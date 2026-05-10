@@ -1,27 +1,15 @@
 package main
 
 import (
-	"context"
-	"log"
+	"fmt"
+	"os"
 
-	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
+	"github.com/Inforberi/financial-intelligence/internal/app"
 )
 
 func main() {
-	ctx := context.Background()
-
-	cfg, err := newConfig()
-	if err != nil {
-		log.Fatalf("failed to read config: %v", err)
+	if err := app.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "application failed: %v\n", err)
+		os.Exit(1)
 	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	_, err = postgres.New(ctx, cfg.Postgres)
-	if err != nil {
-		log.Fatalf("failed to create postgres pool: %v", err)
-	}
-
-	log.Println("postgres pool created successfully")
 }

@@ -1,10 +1,10 @@
-.PHONY: migrate-help migrate-create migrate-up migrate-down
+.PHONY: help-migrate migrate-create migrate-up migrate-down
 
 MIGRATE_CMD=docker compose run --rm postgres-migrate \
 	-path /migrations \
 	-database "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@template-db:5432/${POSTGRES_DB}?sslmode=disable"
 
-migrate-help:
+help-migrate:
 	@echo ""
 	@echo "Доступные команды:"
 	@echo ""

@@ -1,8 +1,8 @@
-.PHONY: dev-up dev-up-build dev-down dev-clean-up dev-db-up dev-db-down dev-logs-app
+.PHONY: help-dev dev-up dev-up-build dev-down dev-clean-up dev-db-up dev-db-down dev-logs-app
 
 DEV_SERVICES=finance-db postgres-port-forwarder
 
-docker-dev-help:
+help-dev:
 	@echo ""
 	@echo "Доступные команды:"
 	@echo ""
