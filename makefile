@@ -5,7 +5,9 @@ export PROJECT_ROOT=$(shell pwd)
 export PROJECT_ROOT
 
 COMPOSE=docker compose -f $(PROJECT_ROOT)/deploy/docker-compose.yml
-FINANCE_APP_LOCATION=$(PROJECT_ROOT)/cmd/finance-app
+APP_LOCATION=$(PROJECT_ROOT)/cmd/auth
+APP_CONTAINER=auth-app
+DB_CONTAINER=auth-db
 
 .PHONY: help
 

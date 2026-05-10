@@ -1,7 +1,7 @@
 services:
-    finance-db:
+    auth-db:
         image: postgres:18.3-bookworm
-        container_name: finance_db
+        container_name: auth-db
         environment:
             - POSTGRES_USER=${POSTGRES_USER}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -9,15 +9,24 @@ services:
         volumes:
             - ${PROJECT_ROOT}/out/pgdata:/var/lib/postgresql
         restart: always
-    finance-app:
-        container_name: finance-app
+        healthcheck:
+            test:
+                [
+                    'CMD-SHELL',
+                    'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}',
+                ]
+            interval: 2s
+            timeout: 3s
+            retries: 30
+    auth-app:
+        container_name: auth-app
         build:
             context: ${PROJECT_ROOT}
-            dockerfile: ${PROJECT_ROOT}/cmd/finance-app/Dockerfile
+            dockerfile: ${PROJECT_ROOT}/cmd/auth/Dockerfile
         ports:
             - 8080:8080
         depends_on:
-            - finance-db
+            - auth-db
 
     postgres-migrate:
         image: migrate/migrate:v4.19.1
@@ -27,8 +36,8 @@ services:
     postgres-port-forwarder:
         image: alpine/socat:1.8.0.3
         container_name: postgres-port-forwarder
-        command: 'tcp-listen:5432,reuseaddr,fork tcp-connect:finance-db:5432'
+        command: 'tcp-listen:5432,reuseaddr,fork tcp-connect:auth-db:5432'
         ports:
             - '127.0.0.1:5432:5432'
         depends_on:
-            - finance-db
+            - auth-db

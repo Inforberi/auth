@@ -14,20 +14,20 @@ help-prod:
 	@echo ""
 
 prod-up:
-	$(COMPOSE) up -d --build finance-app finance-db
+	$(COMPOSE) up -d --build $(APP_CONTAINER) $(DB_CONTAINER)
 
 prod-up-app:
-	$(COMPOSE) up -d --build finance-app
+	$(COMPOSE) up -d --build $(APP_CONTAINER)
 
 prod-db-up:
-	$(COMPOSE) up -d finance-db
+	$(COMPOSE) up -d $(DB_CONTAINER)
 
 prod-db-down:
-	$(COMPOSE) stop finance-db
+	$(COMPOSE) stop $(DB_CONTAINER)
 
 prod-down:
 	$(COMPOSE) down --remove-orphans
 
 prod-logs-app:
-	$(COMPOSE) logs -f finance-app --tail=100
+	$(COMPOSE) logs -f $(APP_CONTAINER) --tail=100
 

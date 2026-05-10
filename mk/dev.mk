@@ -1,6 +1,6 @@
 .PHONY: help-dev dev-up dev-up-build dev-down dev-clean-up dev-db-up dev-db-down dev-logs-app
 
-DEV_SERVICES=finance-db postgres-port-forwarder
+DEV_SERVICES=$(DB_CONTAINER) postgres-port-forwarder
 
 help-dev:
 	@echo ""
@@ -18,20 +18,20 @@ help-dev:
 
 
 dev-up-app:
-	go run $(FINANCE_APP_LOCATION)
+	go run $(APP_LOCATION)
 
 dev-up-build:
 	$(COMPOSE) up -d --build $(DEV_SERVICES)
-	go run $(FINANCE_APP_LOCATION)
+	go run $(APP_LOCATION)
 
 dev-down:
 	$(COMPOSE) down --remove-orphans
 
 dev-db-up:
-	$(COMPOSE) up -d finance-db postgres-port-forwarder
+	$(COMPOSE) up -d $(DB_CONTAINER) postgres-port-forwarder
 
 dev-db-down:
-	$(COMPOSE) stop finance-db postgres-port-forwarder
+	$(COMPOSE) stop $(DB_CONTAINER) postgres-port-forwarder
 
 dev-clean-up:
 	@read -p "Очистить локальные данные БД? [y/N]: " ans; \
@@ -42,4 +42,4 @@ dev-clean-up:
 	fi
 
 dev-logs-app:
-	$(COMPOSE) logs -f finance-app --tail=100
+	$(COMPOSE) logs -f $(APP_CONTAINER) --tail=100
