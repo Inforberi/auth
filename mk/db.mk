@@ -1,4 +1,4 @@
-.PHONY: help db-backup db-restore db-restore-replace db-shell
+.PHONY: help-db db-backup db-restore db-restore-replace db-shell
 
 BACKUP_DIR=$(PROJECT_ROOT)/out/backups
 
@@ -9,7 +9,7 @@ DB_PASSWORD=$(POSTGRES_PASSWORD)
 DB_CONTAINER=finance-db
 BACKUP_FILE=$(BACKUP_DIR)/$(DB_NAME)_$(shell date +%d-%m-%Y_%H-%M-%S).sql
 
-db-help:
+help-db:
 	@echo ""
 	@echo "Доступные команды:"
 	@echo ""

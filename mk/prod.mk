@@ -1,6 +1,6 @@
-.PHONY: docker-prod-help prod-up prod-up-app prod-down prod-logs-app prod-db-up prod-db-down
+.PHONY: help-prod prod-up prod-up-app prod-down prod-logs-app prod-db-up prod-db-down
 
-docker-prod-help:
+help-prod:
 	@echo ""
 	@echo "Доступные команды:"
 	@echo ""
