@@ -7,6 +7,10 @@ type hasher interface {
 	Compare(hash, salt, password []byte) error
 }
 
+// type repo interface{
+
+// }
+
 type RegisterService struct {
 	hasher hasher
 }

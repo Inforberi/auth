@@ -1,6 +1,6 @@
 .PHONY: help-migrate migrate-create migrate-up migrate-down
 
-MIGRATE_CMD=docker compose run --rm postgres-migrate \
+MIGRATE_CMD=$(COMPOSE) run --rm postgres-migrate \
 	-path /migrations \
 	-database "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@$(DB_CONTAINER):5432/${POSTGRES_DB}?sslmode=disable"
 
@@ -19,7 +19,7 @@ migrate-create:
 		echo "Имя миграции не может быть пустым"; \
 		exit 1; \
 	fi; \
-	docker compose run --rm postgres-migrate \
+	$(COMPOSE) run --rm postgres-migrate \
 	create \
 	-ext sql \
 	-dir /migrations \
