@@ -8,6 +8,8 @@ import (
 	"syscall"
 
 	"github.com/Inforberi/financial-intelligence/internal/config"
+	"github.com/Inforberi/financial-intelligence/internal/password/argon2id"
+
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
 	"go.uber.org/zap"
@@ -27,9 +29,10 @@ func Run() error {
 	defer func() {
 		_ = log.Sync()
 	}()
-
 	undo := zap.RedirectStdLog(log)
 	defer undo()
+
+	_ = argon2id.NewArgon2idHash(1, 32, 64*1024, 32, 256)
 
 	pool, err := postgres.New(ctx, cfg.Postgres)
 	if err != nil {

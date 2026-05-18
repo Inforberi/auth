@@ -1,15 +1,14 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"os"
-
-	"github.com/Inforberi/financial-intelligence/internal/app"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
-	if err := app.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "application failed: %v\n", err)
-		os.Exit(1)
-	}
+	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer stop()
 }

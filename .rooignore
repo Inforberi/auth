@@ -1,0 +1,95 @@
+# Dependencies
+node_modules
+vendor
+
+# Next.js
+.next
+out
+
+# Build
+dist
+build
+bin
+target
+
+# Cache
+.cache
+.turbo
+turbo
+.parcel-cache
+
+# Coverage
+coverage
+coverage.out
+.nyc_output
+
+# Logs
+*.log
+logs
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+
+# Generated
+generated
+.generated
+public/generated
+
+# Vercel
+.vercel
+
+# Storybook
+storybook-static
+
+# Maps / Minified
+*.map
+*.min.js
+
+# Media
+*.mp4
+*.mov
+*.zip
+*.tar.gz
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.svg
+
+# Documents
+*.pdf
+
+# IDE
+.idea
+.vscode/settings.json
+
+# Go
+*.test
+*.out
+
+# Temporary
+tmp
+temp
+
+# Git
+.git
+
+# Docker
+docker-data
+
+# Misc
+DS_Store
+Thumbs.db
