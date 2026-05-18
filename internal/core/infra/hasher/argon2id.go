@@ -1,10 +1,11 @@
-package argon2id
+package hasher
 
 import (
 	"bytes"
 	"crypto/rand"
 	"errors"
 
+	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -16,11 +17,6 @@ type Argon2idHash struct {
 	saltLen uint32
 }
 
-type HashSalt struct {
-	Hash []byte
-	Salt []byte
-}
-
 func NewArgon2idHash(time, saltLen uint32, memory uint32, threads uint8, keyLen uint32) *Argon2idHash {
 	return &Argon2idHash{
 		time:    time,
@@ -29,10 +25,6 @@ func NewArgon2idHash(time, saltLen uint32, memory uint32, threads uint8, keyLen 
 		threads: threads,
 		keyLen:  keyLen,
 	}
-}
-
-func (a *Argon2idHash) Hash() {
-
 }
 
 func randomSecret(length uint32) ([]byte, error) {
@@ -46,7 +38,7 @@ func randomSecret(length uint32) ([]byte, error) {
 	return secret, nil
 }
 
-func (a *Argon2idHash) GenerateHash(password, salt []byte) (*HashSalt, error) {
+func (a *Argon2idHash) GenerateHash(password, salt []byte) (*domain.HashSalt, error) {
 	var err error
 
 	if len(salt) == 0 {
@@ -58,7 +50,7 @@ func (a *Argon2idHash) GenerateHash(password, salt []byte) (*HashSalt, error) {
 
 	hash := argon2.IDKey(password, salt, a.time, a.memory, a.threads, a.keyLen)
 
-	return &HashSalt{Hash: hash, Salt: salt}, nil
+	return &domain.HashSalt{Hash: hash, Salt: salt}, nil
 }
 
 func (a *Argon2idHash) Compare(hash, salt, password []byte) error {

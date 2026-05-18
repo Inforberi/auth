@@ -3,8 +3,8 @@ package config
 import (
 	"fmt"
 
-	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
-	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
+	"github.com/Inforberi/financial-intelligence/internal/core/infra/logger"
+	"github.com/Inforberi/financial-intelligence/internal/core/infra/postgres"
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
