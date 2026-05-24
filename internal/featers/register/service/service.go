@@ -4,22 +4,33 @@ import (
 	"context"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
+	session_service "github.com/Inforberi/financial-intelligence/internal/featers/session/service"
 )
 
+type User struct {
+	ID string
+}
+
 type hasher interface {
-	GenerateHash(password, salt []byte) (*domain.HashSalt, error)
-	Compare(hash, salt, password []byte) error
+	GenerateHash(password, salt []byte) (string, error)
+	Compare(password string, encodedHash string) error
 }
 
 type registerRepo interface {
 	ExistsByEmail(ctx context.Context, email string) (bool, error)
+	CreateUser(ctx context.Context, email, passwordHash string) (domain.UserID, error)
 }
 
-type RegisterService struct {
-	hasher hasher
-	repo   registerRepo
+type session interface {
+	CreateSession(ctx context.Context, userID domain.UserID, userAgent, IP string) (*session_service.Session, error)
 }
 
-func New(hasher hasher, repo registerRepo) *RegisterService {
-	return &RegisterService{hasher: hasher, repo: repo}
+type registerService struct {
+	hasher  hasher
+	repo    registerRepo
+	session session
+}
+
+func New(hasher hasher, repo registerRepo, session session) *registerService {
+	return &registerService{hasher: hasher, repo: repo, session: session}
 }

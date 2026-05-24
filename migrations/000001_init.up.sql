@@ -49,13 +49,14 @@ CREATE TABLE auth.sessions(
 
   token_hash TEXT NOT NULL UNIQUE,
 
-  expires_at TIMESTAMPTZ NOT NULL,
+  expired_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   last_used_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   revoked_at TIMESTAMPTZ,
 
-  user_agent TEXT
+  user_agent TEXT,
+  ip_address INET
 );
 
 CREATE INDEX idx_sessions_user_id
