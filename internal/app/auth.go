@@ -67,7 +67,9 @@ func Run() error {
 	// init register
 	registerRepo := register_postgres.New(pool)
 	registerService := register_service.New(argonHash, registerRepo, sessionService)
-	registerHandler := register_http.New(registerService)
+
+	registerLogger := log.With(zap.String("feature", "register"), zap.String("layer", "transport"))
+	registerHandler := register_http.New(registerService, registerLogger)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)

@@ -40,7 +40,13 @@ func CreateLogger(cfg Config) *zap.Logger {
 		},
 	}
 
-	return zap.Must(config.Build())
+	logger := zap.Must(
+		config.Build(
+			zap.AddStacktrace(zapcore.ErrorLevel),
+		),
+	)
+
+	return logger
 }
 
 func getConfigLevel(lvl string) zapcore.Level {

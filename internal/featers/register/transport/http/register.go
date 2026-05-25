@@ -1,11 +1,11 @@
 package register_http
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	"github.com/Inforberi/financial-intelligence/internal/core/transport/httpx"
+	"go.uber.org/zap"
 )
 
 type RegisterByEmailRequest struct {
@@ -28,7 +28,6 @@ func (h *registerHandler) RegisterByEmail(w http.ResponseWriter, r *http.Request
 			"Invalid JSON",
 		)
 		return
-
 	}
 
 	// validate request
@@ -64,8 +63,25 @@ func (h *registerHandler) RegisterByEmail(w http.ResponseWriter, r *http.Request
 		ip,
 	)
 	if err != nil {
-		log.Printf("register error: %+v\n", err)
 		errs := mapError(err)
+
+		logger := h.log.With(
+			zap.String("email", input.Email),
+			zap.String("ip", ip),
+		)
+
+		if errs.Status >= 500 {
+			logger.Error(
+				"register failed",
+				zap.Error(err),
+			)
+		} else {
+			logger.Warn(
+				"register failed",
+				zap.Error(err),
+			)
+		}
+
 		httpx.Error(
 			w,
 			errs.Status,
@@ -89,5 +105,4 @@ func (h *registerHandler) RegisterByEmail(w http.ResponseWriter, r *http.Request
 			UserID: register.UserID,
 		},
 	)
-
 }

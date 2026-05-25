@@ -9,16 +9,17 @@ import (
 )
 
 const (
-	CodeInvalidJSON        = "invalid_json"
-	CodeEmailRequired      = "email_required"
-	CodePasswordRequired   = "password_required"
-	CodeInvalidEmail       = "invalid_email"
-	CodePasswordTooShort   = "password_too_short"
-	CodePasswordTooLong    = "password_too_long"
-	CodePasswordNoLetter   = "password_no_letter"
-	CodePasswordNoDigit    = "password_no_digit"
-	CodeEmailAlreadyExists = "email_already_exists"
-	CodeInternalError      = "internal_error"
+	CodeInvalidJSON         = "invalid_json"
+	CodeEmailRequired       = "email_required"
+	CodePasswordRequired    = "password_required"
+	CodeInvalidEmail        = "invalid_email"
+	CodePasswordTooShort    = "password_too_short"
+	CodePasswordTooLong     = "password_too_long"
+	CodePasswordNoLetter    = "password_no_letter"
+	CodePasswordNoDigit     = "password_no_digit"
+	CodePasswordNoUppercase = "password_no_upper_letter"
+	CodeEmailAlreadyExists  = "email_already_exists"
+	CodeInternalError       = "internal_error"
 )
 
 type ErrorMapping struct {
@@ -33,20 +34,26 @@ func mapError(err error) ErrorMapping {
 	case errors.Is(err, domain.ErrEmailInvalid):
 		return ErrorMapping{
 			Status:  http.StatusBadRequest,
-			Code:    "invalid_email",
+			Code:    CodeInvalidEmail,
 			Message: "Invalid email",
-		}
-	case errors.Is(err, domain.ErrPasswordTooShort):
-		return ErrorMapping{
-			Status:  http.StatusBadRequest,
-			Code:    "password_too_short",
-			Message: "Password too short",
 		}
 	case errors.Is(err, register_service.ErrEmailAlreadyExists):
 		return ErrorMapping{
 			Status:  http.StatusConflict,
-			Code:    "email_already_exists",
+			Code:    CodeEmailAlreadyExists,
 			Message: "Email already exists",
+		}
+	case errors.Is(err, domain.ErrPasswordTooShort):
+		return ErrorMapping{
+			Status:  http.StatusBadRequest,
+			Code:    CodePasswordTooShort,
+			Message: "Password too short",
+		}
+	case errors.Is(err, domain.ErrPasswordNoUpper):
+		return ErrorMapping{
+			Status:  http.StatusBadRequest,
+			Code:    CodePasswordNoUppercase,
+			Message: "Password must contain at least one uppercase letter",
 		}
 	case errors.Is(err, domain.ErrPasswordTooLong):
 		return ErrorMapping{
@@ -69,7 +76,7 @@ func mapError(err error) ErrorMapping {
 	default:
 		return ErrorMapping{
 			Status:  http.StatusInternalServerError,
-			Code:    "internal_error",
+			Code:    CodeInternalError,
 			Message: "Internal error",
 		}
 	}
