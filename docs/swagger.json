@@ -12,7 +12,7 @@
     "host": "localhost:8080",
     "basePath": "/api/v1/",
     "paths": {
-        "/auth/register": {
+        "/auth/register/email": {
             "post": {
                 "description": "Register by email",
                 "consumes": [

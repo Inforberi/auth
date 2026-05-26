@@ -18,7 +18,7 @@ type RegisterByEmailResponse struct {
 }
 
 // @Summary Register by email
-// @Description Register by email
+// @Description Creates a new user account using email/password
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -27,7 +27,7 @@ type RegisterByEmailResponse struct {
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 500 {object} httpx.ErrorResponse
-// @Router /auth/register [post]
+// @Router /auth/register/email [post]
 func (h *RegisterHandler) RegisterByEmail(w http.ResponseWriter, r *http.Request) {
 	// decode json
 	var input RegisterByEmailRequest

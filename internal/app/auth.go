@@ -13,6 +13,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/httpserver"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/postgres"
+	"github.com/Inforberi/financial-intelligence/internal/core/infra/redis"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/sessiontoken"
 	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/router"
 	register_postgres "github.com/Inforberi/financial-intelligence/internal/featers/register/repo/postgres"
@@ -44,9 +45,6 @@ func Run() error {
 	undo := zap.RedirectStdLog(log)
 	defer undo()
 
-	// init argon tokenGen
-	argonHash := hasher.NewArgon2idHash(1, 32, 64*1024, 32, 256)
-
 	// init postgres
 	pool, err := postgres.New(ctx, cfg.Postgres)
 	if err != nil {
@@ -54,6 +52,17 @@ func Run() error {
 	}
 	defer pool.Close()
 	log.Info("postgres pool created successfully")
+
+	// init redis
+	rdb, err := redis.New(ctx, cfg.Redis)
+	if err != nil {
+		return fmt.Errorf("init redis: %w", err)
+	}
+	defer rdb.Close()
+	log.Info("redis created successfully")
+
+	// init argon tokenGen
+	argonHash := hasher.NewArgon2idHash(1, 32, 64*1024, 32, 256)
 
 	now := clock.UTCClock{}
 	tokenGen := sessiontoken.TokenManager{}

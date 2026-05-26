@@ -18,6 +18,44 @@ services:
             interval: 2s
             timeout: 3s
             retries: 30
+        networks:
+            - auth-network
+    redis:
+        image: redis:8.2-bookworm
+        container_name: redis
+        volumes:
+            - redis-data:/data
+            - ./deploy/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+        command: >
+            redis-server /usr/local/etc/redis/redis.conf \
+            --requirepass $${REDIS_PASSWORD}
+        restart: unless-stopped
+        deploy:
+            resources:
+                limits:
+                    cpus: '1.0'
+                    memory: 512M
+            reservations:
+                cpus: '0.25'
+                memory: 256M
+        healthcheck:
+            test: ['CMD', 'redis-cli', '-a', '$${REDIS_PASSWORD}', 'ping']
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
+        environment:
+            - REDIS_PASSWORD=${REDIS_PASSWORD:-defaultpassword}
+        logging:
+        driver: 'json-file'
+        options:
+            max-size: '10m'
+            max-file: '3'
+        sysctls:
+            - net.core.somaxconn=65535
+        networks:
+            - auth-network
+
     auth-app:
         container_name: auth-app
         build:
@@ -27,11 +65,15 @@ services:
             - 8080:8080
         depends_on:
             - auth-db
+        networks:
+            - auth-network
 
     postgres-migrate:
         image: migrate/migrate:v4.19.1
         volumes:
             - ${PROJECT_ROOT}/migrations:/migrations
+        networks:
+            - auth-network
 
     postgres-port-forwarder:
         image: alpine/socat:1.8.0.3
@@ -41,3 +83,20 @@ services:
             - '127.0.0.1:5432:5432'
         depends_on:
             - auth-db
+        networks:
+            - auth-network
+
+    redis-port-forwarder:
+        image: alpine/socat:1.8.0.3
+        container_name: redis-port-forwarder
+        command: 'tcp-listen:6379,reuseaddr,fork tcp-connect:redis:6379'
+        ports:
+            - '127.0.0.1:6379:6379'
+        depends_on:
+            - redis
+        networks:
+            - auth-network
+
+networks:
+    auth-network:
+        driver: bridge

@@ -6,6 +6,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/httpserver"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/postgres"
+	"github.com/Inforberi/financial-intelligence/internal/core/infra/redis"
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
@@ -14,6 +15,7 @@ type Config struct {
 	Logger   logger.Config
 	Session  SessionConfig
 	Server   httpserver.Config
+	Redis    redis.Config
 }
 
 func New() (*Config, error) {
