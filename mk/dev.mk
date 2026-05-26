@@ -21,6 +21,7 @@ dev-up-app:
 	go run $(APP_LOCATION)
 
 dev-up-build:
+	make swagger
 	$(COMPOSE) up -d --build $(DEV_SERVICES)
 	go run $(APP_LOCATION)
 

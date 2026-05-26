@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,13 +14,12 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/sessiontoken"
+	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/router"
 	register_postgres "github.com/Inforberi/financial-intelligence/internal/featers/register/repo/postgres"
 	register_service "github.com/Inforberi/financial-intelligence/internal/featers/register/service"
 	register_http "github.com/Inforberi/financial-intelligence/internal/featers/register/transport/http"
 	session_postgres "github.com/Inforberi/financial-intelligence/internal/featers/session/repo/postgres"
 	session_service "github.com/Inforberi/financial-intelligence/internal/featers/session/service"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 
 	"go.uber.org/zap"
 )
@@ -64,21 +62,16 @@ func Run() error {
 	sessionRepo := session_postgres.New(pool)
 	sessionService := session_service.New(now, sessionRepo, tokenGen, cfg.Session)
 
-	// init register
+	// init register feater
 	registerRepo := register_postgres.New(pool)
 	registerService := register_service.New(argonHash, registerRepo, sessionService)
-
 	registerLogger := log.With(zap.String("feature", "register"), zap.String("layer", "transport"))
 	registerHandler := register_http.New(registerService, registerLogger)
 
-	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("pong"))
+	// init router
+	r := router.New(router.Handlers{
+		Register: registerHandler,
 	})
-
-	r.Post("/auth/register", registerHandler.RegisterByEmail)
 
 	return httpserver.Run(ctx, log, cfg.Server, r)
 }

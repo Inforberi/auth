@@ -1,0 +1,65 @@
+basePath: /api/v1/
+definitions:
+  httpx.ErrorResponse:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+    type: object
+  register_http.RegisterByEmailRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  register_http.RegisterByEmailResponse:
+    properties:
+      userID:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Financial Intelligence API
+  title: Auth API
+  version: "1.0"
+paths:
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register by email
+      parameters:
+      - description: Register payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/register_http.RegisterByEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/register_http.RegisterByEmailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Register by email
+      tags:
+      - auth
+schemes:
+- http
+swagger: "2.0"

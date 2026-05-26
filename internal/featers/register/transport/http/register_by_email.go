@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
-	"github.com/Inforberi/financial-intelligence/internal/core/transport/httpx"
+	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/httpx"
 	"go.uber.org/zap"
 )
 
@@ -17,7 +17,18 @@ type RegisterByEmailResponse struct {
 	UserID domain.UserID `json:"userID"`
 }
 
-func (h *registerHandler) RegisterByEmail(w http.ResponseWriter, r *http.Request) {
+// @Summary Register by email
+// @Description Register by email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body RegisterByEmailRequest true "Register payload"
+// @Success 201 {object} RegisterByEmailResponse
+// @Failure 400 {object} httpx.ErrorResponse
+// @Failure 409 {object} httpx.ErrorResponse
+// @Failure 500 {object} httpx.ErrorResponse
+// @Router /auth/register [post]
+func (h *RegisterHandler) RegisterByEmail(w http.ResponseWriter, r *http.Request) {
 	// decode json
 	var input RegisterByEmailRequest
 	if err := httpx.DecodeJSON(w, r, &input); err != nil {

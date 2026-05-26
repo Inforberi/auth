@@ -17,11 +17,11 @@ type registerService interface {
 	) (*register_service.RegisterResult, error)
 }
 
-type registerHandler struct {
+type RegisterHandler struct {
 	service registerService
 	log     *zap.Logger
 }
 
-func New(service registerService, log *zap.Logger) *registerHandler {
-	return &registerHandler{service: service, log: log}
+func New(service registerService, log *zap.Logger) *RegisterHandler {
+	return &RegisterHandler{service: service, log: log}
 }
