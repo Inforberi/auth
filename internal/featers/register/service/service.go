@@ -7,12 +7,8 @@ import (
 	session_service "github.com/Inforberi/financial-intelligence/internal/featers/session/service"
 )
 
-type User struct {
-	ID string
-}
-
 type hasher interface {
-	GenerateHash(password, salt []byte) (string, error)
+	GenerateHash(password []byte) (string, error)
 	Compare(password string, encodedHash string) error
 }
 

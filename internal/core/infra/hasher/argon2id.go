@@ -43,7 +43,7 @@ func randomSecret(length uint32) ([]byte, error) {
 	return secret, nil
 }
 
-func (a *Argon2idHash) GenerateHash(password, salt []byte) (string, error) {
+func (a *Argon2idHash) GenerateHash(password []byte) (string, error) {
 	salt, err := randomSecret(a.saltLen)
 	if err != nil {
 		return "", err

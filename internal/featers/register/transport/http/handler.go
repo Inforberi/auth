@@ -3,7 +3,7 @@ package register_http
 import (
 	"context"
 
-	register_service "github.com/Inforberi/financial-intelligence/internal/featers/register/service"
+	register_domain "github.com/Inforberi/financial-intelligence/internal/featers/register/domain"
 	"go.uber.org/zap"
 )
 
@@ -14,7 +14,7 @@ type registerService interface {
 		password,
 		userAgent,
 		IP string,
-	) (*register_service.RegisterResult, error)
+	) (*register_domain.RegisterResult, error)
 }
 
 type RegisterHandler struct {
