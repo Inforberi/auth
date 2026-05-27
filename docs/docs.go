@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/auth/register/email": {
             "post": {
-                "description": "Register by email",
+                "description": "Creates a new user account using email/password",
                 "consumes": [
                     "application/json"
                 ],

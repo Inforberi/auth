@@ -6,15 +6,15 @@ import (
 	"time"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
+	session_redis "github.com/Inforberi/financial-intelligence/internal/featers/session/repo/redis"
 )
 
 type Session struct {
-	ID        domain.SessionID
 	RawToken  string
 	ExpiredAt time.Time
 }
 
-func (s *SessionService) CreateSession(ctx context.Context, userID domain.UserID, userAgent, IP string) (*Session, error) {
+func (s *SessionService) CreateSession(ctx context.Context, userID domain.UserID, userAgent, ip string) (*Session, error) {
 	// generate raw token
 	rawToken, err := s.token.GenerateSessionToken()
 	if err != nil {
@@ -22,30 +22,31 @@ func (s *SessionService) CreateSession(ctx context.Context, userID domain.UserID
 	}
 
 	// hash token
-	hashToken := s.token.Hash(rawToken)
+	tokenHash := s.token.Hash(rawToken)
 
 	// calculate expired_at
 	now := s.now.NowUTC()
-	expiredAt := now.Add(s.cfg.SessionTTL)
+	expiresAt := now.Add(s.cfg.SessionTTL)
 
 	// save session in db
-	session, err := s.repo.CreateSession(
+	err = s.repo.Create(
 		ctx,
-		userID,
-		expiredAt,
-		hashToken,
-		userAgent,
-		IP,
-	)
+		session_redis.CreateSessionParams{
+			UserID:    userID,
+			CreatedAt: now,
+			ExpiresAt: expiresAt,
+			TokenHash: tokenHash,
+			UserAgent: userAgent,
+			IPAddress: ip,
+		})
 	if err != nil {
 		return &Session{}, fmt.Errorf("service create session %w", err)
 	}
 
 	// return raw token
 	return &Session{
-		ID:        session,
 		RawToken:  rawToken,
-		ExpiredAt: expiredAt,
+		ExpiredAt: expiresAt,
 	}, nil
 
 }

@@ -1,6 +1,6 @@
-.PHONY: help-dev dev-up dev-up-build dev-down dev-clean-up dev-db-up dev-db-down dev-logs-app
+.PHONY: help-dev dev-up dev-up-build dev-down dev-clean-up dev-db-up dev-db-down dev-logs-app dev-redis-up dev-redis-down
 
-DEV_SERVICES=$(DB_CONTAINER) postgres-port-forwarder
+DEV_SERVICES=$(DB_CONTAINER) $(REDIS_CONTAINER) postgres-port-forwarder redis-port-forwarder
 
 help-dev:
 	@echo ""
@@ -15,14 +15,17 @@ help-dev:
 	@echo "make dev-db-up        - Запустить только Postgres и postgres-port-forwarder"
 	@echo "make dev-db-down      - Остановить только Postgres и postgres-port-forwarder"
 	@echo ""
+	@echo "make dev-redis-up        - Запустить только Redis и redis-port-forwarder"
+	@echo "make dev-redis-down      - Остановить только Redis и redis-port-forwarder"
+	@echo ""
 
 
-dev-up-app:
-	go run $(APP_LOCATION)
-
-dev-up-build:
+dev:
 	make swagger
 	$(COMPOSE) up -d --build $(DEV_SERVICES)
+	go run $(APP_LOCATION)
+
+dev-app:
 	go run $(APP_LOCATION)
 
 dev-down:
@@ -33,6 +36,12 @@ dev-db-up:
 
 dev-db-down:
 	$(COMPOSE) stop $(DB_CONTAINER) postgres-port-forwarder
+
+dev-redis-up:
+	$(COMPOSE) up -d $(REDIS_CONTAINER) redis-port-forwarder
+
+dev-redis-down:
+	$(COMPOSE) stop $(REDIS_CONTAINER) redis-port-forwarder
 
 dev-clean-up:
 	@read -p "Очистить локальные данные БД? [y/N]: " ans; \

@@ -13,13 +13,14 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/httpserver"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/postgres"
-	"github.com/Inforberi/financial-intelligence/internal/core/infra/redis"
+	redis_client "github.com/Inforberi/financial-intelligence/internal/core/infra/redis"
+
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/sessiontoken"
 	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/router"
 	register_postgres "github.com/Inforberi/financial-intelligence/internal/featers/register/repo/postgres"
 	register_service "github.com/Inforberi/financial-intelligence/internal/featers/register/service"
 	register_http "github.com/Inforberi/financial-intelligence/internal/featers/register/transport/http"
-	session_postgres "github.com/Inforberi/financial-intelligence/internal/featers/session/repo/postgres"
+	session_redis "github.com/Inforberi/financial-intelligence/internal/featers/session/repo/redis"
 	session_service "github.com/Inforberi/financial-intelligence/internal/featers/session/service"
 
 	"go.uber.org/zap"
@@ -54,7 +55,7 @@ func Run() error {
 	log.Info("postgres pool created successfully")
 
 	// init redis
-	rdb, err := redis.New(ctx, cfg.Redis)
+	rdb, err := redis_client.New(ctx, cfg.Redis)
 	if err != nil {
 		return fmt.Errorf("init redis: %w", err)
 	}
@@ -68,7 +69,7 @@ func Run() error {
 	tokenGen := sessiontoken.TokenManager{}
 
 	// init session
-	sessionRepo := session_postgres.New(pool)
+	sessionRepo := session_redis.New(rdb)
 	sessionService := session_service.New(now, sessionRepo, tokenGen, cfg.Session)
 
 	// init register feater

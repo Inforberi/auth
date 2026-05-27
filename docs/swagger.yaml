@@ -30,7 +30,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Register by email
+      description: Creates a new user account using email/password
       parameters:
       - description: Register payload
         in: body

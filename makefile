@@ -8,6 +8,7 @@ COMPOSE=docker compose -p auth -f $(PROJECT_ROOT)/deploy/docker-compose.yml
 APP_LOCATION=$(PROJECT_ROOT)/cmd/auth
 APP_CONTAINER=auth-app
 DB_CONTAINER=auth-db
+REDIS_CONTAINER=redis
 
 .PHONY: help
 

@@ -42,22 +42,3 @@ CREATE TABLE auth.password_credentials(
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
-CREATE TABLE auth.sessions(
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-
-  token_hash TEXT NOT NULL UNIQUE,
-
-  expired_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  last_used_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  revoked_at TIMESTAMPTZ,
-
-  user_agent TEXT,
-  ip_address INET
-);
-
-CREATE INDEX idx_sessions_user_id
-ON auth.sessions(user_id);

@@ -1,4 +1,4 @@
-package redis
+package redis_client
 
 type Config struct {
 	Host     string `env:"REDIS_HOST" env-default:"localhost"`
