@@ -5,6 +5,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/httpx"
 	login_domain "github.com/Inforberi/financial-intelligence/internal/featers/login/domain"
+	"go.uber.org/zap"
 )
 
 type LoginByEmailRequest struct {
@@ -26,7 +27,7 @@ type LoginByEmailResponse struct {
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 500 {object} httpx.ErrorResponse
 // @Router /auth/login/email [post]
-func (l *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
+func (l *LoginHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 	// get input data
 	var input LoginByEmailRequest
 	if err := httpx.DecodeJSON(w, r, &input); err != nil {
@@ -71,8 +72,20 @@ func (l *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 		IP:        ip,
 	})
 
+	logger := l.log.With(
+		zap.String("ip", ip),
+		zap.String("user_agent", userAgent),
+	)
+
 	if err != nil {
 		errs := mapError(err)
+
+		if errs.Status >= 500 {
+			logger.Error("login failed", zap.Error(err))
+		} else {
+			logger.Warn("login failed", zap.Error(err))
+		}
+
 		httpx.Error(
 			w,
 			errs.Status,
@@ -88,6 +101,8 @@ func (l *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 		login.Token,
 		login.ExpiresAt,
 	)
+
+	logger.Info("user logged in", zap.String("user_id", string(login.UserID)))
 
 	httpx.JSON(
 		w,

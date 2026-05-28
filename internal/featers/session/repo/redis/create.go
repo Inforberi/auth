@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 )
 
 func (s *SessionRepo) Create(
@@ -17,7 +19,7 @@ func (s *SessionRepo) Create(
 
 	pipe := s.db.TxPipeline()
 
-	session := Session{
+	session := session_domain.Session{
 		UserID:    sessionParams.UserID,
 		UserAgent: sessionParams.UserAgent,
 		IPAddress: sessionParams.IPAddress,

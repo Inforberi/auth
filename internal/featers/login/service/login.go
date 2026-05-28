@@ -39,6 +39,6 @@ func (l *LoginService) Login(ctx context.Context, input login_domain.LoginInput)
 	return &login_domain.LoginResult{
 		UserID:    authData.UserID,
 		Token:     session.RawToken,
-		ExpiresAt: session.ExpiredAt,
+		ExpiresAt: session.ExpiresAt,
 	}, nil
 }

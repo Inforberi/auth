@@ -44,7 +44,7 @@ func New(h Handlers) *chi.Mux {
 
 			// login
 			r.Route("/login", func(r chi.Router) {
-				r.Post("/email", h.Login.Login)
+				r.Post("/email", h.Login.LoginByEmail)
 			})
 		})
 	})

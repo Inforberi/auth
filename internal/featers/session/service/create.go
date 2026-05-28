@@ -3,16 +3,10 @@ package session_service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	session_redis "github.com/Inforberi/financial-intelligence/internal/featers/session/repo/redis"
 )
-
-type Session struct {
-	RawToken  string
-	ExpiredAt time.Time
-}
 
 func (s *SessionService) CreateSession(ctx context.Context, userID domain.UserID, userAgent, ip string) (*Session, error) {
 	// generate raw token
@@ -46,7 +40,7 @@ func (s *SessionService) CreateSession(ctx context.Context, userID domain.UserID
 	// return raw token
 	return &Session{
 		RawToken:  rawToken,
-		ExpiredAt: expiresAt,
+		ExpiresAt: expiresAt,
 	}, nil
 
 }

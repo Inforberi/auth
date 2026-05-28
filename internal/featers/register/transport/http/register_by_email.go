@@ -65,6 +65,11 @@ func (h *RegisterHandler) RegisterByEmail(w http.ResponseWriter, r *http.Request
 	userAgent := httpx.UserAgent(r)
 	ip := httpx.IP(r)
 
+	logger := h.log.With(
+		zap.String("ip", ip),
+		zap.String("user_agent", userAgent),
+	)
+
 	// call service
 	register, err := h.service.RegisterByEmail(
 		r.Context(),
@@ -73,13 +78,9 @@ func (h *RegisterHandler) RegisterByEmail(w http.ResponseWriter, r *http.Request
 		userAgent,
 		ip,
 	)
+
 	if err != nil {
 		errs := mapError(err)
-
-		logger := h.log.With(
-			zap.String("email", input.Email),
-			zap.String("ip", ip),
-		)
 
 		if errs.Status >= 500 {
 			logger.Error(
@@ -107,6 +108,8 @@ func (h *RegisterHandler) RegisterByEmail(w http.ResponseWriter, r *http.Request
 		register.Token,
 		register.ExpiresAt,
 	)
+
+	logger.Info("user register in", zap.String("user_id", string(register.UserID)))
 
 	// write response
 	httpx.JSON(

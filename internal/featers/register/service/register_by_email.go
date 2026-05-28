@@ -64,6 +64,6 @@ func (r *registerService) RegisterByEmail(
 	return &register_domain.RegisterResult{
 		UserID:    userID,
 		Token:     session.RawToken,
-		ExpiresAt: session.ExpiredAt,
+		ExpiresAt: session.ExpiresAt,
 	}, nil
 }
