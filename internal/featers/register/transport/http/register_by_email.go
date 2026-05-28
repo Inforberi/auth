@@ -19,7 +19,7 @@ type RegisterByEmailResponse struct {
 
 // @Summary Register by email
 // @Description Creates a new user account using email/password
-// @Tags auth
+// @Tags Auth
 // @Accept json
 // @Produce json
 // @Param body body RegisterByEmailRequest true "Register payload"

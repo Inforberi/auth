@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 
+	login_http "github.com/Inforberi/financial-intelligence/internal/featers/login/transport/http"
 	register_http "github.com/Inforberi/financial-intelligence/internal/featers/register/transport/http"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -11,6 +12,7 @@ import (
 
 type Handlers struct {
 	Register *register_http.RegisterHandler
+	Login    *login_http.LoginHandler
 }
 
 func New(h Handlers) *chi.Mux {
@@ -33,9 +35,16 @@ func New(h Handlers) *chi.Mux {
 
 	// routes
 	r.Route("/api/v1/", func(r chi.Router) {
+		// auth
 		r.Route("/auth", func(r chi.Router) {
+			//register
 			r.Route("/register", func(r chi.Router) {
 				r.Post("/email", h.Register.RegisterByEmail)
+			})
+
+			// login
+			r.Route("/login", func(r chi.Router) {
+				r.Post("/email", h.Login.Login)
 			})
 		})
 	})

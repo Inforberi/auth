@@ -13,7 +13,7 @@ type LoginByEmailRequest struct {
 }
 
 type LoginByEmailResponse struct {
-	status string
+	Status string `json:"status"`
 }
 
 // @Summary login by email
@@ -26,17 +26,17 @@ type LoginByEmailResponse struct {
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 500 {object} httpx.ErrorResponse
 // @Router /auth/login/email [post]
-
-func (l *loginHandler) Login(w http.ResponseWriter, r *http.Request) {
+func (l *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// get input data
 	var input LoginByEmailRequest
-	if err := httpx.DecodeJSON(w, r, input); err != nil {
+	if err := httpx.DecodeJSON(w, r, &input); err != nil {
 		httpx.Error(
 			w,
 			http.StatusBadRequest,
 			CodeInvalidJSON,
 			"Invalid JSON",
 		)
+		return
 	}
 
 	// base validate
@@ -79,6 +79,7 @@ func (l *loginHandler) Login(w http.ResponseWriter, r *http.Request) {
 			errs.Code,
 			errs.Message,
 		)
+		return
 	}
 
 	// set coockie
@@ -92,7 +93,7 @@ func (l *loginHandler) Login(w http.ResponseWriter, r *http.Request) {
 		w,
 		http.StatusOK,
 		LoginByEmailResponse{
-			status: "ok",
+			Status: "ok",
 		},
 	)
 

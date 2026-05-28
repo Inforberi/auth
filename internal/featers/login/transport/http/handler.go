@@ -11,11 +11,11 @@ type LoginService interface {
 	Login(ctx context.Context, input login_domain.LoginInput) (*login_domain.LoginResult, error)
 }
 
-type loginHandler struct {
+type LoginHandler struct {
 	service LoginService
 	log     *zap.Logger
 }
 
-func New(service LoginService, log *zap.Logger) *loginHandler {
-	return &loginHandler{service: service, log: log}
+func New(service LoginService, log *zap.Logger) *LoginHandler {
+	return &LoginHandler{service: service, log: log}
 }

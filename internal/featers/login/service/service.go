@@ -14,7 +14,7 @@ type session interface {
 }
 
 type loginRepo interface {
-	FindByEmail(ctx context.Context, email string) (login_domain.FindByEmailResult, error)
+	FindByEmail(ctx context.Context, email string) (*login_domain.FindByEmailResult, error)
 }
 
 type hasher interface {

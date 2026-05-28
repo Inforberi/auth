@@ -17,6 +17,9 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/sessiontoken"
 	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/router"
+	login_postgres "github.com/Inforberi/financial-intelligence/internal/featers/login/repo/postgres"
+	login_service "github.com/Inforberi/financial-intelligence/internal/featers/login/service"
+	login_http "github.com/Inforberi/financial-intelligence/internal/featers/login/transport/http"
 	register_postgres "github.com/Inforberi/financial-intelligence/internal/featers/register/repo/postgres"
 	register_service "github.com/Inforberi/financial-intelligence/internal/featers/register/service"
 	register_http "github.com/Inforberi/financial-intelligence/internal/featers/register/transport/http"
@@ -68,7 +71,7 @@ func Run() error {
 	now := clock.UTCClock{}
 	tokenGen := sessiontoken.TokenManager{}
 
-	// init session
+	// init feater
 	sessionRepo := session_redis.New(rdb)
 	sessionService := session_service.New(now, sessionRepo, tokenGen, cfg.Session)
 
@@ -78,9 +81,16 @@ func Run() error {
 	registerLogger := log.With(zap.String("feature", "register"), zap.String("layer", "transport"))
 	registerHandler := register_http.New(registerService, registerLogger)
 
+	// init login feater
+	loginRepo := login_postgres.New(pool)
+	loginService := login_service.New(loginRepo, sessionService, argonHash, now)
+	loginLogger := log.With(zap.String("feature", "login"), zap.String("layer", "transport"))
+	loginHandler := login_http.New(loginService, loginLogger)
+
 	// init router
 	r := router.New(router.Handlers{
 		Register: registerHandler,
+		Login:    loginHandler,
 	})
 
 	return httpserver.Run(ctx, log, cfg.Server, r)

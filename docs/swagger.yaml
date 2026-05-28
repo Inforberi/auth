@@ -7,6 +7,18 @@ definitions:
       message:
         type: string
     type: object
+  login_http.LoginByEmailRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  login_http.LoginByEmailResponse:
+    properties:
+      status:
+        type: string
+    type: object
   register_http.RegisterByEmailRequest:
     properties:
       email:
@@ -26,6 +38,36 @@ info:
   title: Auth API
   version: "1.0"
 paths:
+  /auth/login/email:
+    post:
+      consumes:
+      - application/json
+      description: login by email/password
+      parameters:
+      - description: login payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/login_http.LoginByEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/login_http.LoginByEmailResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: login by email
+      tags:
+      - Auth
   /auth/register/email:
     post:
       consumes:
@@ -59,7 +101,7 @@ paths:
             $ref: '#/definitions/httpx.ErrorResponse'
       summary: Register by email
       tags:
-      - auth
+      - Auth
 schemes:
 - http
 swagger: "2.0"
