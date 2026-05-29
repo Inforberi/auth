@@ -27,6 +27,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (
 
 	timeLeft := session.ExpiresAt.Sub(now)
 
+	// update if lost SessionRefreshThreshold<
 	if timeLeft <= s.cfg.SessionRefreshThreshold {
 		session.ExpiresAt = now.Add(s.cfg.SessionTTL)
 

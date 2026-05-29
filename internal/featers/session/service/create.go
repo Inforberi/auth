@@ -23,7 +23,7 @@ func (s *SessionService) CreateSession(ctx context.Context, userID domain.UserID
 	expiresAt := now.Add(s.cfg.SessionTTL)
 
 	// save session in db
-	err = s.repo.Create(
+	err = s.repo.CreateSession(
 		ctx,
 		session_redis.CreateSessionParams{
 			UserID:    userID,

@@ -21,6 +21,7 @@ help-dev:
 
 
 dev:
+	go mod tidy
 	make swagger
 	$(COMPOSE) up -d --build $(DEV_SERVICES)
 	go run $(APP_LOCATION)

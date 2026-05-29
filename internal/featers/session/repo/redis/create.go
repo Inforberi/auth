@@ -9,7 +9,7 @@ import (
 	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 )
 
-func (s *SessionRepo) Create(
+func (s *SessionRepo) CreateSession(
 	ctx context.Context,
 	sessionParams CreateSessionParams,
 ) error {
