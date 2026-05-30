@@ -6,13 +6,12 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/core/config"
 	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
-	session_redis "github.com/Inforberi/financial-intelligence/internal/featers/session/repo/redis"
 )
 
 type sessionRepo interface {
 	CreateSession(
 		ctx context.Context,
-		sessionParams session_redis.CreateSessionParams,
+		sessionParams session_domain.CreateSessionParams,
 	) error
 	FindSession(ctx context.Context, tokenHash string) (*session_domain.Session, error)
 	UpdateSession(ctx context.Context, tokenHash string, session *session_domain.Session, ttl time.Duration) error

@@ -2,19 +2,21 @@ package session_service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/config"
-	session_redis "github.com/Inforberi/financial-intelligence/internal/featers/session/repo/redis"
+	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func TestCreateSession(t *testing.T) {
+var now = time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+
+func TestCreateSession_Success(t *testing.T) {
 	userAgent := "mobile"
 	ip := "12345"
-	now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
 
 	cfg := config.SessionConfig{
 		SessionTTL:              7 * 24 * time.Hour,
@@ -22,80 +24,147 @@ func TestCreateSession(t *testing.T) {
 		AbsoluteSessionTTL:      14 * 24 * time.Hour,
 	}
 
-	tests := []struct {
-		name       string
-		setupMocks func(repo *mockRepo, token *mockTokenHash, clock *mockClock)
-		wantErr    error
-	}{
-		{
-			name: "Позитивное создание сессии",
-			setupMocks: func(repo *mockRepo, token *mockTokenHash, clock *mockClock) {
-				token.
-					On("GenerateSessionToken").
-					Return("RawToken", nil)
+	repo := &mockRepo{}
+	token := &mockTokenHash{}
+	clock := &mockClock{}
 
-				token.
-					On("Hash", "RawToken").
-					Return("HashedToken", nil)
+	token.
+		On("GenerateSessionToken").
+		Return("RawToken", nil)
 
-				expected := session_redis.CreateSessionParams{
-					UserID:    "user-1",
-					CreatedAt: now,
-					ExpiresAt: now.Add(cfg.SessionTTL),
-					TokenHash: "HashedToken",
-					UserAgent: userAgent,
-					IPAddress: ip,
-				}
+	token.
+		On("Hash", "RawToken").
+		Return("HashedToken", nil)
 
-				clock.
-					On("NowUTC").
-					Return(now)
-
-				repo.
-					On(
-						"CreateSession",
-						mock.Anything,
-						expected,
-					).
-					Return(nil)
-			},
-		},
+	expected := session_domain.CreateSessionParams{
+		UserID:    "user-1",
+		CreatedAt: now,
+		ExpiresAt: now.Add(cfg.SessionTTL),
+		TokenHash: "HashedToken",
+		UserAgent: userAgent,
+		IPAddress: ip,
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			repo := &mockRepo{}
-			token := &mockTokenHash{}
-			clock := &mockClock{}
+	clock.
+		On("NowUTC").
+		Return(now)
 
-			tt.setupMocks(repo, token, clock)
+	repo.
+		On(
+			"CreateSession",
+			mock.Anything,
+			expected,
+		).
+		Return(nil)
 
-			svc := New(clock, repo, token, cfg)
+	svc := New(clock, repo, token, cfg)
 
-			session, err := svc.CreateSession(
-				context.Background(),
-				"user-1",
-				userAgent,
-				ip,
-			)
+	session, err := svc.CreateSession(
+		context.Background(),
+		"user-1",
+		userAgent,
+		ip,
+	)
+	assert.NoError(t, err)
+	assert.NotNil(t, session)
+	assert.Equal(
+		t,
+		"RawToken",
+		session.RawToken,
+	)
+	assert.Equal(
+		t,
+		now.Add(cfg.SessionTTL),
+		session.ExpiresAt,
+	)
+	repo.AssertExpectations(t)
+	token.AssertExpectations(t)
+	clock.AssertExpectations(t)
+}
 
-			if tt.wantErr != nil {
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, tt.wantErr)
-				return
+var errGenerateToken = errors.New("err generate token")
 
-			}
+func TestCreateSession_TokenError(t *testing.T) {
+	token := &mockTokenHash{}
+	clock := &mockClock{}
+	repo := &mockRepo{}
 
-			assert.Equal(t, "RawToken", session.RawToken)
-
-			assert.Equal(
-				t,
-				now.Add(cfg.SessionTTL),
-				session.ExpiresAt,
-			)
-
-			assert.NoError(t, err)
-			assert.NotNil(t, session)
-		})
+	cfg := config.SessionConfig{
+		SessionTTL:              7 * 24 * time.Hour,
+		SessionRefreshThreshold: 24 * time.Hour,
+		AbsoluteSessionTTL:      14 * 24 * time.Hour,
 	}
+
+	token.On("GenerateSessionToken").Return("", errGenerateToken)
+
+	svc := New(clock, repo, token, cfg)
+
+	session, err := svc.CreateSession(
+		context.Background(),
+		"user-1",
+		"mobile",
+		"12345",
+	)
+
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, errGenerateToken)
+	assert.Nil(t, session)
+
+	token.AssertCalled(
+		t,
+		"GenerateSessionToken",
+	)
+	token.AssertNotCalled(
+		t,
+		"Hash",
+		mock.Anything,
+	)
+	clock.AssertNotCalled(
+		t,
+		"NowUTC",
+	)
+	repo.AssertNotCalled(
+		t,
+		"CreateSession",
+		mock.Anything,
+		mock.Anything,
+	)
+}
+
+var ErrCreateSession = errors.New("error create session")
+
+func TestCreateSession_CreateSessionError(t *testing.T) {
+	cfg := config.SessionConfig{
+		SessionTTL:              7 * 24 * time.Hour,
+		AbsoluteSessionTTL:      14 * 24 * time.Hour,
+		SessionRefreshThreshold: 24 * time.Hour,
+	}
+
+	token := &mockTokenHash{}
+	clock := &mockClock{}
+	repo := &mockRepo{}
+
+	token.On("GenerateSessionToken").Return("RawToken", nil)
+	token.On("Hash", "RawToken").Return("HashedToken")
+
+	clock.On("NowUTC").Return(now)
+
+	repo.On("CreateSession", mock.Anything, mock.Anything).Return(ErrCreateSession)
+
+	svc := New(clock, repo, token, cfg)
+
+	session, err := svc.CreateSession(
+		context.Background(),
+		"user-1",
+		"mobile",
+		"12345",
+	)
+
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrCreateSession)
+	assert.Nil(t, session)
+
+	repo.AssertExpectations(t)
+	token.AssertExpectations(t)
+	clock.AssertExpectations(t)
 }

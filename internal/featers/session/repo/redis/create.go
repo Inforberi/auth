@@ -11,7 +11,7 @@ import (
 
 func (s *SessionRepo) CreateSession(
 	ctx context.Context,
-	sessionParams CreateSessionParams,
+	sessionParams session_domain.CreateSessionParams,
 ) error {
 
 	sessionKey := sessionKey(sessionParams.TokenHash)

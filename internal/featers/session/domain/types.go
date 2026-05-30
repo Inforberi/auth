@@ -19,3 +19,12 @@ type ValidateSession struct {
 	ExpiresAt time.Time     `json:"expiresAt"`
 	Extended  bool
 }
+
+type CreateSessionParams struct {
+	UserID    domain.UserID
+	CreatedAt time.Time
+	ExpiresAt time.Time
+	TokenHash string
+	UserAgent string
+	IPAddress string
+}

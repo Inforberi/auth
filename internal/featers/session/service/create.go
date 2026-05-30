@@ -5,14 +5,14 @@ import (
 	"fmt"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
-	session_redis "github.com/Inforberi/financial-intelligence/internal/featers/session/repo/redis"
+	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 )
 
 func (s *SessionService) CreateSession(ctx context.Context, userID domain.UserID, userAgent, ip string) (*Session, error) {
 	// generate raw token
 	rawToken, err := s.token.GenerateSessionToken()
 	if err != nil {
-		return &Session{}, err
+		return nil, err
 	}
 
 	// hash token
@@ -25,7 +25,7 @@ func (s *SessionService) CreateSession(ctx context.Context, userID domain.UserID
 	// save session in db
 	err = s.repo.CreateSession(
 		ctx,
-		session_redis.CreateSessionParams{
+		session_domain.CreateSessionParams{
 			UserID:    userID,
 			CreatedAt: now,
 			ExpiresAt: expiresAt,
@@ -34,7 +34,7 @@ func (s *SessionService) CreateSession(ctx context.Context, userID domain.UserID
 			IPAddress: ip,
 		})
 	if err != nil {
-		return &Session{}, fmt.Errorf("service create session %w", err)
+		return nil, fmt.Errorf("service create session %w", err)
 	}
 
 	// return raw token

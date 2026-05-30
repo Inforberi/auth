@@ -5,7 +5,6 @@ import (
 	"time"
 
 	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
-	session_redis "github.com/Inforberi/financial-intelligence/internal/featers/session/repo/redis"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -19,7 +18,7 @@ func (m *mockRepo) FindSession(ctx context.Context, tokenHash string) (*session_
 
 func (m *mockRepo) CreateSession(
 	ctx context.Context,
-	sessionParams session_redis.CreateSessionParams,
+	sessionParams session_domain.CreateSessionParams,
 ) error {
 	args := m.Called(ctx, sessionParams)
 	return args.Error(0)
