@@ -4,25 +4,15 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
-	"github.com/Inforberi/financial-intelligence/internal/core/config"
 	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-var now = time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
-
 func TestCreateSession_Success(t *testing.T) {
 	userAgent := "mobile"
 	ip := "12345"
-
-	cfg := config.SessionConfig{
-		SessionTTL:              7 * 24 * time.Hour,
-		SessionRefreshThreshold: 24 * time.Hour,
-		AbsoluteSessionTTL:      14 * 24 * time.Hour,
-	}
 
 	repo := &mockRepo{}
 	token := &mockTokenHash{}
@@ -89,12 +79,6 @@ func TestCreateSession_TokenError(t *testing.T) {
 	clock := &mockClock{}
 	repo := &mockRepo{}
 
-	cfg := config.SessionConfig{
-		SessionTTL:              7 * 24 * time.Hour,
-		SessionRefreshThreshold: 24 * time.Hour,
-		AbsoluteSessionTTL:      14 * 24 * time.Hour,
-	}
-
 	token.On("GenerateSessionToken").Return("", errGenerateToken)
 
 	svc := New(clock, repo, token, cfg)
@@ -134,12 +118,6 @@ func TestCreateSession_TokenError(t *testing.T) {
 var ErrCreateSession = errors.New("error create session")
 
 func TestCreateSession_CreateSessionError(t *testing.T) {
-	cfg := config.SessionConfig{
-		SessionTTL:              7 * 24 * time.Hour,
-		AbsoluteSessionTTL:      14 * 24 * time.Hour,
-		SessionRefreshThreshold: 24 * time.Hour,
-	}
-
 	token := &mockTokenHash{}
 	clock := &mockClock{}
 	repo := &mockRepo{}

@@ -4,15 +4,28 @@ import (
 	"context"
 	"time"
 
+	"github.com/Inforberi/financial-intelligence/internal/core/config"
 	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 	"github.com/stretchr/testify/mock"
 )
+
+var now = time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+var cfg = config.SessionConfig{
+	SessionTTL:              7 * 24 * time.Hour,
+	SessionRefreshThreshold: 24 * time.Hour,
+	AbsoluteSessionTTL:      14 * 24 * time.Hour,
+}
 
 // mock repo
 type mockRepo struct{ mock.Mock }
 
 func (m *mockRepo) FindSession(ctx context.Context, tokenHash string) (*session_domain.Session, error) {
 	args := m.Called(ctx, tokenHash)
+
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
 	return args.Get(0).(*session_domain.Session), args.Error(1)
 }
 
