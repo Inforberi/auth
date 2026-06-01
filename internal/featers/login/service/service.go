@@ -2,9 +2,9 @@ package login_service
 
 import (
 	"context"
+	"time"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
-	"github.com/Inforberi/financial-intelligence/internal/core/infra/clock"
 	login_domain "github.com/Inforberi/financial-intelligence/internal/featers/login/domain"
 	session_service "github.com/Inforberi/financial-intelligence/internal/featers/session/service"
 )
@@ -21,14 +21,18 @@ type hasher interface {
 	Compare(password string, encodedHash string) error
 }
 
+type clock interface {
+	NowUTC() time.Time
+}
+
 type LoginService struct {
 	repo    loginRepo
 	session session
 	hash    hasher
-	now     clock.UTCClock
+	now     clock
 }
 
-func New(repo loginRepo, session session, hash hasher, now clock.UTCClock) *LoginService {
+func New(repo loginRepo, session session, hash hasher, now clock) *LoginService {
 	return &LoginService{
 		repo:    repo,
 		session: session,

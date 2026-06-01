@@ -17,7 +17,7 @@ type sessionRepo interface {
 	UpdateSession(ctx context.Context, tokenHash string, session *session_domain.Session, ttl time.Duration) error
 }
 
-type сlock interface {
+type clock interface {
 	NowUTC() time.Time
 }
 
@@ -32,13 +32,13 @@ type Session struct {
 }
 
 type SessionService struct {
-	now   сlock
+	now   clock
 	repo  sessionRepo
 	token tokenManager
 	cfg   config.SessionConfig
 }
 
-func New(now сlock, repo sessionRepo, token tokenManager, cfg config.SessionConfig) *SessionService {
+func New(now clock, repo sessionRepo, token tokenManager, cfg config.SessionConfig) *SessionService {
 	return &SessionService{
 		now:   now,
 		repo:  repo,
