@@ -35,7 +35,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/login_http.LoginByEmailRequest"
+                            "$ref": "#/definitions/password_http.LoginByEmailRequest"
                         }
                     }
                 ],
@@ -43,7 +43,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/login_http.LoginByEmailResponse"
+                            "$ref": "#/definitions/password_http.LoginByEmailResponse"
                         }
                     },
                     "404": {
@@ -81,7 +81,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/register_http.RegisterByEmailRequest"
+                            "$ref": "#/definitions/password_http.RegisterRequest"
                         }
                     }
                 ],
@@ -89,7 +89,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/register_http.RegisterByEmailResponse"
+                            "$ref": "#/definitions/password_http.RegisterResponse"
                         }
                     },
                     "400": {
@@ -126,7 +126,7 @@ const docTemplate = `{
                 }
             }
         },
-        "login_http.LoginByEmailRequest": {
+        "password_http.LoginByEmailRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -137,7 +137,7 @@ const docTemplate = `{
                 }
             }
         },
-        "login_http.LoginByEmailResponse": {
+        "password_http.LoginByEmailResponse": {
             "type": "object",
             "properties": {
                 "status": {
@@ -145,7 +145,7 @@ const docTemplate = `{
                 }
             }
         },
-        "register_http.RegisterByEmailRequest": {
+        "password_http.RegisterRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -156,7 +156,7 @@ const docTemplate = `{
                 }
             }
         },
-        "register_http.RegisterByEmailResponse": {
+        "password_http.RegisterResponse": {
             "type": "object",
             "properties": {
                 "userID": {

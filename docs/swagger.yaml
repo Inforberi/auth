@@ -7,26 +7,26 @@ definitions:
       message:
         type: string
     type: object
-  login_http.LoginByEmailRequest:
+  password_http.LoginByEmailRequest:
     properties:
       email:
         type: string
       password:
         type: string
     type: object
-  login_http.LoginByEmailResponse:
+  password_http.LoginByEmailResponse:
     properties:
       status:
         type: string
     type: object
-  register_http.RegisterByEmailRequest:
+  password_http.RegisterRequest:
     properties:
       email:
         type: string
       password:
         type: string
     type: object
-  register_http.RegisterByEmailResponse:
+  password_http.RegisterResponse:
     properties:
       userID:
         type: string
@@ -49,14 +49,14 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/login_http.LoginByEmailRequest'
+          $ref: '#/definitions/password_http.LoginByEmailRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/login_http.LoginByEmailResponse'
+            $ref: '#/definitions/password_http.LoginByEmailResponse'
         "404":
           description: Not Found
           schema:
@@ -79,14 +79,14 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/register_http.RegisterByEmailRequest'
+          $ref: '#/definitions/password_http.RegisterRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/register_http.RegisterByEmailResponse'
+            $ref: '#/definitions/password_http.RegisterResponse'
         "400":
           description: Bad Request
           schema:
