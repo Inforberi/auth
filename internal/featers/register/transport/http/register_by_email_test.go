@@ -18,7 +18,6 @@ import (
 
 func TestRegisterByEmail_Success(t *testing.T) {
 	service := &mockRegisterService{}
-	handler := New(service, zap.NewNop())
 
 	expiresAt := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
 	userID := domain.UserID("user-1")
@@ -50,6 +49,8 @@ func TestRegisterByEmail_Success(t *testing.T) {
 	req.RemoteAddr = "127.0.0.1:12345"
 
 	rr := httptest.NewRecorder()
+
+	handler := New(service, zap.NewNop())
 
 	handler.RegisterByEmail(rr, req)
 
