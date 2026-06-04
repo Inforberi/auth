@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/config"
+	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 	"github.com/stretchr/testify/mock"
 )
@@ -44,6 +45,21 @@ func (m *mockRepo) UpdateSession(
 	ttl time.Duration,
 ) error {
 	args := m.Called(ctx, tokenHash, session, ttl)
+	return args.Error(0)
+}
+
+func (m *mockRepo) DeleteSession(ctx context.Context, tokenHash string, userID domain.UserID) error {
+	args := m.Called(ctx, tokenHash, userID)
+	return args.Error(0)
+}
+
+func (m *mockRepo) DeleteAllSessions(ctx context.Context, userID domain.UserID) error {
+	args := m.Called(ctx, userID)
+	return args.Error(0)
+}
+
+func (m *mockRepo) DeleteAllSessionsExcept(ctx context.Context, userID domain.UserID, tokenHash string) error {
+	args := m.Called(ctx, userID, tokenHash)
 	return args.Error(0)
 }
 

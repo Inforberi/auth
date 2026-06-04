@@ -76,3 +76,8 @@ func (m *mockSession) CreateSession(
 
 	return session, args.Error(1)
 }
+
+func (m *mockSession) LogoutAllExcept(ctx context.Context, tokenHash string, userID domain.UserID) error {
+	args := m.Called(ctx, tokenHash, userID)
+	return args.Error(1)
+}

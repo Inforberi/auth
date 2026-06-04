@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/config"
+	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 )
 
@@ -15,6 +16,9 @@ type sessionRepo interface {
 	) error
 	FindSession(ctx context.Context, tokenHash string) (*session_domain.Session, error)
 	UpdateSession(ctx context.Context, tokenHash string, session *session_domain.Session, ttl time.Duration) error
+	DeleteSession(ctx context.Context, tokenHash string, userID domain.UserID) error
+	DeleteAllSessions(ctx context.Context, userID domain.UserID) error
+	DeleteAllSessionsExcept(ctx context.Context, userID domain.UserID, tokenHash string) error
 }
 
 type clock interface {

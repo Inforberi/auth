@@ -11,6 +11,7 @@ import (
 
 type session interface {
 	CreateSession(ctx context.Context, userID domain.UserID, userAgent, IP string) (*session_service.Session, error)
+	LogoutAllExcept(ctx context.Context, tokenHash string, userID domain.UserID) error
 }
 
 type passwordRepo interface {
