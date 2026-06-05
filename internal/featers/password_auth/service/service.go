@@ -18,6 +18,8 @@ type passwordRepo interface {
 	FindByEmail(ctx context.Context, email string) (*password_domain.FindByEmailResult, error)
 	ExistsByEmail(ctx context.Context, email string) (bool, error)
 	CreateUser(ctx context.Context, email, passwordHash string) (domain.UserID, error)
+	FindUserByUserID(ctx context.Context, userID domain.UserID) (*password_domain.FindUserPassword, error)
+	UpdatePasswordHash(ctx context.Context, userID domain.UserID, passwordHash string) error
 }
 
 type hasher interface {

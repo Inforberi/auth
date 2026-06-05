@@ -38,6 +38,16 @@ func (m *mockPasswordRepo) CreateUser(ctx context.Context, email, passwordHash s
 	return args.Get(0).(domain.UserID), args.Error(1)
 }
 
+func (m *mockPasswordRepo) FindUserByUserID(ctx context.Context, userID domain.UserID) (*password_domain.FindUserPassword, error) {
+	args := m.Called(ctx, userID)
+	return args.Get(0).(*password_domain.FindUserPassword), args.Error(1)
+}
+
+func (m *mockPasswordRepo) UpdatePasswordHash(ctx context.Context, userID domain.UserID, passwordHash string) error {
+	args := m.Called(ctx, userID, passwordHash)
+	return args.Error(0)
+}
+
 type mockHasher struct {
 	mock.Mock
 }
@@ -79,5 +89,5 @@ func (m *mockSession) CreateSession(
 
 func (m *mockSession) LogoutAllExcept(ctx context.Context, tokenHash string, userID domain.UserID) error {
 	args := m.Called(ctx, tokenHash, userID)
-	return args.Error(1)
+	return args.Error(0)
 }

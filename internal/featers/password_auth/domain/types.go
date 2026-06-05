@@ -11,6 +11,10 @@ type FindByEmailResult struct {
 	PasswordHash string
 }
 
+type FindUserPassword struct {
+	PasswordHash string
+}
+
 type LoginResult struct {
 	UserID    domain.UserID
 	Token     string
