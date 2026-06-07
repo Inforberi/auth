@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
+	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 	session_service "github.com/Inforberi/financial-intelligence/internal/featers/session/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -110,7 +111,7 @@ func TestRegister_ExistsByEmailError(t *testing.T) {
 		)
 
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, ErrEmailAlreadyExists)
+		assert.ErrorIs(t, err, password_domain.ErrEmailAlreadyExists)
 		assert.Nil(t, registerResult)
 
 		repo.AssertCalled(t, "ExistsByEmail", context.Background(), email)

@@ -3,6 +3,7 @@ package password_http
 import (
 	"context"
 
+	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 	"github.com/stretchr/testify/mock"
 )
@@ -38,4 +39,16 @@ func (m *mockPasswordService) Register(
 	}
 
 	return args.Get(0).(*password_domain.RegisterResult), args.Error(1)
+}
+
+func (m *mockPasswordService) ChangePassword(
+	ctx context.Context,
+	userID domain.UserID,
+	currentTokenHash string,
+	oldPassword string,
+	newPassword string,
+) error {
+	args := m.Called(ctx, userID, currentTokenHash, oldPassword, newPassword)
+
+	return args.Error(0)
 }

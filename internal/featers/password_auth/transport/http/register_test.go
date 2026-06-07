@@ -10,7 +10,6 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
-	password_service "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
@@ -158,7 +157,7 @@ func TestRegister_ServiceError(t *testing.T) {
 		).
 		Return(
 			nil,
-			password_service.ErrEmailAlreadyExists,
+			password_domain.ErrEmailAlreadyExists,
 		)
 
 	handler := New(service, zap.NewNop())

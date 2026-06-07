@@ -7,6 +7,21 @@ definitions:
       message:
         type: string
     type: object
+  password_http.LoginBadRequestError:
+    properties:
+      code:
+        enum:
+        - invalid_json
+        - email_required
+        - password_required
+        - invalid_email
+        - invalid_credentials
+        example: invalid_credentials
+        type: string
+      message:
+        example: invalid email or password
+        type: string
+    type: object
   password_http.LoginByEmailRequest:
     properties:
       email:
@@ -17,6 +32,17 @@ definitions:
   password_http.LoginByEmailResponse:
     properties:
       status:
+        type: string
+    type: object
+  password_http.LoginInternalError:
+    properties:
+      code:
+        enum:
+        - internal_error
+        example: internal_error
+        type: string
+      message:
+        example: internal error
         type: string
     type: object
   password_http.RegisterRequest:
@@ -57,14 +83,14 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/password_http.LoginByEmailResponse'
-        "404":
-          description: Not Found
+        "400":
+          description: Bad Request
           schema:
-            $ref: '#/definitions/httpx.ErrorResponse'
+            $ref: '#/definitions/password_http.LoginBadRequestError'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/httpx.ErrorResponse'
+            $ref: '#/definitions/password_http.LoginInternalError'
       summary: login by email
       tags:
       - Auth

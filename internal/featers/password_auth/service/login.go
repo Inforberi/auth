@@ -19,7 +19,7 @@ func (l *PasswordService) Login(ctx context.Context, input password_domain.Login
 	// check email in db
 	authData, err := l.repo.FindByEmail(ctx, email.String())
 	if err != nil {
-		if errors.Is(err, password_domain.ErrNotFound) {
+		if errors.Is(err, password_domain.ErrUserNotFound) {
 			return nil, password_domain.ErrInvalidEmailOrPassword
 		}
 		return nil, fmt.Errorf("FindByEmail: %w", err)

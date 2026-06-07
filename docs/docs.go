@@ -46,16 +46,16 @@ const docTemplate = `{
                             "$ref": "#/definitions/password_http.LoginByEmailResponse"
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httpx.ErrorResponse"
+                            "$ref": "#/definitions/password_http.LoginBadRequestError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httpx.ErrorResponse"
+                            "$ref": "#/definitions/password_http.LoginInternalError"
                         }
                     }
                 }
@@ -126,6 +126,26 @@ const docTemplate = `{
                 }
             }
         },
+        "password_http.LoginBadRequestError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "enum": [
+                        "invalid_json",
+                        "email_required",
+                        "password_required",
+                        "invalid_email",
+                        "invalid_credentials"
+                    ],
+                    "example": "invalid_credentials"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "invalid email or password"
+                }
+            }
+        },
         "password_http.LoginByEmailRequest": {
             "type": "object",
             "properties": {
@@ -142,6 +162,22 @@ const docTemplate = `{
             "properties": {
                 "status": {
                     "type": "string"
+                }
+            }
+        },
+        "password_http.LoginInternalError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "enum": [
+                        "internal_error"
+                    ],
+                    "example": "internal_error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "internal error"
                 }
             }
         },

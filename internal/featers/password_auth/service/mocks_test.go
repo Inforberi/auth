@@ -40,6 +40,9 @@ func (m *mockPasswordRepo) CreateUser(ctx context.Context, email, passwordHash s
 
 func (m *mockPasswordRepo) FindUserByUserID(ctx context.Context, userID domain.UserID) (*password_domain.FindUserPassword, error) {
 	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).(*password_domain.FindUserPassword), args.Error(1)
 }
 

@@ -8,6 +8,11 @@ import (
 	"go.uber.org/zap"
 )
 
+// only for docs
+type RegisterBadRequestError struct{
+	code string `json:"code" enums:"invalid_json,email_required,errPasswordRequired,"`
+}
+
 type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -34,8 +39,8 @@ func (h *PasswordHandler) Register(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(
 			w,
 			http.StatusBadRequest,
-			CodeInvalidJSON,
-			"Invalid JSON",
+			errInvalidJSON.code,
+			errInvalidJSON.message,
 		)
 		return
 	}
@@ -44,8 +49,8 @@ func (h *PasswordHandler) Register(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(
 			w,
 			http.StatusBadRequest,
-			CodeEmailRequired,
-			"Email required",
+			errEmailRequired.code,
+			errEmailRequired.message,
 		)
 		return
 	}
@@ -54,19 +59,14 @@ func (h *PasswordHandler) Register(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(
 			w,
 			http.StatusBadRequest,
-			CodePasswordRequired,
-			"Password required",
+			errPasswordRequired.code,
+			errPasswordRequired.message,
 		)
 		return
 	}
 
 	userAgent := httpx.UserAgent(r)
 	ip := httpx.IP(r)
-
-	logger := h.log.With(
-		zap.String("ip", ip),
-		zap.String("user_agent", userAgent),
-	)
 
 	register, err := h.service.Register(
 		r.Context(),
@@ -77,25 +77,11 @@ func (h *PasswordHandler) Register(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		errs := mapError(err)
-
-		if errs.Status >= 500 {
-			logger.Error(
-				"register failed",
-				zap.Error(err),
-			)
-		} else {
-			logger.Warn(
-				"register failed",
-				zap.Error(err),
-			)
-		}
-
-		httpx.Error(
+		h.respondError(
 			w,
-			errs.Status,
-			errs.Code,
-			errs.Message,
+			r,
+			err,
+			"register",
 		)
 		return
 	}
@@ -106,7 +92,7 @@ func (h *PasswordHandler) Register(w http.ResponseWriter, r *http.Request) {
 		register.ExpiresAt,
 	)
 
-	logger.Info("user register in", zap.String("user_id", string(register.UserID)))
+	h.log.Info("user register in", zap.String("user_id", string(register.UserID)))
 
 	httpx.JSON(
 		w,

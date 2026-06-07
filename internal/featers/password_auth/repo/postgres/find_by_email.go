@@ -24,7 +24,7 @@ func (l *PasswordRepo) FindByEmail(ctx context.Context, email string) (*domain_p
 	err := l.db.QueryRow(ctx, sql, email).Scan(&userID, &passwordHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("FindByEmail: %w", domain_password_auth.ErrNotFound)
+			return nil, fmt.Errorf("FindByEmail: %w", domain_password_auth.ErrUserNotFound)
 		}
 		return nil, fmt.Errorf("repo find by email %w", err)
 	}

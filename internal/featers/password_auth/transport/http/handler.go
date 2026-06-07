@@ -3,6 +3,7 @@ package password_http
 import (
 	"context"
 
+	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 	"go.uber.org/zap"
 )
@@ -16,6 +17,13 @@ type PasswordService interface {
 		userAgent,
 		IP string,
 	) (*password_domain.RegisterResult, error)
+	ChangePassword(
+		ctx context.Context,
+		userID domain.UserID,
+		currentTokenHash string,
+		oldPassword string,
+		newPassword string,
+	) error
 }
 
 type PasswordHandler struct {

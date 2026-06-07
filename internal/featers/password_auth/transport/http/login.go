@@ -8,6 +8,17 @@ import (
 	"go.uber.org/zap"
 )
 
+// only for docs
+type LoginBadRequestError struct {
+	Code    string `json:"code" enums:"invalid_json,email_required,password_required,invalid_email,invalid_credentials" example:"invalid_credentials"`
+	Message string `json:"message" example:"invalid email or password"`
+}
+type LoginInternalError struct {
+	Code    string `json:"code" enums:"internal_error" example:"internal_error"`
+	Message string `json:"message" example:"internal error"`
+}
+
+// real
 type LoginByEmailRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -24,8 +35,8 @@ type LoginByEmailResponse struct {
 // @Produce json
 // @Param body body LoginByEmailRequest true "login payload"
 // @Success 200 {object} LoginByEmailResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Failure 500 {object} httpx.ErrorResponse
+// @Failure 400 {object} password_http.LoginBadRequestError
+// @Failure 500 {object} password_http.LoginInternalError
 // @Router /auth/login/email [post]
 func (h *PasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 	var input LoginByEmailRequest
@@ -33,8 +44,8 @@ func (h *PasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(
 			w,
 			http.StatusBadRequest,
-			CodeInvalidJSON,
-			"Invalid JSON",
+			errInvalidJSON.code,
+			errInvalidJSON.message,
 		)
 		return
 	}
@@ -43,8 +54,8 @@ func (h *PasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(
 			w,
 			http.StatusBadRequest,
-			CodeEmailRequired,
-			"Email required",
+			errEmailRequired.code,
+			errEmailRequired.message,
 		)
 		return
 	}
@@ -53,8 +64,8 @@ func (h *PasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(
 			w,
 			http.StatusBadRequest,
-			CodePasswordRequired,
-			"Password required",
+			errPasswordRequired.code,
+			errPasswordRequired.message,
 		)
 		return
 	}
@@ -69,26 +80,8 @@ func (h *PasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 		IP:        ip,
 	})
 
-	logger := h.log.With(
-		zap.String("ip", ip),
-		zap.String("user_agent", userAgent),
-	)
-
 	if err != nil {
-		errs := mapError(err)
-
-		if errs.Status >= 500 {
-			logger.Error("login failed", zap.Error(err))
-		} else {
-			logger.Warn("login failed", zap.Error(err))
-		}
-
-		httpx.Error(
-			w,
-			errs.Status,
-			errs.Code,
-			errs.Message,
-		)
+		h.respondError(w, r, err, "login")
 		return
 	}
 
@@ -98,7 +91,7 @@ func (h *PasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 		login.ExpiresAt,
 	)
 
-	logger.Info("user logged in", zap.String("user_id", string(login.UserID)))
+	h.log.Info("user logged in", zap.String("user_id", string(login.UserID)))
 
 	httpx.JSON(
 		w,
