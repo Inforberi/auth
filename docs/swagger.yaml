@@ -1,12 +1,5 @@
 basePath: /api/v1/
 definitions:
-  httpx.ErrorResponse:
-    properties:
-      code:
-        type: string
-      message:
-        type: string
-    type: object
   password_http.LoginBadRequestError:
     properties:
       code:
@@ -35,6 +28,47 @@ definitions:
         type: string
     type: object
   password_http.LoginInternalError:
+    properties:
+      code:
+        enum:
+        - internal_error
+        example: internal_error
+        type: string
+      message:
+        example: internal error
+        type: string
+    type: object
+  password_http.RegisterBadRequestError:
+    properties:
+      code:
+        enum:
+        - invalid_json
+        - email_required
+        - password_required
+        - invalid_email
+        - password_too_short
+        - password_too_long
+        - password_no_letter
+        - password_no_digit
+        - password_no_upper_letter
+        example: password_too_short
+        type: string
+      message:
+        example: password too short
+        type: string
+    type: object
+  password_http.RegisterConflictError:
+    properties:
+      code:
+        enum:
+        - email_already_exists
+        example: email_already_exists
+        type: string
+      message:
+        example: email already exists
+        type: string
+    type: object
+  password_http.RegisterInternalError:
     properties:
       code:
         enum:
@@ -116,15 +150,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httpx.ErrorResponse'
+            $ref: '#/definitions/password_http.RegisterBadRequestError'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/httpx.ErrorResponse'
+            $ref: '#/definitions/password_http.RegisterConflictError'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/httpx.ErrorResponse'
+            $ref: '#/definitions/password_http.RegisterInternalError'
       summary: Register by email
       tags:
       - Auth

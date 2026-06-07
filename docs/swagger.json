@@ -92,19 +92,19 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httpx.ErrorResponse"
+                            "$ref": "#/definitions/password_http.RegisterBadRequestError"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/httpx.ErrorResponse"
+                            "$ref": "#/definitions/password_http.RegisterConflictError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/httpx.ErrorResponse"
+                            "$ref": "#/definitions/password_http.RegisterInternalError"
                         }
                     }
                 }
@@ -112,17 +112,6 @@
         }
     },
     "definitions": {
-        "httpx.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
         "password_http.LoginBadRequestError": {
             "type": "object",
             "properties": {
@@ -163,6 +152,62 @@
             }
         },
         "password_http.LoginInternalError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "enum": [
+                        "internal_error"
+                    ],
+                    "example": "internal_error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "internal error"
+                }
+            }
+        },
+        "password_http.RegisterBadRequestError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "enum": [
+                        "invalid_json",
+                        "email_required",
+                        "password_required",
+                        "invalid_email",
+                        "password_too_short",
+                        "password_too_long",
+                        "password_no_letter",
+                        "password_no_digit",
+                        "password_no_upper_letter"
+                    ],
+                    "example": "password_too_short"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "password too short"
+                }
+            }
+        },
+        "password_http.RegisterConflictError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "enum": [
+                        "email_already_exists"
+                    ],
+                    "example": "email_already_exists"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "email already exists"
+                }
+            }
+        },
+        "password_http.RegisterInternalError": {
             "type": "object",
             "properties": {
                 "code": {
