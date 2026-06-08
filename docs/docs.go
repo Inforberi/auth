@@ -47,15 +47,15 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "codes: invalid_json, email_required, password_required, invalid_email, invalid_credentials",
                         "schema": {
-                            "$ref": "#/definitions/password_http.LoginBadRequestError"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "code: internal_error",
                         "schema": {
-                            "$ref": "#/definitions/password_http.LoginInternalError"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     }
                 }
@@ -63,7 +63,7 @@ const docTemplate = `{
         },
         "/auth/register/email": {
             "post": {
-                "description": "Creates a new user account using email/password",
+                "description": "Creates a new user account using email/password.",
                 "consumes": [
                     "application/json"
                 ],
@@ -93,21 +93,21 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "codes: invalid_json, email_required, password_required, invalid_email, password_too_short, password_too_long, password_no_letter, password_no_digit, password_no_upper_letter",
                         "schema": {
-                            "$ref": "#/definitions/password_http.RegisterBadRequestError"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "409": {
-                        "description": "Conflict",
+                        "description": "code: email_already_exists",
                         "schema": {
-                            "$ref": "#/definitions/password_http.RegisterConflictError"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "code: internal_error",
                         "schema": {
-                            "$ref": "#/definitions/password_http.RegisterInternalError"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     }
                 }
@@ -115,23 +115,16 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "password_http.LoginBadRequestError": {
+        "httpx.ErrorResponse": {
             "type": "object",
             "properties": {
                 "code": {
                     "type": "string",
-                    "enum": [
-                        "invalid_json",
-                        "email_required",
-                        "password_required",
-                        "invalid_email",
-                        "invalid_credentials"
-                    ],
-                    "example": "invalid_credentials"
+                    "example": "invalid_json"
                 },
                 "message": {
                     "type": "string",
-                    "example": "invalid email or password"
+                    "example": "invalid json"
                 }
             }
         },
@@ -151,78 +144,6 @@ const docTemplate = `{
             "properties": {
                 "status": {
                     "type": "string"
-                }
-            }
-        },
-        "password_http.LoginInternalError": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string",
-                    "enum": [
-                        "internal_error"
-                    ],
-                    "example": "internal_error"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "internal error"
-                }
-            }
-        },
-        "password_http.RegisterBadRequestError": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string",
-                    "enum": [
-                        "invalid_json",
-                        "email_required",
-                        "password_required",
-                        "invalid_email",
-                        "password_too_short",
-                        "password_too_long",
-                        "password_no_letter",
-                        "password_no_digit",
-                        "password_no_upper_letter"
-                    ],
-                    "example": "password_too_short"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "password too short"
-                }
-            }
-        },
-        "password_http.RegisterConflictError": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string",
-                    "enum": [
-                        "email_already_exists"
-                    ],
-                    "example": "email_already_exists"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "email already exists"
-                }
-            }
-        },
-        "password_http.RegisterInternalError": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string",
-                    "enum": [
-                        "internal_error"
-                    ],
-                    "example": "internal_error"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "internal error"
                 }
             }
         },

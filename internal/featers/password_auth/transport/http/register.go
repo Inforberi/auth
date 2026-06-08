@@ -29,21 +29,6 @@ var registerClientErrors = []clientError{
 	{domain.ErrPasswordNoUpper, http.StatusBadRequest, errPasswordNoUpper},
 }
 
-type RegisterBadRequestError struct {
-	Code    string `json:"code" enums:"invalid_json,email_required,password_required,invalid_email,password_too_short,password_too_long,password_no_letter,password_no_digit,password_no_upper_letter" example:"password_too_short"`
-	Message string `json:"message" example:"password too short"`
-}
-
-type RegisterConflictError struct {
-	Code    string `json:"code" enums:"email_already_exists" example:"email_already_exists"`
-	Message string `json:"message" example:"email already exists"`
-}
-
-type RegisterInternalError struct {
-	Code    string `json:"code" enums:"internal_error" example:"internal_error"`
-	Message string `json:"message" example:"internal error"`
-}
-
 type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -54,15 +39,15 @@ type RegisterResponse struct {
 }
 
 // @Summary Register by email
-// @Description Creates a new user account using email/password
+// @Description Creates a new user account using email/password.
 // @Tags Auth
 // @Accept json
 // @Produce json
 // @Param body body RegisterRequest true "Register payload"
 // @Success 201 {object} RegisterResponse
-// @Failure 400 {object} password_http.RegisterBadRequestError
-// @Failure 409 {object} password_http.RegisterConflictError
-// @Failure 500 {object} password_http.RegisterInternalError
+// @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, email_required, password_required, invalid_email, password_too_short, password_too_long, password_no_letter, password_no_digit, password_no_upper_letter"
+// @Failure 409 {object} httpx.ErrorResponse "code: email_already_exists"
+// @Failure 500 {object} httpx.ErrorResponse "code: internal_error"
 // @Router /auth/register/email [post]
 func (h *PasswordHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var input RegisterRequest

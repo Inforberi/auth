@@ -26,16 +26,6 @@ var loginClientErrors = []clientError{
 	},
 }
 
-type LoginBadRequestError struct {
-	Code    string `json:"code" enums:"invalid_json,email_required,password_required,invalid_email,invalid_credentials" example:"invalid_credentials"`
-	Message string `json:"message" example:"invalid email or password"`
-}
-
-type LoginInternalError struct {
-	Code    string `json:"code" enums:"internal_error" example:"internal_error"`
-	Message string `json:"message" example:"internal error"`
-}
-
 type LoginByEmailRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -52,8 +42,8 @@ type LoginByEmailResponse struct {
 // @Produce json
 // @Param body body LoginByEmailRequest true "login payload"
 // @Success 200 {object} LoginByEmailResponse
-// @Failure 400 {object} password_http.LoginBadRequestError
-// @Failure 500 {object} password_http.LoginInternalError
+// @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, email_required, password_required, invalid_email, invalid_credentials"
+// @Failure 500 {object} httpx.ErrorResponse "code: internal_error"
 // @Router /auth/login/email [post]
 func (h *PasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 	var input LoginByEmailRequest

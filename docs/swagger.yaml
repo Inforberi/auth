@@ -1,18 +1,12 @@
 basePath: /api/v1/
 definitions:
-  password_http.LoginBadRequestError:
+  httpx.ErrorResponse:
     properties:
       code:
-        enum:
-        - invalid_json
-        - email_required
-        - password_required
-        - invalid_email
-        - invalid_credentials
-        example: invalid_credentials
+        example: invalid_json
         type: string
       message:
-        example: invalid email or password
+        example: invalid json
         type: string
     type: object
   password_http.LoginByEmailRequest:
@@ -25,58 +19,6 @@ definitions:
   password_http.LoginByEmailResponse:
     properties:
       status:
-        type: string
-    type: object
-  password_http.LoginInternalError:
-    properties:
-      code:
-        enum:
-        - internal_error
-        example: internal_error
-        type: string
-      message:
-        example: internal error
-        type: string
-    type: object
-  password_http.RegisterBadRequestError:
-    properties:
-      code:
-        enum:
-        - invalid_json
-        - email_required
-        - password_required
-        - invalid_email
-        - password_too_short
-        - password_too_long
-        - password_no_letter
-        - password_no_digit
-        - password_no_upper_letter
-        example: password_too_short
-        type: string
-      message:
-        example: password too short
-        type: string
-    type: object
-  password_http.RegisterConflictError:
-    properties:
-      code:
-        enum:
-        - email_already_exists
-        example: email_already_exists
-        type: string
-      message:
-        example: email already exists
-        type: string
-    type: object
-  password_http.RegisterInternalError:
-    properties:
-      code:
-        enum:
-        - internal_error
-        example: internal_error
-        type: string
-      message:
-        example: internal error
         type: string
     type: object
   password_http.RegisterRequest:
@@ -118,13 +60,14 @@ paths:
           schema:
             $ref: '#/definitions/password_http.LoginByEmailResponse'
         "400":
-          description: Bad Request
+          description: 'codes: invalid_json, email_required, password_required, invalid_email,
+            invalid_credentials'
           schema:
-            $ref: '#/definitions/password_http.LoginBadRequestError'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
-          description: Internal Server Error
+          description: 'code: internal_error'
           schema:
-            $ref: '#/definitions/password_http.LoginInternalError'
+            $ref: '#/definitions/httpx.ErrorResponse'
       summary: login by email
       tags:
       - Auth
@@ -132,7 +75,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates a new user account using email/password
+      description: Creates a new user account using email/password.
       parameters:
       - description: Register payload
         in: body
@@ -148,17 +91,19 @@ paths:
           schema:
             $ref: '#/definitions/password_http.RegisterResponse'
         "400":
-          description: Bad Request
+          description: 'codes: invalid_json, email_required, password_required, invalid_email,
+            password_too_short, password_too_long, password_no_letter, password_no_digit,
+            password_no_upper_letter'
           schema:
-            $ref: '#/definitions/password_http.RegisterBadRequestError'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "409":
-          description: Conflict
+          description: 'code: email_already_exists'
           schema:
-            $ref: '#/definitions/password_http.RegisterConflictError'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
-          description: Internal Server Error
+          description: 'code: internal_error'
           schema:
-            $ref: '#/definitions/password_http.RegisterInternalError'
+            $ref: '#/definitions/httpx.ErrorResponse'
       summary: Register by email
       tags:
       - Auth
