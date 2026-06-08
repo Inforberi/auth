@@ -16,7 +16,8 @@ type Session struct {
 
 type ValidateSession struct {
 	UserID    domain.UserID `json:"userId"`
-	ExpiresAt time.Time     `json:"expiresAt"`
+	TokenHash string
+	ExpiresAt time.Time `json:"expiresAt"`
 	Extended  bool
 }
 

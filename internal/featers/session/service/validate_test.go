@@ -39,6 +39,7 @@ func TestValidateSession_SuccessNoExtended(t *testing.T) {
 		t,
 		domain.UserID("user-1"),
 		session.UserID,
+		session.TokenHash,
 	)
 
 	assert.Equal(
