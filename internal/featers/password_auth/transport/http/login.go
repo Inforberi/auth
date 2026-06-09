@@ -89,6 +89,6 @@ func (h *PasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.SetSessionCookie(w, login.Token, login.ExpiresAt)
-	h.log.Info("user logged in", zap.String("user_id", string(login.UserID)))
 	httpx.JSON(w, http.StatusOK, LoginByEmailResponse{Status: "ok"})
+	h.log.Info("user logged in", zap.String("user_id", string(login.UserID)))
 }

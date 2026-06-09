@@ -4,11 +4,33 @@ import (
 	"net/http"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/httpx"
+	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 )
 
 var (
-	errConfirmPassword = errorBody{"not_confirm_password", "password not confirmed"}
+	errConfirmPassword        = errorBody{"not_confirm_password", "password not confirmed"}
+	errInvalidEmailOrPassword = errorBody{"invalid_email_or_password", "invalid email or password"}
+	errSamePassword           = errorBody{"same_password", "same password"}
+	errNotFound               = errorBody{"not_found", "not found"}
 )
+
+var changePasswordErrors = []clientError{
+	{
+		password_domain.ErrInvalidEmailOrPassword,
+		http.StatusBadRequest,
+		errInvalidEmailOrPassword,
+	},
+	{
+		password_domain.ErrSamePassword,
+		http.StatusBadRequest,
+		errSamePassword,
+	},
+	{
+		password_domain.ErrNotFound,
+		http.StatusNotFound,
+		errNotFound,
+	},
+}
 
 type ChangePasswordRequest struct {
 	OldPassword     string `json:"oldPassword"`
@@ -16,8 +38,15 @@ type ChangePasswordRequest struct {
 	ConfirmPassword string `json:"confirmPassword"`
 }
 
+type ChangePasswordResponse struct {
+	Status string
+}
+
 func (p *PasswordHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
-	//TODO get userId and token from context from middleware
+	auth, ok := httpx.GetAuthContext(r.Context())
+	if !ok {
+		panic("get auth form context")
+	}
 
 	// decode json
 	var input ChangePasswordRequest
@@ -43,8 +72,22 @@ func (p *PasswordHandler) ChangePassword(w http.ResponseWriter, r *http.Request)
 	}
 
 	// call service
-	// p.service.ChangePassword(r.Context())
+	err := p.service.ChangePassword(
+		r.Context(),
+		auth.UserID,
+		auth.TokenHash,
+		input.OldPassword,
+		input.NewPassword,
+	)
+	if err != nil {
+		p.respondError(w, r, err, "change password", changePasswordErrors)
+		return
+	}
 
-	// map error
-
+	httpx.JSON(
+		w,
+		http.StatusOK,
+		ChangePasswordResponse{Status: "ok"},
+	)
+	p.log.Info("user change password")
 }
