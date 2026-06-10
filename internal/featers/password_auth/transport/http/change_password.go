@@ -1,6 +1,7 @@
 package password_http
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/httpx"
@@ -8,10 +9,19 @@ import (
 )
 
 var (
-	errConfirmPassword        = errorBody{"not_confirm_password", "password not confirmed"}
+	errConfirmPassword        = errorBody{"password_mismatch", "passwords do not match"}
 	errInvalidEmailOrPassword = errorBody{"invalid_email_or_password", "invalid email or password"}
 	errSamePassword           = errorBody{"same_password", "same password"}
-	errNotFound               = errorBody{"not_found", "not found"}
+	errEmptyNewPassword       = errorBody{"empty_new_password", "new password cannot be empty"}
+	errEmptyOldPassword       = errorBody{"empty_old_password", "old password cannot be empty"}
+	errEmptyConfirmPassword   = errorBody{"empty_confirm_password", "confirmation password cannot be empty"}
+)
+
+var (
+	ErrEmptyOldPassword     = errors.New("empty_old_password")
+	ErrEmptyNewPassword     = errors.New("empty_new_password")
+	ErrEmptyConfirmPassword = errors.New("empty_confirm_password")
+	ErrPasswordMismatch     = errors.New("password_mismatch")
 )
 
 var changePasswordErrors = []clientError{
@@ -30,6 +40,26 @@ var changePasswordErrors = []clientError{
 		http.StatusNotFound,
 		errNotFound,
 	},
+	{
+		ErrEmptyNewPassword,
+		http.StatusBadRequest,
+		errEmptyNewPassword,
+	},
+	{
+		ErrEmptyOldPassword,
+		http.StatusBadRequest,
+		errEmptyOldPassword,
+	},
+	{
+		ErrEmptyConfirmPassword,
+		http.StatusBadRequest,
+		errEmptyConfirmPassword,
+	},
+	{
+		ErrPasswordMismatch,
+		http.StatusBadRequest,
+		errConfirmPassword,
+	},
 }
 
 type ChangePasswordRequest struct {
@@ -40,6 +70,20 @@ type ChangePasswordRequest struct {
 
 type ChangePasswordResponse struct {
 	Status string
+}
+
+func validateChangePasswordInput(input ChangePasswordRequest) error {
+	switch {
+	case input.OldPassword == "":
+		return ErrEmptyOldPassword
+	case input.NewPassword == "":
+		return ErrEmptyNewPassword
+	case input.ConfirmPassword == "":
+		return ErrEmptyConfirmPassword
+	case input.NewPassword != input.ConfirmPassword:
+		return ErrPasswordMismatch
+	}
+	return nil
 }
 
 func (p *PasswordHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
@@ -60,33 +104,8 @@ func (p *PasswordHandler) ChangePassword(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if input.NewPassword == "" {
-		httpx.Error(
-			w,
-			http.StatusBadRequest,
-			"empty_new_password",
-			"new password cannot be empty",
-		)
-		return
-	}
-
-	if input.ConfirmPassword == "" {
-		httpx.Error(
-			w,
-			http.StatusBadRequest,
-			"empty_confirm_password",
-			"confirmation password cannot be empty",
-		)
-		return
-	}
-
-	if input.NewPassword != input.ConfirmPassword {
-		httpx.Error(
-			w,
-			http.StatusBadRequest,
-			"password_mismatch",
-			"new password and confirmation do not match",
-		)
+	if err := validateChangePasswordInput(input); err != nil {
+		p.respondError(w, r, err, "change password", changePasswordErrors)
 		return
 	}
 

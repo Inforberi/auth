@@ -84,9 +84,14 @@ func TestChangePassword_ValidationError(t *testing.T) {
 		name           string
 		expectedStatus int
 		body           string
-		expectedError  string
+		expectedCode   string
 	}{
-	
+		{
+			name:           "empty old password",
+			expectedStatus: http.StatusBadRequest,
+			body:           `{"oldPassword":"", "newPassword":"newPassword1", "confirmPassword":"confirmPassword"}`,
+			expectedCode:   "empty_old_password",
+		},
 	}
 
 	for _, tt := range tests {
@@ -101,9 +106,13 @@ func TestChangePassword_ValidationError(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 
 			var resp map[string]interface{}
-			_ = json.Unmarshal(rr.Body.Bytes(), &resp)
 
-			assert.Equal(t, tt.expectedError, resp["code"])
+			err := json.Unmarshal(rr.Body.Bytes(), &resp)
+			assert.NoError(t, err)
+			// приведение к строке и сравнение с ожидаемым кодом
+			code, ok := resp["code"].(string)
+			assert.True(t, ok, "code should be string")
+			assert.Equal(t, tt.expectedCode, code)
 		})
 	}
 }

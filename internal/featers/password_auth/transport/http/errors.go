@@ -31,6 +31,7 @@ var (
 	errEmailRequired    = errorBody{"email_required", "email required"}
 	errPasswordRequired = errorBody{"password_required", "password required"}
 	errInvalidEmail     = errorBody{"invalid_email", "invalid email"}
+	errNotFound         = errorBody{"not_found", "not found"}
 )
 
 func mapError(err error, clientErrors []clientError) ErrorMapping {
