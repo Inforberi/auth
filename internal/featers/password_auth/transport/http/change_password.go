@@ -60,13 +60,32 @@ func (p *PasswordHandler) ChangePassword(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// validate confirm password
+	if input.NewPassword == "" {
+		httpx.Error(
+			w,
+			http.StatusBadRequest,
+			"empty_new_password",
+			"new password cannot be empty",
+		)
+		return
+	}
+
+	if input.ConfirmPassword == "" {
+		httpx.Error(
+			w,
+			http.StatusBadRequest,
+			"empty_confirm_password",
+			"confirmation password cannot be empty",
+		)
+		return
+	}
+
 	if input.NewPassword != input.ConfirmPassword {
 		httpx.Error(
 			w,
 			http.StatusBadRequest,
-			errConfirmPassword.code,
-			errConfirmPassword.message,
+			"password_mismatch",
+			"new password and confirmation do not match",
 		)
 		return
 	}
