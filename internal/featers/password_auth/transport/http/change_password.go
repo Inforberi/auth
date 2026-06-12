@@ -86,10 +86,28 @@ func validateChangePasswordInput(input ChangePasswordRequest) error {
 	return nil
 }
 
+// @Summary change password
+// @Description change password
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param body body ChangePasswordRequest true "change password payload"
+// @Success 200 {object} ChangePasswordResponse
+// @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, password_mismatch, invalid_email_or_password, same_password, empty_new_password, empty_old_password, empty_confirm_password"
+// @Failure 401 {object} httpx.ErrorResponse "code: unauthorized"
+// @Failure 404 {object} httpx.ErrorResponse "code: not_found"
+// @Failure 500 {object} httpx.ErrorResponse "code: internal_error"
+// @Router /auth/change-password [post]
 func (p *PasswordHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	auth, ok := httpx.GetAuthContext(r.Context())
 	if !ok {
-		panic("get auth form context")
+		httpx.Error(
+			w,
+			http.StatusUnauthorized,
+			"unauthorized",
+			"unauthorized",
+		)
+		return
 	}
 
 	// decode json
@@ -104,6 +122,7 @@ func (p *PasswordHandler) ChangePassword(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// validate input
 	if err := validateChangePasswordInput(input); err != nil {
 		p.respondError(w, r, err, "change password", changePasswordErrors)
 		return
