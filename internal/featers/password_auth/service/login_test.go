@@ -170,7 +170,7 @@ func TestLogin_UserNotFound(t *testing.T) {
 		"test@mail.ru",
 	).Return(
 		nil,
-		password_domain.ErrNotFound,
+		password_domain.ErrUserNotFound,
 	)
 
 	svc := New(
