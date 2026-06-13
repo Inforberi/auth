@@ -6,4 +6,5 @@ type Config struct {
 	SMTPUsername string `env:"SMTP_USERNAME" env-required:"true"`
 	SMTPPassword string `env:"SMTP_PASSWORD" env-required:"true"`
 	SMTPFrom     string `env:"SMTP_FROM" env-required:"true"`
+	SMTPDomain   string `env:"SMTP_DOMAIN" env-required:"true"`
 }

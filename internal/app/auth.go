@@ -19,6 +19,7 @@ import (
 	redis_client "github.com/Inforberi/financial-intelligence/internal/core/infra/redis"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/sessiontoken"
+	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/dev"
 	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/router"
 	postgres_password "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/repo/postgres"
 	password_service "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/service"
@@ -74,7 +75,12 @@ func Run() error {
 	tokenGen := sessiontoken.TokenManager{}
 
 	// init mailer
-	_ = mailer.New(cfg.MailSender)
+	mail := mailer.New(cfg.MailSender)
+
+	var mailTest *dev.MailTestHandler
+	if cfg.Logger.Env == "dev" {
+		mailTest = dev.NewMailTest(mail, log)
+	}
 
 	// init session feater
 	sessionRepo := session_redis.New(rdb)
@@ -92,6 +98,7 @@ func Run() error {
 	r := router.New(router.Handlers{
 		PasswordHandler: passwordHandler,
 		Middleware:      mv,
+		MailTest:        mailTest,
 	})
 
 	return httpserver.Run(ctx, log, cfg.Server, r)

@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 
+	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/dev"
 	core_middleware "github.com/Inforberi/financial-intelligence/internal/core/transport/http/middleware"
 	password_http "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/transport/http"
 	"github.com/go-chi/chi/v5"
@@ -13,6 +14,7 @@ import (
 type Handlers struct {
 	PasswordHandler *password_http.PasswordHandler
 	Middleware      *core_middleware.Middleware
+	MailTest        *dev.MailTestHandler
 }
 
 func New(h Handlers) *chi.Mux {
@@ -46,6 +48,12 @@ func New(h Handlers) *chi.Mux {
 			})
 
 		})
+
+		if h.MailTest != nil {
+			r.Route("/dev", func(r chi.Router) {
+				r.Post("/send-mail", h.MailTest.Send)
+			})
+		}
 	})
 
 	return r

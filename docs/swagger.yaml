@@ -1,5 +1,20 @@
 basePath: /api/v1/
 definitions:
+  dev.SendMailRequest:
+    properties:
+      body:
+        type: string
+      subject:
+        type: string
+      to:
+        type: string
+    type: object
+  dev.SendMailResponse:
+    properties:
+      status:
+        example: ok
+        type: string
+    type: object
   httpx.ErrorResponse:
     properties:
       code:
@@ -158,6 +173,37 @@ paths:
       summary: Register by email
       tags:
       - Auth
+  /dev/send-mail:
+    post:
+      consumes:
+      - application/json
+      description: Dev-only endpoint for manual SMTP testing. Available only when
+        APP_ENV=dev.
+      parameters:
+      - description: mail payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dev.SendMailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dev.SendMailResponse'
+        "400":
+          description: 'codes: invalid_json, to_required, subject_required, body_required'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: 'code: send_failed'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Send test email
+      tags:
+      - Dev
 schemes:
 - http
 swagger: "2.0"

@@ -167,9 +167,78 @@
                     }
                 }
             }
+        },
+        "/dev/send-mail": {
+            "post": {
+                "description": "Dev-only endpoint for manual SMTP testing. Available only when APP_ENV=dev.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dev"
+                ],
+                "summary": "Send test email",
+                "parameters": [
+                    {
+                        "description": "mail payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dev.SendMailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dev.SendMailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "codes: invalid_json, to_required, subject_required, body_required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "code: send_failed",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "dev.SendMailRequest": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "subject": {
+                    "type": "string"
+                },
+                "to": {
+                    "type": "string"
+                }
+            }
+        },
+        "dev.SendMailResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                }
+            }
+        },
         "httpx.ErrorResponse": {
             "type": "object",
             "properties": {
