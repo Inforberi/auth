@@ -3,10 +3,22 @@ definitions:
   httpx.ErrorResponse:
     properties:
       code:
-        example: invalid_json
         type: string
       message:
-        example: invalid json
+        type: string
+    type: object
+  password_http.ChangePasswordRequest:
+    properties:
+      confirmPassword:
+        type: string
+      newPassword:
+        type: string
+      oldPassword:
+        type: string
+    type: object
+  password_http.ChangePasswordResponse:
+    properties:
+      status:
         type: string
     type: object
   password_http.LoginByEmailRequest:
@@ -40,6 +52,45 @@ info:
   title: Auth API
   version: "1.0"
 paths:
+  /auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: change password
+      parameters:
+      - description: change password payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/password_http.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/password_http.ChangePasswordResponse'
+        "400":
+          description: 'codes: invalid_json, password_mismatch, invalid_email_or_password,
+            same_password, empty_new_password, empty_old_password, empty_confirm_password'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: 'code: unauthorized'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: 'code: not_found'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: 'code: internal_error'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: change password
+      tags:
+      - Auth
   /auth/login/email:
     post:
       consumes:

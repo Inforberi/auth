@@ -6,8 +6,8 @@ import (
 )
 
 type ErrorResponse struct {
-	Code    string `json:"code" example:"invalid_json"`
-	Message string `json:"message" example:"invalid json"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
 func JSON(w http.ResponseWriter, status int, data any) {

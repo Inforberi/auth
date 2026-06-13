@@ -39,6 +39,12 @@ func New(h Handlers) *chi.Mux {
 			r.Route("/login", func(r chi.Router) {
 				r.Post("/email", h.PasswordHandler.LoginByEmail)
 			})
+
+			r.Group(func(r chi.Router) {
+				r.Use(h.Middleware.Auth)
+				r.Post("/change-password", h.PasswordHandler.ChangePassword)
+			})
+
 		})
 	})
 

@@ -14,6 +14,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/hasher"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/httpserver"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/logger"
+	"github.com/Inforberi/financial-intelligence/internal/core/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/postgres"
 	redis_client "github.com/Inforberi/financial-intelligence/internal/core/infra/redis"
 
@@ -71,6 +72,9 @@ func Run() error {
 	now := clock.UTCClock{}
 	// init token
 	tokenGen := sessiontoken.TokenManager{}
+
+	// init mailer
+	_ = mailer.New(cfg.MailSender)
 
 	// init session feater
 	sessionRepo := session_redis.New(rdb)
