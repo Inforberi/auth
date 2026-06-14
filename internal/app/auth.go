@@ -17,11 +17,12 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/postgres"
 	redis_client "github.com/Inforberi/financial-intelligence/internal/core/infra/redis"
+	"github.com/Inforberi/financial-intelligence/internal/core/infra/tokengenerate"
 
-	"github.com/Inforberi/financial-intelligence/internal/core/infra/sessiontoken"
 	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/dev"
 	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/router"
 	postgres_password "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/repo/postgres"
+	password_redis "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/repo/redis"
 	password_service "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/service"
 	password_http "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/transport/http"
 	session_redis "github.com/Inforberi/financial-intelligence/internal/featers/session/repo/redis"
@@ -72,7 +73,7 @@ func Run() error {
 	// init clock
 	now := clock.UTCClock{}
 	// init token
-	tokenGen := sessiontoken.TokenManager{}
+	tokenGen := tokengenerate.New()
 
 	// init mailer
 	mail := mailer.New(cfg.MailSender)
@@ -88,7 +89,17 @@ func Run() error {
 
 	// init password feater
 	passwordRepo := postgres_password.New(pool)
-	passwordSvc := password_service.New(passwordRepo, sessionService, argonHash, now)
+	passwordRedisRepo := password_redis.New(rdb)
+	passwordSvc := password_service.New(
+		passwordRepo,
+		sessionService,
+		argonHash,
+		now,
+		tokenGen,
+		passwordRedisRepo,
+		cfg.Password,
+		mail,
+	)
 	passwordLogger := log.With(zap.String("feature", "password_auth"), zap.String("layer", "transport"))
 	passwordHandler := password_http.New(passwordSvc, passwordLogger)
 

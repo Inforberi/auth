@@ -32,7 +32,8 @@ func TestRegister_Success(t *testing.T) {
 		ExpiresAt: now.Add(7 * 24 * time.Hour),
 	}, nil)
 
-	svc := New(repo, session, hasher, nil)
+	svc := newTestService(repo, session, hasher)
+
 	register, err := svc.Register(
 		context.Background(),
 		email,
@@ -68,7 +69,7 @@ func TestRegister_EmailPasswordErrors(t *testing.T) {
 			session := &mockSession{}
 			hasher := &mockHasher{}
 
-			svc := New(repo, session, hasher, nil)
+			svc := newTestService(repo, session, hasher)
 
 			registerResult, err := svc.Register(
 				context.Background(),
@@ -100,7 +101,7 @@ func TestRegister_ExistsByEmailError(t *testing.T) {
 
 		repo.On("ExistsByEmail", context.Background(), email).Return(true, nil)
 
-		svc := New(repo, session, hasher, nil)
+		svc := newTestService(repo, session, hasher)
 
 		registerResult, err := svc.Register(
 			context.Background(),
@@ -128,7 +129,7 @@ func TestRegister_ExistsByEmailError(t *testing.T) {
 
 		repo.On("ExistsByEmail", context.Background(), email).Return(false, repoErr)
 
-		svc := New(repo, session, hasher, nil)
+		svc := newTestService(repo, session, hasher)
 
 		registerResult, err := svc.Register(
 			context.Background(),
@@ -156,7 +157,7 @@ func TestRegister_GenerateHashError(t *testing.T) {
 	repo.On("ExistsByEmail", context.Background(), email).Return(false, nil)
 	hasher.On("GenerateHash", []byte(password)).Return("", hashErr)
 
-	svc := New(repo, session, hasher, nil)
+	svc := newTestService(repo, session, hasher)
 
 	registerResult, err := svc.Register(
 		context.Background(),
@@ -189,7 +190,7 @@ func TestRegister_CreateUserError(t *testing.T) {
 	hasher.On("GenerateHash", []byte(password)).Return(hash, nil)
 	repo.On("CreateUser", context.Background(), email, hash).Return(domain.UserID(""), createUserErr)
 
-	svc := New(repo, session, hasher, nil)
+	svc := newTestService(repo, session, hasher)
 
 	registerResult, err := svc.Register(
 		context.Background(),
@@ -224,7 +225,7 @@ func TestRegister_CreateSessionError(t *testing.T) {
 	repo.On("CreateUser", context.Background(), email, hash).Return(user, nil)
 	session.On("CreateSession", context.Background(), user, "mobile", "12345").Return(nil, createSessionErr)
 
-	svc := New(repo, session, hasher, nil)
+	svc := newTestService(repo, session, hasher)
 
 	registerResult, err := svc.Register(
 		context.Background(),

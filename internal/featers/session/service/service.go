@@ -26,7 +26,7 @@ type clock interface {
 }
 
 type tokenManager interface {
-	GenerateSessionToken() (string, error)
+	GenerateToken(lengths ...int) (string, error)
 	Hash(rawToken string) string
 }
 

@@ -18,6 +18,7 @@ type Config struct {
 	Server     httpserver.Config
 	Redis      redis_client.Config
 	MailSender mailer.Config
+	Password   PasswordConfig
 }
 
 func New() (*Config, error) {

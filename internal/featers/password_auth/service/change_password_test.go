@@ -36,7 +36,7 @@ func TestChangePassword_Success(t *testing.T) {
 
 	session.On("LogoutAllExcept", context.Background(), currentTokenHash, userID).Return(nil)
 
-	svc := New(repo, session, hasher, nil)
+	svc := newTestService(repo, session, hasher)
 
 	err := svc.ChangePassword(context.Background(), userID, currentTokenHash, oldPassword, newPassword)
 
@@ -72,7 +72,7 @@ func TestChangePassword_FindUserError(t *testing.T) {
 
 			repo.On("FindUserByUserID", mock.Anything, userID).Return(nil, tt.err)
 
-			svc := New(repo, session, hasher, nil)
+			svc := newTestService(repo, session, hasher)
 
 			err := svc.ChangePassword(context.Background(), userID, currentTokenHash, oldPassword, newPassword)
 
@@ -100,7 +100,7 @@ func TestChangePasswordCompareError(t *testing.T) {
 
 	hasher.On("Compare", oldPassword, oldPasswordHash).Return(password_domain.ErrInvalidEmailOrPassword)
 
-	svc := New(repo, session, hasher, nil)
+	svc := newTestService(repo, session, hasher)
 
 	err := svc.ChangePassword(context.Background(), userID, currentTokenHash, oldPassword, newPassword)
 
@@ -127,7 +127,7 @@ func TestChangePassword_SamePasswordError(t *testing.T) {
 
 	hasher.On("Compare", oldPassword, oldPasswordHash).Return(nil)
 
-	svc := New(repo, session, hasher, nil)
+	svc := newTestService(repo, session, hasher)
 
 	err := svc.ChangePassword(context.Background(), userID, currentTokenHash, oldPassword, newPassword)
 
@@ -153,7 +153,7 @@ func TestChangePassword_ValidateError(t *testing.T) {
 
 	hasher.On("Compare", oldPassword, oldPasswordHash).Return(nil)
 
-	svc := New(repo, session, hasher, nil)
+	svc := newTestService(repo, session, hasher)
 
 	err := svc.ChangePassword(context.Background(), userID, currentTokenHash, oldPassword, newPassword)
 
@@ -180,7 +180,7 @@ func TestChangePassword_GenerateHashError(t *testing.T) {
 	hasher.On("Compare", oldPassword, oldPasswordHash).Return(nil)
 	hasher.On("GenerateHash", []byte(newPassword)).Return("", generateHashErr)
 
-	svc := New(repo, session, hasher, nil)
+	svc := newTestService(repo, session, hasher)
 
 	err := svc.ChangePassword(context.Background(), userID, currentTokenHash, oldPassword, newPassword)
 
@@ -207,7 +207,7 @@ func TestChangePassword_UpdatePasswordError(t *testing.T) {
 
 	repo.On("UpdatePasswordHash", context.Background(), userID, newPasswordHash).Return(updatePasswordErr)
 
-	svc := New(repo, session, hasher, nil)
+	svc := newTestService(repo, session, hasher)
 
 	err := svc.ChangePassword(context.Background(), userID, currentTokenHash, oldPassword, newPassword)
 
@@ -236,7 +236,7 @@ func TestChangePassword_LogoutAllError(t *testing.T) {
 
 	session.On("LogoutAllExcept", context.Background(), currentTokenHash, userID).Return(logoutAllErr)
 
-	svc := New(repo, session, hasher, nil)
+	svc := newTestService(repo, session, hasher)
 
 	err := svc.ChangePassword(context.Background(), userID, currentTokenHash, oldPassword, newPassword)
 

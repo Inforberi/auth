@@ -66,7 +66,7 @@ func (m *mockRepo) DeleteAllSessionsExcept(ctx context.Context, userID domain.Us
 // mock token hash
 type mockTokenHash struct{ mock.Mock }
 
-func (m *mockTokenHash) GenerateSessionToken() (string, error) {
+func (m *mockTokenHash) GenerateToken(lengths ...int) (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)
 }

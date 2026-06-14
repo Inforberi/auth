@@ -61,12 +61,7 @@ func TestLogin_Success(t *testing.T) {
 		nil,
 	)
 
-	svc := New(
-		repo,
-		session,
-		hasher,
-		nil,
-	)
+	svc := newTestService(repo, session, hasher)
 
 	result, err := svc.Login(
 		context.Background(),
@@ -113,12 +108,7 @@ func TestLogin_InvalidEmail(t *testing.T) {
 			hasher := &mockHasher{}
 			session := &mockSession{}
 
-			svc := New(
-				repo,
-				session,
-				hasher,
-				nil,
-			)
+			svc := newTestService(repo, session, hasher)
 
 			result, err := svc.Login(
 				context.Background(),
@@ -173,12 +163,7 @@ func TestLogin_UserNotFound(t *testing.T) {
 		password_domain.ErrUserNotFound,
 	)
 
-	svc := New(
-		repo,
-		session,
-		hasher,
-		nil,
-	)
+	svc := newTestService(repo, session, hasher)
 
 	result, err := svc.Login(
 		context.Background(),
@@ -233,12 +218,7 @@ func TestLogin_FindByEmailError(t *testing.T) {
 		findErr,
 	)
 
-	svc := New(
-		repo,
-		session,
-		hasher,
-		nil,
-	)
+	svc := newTestService(repo, session, hasher)
 
 	result, err := svc.Login(
 		context.Background(),
@@ -298,12 +278,7 @@ func TestLogin_InvalidPassword(t *testing.T) {
 		"hashed",
 	).Return(errors.New("invalid password"))
 
-	svc := New(
-		repo,
-		session,
-		hasher,
-		nil,
-	)
+	svc := newTestService(repo, session, hasher)
 
 	result, err := svc.Login(
 		context.Background(),
@@ -371,12 +346,7 @@ func TestLogin_CreateSessionError(t *testing.T) {
 		"127.0.0.1",
 	).Return(nil, createErr)
 
-	svc := New(
-		repo,
-		session,
-		hasher,
-		nil,
-	)
+	svc := newTestService(repo, session, hasher)
 
 	result, err := svc.Login(
 		context.Background(),

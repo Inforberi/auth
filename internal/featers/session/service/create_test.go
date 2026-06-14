@@ -19,7 +19,7 @@ func TestCreateSession_Success(t *testing.T) {
 	clock := &mockClock{}
 
 	token.
-		On("GenerateSessionToken").
+		On("GenerateToken").
 		Return("RawToken", nil)
 
 	token.
@@ -79,7 +79,7 @@ func TestCreateSession_TokenError(t *testing.T) {
 	clock := &mockClock{}
 	repo := &mockRepo{}
 
-	token.On("GenerateSessionToken").Return("", errGenerateToken)
+	token.On("GenerateToken").Return("", errGenerateToken)
 
 	svc := New(clock, repo, token, cfg)
 
@@ -96,7 +96,7 @@ func TestCreateSession_TokenError(t *testing.T) {
 
 	token.AssertCalled(
 		t,
-		"GenerateSessionToken",
+		"GenerateToken",
 	)
 	token.AssertNotCalled(
 		t,
@@ -122,7 +122,7 @@ func TestCreateSession_CreateSessionError(t *testing.T) {
 	clock := &mockClock{}
 	repo := &mockRepo{}
 
-	token.On("GenerateSessionToken").Return("RawToken", nil)
+	token.On("GenerateToken").Return("RawToken", nil)
 	token.On("Hash", "RawToken").Return("HashedToken")
 
 	clock.On("NowUTC").Return(now)

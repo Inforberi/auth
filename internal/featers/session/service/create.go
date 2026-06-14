@@ -10,7 +10,7 @@ import (
 
 func (s *SessionService) CreateSession(ctx context.Context, userID domain.UserID, userAgent, ip string) (*Session, error) {
 	// generate raw token
-	rawToken, err := s.token.GenerateSessionToken()
+	rawToken, err := s.token.GenerateToken()
 	if err != nil {
 		return nil, err
 	}

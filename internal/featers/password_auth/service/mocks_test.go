@@ -4,11 +4,25 @@ import (
 	"context"
 	"time"
 
+	"github.com/Inforberi/financial-intelligence/internal/core/config"
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 	session_service "github.com/Inforberi/financial-intelligence/internal/featers/session/service"
 	"github.com/stretchr/testify/mock"
 )
+
+func newTestService(repo *mockPasswordRepo, session *mockSession, hash *mockHasher) *PasswordService {
+	return New(
+		repo,
+		session,
+		hash,
+		nil,
+		&mockTokenManager{},
+		&mockRedisRepo{},
+		config.PasswordConfig{ResetTokenTTL: 1 * time.Hour},
+		&mockMailer{},
+	)
+}
 
 type mockPasswordRepo struct {
 	mock.Mock
@@ -92,5 +106,33 @@ func (m *mockSession) CreateSession(
 
 func (m *mockSession) LogoutAllExcept(ctx context.Context, tokenHash string, userID domain.UserID) error {
 	args := m.Called(ctx, tokenHash, userID)
+	return args.Error(0)
+}
+
+type mockTokenManager struct{ mock.Mock }
+
+func (m *mockTokenManager) GenerateToken(lengths ...int) (string, error) {
+	args := m.Called(lengths)
+	if args.Get(0) == nil {
+		return "", args.Error(1)
+	}
+	return args.String(0), args.Error(1)
+}
+func (m *mockTokenManager) Hash(rawToken string) string {
+	args := m.Called(rawToken)
+	return args.String(0)
+}
+
+type mockRedisRepo struct{ mock.Mock }
+
+func (m *mockRedisRepo) SaveResetToken(ctx context.Context, tokenHash string, userID domain.UserID, ttl time.Duration) error {
+	args := m.Called(ctx, tokenHash, userID, ttl)
+	return args.Error(0)
+}
+
+type mockMailer struct{ mock.Mock }
+
+func (m *mockMailer) Send(to, subject, htmlBody string) error {
+	args := m.Called(to, subject, htmlBody)
 	return args.Error(0)
 }
