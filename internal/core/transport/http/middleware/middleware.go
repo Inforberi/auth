@@ -3,8 +3,9 @@ package core_middleware
 import (
 	"context"
 
-	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 	"go.uber.org/zap"
+
+	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 )
 
 type SessionService interface {

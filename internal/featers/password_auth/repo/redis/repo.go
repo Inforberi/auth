@@ -3,8 +3,9 @@ package password_redis
 import (
 	"fmt"
 
-	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	"github.com/redis/go-redis/v9"
+
+	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 )
 
 type RedisRepo struct {

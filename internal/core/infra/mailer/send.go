@@ -32,7 +32,10 @@ func (m *Mailer) Send(to, subject, htmlBody string) error {
 		return fmt.Errorf("body is empty")
 	}
 
-	auth := smtp.PlainAuth("", m.cfg.SMTPUsername, m.cfg.SMTPPassword, m.cfg.SMTPHost)
+	var auth smtp.Auth
+	if m.cfg.SMTPUsername != "" {
+		auth = smtp.PlainAuth("", m.cfg.SMTPUsername, m.cfg.SMTPPassword, m.cfg.SMTPHost)
+	}
 
 	addr := fmt.Sprintf("%s:%s", m.cfg.SMTPHost, m.cfg.SMTPPort)
 
@@ -52,13 +55,13 @@ func buildMessage(from, to, subject, htmlBody, domain string) string {
 	encodedHTML := encodeQuotedPrintable(htmlBody)
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("From: %s\r\n", from))
-	sb.WriteString(fmt.Sprintf("To: %s\r\n", to))
-	sb.WriteString(fmt.Sprintf("Subject: %s\r\n", encodeSubject(subject)))
-	sb.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().Format(time.RFC1123Z)))
-	sb.WriteString(fmt.Sprintf("Message-ID: %s\r\n", messageID))
+	sb.WriteString("From: " + from + "\r\n")
+	sb.WriteString("To: " + to + "\r\n")
+	sb.WriteString("Subject: " + encodeSubject(subject) + "\r\n")
+	sb.WriteString("Date: " + time.Now().Format(time.RFC1123Z) + "\r\n")
+	sb.WriteString("Message-ID: " + messageID + "\r\n")
 	sb.WriteString("MIME-Version: 1.0\r\n")
-	sb.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n", boundary))
+	sb.WriteString("Content-Type: multipart/alternative; boundary=\"" + boundary + "\"\r\n")
 	sb.WriteString("\r\n")
 
 	writePart := func(contentType, encodedBody string) {
@@ -102,8 +105,12 @@ func randomHex(n int) string {
 func encodeQuotedPrintable(text string) string {
 	var buf bytes.Buffer
 	w := quotedprintable.NewWriter(&buf)
-	w.Write([]byte(text))
-	w.Close()
+	if _, err := w.Write([]byte(text)); err != nil {
+		return ""
+	}
+	if err := w.Close(); err != nil {
+		return ""
+	}
 
 	return buf.String()
 }

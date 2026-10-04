@@ -18,7 +18,7 @@ func (s *SessionRepo) DeleteSession(ctx context.Context, tokenHash string, userI
 	pipe.SRem(ctx, userSessionsKey, sessionKey)
 
 	if _, err := pipe.Exec(ctx); err != nil {
-		return fmt.Errorf("Err delete session in redis %w", err)
+		return fmt.Errorf("delete session in redis: %w", err)
 	}
 
 	return nil

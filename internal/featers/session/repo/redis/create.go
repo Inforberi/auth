@@ -13,7 +13,6 @@ func (s *SessionRepo) CreateSession(
 	ctx context.Context,
 	sessionParams session_domain.CreateSessionParams,
 ) error {
-
 	sessionKey := sessionKey(sessionParams.TokenHash)
 	userSessionsKey := userSessionsKey(sessionParams.UserID)
 

@@ -7,12 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Inforberi/financial-intelligence/internal/core/domain"
-	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/httpx"
-	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
+
+	"github.com/Inforberi/financial-intelligence/internal/core/domain"
+	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/httpx"
+	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 )
 
 const (
@@ -44,6 +45,7 @@ func TestChangePassword_Success(t *testing.T) {
 
 	req = req.WithContext(httpx.SetAuthContext(req.Context(), auth))
 
+	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
 	service.On(
@@ -125,6 +127,8 @@ func TestChangePassword_ValidationError(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			req = req.WithContext(httpx.SetAuthContext(req.Context(), auth))
 
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Content-Type", "application/json")
 			rw := httptest.NewRecorder()
 			handler.ChangePassword(rw, req)
 
@@ -154,6 +158,7 @@ func TestChangePassword_NoAuth(t *testing.T) {
 		"confirmPassword":"newPassword1"
 	}`))
 
+	req.Header.Set("Content-Type", "application/json")
 	rw := httptest.NewRecorder()
 
 	handler.ChangePassword(rw, req)
@@ -214,6 +219,8 @@ func TestChangePassword_ServiceError(t *testing.T) {
 			req.Header.Set("Content-type", "application/json")
 			req = req.WithContext(httpx.SetAuthContext(req.Context(), auth))
 
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Content-Type", "application/json")
 			rw := httptest.NewRecorder()
 
 			service.On(
@@ -236,7 +243,6 @@ func TestChangePassword_ServiceError(t *testing.T) {
 			code, ok := response["code"].(string)
 			assert.True(t, ok, "code should be string")
 			assert.Equal(t, tt.expectedCode, code)
-
 		})
 	}
 }

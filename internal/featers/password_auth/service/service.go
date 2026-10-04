@@ -29,7 +29,7 @@ type redisRepo interface {
 
 type hasher interface {
 	GenerateHash(password []byte) (string, error)
-	Compare(password string, encodedHash string) error
+	Compare(password, encodedHash string) error
 }
 
 type clock interface {

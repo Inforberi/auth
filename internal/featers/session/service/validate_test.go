@@ -5,10 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Inforberi/financial-intelligence/internal/core/domain"
-	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/Inforberi/financial-intelligence/internal/core/domain"
+	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 )
 
 func TestValidateSession_SuccessNoExtended(t *testing.T) {

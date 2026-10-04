@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	core_middleware "github.com/Inforberi/financial-intelligence/internal/core/transport/http/middleware"
+	"go.uber.org/zap"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/config"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/clock"
@@ -18,8 +18,8 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/postgres"
 	redis_client "github.com/Inforberi/financial-intelligence/internal/core/infra/redis"
 	"github.com/Inforberi/financial-intelligence/internal/core/infra/tokengenerate"
-
 	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/dev"
+	core_middleware "github.com/Inforberi/financial-intelligence/internal/core/transport/http/middleware"
 	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/router"
 	postgres_password "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/repo/postgres"
 	password_redis "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/repo/redis"
@@ -27,8 +27,6 @@ import (
 	password_http "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/transport/http"
 	session_redis "github.com/Inforberi/financial-intelligence/internal/featers/session/repo/redis"
 	session_service "github.com/Inforberi/financial-intelligence/internal/featers/session/service"
-
-	"go.uber.org/zap"
 )
 
 func Run() error {
@@ -46,7 +44,9 @@ func Run() error {
 	// init logger
 	log := logger.CreateLogger(cfg.Logger)
 	defer func() {
-		_ = log.Sync()
+		if err := log.Sync(); err != nil {
+			return
+		} // stdout/stderr may not support fsync; no further buffered logger remains.
 	}()
 	undo := zap.RedirectStdLog(log)
 	defer undo()
@@ -64,7 +64,11 @@ func Run() error {
 	if err != nil {
 		return fmt.Errorf("init redis: %w", err)
 	}
-	defer rdb.Close()
+	defer func() {
+		if err := rdb.Close(); err != nil {
+			log.Error("failed to close Redis")
+		}
+	}()
 	log.Info("redis created successfully")
 
 	// init password hasher
@@ -110,6 +114,14 @@ func Run() error {
 		PasswordHandler: passwordHandler,
 		Middleware:      mv,
 		MailTest:        mailTest,
+		Config:          cfg,
+		Logger:          log,
+		ReadyCheck: func(ctx context.Context) error {
+			if err := pool.Ping(ctx); err != nil {
+				return err
+			}
+			return rdb.Ping(ctx).Err()
+		},
 	})
 
 	return httpserver.Run(ctx, log, cfg.Server, r)

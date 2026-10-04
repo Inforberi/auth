@@ -1,0 +1,63 @@
+# Isolated, disposable infrastructure acceptance environment. Never use real .env.
+services:
+  postgres:
+    image: postgres:18.6-bookworm
+    environment:
+      POSTGRES_DB: auth
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: local-auth-only
+  redis:
+    environment:
+      REDIS_PASSWORD: local-redis-only
+  migrate:
+    entrypoint: [migrate, '-path=/migrations', '-database=postgres://auth:local-auth-only@postgres:5432/auth?sslmode=disable&search_path=public']
+  api:
+    image: ${AUTH_TEST_IMAGE:-auth:stage1}
+    env_file: [.env.example]
+    environment:
+      APP_ENV: ${AUTH_TEST_APP_ENV:-test}
+      SWAGGER_ENABLED: 'false'
+      PORT: '8080'
+      DATABASE_URL: postgres://auth_runtime:test-runtime-only@postgres:5432/auth?sslmode=disable
+      REDIS_HOST: redis
+      REDIS_PASSWORD: local-redis-only
+      SMTP_HOST: mailpit
+    ports: ['127.0.0.1::8080']
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - .:/workspace:ro
+      - test-go-mod-cache:/go/pkg/mod
+      - test-go-build-cache:/root/.cache/go-build
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+  mailpit:
+    image: axllent/mailpit:v1.27.10
+  backup:
+    extends:
+      file: deploy/compose.prod.yml
+      service: backup
+    environment:
+      PGHOST: postgres
+      PGDATABASE: auth
+      PGUSER: auth
+      PGPASSWORD: local-auth-only
+      POSTGRES_DB: auth
+      POSTGRES_USER: auth
+    volumes:
+      - type: bind
+        source: ./deploy/scripts/postgres-backup.sh
+        target: /usr/local/bin/postgres-backup
+        read_only: true
+        bind:
+          create_host_path: false
+volumes:
+  backups:
+  test-go-mod-cache:
+  test-go-build-cache:

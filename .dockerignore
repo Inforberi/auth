@@ -1,0 +1,10 @@
+.git
+.serena
+.env
+.env.prod
+out
+data
+backups
+bin
+tmp
+docs/reference

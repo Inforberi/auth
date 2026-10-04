@@ -6,11 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 	session_service "github.com/Inforberi/financial-intelligence/internal/featers/session/service"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestLogin_Success(t *testing.T) {

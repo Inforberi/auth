@@ -3,9 +3,10 @@ package password_http
 import (
 	"context"
 
+	"github.com/stretchr/testify/mock"
+
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
-	"github.com/stretchr/testify/mock"
 )
 
 type mockPasswordService struct {
@@ -30,9 +31,9 @@ func (m *mockPasswordService) Register(
 	email,
 	password,
 	userAgent,
-	IP string,
+	ip string,
 ) (*password_domain.RegisterResult, error) {
-	args := m.Called(ctx, email, password, userAgent, IP)
+	args := m.Called(ctx, email, password, userAgent, ip)
 
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

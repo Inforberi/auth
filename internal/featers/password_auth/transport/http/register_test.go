@@ -8,11 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Inforberi/financial-intelligence/internal/core/domain"
-	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
+
+	"github.com/Inforberi/financial-intelligence/internal/core/domain"
+	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 )
 
 func TestRegister_Success(t *testing.T) {
@@ -47,6 +48,7 @@ func TestRegister_Success(t *testing.T) {
 	req.Header.Set("User-Agent", "test-agent")
 	req.RemoteAddr = "127.0.0.1:12345"
 
+	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
 	handler := New(service, zap.NewNop())
@@ -74,6 +76,7 @@ func TestRegister_InvalidJSON(t *testing.T) {
 		"/auth/register/email",
 		strings.NewReader(`{invalid-json`),
 	)
+	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
 	handler.Register(rr, req)
@@ -100,6 +103,7 @@ func TestRegister_EmailRequired(t *testing.T) {
 		"/auth/register/email",
 		strings.NewReader(`{"password":"Password123"}`),
 	)
+	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
 	handler.Register(rr, req)
@@ -126,6 +130,7 @@ func TestRegister_PasswordRequired(t *testing.T) {
 		"/auth/register/email",
 		strings.NewReader(`{"email":"test@mail.ru"}`),
 	)
+	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
 	handler.Register(rr, req)
@@ -174,6 +179,7 @@ func TestRegister_ServiceError(t *testing.T) {
 		),
 	)
 
+	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
 	handler.Register(rr, req)

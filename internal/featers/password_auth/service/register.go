@@ -13,7 +13,7 @@ func (r *PasswordService) Register(
 	email,
 	password,
 	userAgent,
-	IP string,
+	ip string,
 ) (*password_domain.RegisterResult, error) {
 	emailValue, err := domain.NewEmail(email)
 	if err != nil {
@@ -43,7 +43,7 @@ func (r *PasswordService) Register(
 		return nil, fmt.Errorf("register by email create user %w", err)
 	}
 
-	session, err := r.session.CreateSession(ctx, userID, userAgent, IP)
+	session, err := r.session.CreateSession(ctx, userID, userAgent, ip)
 	if err != nil {
 		return nil, fmt.Errorf("register by email create session %w", err)
 	}

@@ -1,2 +1,7 @@
 .env
+.env.prod
 out
+data/
+backups/
+bin/
+tmp/

@@ -1,3 +1,6 @@
+# LEGACY: not used by Make or CI. Preserved for migration of existing local data.
+# Supported profiles are compose.base.yml + compose.dev.yml / compose.prod.yml.
+# Do not use this file for a production deployment; see README.md.
 services:
     auth-db:
         image: postgres:18.3-bookworm

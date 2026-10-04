@@ -42,5 +42,4 @@ func (s *SessionService) CreateSession(ctx context.Context, userID domain.UserID
 		RawToken:  rawToken,
 		ExpiresAt: expiresAt,
 	}, nil
-
 }

@@ -4,8 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/httpx"
 	"go.uber.org/zap"
+
+	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/httpx"
 )
 
 type errorBody struct {
@@ -48,6 +49,7 @@ func mapError(err error, clientErrors []clientError) ErrorMapping {
 	}
 }
 
+//nolint:unparam // Preserve the optional log-field extension for project-specific handlers.
 func (h *PasswordHandler) respondError(
 	w http.ResponseWriter,
 	r *http.Request,

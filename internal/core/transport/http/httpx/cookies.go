@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -23,7 +24,7 @@ func SetSessionCookie(w http.ResponseWriter, token string, expiresAt time.Time) 
 func GetSessionCookie(r *http.Request) (string, error) {
 	token, err := r.Cookie(SessionCookieName)
 	if err != nil {
-		if err == http.ErrNoCookie {
+		if errors.Is(err, http.ErrNoCookie) {
 			return "", fmt.Errorf("cookie not found %w", err)
 		}
 		return "", fmt.Errorf("get session cookie %w", err)

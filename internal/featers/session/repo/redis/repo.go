@@ -1,8 +1,9 @@
 package session_redis
 
 import (
-	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	"github.com/redis/go-redis/v9"
+
+	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 )
 
 type SessionRepo struct {

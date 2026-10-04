@@ -15,7 +15,7 @@ func (r *PasswordRepo) ExistsByEmail(ctx context.Context, email string) (bool, e
 	`
 
 	var exists bool
-	
+
 	err := r.db.QueryRow(ctx, sql, email).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("query ExistByEmail: %w", err)

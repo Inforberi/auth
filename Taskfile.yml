@@ -1,0 +1,115 @@
+version: '3'
+
+# Основные команды проекта. Список: task --list.
+# Taskfile не загружает .env автоматически и не выполняет source/eval.
+# Для другого файла окружения: task dev-up DEV_ENV=path/to/.env
+vars:
+  DEV_ENV: .env
+  PROD_ENV: .env.prod
+  FILE: ''
+  CONFIRM: ''
+  DEV_COMPOSE: 'APP_ENV_FILE={{.DEV_ENV | shellQuote}} docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file {{.DEV_ENV | shellQuote}} -f deploy/compose.base.yml -f deploy/compose.dev.yml'
+  PROD_COMPOSE: 'APP_ENV_FILE={{.PROD_ENV | shellQuote}} docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file {{.PROD_ENV | shellQuote}} -f deploy/compose.base.yml -f deploy/compose.prod.yml'
+
+tasks:
+  default:
+    desc: Показать все доступные команды
+    cmds: [task --list]
+
+  # --- Ежедневная разработка -------------------------------------------------
+  dev-up:
+    desc: Запустить API, PostgreSQL, Redis и Mailpit для разработки
+    aliases: [dev]
+    cmds: ['{{.DEV_COMPOSE}} up -d --build api']
+
+  dev-down:
+    desc: Остановить окружение разработки, сохранив данные в volumes
+    cmds: ['{{.DEV_COMPOSE}} down']
+
+  dev-logs:
+    desc: Показать логи API в окружении разработки
+    cmds: ['{{.DEV_COMPOSE}} logs -f --tail=100 api']
+
+  migrate-up:
+    desc: Применить миграции в локальном окружении разработки
+    cmds:
+      - '{{.DEV_COMPOSE}} up -d --wait postgres'
+      - '{{.DEV_COMPOSE}} run --rm migrate up'
+
+  migrate-down:
+    desc: Откатить одну миграцию только на disposable development БД
+    cmds:
+      - |
+        test {{.CONFIRM | shellQuote}} = dev-down || { echo 'Запуск: task migrate-down CONFIRM=dev-down'; exit 1; }
+        {{.DEV_COMPOSE}} run --rm migrate down 1
+
+  # --- Код и API -------------------------------------------------------------
+  check:
+    desc: 'Обычная проверка перед коммитом: тесты и lint'
+    cmds:
+      - task: check-test
+      - task: check-lint
+
+  check-test:
+    internal: true
+    cmds: [go test ./...]
+
+  check-lint:
+    internal: true
+    cmds:
+      - go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run
+
+  fmt:
+    desc: Отформатировать Go-код
+    cmds:
+      - go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 fmt ./cmd/... ./internal/...
+
+  swagger:
+    desc: Пересобрать Swagger после изменения HTTP API
+    cmds:
+      - go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g cmd/auth/main.go --parseInternal --packageName docs -o docs
+
+  # --- Редкие проверки -------------------------------------------------------
+  # Не входят в task check: запускаются перед релизом или после обновления зависимостей.
+  check-security:
+    desc: Проверить известные уязвимости Go-зависимостей
+    cmds:
+      - go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+
+  check-integration:
+    desc: Запустить изолированный PostgreSQL/Redis backup-restore drill
+    cmds: [bash deploy/scripts/check-integration.sh]
+
+  # --- Production: выполнять осознанно --------------------------------------
+  prod-up:
+    desc: Запустить production Compose profile (это не approval на релиз)
+    cmds: ['{{.PROD_COMPOSE}} up -d --build api backup']
+
+  prod-down:
+    desc: Остановить production profile, сохранив volumes
+    cmds: ['{{.PROD_COMPOSE}} down']
+
+  prod-logs:
+    desc: Показать логи production API
+    cmds: ['{{.PROD_COMPOSE}} logs -f --tail=100 api']
+
+  db-runtime-grants:
+    desc: Выдать runtime-роли проверенные права в production БД
+    cmds:
+      - >-
+        {{.PROD_COMPOSE}} exec -T postgres sh -c
+        'exec psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"'
+        < deploy/runtime-grants.sql
+
+  db-backup:
+    desc: Создать PostgreSQL backup в production profile
+    cmds: ['{{.PROD_COMPOSE}} run --rm backup create']
+
+  db-restore:
+    desc: Восстановить БД — требует FILE и точное CONFIRM=project:database
+    cmds:
+      - >-
+        AUTH_ENV_FILE={{.PROD_ENV | shellQuote}}
+        RESTORE_FILE={{.FILE | shellQuote}}
+        RESTORE_CONFIRM={{.CONFIRM | shellQuote}}
+        bash deploy/scripts/postgres-restore.sh

@@ -4,11 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/stretchr/testify/mock"
+
 	"github.com/Inforberi/financial-intelligence/internal/core/config"
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 	session_service "github.com/Inforberi/financial-intelligence/internal/featers/session/service"
-	"github.com/stretchr/testify/mock"
 )
 
 func newTestService(repo *mockPasswordRepo, session *mockSession, hash *mockHasher) *PasswordService {
@@ -118,6 +119,7 @@ func (m *mockTokenManager) GenerateToken(lengths ...int) (string, error) {
 	}
 	return args.String(0), args.Error(1)
 }
+
 func (m *mockTokenManager) Hash(rawToken string) string {
 	args := m.Called(rawToken)
 	return args.String(0)

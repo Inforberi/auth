@@ -3,8 +3,9 @@ package dev
 import (
 	"net/http"
 
-	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/httpx"
 	"go.uber.org/zap"
+
+	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/httpx"
 )
 
 type MailSender interface {
@@ -42,7 +43,7 @@ type SendMailResponse struct {
 // @Success 200 {object} SendMailResponse
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, to_required, subject_required, body_required"
 // @Failure 500 {object} httpx.ErrorResponse "code: send_failed"
-// @Router /dev/send-mail [post]
+// @Router /api/v1/dev/send-mail [post]
 func (h *MailTestHandler) Send(w http.ResponseWriter, r *http.Request) {
 	var input SendMailRequest
 	if err := httpx.DecodeJSON(w, r, &input); err != nil {

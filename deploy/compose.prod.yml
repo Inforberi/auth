@@ -1,0 +1,55 @@
+services:
+  postgres:
+    restart: unless-stopped
+  redis:
+    restart: unless-stopped
+  api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.prod
+    env_file: ['${APP_ENV_FILE:-.env.prod}']
+    ports: ['127.0.0.1:${PORT:-8080}:${PORT:-8080}']
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=16m']
+    stop_grace_period: 15s
+  backup:
+    image: ${POSTGRES_IMAGE:-postgres:18.6-bookworm}
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB:?required}
+      PGUSER: ${POSTGRES_USER:?required}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?required}
+      POSTGRES_DB: ${POSTGRES_DB:?required}
+      POSTGRES_USER: ${POSTGRES_USER:?required}
+      BACKUP_DIR: /backups
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-24h}
+      BACKUP_RETENTION_COUNT: ${BACKUP_RETENTION_COUNT:-7}
+      RESTORE_HEALTHCHECK_SQL: '${RESTORE_HEALTHCHECK_SQL:-SELECT count(*) FROM auth.users;}'
+    volumes:
+      - backups:/backups
+      - type: bind
+        source: ./deploy/scripts/postgres-backup.sh
+        target: /usr/local/bin/postgres-backup
+        read_only: true
+        bind:
+          create_host_path: false
+    entrypoint: [bash, /usr/local/bin/postgres-backup]
+    command: [schedule]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=64m']
+    restart: unless-stopped
+volumes:
+  backups:

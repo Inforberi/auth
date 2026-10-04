@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Inforberi/financial-intelligence/internal/core/domain"
-	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
+
+	"github.com/Inforberi/financial-intelligence/internal/core/domain"
+	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 )
 
 var (
@@ -37,6 +38,7 @@ func TestLoginByEmail_Success(t *testing.T) {
 	req.Header.Set("User-Agent", "test-agent")
 	req.RemoteAddr = "127.0.0.1:12345"
 
+	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
 	service.On(
@@ -120,6 +122,8 @@ func TestLoginByEmail_ValidationError(t *testing.T) {
 				strings.NewReader(tt.body),
 			)
 
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Content-Type", "application/json")
 			rw := httptest.NewRecorder()
 
 			handler.LoginByEmail(rw, req)
@@ -176,6 +180,8 @@ func TestLoginByEmail_ServiceErrors(t *testing.T) {
 			req.Header.Set("User-Agent", "test-agent")
 			req.RemoteAddr = "127.0.0.1:12345"
 
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Content-Type", "application/json")
 			rw := httptest.NewRecorder()
 
 			service.On(
@@ -205,8 +211,6 @@ func TestLoginByEmail_ServiceErrors(t *testing.T) {
 			assert.True(t, ok, "code should be string")
 
 			assert.Equal(t, tt.exceptedCode, code)
-
 		})
 	}
-
 }

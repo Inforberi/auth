@@ -9,10 +9,9 @@ import (
 
 // @title Auth API
 // @version 1.0
-// @description Financial Intelligence API
-// @host localhost:8080
-// @BasePath /api/v1/
-// @schemes http
+// @description Reusable authentication service. Cookie sessions require HTTPS. CSRF protection is a later release prerequisite.
+// @BasePath /
+// @schemes https http
 
 func main() {
 	if err := app.Run(); err != nil {

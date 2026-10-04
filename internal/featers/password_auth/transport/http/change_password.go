@@ -97,7 +97,7 @@ func validateChangePasswordInput(input ChangePasswordRequest) error {
 // @Failure 401 {object} httpx.ErrorResponse "code: unauthorized"
 // @Failure 404 {object} httpx.ErrorResponse "code: not_found"
 // @Failure 500 {object} httpx.ErrorResponse "code: internal_error"
-// @Router /auth/change-password [post]
+// @Router /api/v1/auth/change-password [post]
 func (p *PasswordHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	auth, ok := httpx.GetAuthContext(r.Context())
 	if !ok {

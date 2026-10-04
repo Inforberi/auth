@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/auth/change-password": {
+        "/api/v1/auth/change-password": {
             "post": {
                 "description": "change password",
                 "consumes": [
@@ -73,7 +73,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/login/email": {
+        "/api/v1/auth/login/email": {
             "post": {
                 "description": "login by email/password",
                 "consumes": [
@@ -119,7 +119,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/register/email": {
+        "/api/v1/auth/register/email": {
             "post": {
                 "description": "Creates a new user account using email/password.",
                 "consumes": [
@@ -171,7 +171,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/dev/send-mail": {
+        "/api/v1/dev/send-mail": {
             "post": {
                 "description": "Dev-only endpoint for manual SMTP testing. Available only when APP_ENV=dev.",
                 "consumes": [
@@ -212,6 +212,50 @@ const docTemplate = `{
                         "description": "code: send_failed",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health/live": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Process liveness",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/router.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health/ready": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "PostgreSQL and Redis readiness",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/router.HealthResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/router.HealthResponse"
                         }
                     }
                 }
@@ -312,6 +356,14 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "router.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
         }
     }
 }`
@@ -319,11 +371,11 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
-	BasePath:         "/api/v1/",
-	Schemes:          []string{"http"},
+	Host:             "",
+	BasePath:         "/",
+	Schemes:          []string{"https", "http"},
 	Title:            "Auth API",
-	Description:      "Financial Intelligence API",
+	Description:      "Reusable authentication service. Cookie sessions require HTTPS. CSRF protection is a later release prerequisite.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

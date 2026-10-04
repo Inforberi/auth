@@ -3,10 +3,11 @@ package password_http
 import (
 	"net/http"
 
+	"go.uber.org/zap"
+
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/httpx"
 	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
-	"go.uber.org/zap"
 )
 
 var (
@@ -48,7 +49,7 @@ type RegisterResponse struct {
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, email_required, password_required, invalid_email, password_too_short, password_too_long, password_no_letter, password_no_digit, password_no_upper_letter"
 // @Failure 409 {object} httpx.ErrorResponse "code: email_already_exists"
 // @Failure 500 {object} httpx.ErrorResponse "code: internal_error"
-// @Router /auth/register/email [post]
+// @Router /api/v1/auth/register/email [post]
 func (h *PasswordHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var input RegisterRequest
 	if err := httpx.DecodeJSON(w, r, &input); err != nil {

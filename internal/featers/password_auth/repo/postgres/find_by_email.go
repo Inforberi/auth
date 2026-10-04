@@ -5,11 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Inforberi/financial-intelligence/internal/core/domain"
-
-	domain_password_auth "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
-
 	"github.com/jackc/pgx/v5"
+
+	"github.com/Inforberi/financial-intelligence/internal/core/domain"
+	domain_password_auth "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 )
 
 func (l *PasswordRepo) FindByEmail(ctx context.Context, email string) (*domain_password_auth.FindByEmailResult, error) {

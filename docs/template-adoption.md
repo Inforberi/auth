@@ -1,0 +1,47 @@
+# Перенос go-template в Auth
+
+Источник: локальный go-template, ветка `main`, commit `4acce0b1b822742327a84c5216e7f1c899f08424`, snapshot 2026-10-04. Собрано 37 исходных файлов; реальные secrets, Git history и данные не копировались. Решения ниже относятся к инфраструктурному этапу 1, не к готовности auth/RBAC/payments. Полная копия исходников удалена по явному запросу пользователя; соседний проект остаётся нетронутым.
+
+## Матрица решений
+
+| Источники go-template | Решение и рабочее место Auth |
+| --- | --- |
+| `internal/infra/config/config.go`, `config_test.go` | Подход к validation адаптирован в `internal/core/config`: APP_ENV/log level, URLs/ports, pool/session bounds, SMTP headers, Swagger credentials, production policy; table/env tests. Не выводим raw cleanenv/DSN errors. |
+| `cmd/api/main.go`, `internal/app/app.go`, `internal/transport/http/server/server.go` | Сохранили Auth composition root и сигналы; независимый bounded shutdown и cleanup в `cmd/auth`, `internal/app`, `internal/core/infra/httpserver`; active-request drain test. |
+| `internal/infra/postgres/postgres.go` | Connect/Ping deadline 5s, Close при failed Ping в `internal/core/infra/postgres`; сохранили MinConns/lifetime/idle options. Cancel/redaction test и реальный startup. |
+| `internal/infra/logger/logger.go`, `context.go`, `middleware/request.go` | Существующий zap logger сохранён, добавлены context logger, crypto request ID, response header, route/status/duration/bytes. Нет URL/query/body/header в access log; negative test. Это не durable audit. |
+| `router/router.go`, `router_test.go` | Live/ready с PostgreSQL + Redis, deadline 2s, generic 503; health/error/timeout tests. Swagger default off + Basic Auth; dev mail route только dev. |
+| `httpx/request.go`, `json.go`, `request_test.go` | Strict JSON и 1 MiB bound в текущем `httpx`; Auth error envelope сохранён. Unknown/trailing/malformed/large/media tests; proxy headers отключены до explicit trust policy. Webhook raw-body verification не использует этот decoder. |
+| `pkg/client.go`, `client_test.go` | Wrapper отклонён. Он включает provider body в errors и не задаёт bounds успешного response/SSRF/redirect policy. Пока нет реального outbound use case, отдельная abstraction не нужна. Telegram/OIDC/payment adapters используют SDK или собственный стандартный transport с требованиями ниже. |
+| `go.mod`, `go.sum` | Чужие lockfiles не перенесены. Go 1.27.1; chi 5.3.2, pgx 5.10.0, http-swagger/v2 2.0.2; security fixes x/crypto 0.56.0, x/text 0.41.0, x/mod 0.40.0. Остальные версии — текущий Auth graph, не обещание «latest». Argon2 compatibility/resource-bound tests. |
+| `deploy/Dockerfile.dev`, `Dockerfile.prod`, `.dockerignore`, `.gitignore` | Auth Dockerfiles + secrets/data exclusion. Dev bind mount и Go caches; prod multi-architecture build args, static nonroot/read-only runtime. Реальная host architecture проверяется build/smoke; cross-platform coverage не заявляется. |
+| `.air.toml` | Air отклонён как необязательная дополнительная dependency. Dev — ручной restart `go run`; hot reload не заявляется. |
+| `deploy/compose.dev.yml`, `compose.prod.yml`, `.env.example`, `.env.prod.example` | Отдельные base/dev/prod/check profiles: Redis auth consistent, Mailpit, health/migration ordering, isolated named volumes, localhost dev ports, no prod storage ports. Runtime role отдельно от owner, `deploy/runtime-grants.sql`. Existing `out/pgdata` не используется и не удаляется. |
+| `Taskfile.yml`, `.github/workflows/ci.yml` | Перенесли команды Make в один Taskfile, сохранили tasks в `Taskfile.yml`: check/race/integration/security/Swagger/Compose/shell. CI actions pinned SHA, permissions read-only, no persisted credentials, same checks; Task включён по отдельному запросу пользователя. |
+| `docs/docs.go`, `swagger.json`, `swagger.yaml` | Template API spec отклонён; Auth spec сгенерирован заново pinned swag 1.16.6. Исправлены title/base/path, health routes, UI policy и generation drift job. OpenAPI 3 не вводили. |
+| `deploy/scripts/postgres-backup.sh`, `postgres-restore.sh` | Backup core адаптирован: dedicated volume/path, checksum + preflight, shared lock, retention, pre-restore copy, blocker checks, transaction restore. Host wrapper — exact target confirmation, named-container mutex, stop current writers, migration/grants/health before resume. Disposable canary и negative cases проверяются integration script. |
+| `deploy/compose.logs.yml` | Dozzle/socket proxy отклонены: Docker socket expands access to all host containers, а dashboard не нужен базовому auth шаблону. Используем `task *-logs-app`; отдельный observability deployment требует scoped policy. |
+| `.github/workflows/deploy.yml` | SSH/auto-deploy отклонены до выбора deployment target, secret store и release gates. Полезный принцип: deploy только прошедшего CI immutable artifact; не включён executable deployment workflow. |
+| `README.md` | Quick start, config, checks, operations/copy/update guide адаптированы в корневой README. Никаких будущих source dependencies на snapshot. |
+
+Дополнительно для Auth: исправлен reset renderer → subject/body → Send, not-found отличается от infrastructure failure; пользовательский HTML сохранён. Reset token только в escaped trusted URL, в Redis hash. Сам reset endpoint и atomic consumption остаются этапом 5.2. Исправлен независимый absolute TTL env key. Audit port `internal/core/audit` — только контракт без durable sink, enforcement и хранения; они входят в ADR/lifecycle security tasks.
+
+## Принятые инфраструктурные решения
+
+- Task сохраняет основной developer interface; `.env` не source/eval и не читается автоматически всеми targets. Checks используют только examples.
+- Один project — одна изолированная БД/Redis deployment. Volume names scope задаётся APP_NAME; эксплуатационные writers должны быть перечислены перед restore. PostgreSQL — authoritative persistent data; Redis session consistency пока не пересмотрена.
+- Outbound integrations: trusted HTTPS destinations, explicit request context/timeout, limited successful/error response, no body/token/URL query in logged errors, controlled redirects/SSRF, provider-specific idempotency/retry, close/reuse connections. Проверки cancellation, concurrent use, redirects, body limits и failure semantics выполняются при появлении adapter, а не копируются из чужого wrapper.
+- Owner/migration и runtime credentials различаются; runtime — только schema usage/DML. SQL grants проверяются отдельно и повторяются после restore. Bootstrap/password provisioning остаётся operator action.
+- No automatic deployment, Air или log dashboard. Эти отклонения завершают выбор компонентов первого этапа, не оставляют задачу чтения удалённого reference.
+
+## Проверки и границы
+
+При переносе выполнялись unit/negative tests, vet/build/lint, race, security scan, generation/Compose/shell checks, builds и isolated drill. После уточнения пользователя обычный `task check` сокращён до tests + lint; остальные checks отдельные по риску/release, не на каждую правку. CI не дублирует race/integration на каждом push. Swagger shell-файл удалён, остались три operational/acceptance scripts. Финальный результат startup/restore фиксируется в [плане](auth-plan.md).
+
+После исправления достижимой [GO-2026-5970](https://pkg.go.dev/vuln/GO-2026-5970) scan показал 0 reachable findings и 6 module-only advisory. Затем x/crypto/x/mod обновлены до указанных advisory исправленных версий; tests/lint и production build проходят. Повторный security scan после этих последних updates не выполнялся: остаётся отдельным release check, не заявляем его результат. Неиспользуемый `x/crypto/openpgp` не импортируется приложением и остаётся unsafe/unmaintained; запрещено добавлять его использование. Нулевые reachable findings не заменяют audit.
+
+Не подтверждены: реальный GitHub-hosted CI execution, second architecture, production deployment/ingress, live SMTP/provider sandbox, полный secret/container CVE scan, encrypted off-site restore, все fault-injection и signal-interruption варианты host wrapper. Unit race не доказывает SQL/Redis concurrency будущих auth flows. Release gates этапа 14 обязательны; текущие session/cookie/CSRF/identity/access дефекты остаются задачами 4–13. Production release не выполнялся.
+
+Restore data grants не включает global roles/passwords; последние provision отдельно. Redis invalidation после старого DB snapshot и будущие outbox/billing writers ещё не реализованы. Current backup drill проверяет инфраструктуру и canary, не итоговые entitlement/payment invariants.
+
+Итог текущего захода: tests/lint и production-image isolated drill прошли (up/down/up, DDL denial, checksum/path/lock rejection, canary restore, Redis failure). Dev smoke упал из-за CGO `/tmp` в readonly test container; `CGO_ENABLED=0` добавлен в dev Dockerfile, повторный запуск отклонён пользователем. Исправление dev startup пока не проверено, reference удалён по явному запросу пользователя; dev smoke остаётся непроверенным. Swagger task после переноса не выполнялась (проверен только dry-run). Последующие проверки — только по отдельному запросу пользователя.

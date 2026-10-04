@@ -1,18 +1,18 @@
 {
     "schemes": [
+        "https",
         "http"
     ],
     "swagger": "2.0",
     "info": {
-        "description": "Financial Intelligence API",
+        "description": "Reusable authentication service. Cookie sessions require HTTPS. CSRF protection is a later release prerequisite.",
         "title": "Auth API",
         "contact": {},
         "version": "1.0"
     },
-    "host": "localhost:8080",
-    "basePath": "/api/v1/",
+    "basePath": "/",
     "paths": {
-        "/auth/change-password": {
+        "/api/v1/auth/change-password": {
             "post": {
                 "description": "change password",
                 "consumes": [
@@ -70,7 +70,7 @@
                 }
             }
         },
-        "/auth/login/email": {
+        "/api/v1/auth/login/email": {
             "post": {
                 "description": "login by email/password",
                 "consumes": [
@@ -116,7 +116,7 @@
                 }
             }
         },
-        "/auth/register/email": {
+        "/api/v1/auth/register/email": {
             "post": {
                 "description": "Creates a new user account using email/password.",
                 "consumes": [
@@ -168,7 +168,7 @@
                 }
             }
         },
-        "/dev/send-mail": {
+        "/api/v1/dev/send-mail": {
             "post": {
                 "description": "Dev-only endpoint for manual SMTP testing. Available only when APP_ENV=dev.",
                 "consumes": [
@@ -209,6 +209,50 @@
                         "description": "code: send_failed",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health/live": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Process liveness",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/router.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health/ready": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "PostgreSQL and Redis readiness",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/router.HealthResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/router.HealthResponse"
                         }
                     }
                 }
@@ -306,6 +350,14 @@
             "type": "object",
             "properties": {
                 "userID": {
+                    "type": "string"
+                }
+            }
+        },
+        "router.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
                     "type": "string"
                 }
             }

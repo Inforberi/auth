@@ -13,7 +13,7 @@ func (r *PasswordRepo) CreateUser(ctx context.Context, email, passwordHash strin
 		return "", fmt.Errorf("error to start transaction %w", err)
 	}
 
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }() //nolint:gosec // Rollback after Commit reports ErrTxClosed; original errors take precedence.
 
 	var userId domain.UserID
 

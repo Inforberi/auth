@@ -1,32 +1,15 @@
-FROM golang:1.26.3-bookworm AS builder
-
+# Legacy entry point retained for compatibility. Canonical production build:
+# docker build -f deploy/Dockerfile.prod .
+ARG GO_IMAGE=golang:1.27.1-bookworm
+FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS build
 WORKDIR /src
-
+ARG TARGETOS
+ARG TARGETARCH
+ENV CGO_ENABLED=0 GOTOOLCHAIN=local
 COPY go.mod go.sum ./
 RUN go mod download
-
 COPY . .
-
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build \
-    -trimpath \
-    -ldflags="-s -w" \
-    -o /out/finance-app \
-    ./cmd/finance-app
-
-
-FROM alpine:3.23.4
-
-WORKDIR /app
-
-RUN apk add --no-cache ca-certificates tzdata \
-    && addgroup -S app \
-    && adduser -S app -G app
-
-COPY --from=builder /out/finance-app ./finance-app
-
-USER app
-
-EXPOSE 8080
-
-CMD ["./finance-app"]
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -mod=readonly -trimpath -o /out/auth ./cmd/auth
+FROM gcr.io/distroless/static-debian13:nonroot
+COPY --from=build /out/auth /app/auth
+ENTRYPOINT ["/app/auth"]

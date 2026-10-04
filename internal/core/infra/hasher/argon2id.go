@@ -19,10 +19,12 @@ type Argon2idHash struct {
 	saltLen uint32
 }
 
-var ErrInvalidHashFormat = errors.New("invalid password hash format")
-var ErrPasswordMismatch = errors.New("password mismatch")
+var (
+	ErrInvalidHashFormat = errors.New("invalid password hash format")
+	ErrPasswordMismatch  = errors.New("password mismatch")
+)
 
-func NewArgon2idHash(time, saltLen uint32, memory uint32, threads uint8, keyLen uint32) *Argon2idHash {
+func NewArgon2idHash(time, saltLen, memory uint32, threads uint8, keyLen uint32) *Argon2idHash {
 	return &Argon2idHash{
 		time:    time,
 		saltLen: saltLen,
@@ -73,7 +75,10 @@ func (a *Argon2idHash) GenerateHash(password []byte) (string, error) {
 	return encoded, nil
 }
 
-func (a *Argon2idHash) Compare(password string, encodedHash string) error {
+func (a *Argon2idHash) Compare(password, encodedHash string) error {
+	if len(encodedHash) > 4096 {
+		return ErrInvalidHashFormat
+	}
 
 	parts := strings.Split(encodedHash, "$")
 	if len(parts) != 6 {
@@ -98,6 +103,9 @@ func (a *Argon2idHash) Compare(password string, encodedHash string) error {
 	if err != nil {
 		return ErrInvalidHashFormat
 	}
+	if memory < 8*threads || memory > 256*1024 || timeCost < 1 || timeCost > 10 || threads < 1 || threads > 32 {
+		return ErrInvalidHashFormat
+	}
 
 	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
@@ -108,6 +116,9 @@ func (a *Argon2idHash) Compare(password string, encodedHash string) error {
 	if err != nil {
 		return ErrInvalidHashFormat
 	}
+	if len(salt) < 8 || len(salt) > 64 || len(expectedHash) < 16 || len(expectedHash) > 256 {
+		return ErrInvalidHashFormat
+	}
 
 	hash := argon2.IDKey(
 		[]byte(password),
@@ -115,7 +126,7 @@ func (a *Argon2idHash) Compare(password string, encodedHash string) error {
 		uint32(timeCost),
 		uint32(memory),
 		uint8(threads),
-		uint32(len(expectedHash)),
+		uint32(len(expectedHash)), //nolint:gosec // Length is explicitly bounded to 16..256 above.
 	)
 	if subtle.ConstantTimeCompare(hash, expectedHash) != 1 {
 		return ErrPasswordMismatch

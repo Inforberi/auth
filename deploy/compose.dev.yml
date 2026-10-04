@@ -1,0 +1,29 @@
+services:
+  postgres:
+    ports: ['127.0.0.1:${POSTGRES_PORT:-5432}:5432']
+  redis:
+    ports: ['127.0.0.1:6379:6379']
+  mailpit:
+    image: axllent/mailpit:v1.27.10
+    ports: ['127.0.0.1:8025:8025']
+  api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.dev
+    env_file: ['${APP_ENV_FILE:-.env}']
+    volumes:
+      - .:/workspace
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    ports: ['127.0.0.1:${PORT:-8080}:${PORT:-8080}']
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    stop_grace_period: 15s
+volumes:
+  go-mod-cache:
+  go-build-cache:

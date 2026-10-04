@@ -3,9 +3,10 @@ package password_http
 import (
 	"context"
 
+	"go.uber.org/zap"
+
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
-	"go.uber.org/zap"
 )
 
 type PasswordService interface {

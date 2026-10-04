@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
-	"github.com/jackc/pgx/v5"
 )
 
 func (p *PasswordRepo) FindUserByUserID(ctx context.Context, userID domain.UserID) (*password_domain.FindUserPassword, error) {

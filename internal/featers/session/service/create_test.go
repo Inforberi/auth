@@ -5,9 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 )
 
 func TestCreateSession_Success(t *testing.T) {

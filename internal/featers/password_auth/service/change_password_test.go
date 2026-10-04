@@ -5,10 +5,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Inforberi/financial-intelligence/internal/core/domain"
-	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/Inforberi/financial-intelligence/internal/core/domain"
+	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 )
 
 const (

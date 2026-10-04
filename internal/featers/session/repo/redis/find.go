@@ -6,8 +6,9 @@ import (
 	"errors"
 	"fmt"
 
-	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 	"github.com/redis/go-redis/v9"
+
+	session_domain "github.com/Inforberi/financial-intelligence/internal/featers/session/domain"
 )
 
 func (s *SessionRepo) FindSession(ctx context.Context, tokenHash string) (*session_domain.Session, error) {

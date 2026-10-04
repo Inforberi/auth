@@ -2,11 +2,13 @@ package password_redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 	"github.com/redis/go-redis/v9"
+
+	"github.com/Inforberi/financial-intelligence/internal/core/domain"
 )
 
 func (r *RedisRepo) SaveResetToken(ctx context.Context, tokenHash string, userID domain.UserID, ttl time.Duration) error {
@@ -14,7 +16,7 @@ func (r *RedisRepo) SaveResetToken(ctx context.Context, tokenHash string, userID
 	userKey := forgotPasswordUserTokenKey(userID)
 
 	oldHash, err := r.db.Get(ctx, userKey).Result()
-	if err != nil && err != redis.Nil {
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return fmt.Errorf("get old reset token: %w", err)
 	}
 

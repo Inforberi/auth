@@ -14,7 +14,9 @@ func JSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
-	_ = json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		return
+	} // Response headers are committed; a disconnected client cannot receive a second error.
 }
 
 func Error(w http.ResponseWriter, status int, code, message string) {

@@ -2,9 +2,12 @@ package password_service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Inforberi/financial-intelligence/internal/core/domain"
+	"github.com/Inforberi/financial-intelligence/internal/core/infra/mailer/templates"
+	password_domain "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/domain"
 )
 
 func (p *PasswordService) ForgotPassword(ctx context.Context, email string) error {
@@ -17,7 +20,10 @@ func (p *PasswordService) ForgotPassword(ctx context.Context, email string) erro
 	// find user by email
 	findResult, err := p.repo.FindByEmail(ctx, mail.String())
 	if err != nil {
-		return nil
+		if errors.Is(err, password_domain.ErrNotFound) {
+			return nil
+		}
+		return fmt.Errorf("forgot password lookup: %w", err)
 	}
 
 	// if find generate token
@@ -26,14 +32,20 @@ func (p *PasswordService) ForgotPassword(ctx context.Context, email string) erro
 		return fmt.Errorf("forgot password generate token %w", err)
 	}
 	hashToken := p.tm.Hash(rawToken)
+	body, err := templates.RenderResetPassword(p.cfg.ResetURL, rawToken, p.cfg.ResetTokenTTL, p.now.NowUTC())
+	if err != nil {
+		return err
+	}
 
 	// save token in redis
 	err = p.redis.SaveResetToken(ctx, hashToken, findResult.UserID, p.cfg.ResetTokenTTL)
 	if err != nil {
-		return fmt.Errorf("err save reset token %w:", err)
+		return fmt.Errorf("save reset token: %w", err)
 	}
 
 	// if find send email with link with token
-	p.mailer.Send(mail.String(), )
+	if err := p.mailer.Send(mail.String(), "Сброс пароля", body); err != nil {
+		return fmt.Errorf("forgot password delivery: %w", err)
+	}
 	return nil
 }
