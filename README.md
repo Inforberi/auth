@@ -25,7 +25,9 @@ Checks используют `.env.example`/`.env.prod.example`, не читаю�
 
 ## Конфигурация
 
-Полные примеры — `.env.example` и `.env.prod.example`; источник runtime validation — `internal/core/config/config.go`. `APP_ENV=dev|test|prod`, `LOG_LEVEL` задаёт logger. `PORT`, `DATABASE_URL`, pool limits, `REDIS_HOST/PORT/PASSWORD` обязательны для startup. `SESSION_TTL`, **отдельный** `ABSOLUTE_SESSION_TTL` и `SESSION_REFRESH_THRESHOLD` должны быть согласованы. Reset URL берётся только из `PASSWORD_RESET_URL`, TTL — `PASSWORD_RESET_TOKEN_TTL`; публичный reset API пока выключен.
+Полные примеры — `.env.example` и `.env.prod.example`; источник runtime validation — `internal/app/config/config.go`. `APP_ENV=dev|test|prod`, `LOG_LEVEL` задаёт logger. `PORT`, `DATABASE_URL`, pool limits, `REDIS_HOST/PORT/PASSWORD` обязательны для startup. `SESSION_TTL`, **отдельный** `ABSOLUTE_SESSION_TTL` и `SESSION_REFRESH_THRESHOLD` должны быть согласованы. Reset URL берётся только из `PASSWORD_RESET_URL`, TTL — `PASSWORD_RESET_TOKEN_TTL`; публичный reset API пока выключен.
+
+Код Auth расположен в `internal/modules/auth` по фичам; инфраструктура — в `internal/infra`, HTTP router — в `internal/transport/http`, DI/config — в `internal/app`. Карта переноса и правила добавления кода — в [архитектуре](docs/architecture.md). Рукописные Go/HTML-файлы, включая tests, ограничены 150 строками; лимит и основные границы зависимостей проверяет обычный `task check`.
 
 `SMTP_HOST/PORT/USERNAME/PASSWORD/FROM/DOMAIN` задают mailer. В dev SMTP идёт в Mailpit. Production SMTP delivery, TLS/timeouts/outbox ещё требуют отдельной проверки. `SWAGGER_ENABLED=false` по умолчанию; при включении нужны credentials. В prod dev mail route отсутствует, reset URL требует HTTPS, Redis password — минимум 16 символов. Validation не заменяет secret provisioning и review.
 

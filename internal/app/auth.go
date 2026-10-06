@@ -9,24 +9,24 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/Inforberi/financial-intelligence/internal/core/config"
-	"github.com/Inforberi/financial-intelligence/internal/core/infra/clock"
-	"github.com/Inforberi/financial-intelligence/internal/core/infra/hasher"
-	"github.com/Inforberi/financial-intelligence/internal/core/infra/httpserver"
-	"github.com/Inforberi/financial-intelligence/internal/core/infra/logger"
-	"github.com/Inforberi/financial-intelligence/internal/core/infra/mailer"
-	"github.com/Inforberi/financial-intelligence/internal/core/infra/postgres"
-	redis_client "github.com/Inforberi/financial-intelligence/internal/core/infra/redis"
-	"github.com/Inforberi/financial-intelligence/internal/core/infra/tokengenerate"
-	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/dev"
-	core_middleware "github.com/Inforberi/financial-intelligence/internal/core/transport/http/middleware"
-	"github.com/Inforberi/financial-intelligence/internal/core/transport/http/router"
-	postgres_password "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/repo/postgres"
-	password_redis "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/repo/redis"
-	password_service "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/service"
-	password_http "github.com/Inforberi/financial-intelligence/internal/featers/password_auth/transport/http"
-	session_redis "github.com/Inforberi/financial-intelligence/internal/featers/session/repo/redis"
-	session_service "github.com/Inforberi/financial-intelligence/internal/featers/session/service"
+	"github.com/Inforberi/financial-intelligence/internal/app/config"
+	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
+	"github.com/Inforberi/financial-intelligence/internal/infra/httpserver"
+	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
+	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
+	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
+	redisclient "github.com/Inforberi/financial-intelligence/internal/infra/redis"
+	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
+	"github.com/Inforberi/financial-intelligence/internal/modules/auth/password/hasher"
+	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/modules/auth/password/repository/postgres"
+	passwordredis "github.com/Inforberi/financial-intelligence/internal/modules/auth/password/repository/redis"
+	passwordservice "github.com/Inforberi/financial-intelligence/internal/modules/auth/password/service"
+	passwordhttp "github.com/Inforberi/financial-intelligence/internal/modules/auth/password/transport/http"
+	sessionredis "github.com/Inforberi/financial-intelligence/internal/modules/auth/session/repository/redis"
+	sessionservice "github.com/Inforberi/financial-intelligence/internal/modules/auth/session/service"
+	middleware "github.com/Inforberi/financial-intelligence/internal/modules/auth/session/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
+	"github.com/Inforberi/financial-intelligence/internal/transport/http/router"
 )
 
 func Run() error {
@@ -60,7 +60,7 @@ func Run() error {
 	log.Info("postgres pool created successfully")
 
 	// init redis
-	rdb, err := redis_client.New(ctx, cfg.Redis)
+	rdb, err := redisclient.New(ctx, cfg.Redis)
 	if err != nil {
 		return fmt.Errorf("init redis: %w", err)
 	}
@@ -87,14 +87,14 @@ func Run() error {
 		mailTest = dev.NewMailTest(mail, log)
 	}
 
-	// init session feater
-	sessionRepo := session_redis.New(rdb)
-	sessionService := session_service.New(now, sessionRepo, tokenGen, cfg.Session)
+	// init session feature
+	sessionRepo := sessionredis.New(rdb)
+	sessionService := sessionservice.New(now, sessionRepo, tokenGen, cfg.Session)
 
-	// init password feater
-	passwordRepo := postgres_password.New(pool)
-	passwordRedisRepo := password_redis.New(rdb)
-	passwordSvc := password_service.New(
+	// init password feature
+	passwordRepo := passwordpostgres.New(pool)
+	passwordRedisRepo := passwordredis.New(rdb)
+	passwordSvc := passwordservice.New(
 		passwordRepo,
 		sessionService,
 		argonHash,
@@ -105,10 +105,10 @@ func Run() error {
 		mail,
 	)
 	passwordLogger := log.With(zap.String("feature", "password_auth"), zap.String("layer", "transport"))
-	passwordHandler := password_http.New(passwordSvc, passwordLogger)
+	passwordHandler := passwordhttp.New(passwordSvc, passwordLogger)
 
 	// init middleware
-	mv := core_middleware.New(sessionService, log)
+	mv := middleware.New(sessionService, log)
 
 	r := router.New(router.Handlers{
 		PasswordHandler: passwordHandler,
