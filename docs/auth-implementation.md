@@ -8,7 +8,7 @@
 
 Обычная проверка изменений Go: `task check` (tests + lint). Дополнительные race/integration/security/container/API checks — только по затронутому риску и перед release; весь набор не повторять после каждой мелкой правки. Если обязательная для конкретного изменения проверка недоступна или падает, записать результат и не заявлять её прохождение. Задачи ниже не разрешают prod deploy/restore ради проверки.
 
-Основной порядок: 1.1–1.8 → 4 → 5/6 → 7/8 → 9/10 → 11/12 → 14. Детализация разделов 2–3 и перенос 4.2–4.3 выполняются внутри первого этапа. Этап 0 до зависимых решений; 13.1 после 6 до любых production admin endpoints. Docs и security audit ведутся на каждом шаге.
+Текущий порядок: 0 и 1.1–1.8 завершены → 4 → 5/6 → 7/8 → 9/10 → 11/12 → 14. Детализация разделов 2–3 и перенос 4.2–4.3 выполняются внутри первого этапа. Этап 0 до зависимых решений; 13.1 после 6 до любых production admin endpoints. Docs и security audit ведутся на каждом шаге.
 
 ## 1. Адаптация go-template и удаление reference — первый этап
 
@@ -16,25 +16,25 @@
 - [x] 1.2. Выполнить инфраструктурные задачи раздела 2.
 - [x] 1.3. Выполнить окружение/toolchain/CI/dependency задачи раздела 3.
 - [x] 1.4. Выполнить перенос HTTP validation и Swagger policy по 4.2–4.3; schema/domain задачи 4.1/4.4 оставить следующему этапу.
-- [x] 1.5. Оценить REF `pkg/client.go/client_test.go`: либо адаптировать в `internal/core/infra/httpclient/` с bounds/redaction/TLS/redirect/SSRF/cancellation tests, либо отклонить wrapper в пользу стандартного transport/SDK. Записать решение сейчас; этапы 8/12 не зависят от source snapshot.
+- [x] 1.5. Оценить REF `pkg/client.go/client_test.go`: либо адаптировать в `internal/infra/httpclient/` с bounds/redaction/TLS/redirect/SSRF/cancellation tests, либо отклонить wrapper в пользу стандартного transport/SDK. Записать решение сейчас; этапы 8/12 не зависят от source snapshot.
 - [x] 1.6. Адаптировать REF backup/restore и Task/Compose tasks в рабочие `deploy/scripts/`/`Taskfile.yml`; проверить locks, exact targets, текущих writers, DB roles, failures и restore на disposable DB. Для logs/deploy выбрать полезные компоненты либо отклонить с причиной. Auto-deploy не включать. Финальная проверка с будущими billing/email workers остаётся этапом 14.
 - [x] 1.7. Создать `docs/template-adoption.md`: source commit `4acce0b1b822742327a84c5216e7f1c899f08424`, все компоненты, решение/рабочие файлы, проверки и ограничения. Перенести полезные REF README инструкции в Auth docs; заменить ссылки на snapshot рабочими путями/документами.
-- [x] 1.8. Временный `docs/reference/go-template/` удалён по явному запросу пользователя после переноса выбранных компонентов. Provenance и решения сохранены в `docs/template-adoption.md`; исходный соседний проект не затронут. Tests/lint и production drill выполнены ранее. Незавершённый dev smoke после CGO fix остаётся отдельным проверочным долгом, не поводом хранить source snapshot.
+- [x] 1.8. Временный `docs/reference/go-template/` удалён по явному запросу пользователя после переноса выбранных компонентов. Provenance и решения сохранены в `docs/template-adoption.md`; исходный соседний проект не затронут. Tests/lint и production drill выполнены ранее. 6 октября 2026 dev smoke после CGO fix прошёл на изолированном Compose project; проверочный долг закрыт.
 
 Готово: reference отсутствует, Auth содержит все выбранные и проверенные улучшения, дальнейшие задачи не требуют исходников другого проекта. Незавершённые проверки учитываются отдельно; удаление source snapshot не означает их прохождение.
 
 ## 0. Архитектура
 
-- [ ] 0.1. Создать `docs/architecture.md` и ADR в `docs/adr/`: single-app independent deployment, модульные границы identity/session/access/entitlement/billing, ownership UUID/app scope и PostgreSQL/Redis sources of truth. Доставленный reference считать завершённым сбором материалов, а не завершением ADR.
-- [ ] 0.2. Создать `docs/threat-model.md` по takeover/replay/linking/CSRF/privilege escalation/resource exhaustion/payment forgery; связать mitigation и negative tests с номерами подэтапов.
-- [ ] 0.3. ADR по durable session revocation и challenges: failure semantics, transactional updates, outbox/inbox, Redis fallback, authentication context. Решение необходимо до 5.2/5.4/6.2–6.3.
-- [ ] 0.4. Записать billing scope: личный account first, versioned catalog, один hosted checkout adapter. Перед 12.1 выбрать реальный provider по требованиям продавца. Common SSO/organizations/Mini Apps — включаемые расширения, не prerequisites базового шаблона.
+- [x] 0.1. [architecture.md](architecture.md) и [ADR 001](adr/001-deployment-and-reuse.md): independent single-app, module boundaries, UUID/app scope и reuse.
+- [x] 0.2. [threat-model.md](threat-model.md): угрозы, меры и negative tests с номерами подэтапов.
+- [x] 0.3. [ADR 002](adr/002-sessions-and-transactions.md): durable session ledger/auth version, transaction challenges/audit/outbox, fail-closed и authentication context.
+- [x] 0.4. [ADR 003](adr/003-access-and-optional-billing.md): personal billing owner, catalog, отдельные настройки access/entitlements/billing и optional payments.
 
-Проверка: нет противоречий между schema/API/security/release scope; каждое нерешённое внешнее условие привязано к конкретному dependent шагу.
+Завершено 6 октября 2026. Это решения для будущей реализации, не готовые session/RBAC/payment APIs. Merchant/provider выбирается до 12.1; расширенные клиенты/SSO/organizations — до соответствующего профиля.
 
 ## 1.1. Детализация восстановления сборки
 
-- [x] 1.1a. В `internal/featers/password_auth/service/forgot_password.go` завершить renderer → subject/body → `Send` и error handling. Использовать текущие `internal/core/infra/mailer/templates/reset_password.go/.html`; сохранить пользовательский HTML. Не публиковать reset endpoint раньше 5.2.
+- [x] 1.1a. В `internal/modules/auth/password/service/forgot_password.go` завершить renderer → subject/body → `Send` и error handling. Использовать текущие `internal/modules/auth/password/templates/reset_password.go/.html`; сохранить пользовательский HTML. Не публиковать reset endpoint раньше 5.2.
 - [x] 1.1b. Проверить успешный render, escaping/URL generation и ошибку доставки содержательными tests в mailer/templates и password service. Не скрывать техническую ошибку пустой заглушкой.
 - [x] 1.1c. Выполнить базовые checks. Зафиксировать remaining failures отдельно; не смешивать dependency/container updates с исправлением Send.
 
@@ -46,12 +46,12 @@
 
 | Шаг | Источник REF | Рабочие файлы Auth | Реализация и проверка |
 | --- | --- | --- | --- |
-| 2.1 | `internal/infra/config/config.go`, `config_test.go` | `internal/core/config/*`, infra config types | `Validate`, отдельный env key absolute TTL, durations/pools/secrets/URL policy; table tests invalid/missing/prod configuration |
-| 2.2a | `internal/transport/http/server/server.go`, `cmd/api/main.go`, `internal/app/app.go` | `internal/core/infra/httpserver/server.go`, `internal/app/auth.go`, `cmd/auth/main.go` | Independent bounded shutdown, signal/resource cleanup; тест завершения активного HTTP request и cancellation |
-| 2.2b | `internal/infra/postgres/postgres.go` | `internal/core/infra/postgres/postrges_pool.go` | Connect/Ping deadline, Close при failed Ping, сохранить pool options; failure/timeout проверка |
-| 2.3 | `internal/infra/logger/*`, `middleware/request.go` | `internal/core/infra/logger/*`, HTTP middleware/router | Context logger + Request ID, route-based redaction/proxy policy; negative tests token/query/header leaks |
+| 2.1 | `internal/infra/config/config.go`, `config_test.go` | `internal/app/config/*`, infra config types | `Validate`, отдельный env key absolute TTL, durations/pools/secrets/URL policy; table tests invalid/missing/prod configuration |
+| 2.2a | `internal/transport/http/server/server.go`, `cmd/api/main.go`, `internal/app/app.go` | `internal/infra/httpserver/server.go`, `internal/app/auth.go`, `cmd/auth/main.go` | Independent bounded shutdown, signal/resource cleanup; тест завершения активного HTTP request и cancellation |
+| 2.2b | `internal/infra/postgres/postgres.go` | `internal/infra/postgres/postrges_pool.go` | Connect/Ping deadline, Close при failed Ping, сохранить pool options; failure/timeout проверка |
+| 2.3 | `internal/infra/logger/*`, `middleware/request.go` | `internal/infra/logger/*`, HTTP middleware/router | Context logger + Request ID, route-based redaction/proxy policy; negative tests token/query/header leaks |
 | 2.4 | `router/router.go`, `router_test.go` | HTTP health handler/router и `internal/app/auth.go` | Live + bounded ready PostgreSQL/Redis; healthy/failure/timeout HTTP tests, никаких DSN в ответах |
-| 2.5 | Durable audit в template отсутствует | `internal/core/audit/audit.go`, policy в template-adoption | В 1.2 создан port без sink/enforcement; durable storage и transactional writes по ADR этапа 0 и lifecycle этапов 4–6. Access log не полноценный audit |
+| 2.5 | Durable audit в template отсутствует | `internal/modules/auth/audit/audit.go`, policy в template-adoption | В 1.2 создан port без sink/enforcement; durable storage и transactional writes по ADR этапа 0 и lifecycle этапов 4–6. Access log не полноценный audit |
 
 Для каждого шага обновить env/config reference и статус. Health и Swagger не заменяют auth checks. Не копировать template error wrapping так, чтобы потерять тип ошибки или раскрыть DSN.
 
@@ -70,10 +70,14 @@
 
 ## 4. Схема и API
 
+- [x] 4.0a. Перенести существующие password/session фичи из прежнего `internal/featers` в `internal/modules/auth/password` и `internal/modules/auth/session`; user/status types выделить в `internal/modules/auth/account/model`. Разобрать `core` по владельцам: auth policies/templates/session HTTP logic — в фичи, aggregated config — в `internal/app/config`, DB/Redis/SMTP/logger lifecycle — в `internal/infra`, общий router/HTTP middleware — в `internal/transport/http`, внешние protocol adapters — в `internal/integrations`. В развитой фиче разделить model/service/repository/transport по архитектуре, без пустых слоёв. Wiring оставить в `internal/app`; business packages не импортируют adapter packages, межфичевые связи через малые consumer-owned interfaces. Не создавать будущие фичи пустыми.
+- [x] 4.0b. Разделить рукописные code/test файлы до ≤150 физических строк по операциям и сценариям, без искусственного дробления пакетов/уплотнения строк. Generated files явно исключить. Добавить `doc.go` с назначением/зависимостями и карту путей/навигации; обновить imports, DI, mock/generation configuration и текущие рабочие пути в плане. Старые пути в историческом provenance допустимы с пометкой.
+- [x] 4.0c. Добавить лёгкий контроль лимита в существующий workflow без нового sh-скрипта. Выполнить `task check`; generation только для затронутых generated artifacts. Убедиться, что `core`/`featers` и их imports исчезли, циклов нет, API/schema/поведение сохранены. Security fixes и schema changes — следующие отдельные подэтапы.
+
 Перенос источников в 4.2–4.3 выполняется в 1.4. На этапе 4 остаются schema/domain изменения и проверка API на обновлённой схеме; повторное чтение reference не нужно.
 
 - [ ] 4.1. Проверить/адаптировать существующие `migrations/000001_init.up.sql/.down.sql`, domain models и PostgreSQL repos: UUID, status/deletion, contacts/credentials, timestamps, UNIQUE/FK/CHECK/indexes. Up/down/up только на disposable DB; pre-production правило редактирования текущей миграции сохраняется.
-- [x] 4.2. Из REF `httpx/request.go`, `json.go`, `request_test.go` адаптировать текущий `internal/core/transport/http/httpx`: content type/body bounds, single value, unknown fields, DTO validation. Сохранить Auth error envelope и документировать изменения statuses. Negative tests malformed/oversized/trailing JSON; не применить decoder к подписываемому webhook до raw-body verification.
+- [x] 4.2. Из REF `httpx/request.go`, `json.go`, `request_test.go` адаптировать текущий `internal/transport/http/httpx`: content type/body bounds, single value, unknown fields, DTO validation. Сохранить Auth error envelope и документировать изменения statuses. Negative tests malformed/oversized/trailing JSON; не применить decoder к подписываемому webhook до raw-body verification.
 - [x] 4.3. Из REF router/Swagger jobs перенести policy и pinned generation в `Taskfile.yml`/Auth router. Убрать наследие finance metadata из `cmd/auth/main.go` и generated `docs/*`. UI off in prod; dev mail endpoint unavailable in prod. Swagger 2.0 остаётся текущим контрактом до отдельного решения о OpenAPI 3.
 - [ ] 4.4. Добавить schema/API contract checks, generation drift и реальное совпадение routes/status/DTO/security. Snapshot Swagger — пример структуры, не API Auth.
 
@@ -86,12 +90,12 @@
 - [ ] 5.5. Confirmed email change с fresh auth, уведомлением старого адреса и unique ownership; проверить чужой email/link race.
 - [ ] 5.6. Account deletion/retention: revoke methods/sessions, согласовать subscription cancellation и сохранение платёжной истории; запретить takeover через переиспользование связанной identity.
 
-Рабочие места: `internal/featers/password_auth/*`, session module, core domains/mailer, SQL и router. Схема/DTO/docs/tests обновляются в каждом подэтапе. Email delivery проверяется в staging отдельно от mocks.
+Рабочие места: `internal/modules/auth/password/*`, session module, core domains/mailer, SQL и router. Схема/DTO/docs/tests обновляются в каждом подэтапе. Email delivery проверяется в staging отдельно от mocks.
 
 ## 6. Session и authentication security
 
 - [ ] 6.1. `ValidateSession`, cookie helpers и middleware: expiry на равенстве, clamp absolute deadline, cookie refresh, rotation/fresh auth. Table tests boundaries и реальный browser smoke.
-- [ ] 6.2. Redis repo refresh/delete/indexes: атомарное обновление только актуальной сессии, согласованные create/logout-all и revoke. Integration race tests с настоящим Redis; revoked session не возрождается.
+- [ ] 6.2. По ADR 002 внедрить PostgreSQL session ledger/verifier и проверку актуального user status/auth version на каждом защищённом запросе. Conditional refresh/revoke в SQL, Redis cache/index cleanup без resurrection; согласованные create/logout-all. Проверка чувствительной записи внутри SQL transaction. Concurrency/partial failure tests с настоящими PostgreSQL/Redis.
 - [ ] 6.3. По ADR внедрить durable auth version/invalidation при password reset/change/block. Проверить PostgreSQL/Redis partial failures и concurrent session issuance; outbox alone не заменяет enforcement актуальности.
 - [ ] 6.4. Distributed limits по IP/account/challenge, parser bounds и hashing concurrency. Fuzz corrupted hashes, load/resource checks, rate-limit bypass/proxy/failure tests.
 - [ ] 6.5. CSRF/Origin/CORS/security headers, local HTTPS для `__Host-session`, SMTP TLS/deadlines и secret redaction. Проверить login/linking/изменяющие запросы и email/OIDC browser compatibility.
@@ -130,6 +134,7 @@ Template не содержит identities/SSO/RBAC: эти задачи реал
 - [ ] 10.1. Single-app scope и schema/domain для roles/permission grants, deny-by-default; настройки расширяемы продуктом.
 - [ ] 10.2. Центральный authorization service/middleware и resource ownership для read/list/write/admin APIs. DTO не позволяет self-promotion и подмену user/app scope.
 - [ ] 10.3. Одноразовый operational bootstrap admin и safe role changes/revoke; MFA + fresh auth + durable audit. Проверить last admin recovery и privilege escalation.
+- [ ] 10.5. Раздельные access catalog settings и user role assignments; custom role/permission keys, отдельные management permissions, validation/version/conflict/audit. Operator config до защищённого API; admin settings только после 13.1. Проверить custom role, self-promotion, concurrent settings и last admin. Plan/billing settings сюда не входят.
 - [ ] 10.4. Multi-app memberships/platform_admin/organizations — только расширенный профиль с отдельными cross-app tests.
 
 Готово: member/admin и custom permission проверены backend; тарифы не участвуют в выдаче административных прав. UI следует API contract.
@@ -140,10 +145,13 @@ Template не содержит identities/SSO/RBAC: эти задачи реал
 - [ ] 11.2. Manual/trial grants с audit/expiry; backend feature checks, no Pro→admin и no admin→paid bypass.
 - [ ] 11.3. Atomic usage/quotas, billing period/reset policy, bounded cache/invalidation. Integration tests concurrency/expiry/downgrade; сохранение данных при снижении лимита.
 
+- [ ] 11.4. Отдельные настройки features/plans/limits/grants с version/conflict/audit; профиль entitlements-only без provider secrets. Проверить unknown feature/expired grant/disabled billing и отсутствие admin→paid bypass.
+
 ## 12. Payments
 
 Подробные варианты и критерии находятся в этапе 12 [основного плана](auth-plan.md). Здесь порядок рабочих изменений:
 
+- [ ] 12.0. Отдельные billing settings/permissions; auth-only, entitlements-only, billing-enabled профили и schema selection по ADR 003. Проверить старт без payment secrets/connections/routes/workers; sales pause сохраняет webhook/cancel/refund/reconciliation, историю и grants. Полное отключение после завершения обязательств по runbook; не выключать оплатой entitlement enforcement. Protected settings API после 13.1.
 - [ ] 12.1. После выбора provider: schema/domain/repo billing accounts/orders/payment attempts/subscriptions/refunds/event inbox/outbox, amount/currency/price snapshot и state machine. Не создавать все будущие таблицы до определения сценариев.
 - [ ] 12.2. Hosted checkout adapter и protected purchase API: backend owner/price/amount, allowed return URLs, provider idempotency + local recovery. Contract tests timeout-after-provider-success и repeat request.
 - [ ] 12.3. Provider webhook transport: raw-body/signature или официальная authenticated verification; durable event inbox перед ACK, event/payment uniqueness; worker retries/backoff/error queue.
@@ -173,9 +181,9 @@ Template не содержит identities/SSO/RBAC: эти задачи реал
 
 ## Учёт выполнения
 
-Текущий результат: tests/lint и production drill прошли. Dev smoke после CGO fix не повторялся (пользователь отклонил запуск), reference удалён по явному запросу пользователя; dev smoke остаётся непроверенным. Не считать dev startup проверенным; новые проверки без отдельного запроса не запускать.
+Текущий результат: 4.0 завершён, структура перенесена, Go/HTML ≤150 строк; `task check` и Swagger generation прошли, API/schema сохранены. Следующий шаг — 4.1. Этап 0 задокументирован; tests/lint и production drill прошли ранее, reference удалён. 6 октября 2026 dev image build и isolated startup/SMTP smoke после CGO fix прошли (команды/границы в основном плане). Проверочный долг закрыт; runtime auth/security/billing задачи остаются впереди. Не повторять полный набор проверок для правок документации.
 
-При завершении подэтапа добавить в основной план: номер, изменённые файлы/commit при наличии, команды и результаты checks, schema/API change, ограничения и следующий шаг. Статусы «материалы собраны», «адаптировано» и «проверено в staging» различаются. Этап 1.1–1.7 адаптирован; cleanup 1.8 выполнен; dev smoke после CGO fix пока не подтверждён. Новые auth flows не реализовывались.
+При завершении подэтапа добавить в основной план: номер, изменённые файлы/commit при наличии, команды и результаты checks, schema/API change, ограничения и следующий шаг. Статусы «материалы собраны», «адаптировано» и «проверено в staging» различаются. Этап 1.1–1.7 адаптирован; cleanup 1.8 выполнен; dev smoke после CGO fix подтверждён 6 октября 2026. Новые auth flows не реализовывались.
 
 ## Режим проверок после уточнения пользователя
 
