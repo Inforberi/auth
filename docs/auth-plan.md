@@ -355,6 +355,14 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 Проверено: `task fmt`, `task swagger`, `task check` — успешны, lint 0 issues. Swagger JSON совпадает с исходным контрактом, включая schema names; для этого использованы документированные `swaggertype`/`@name`. SQL/schema/dependencies и HTTP поведение не менялись; runtime Docker/SMTP/race/security scan повторно не запускались. Новые session security/lifecycle функции не добавлены, baseline P0 остаются задачами 5/6. Следующий шаг — **4.1**, не повторный перенос инфраструктуры.
 
+### Dev tooling — уточнение 6 октября 2026
+
+По явному запросу добавлен `.air.toml` для `./cmd/auth`; Air `v1.67.4` закреплён только в dev image, Go/HTML watch и graceful interrupt/restart настроены по документации. Production image и application dependencies не менялись. Tmp binary вынесен в отдельный writable volume; integration runner подготавливает mountpoint для readonly source bind.
+
+Taskfile приведён к формату предоставленного примера: отступы 4 пробела, списки cmds, русские секции/описания, namespaced `dev:*`, `migrate:*`, `go:*`, `check:*`, `prod:*`; `backup`/`restore` отдельно. Старые публичные имена — aliases. `task check` всё ещё только tests + lint; rollback/restore guards сохранены. Worker/seeds/log dashboard/auto-deploy/reset из примера не добавлены.
+
+Проверено: Task list/dry-run, shell syntax, `git diff --check`, dev image build и `AUTH_TEST_IMAGE=auth:aircheck AUTH_TEST_APP_ENV=dev AUTH_SMOKE_ONLY=true task check:integration` — успешны. Первый запуск выявил отсутствующий tmp mountpoint; исправление проверено повторным smoke. API действительно стартует через Air, readiness/liveness/локальная SMTP отправка прошли. Тестовый project `auth-check-1791317880-20730` и volumes удалены; существующая БД не затронута. File-change reload и signal-drain под активной нагрузкой отдельно не проверялись; полный tests/lint/security/backup drill не повторялся для dev config changes. Следующий функциональный шаг остаётся 4.1.
+
 ## Источники
 
 Текущий код Auth и go-template — источник выводов о проекте. Telegram/OIDC/платёжные правила и webhook semantics повторно проверены 4 октября 2026 через Context7 и официальную документацию; остальные ссылки — материалы для ADR/реализации, а не подтверждение готовности интеграций:

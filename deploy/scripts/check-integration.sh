@@ -7,6 +7,8 @@ project="auth-check-$(date +%s)-$$"
 compose() { APP_ENV_FILE=.env.example docker compose --project-directory "$project_root" --env-file .env.example -p "$project" -f deploy/compose.base.yml -f deploy/compose.check.yml "$@"; }
 # Cleanup targets only the unique project created by this script, never user data.
 trap 'compose down --volumes --remove-orphans' EXIT
+# The nested writable Air volume needs its mountpoint in the readonly source bind.
+mkdir -p tmp
 compose up -d --wait postgres redis mailpit
 compose run --rm migrate up
 if [[ "${AUTH_SMOKE_ONLY:-false}" != true ]]; then

@@ -15,7 +15,7 @@
 | `pkg/client.go`, `client_test.go` | Wrapper отклонён. Он включает provider body в errors и не задаёт bounds успешного response/SSRF/redirect policy. Пока нет реального outbound use case, отдельная abstraction не нужна. Telegram/OIDC/payment adapters используют SDK или собственный стандартный transport с требованиями ниже. |
 | `go.mod`, `go.sum` | Чужие lockfiles не перенесены. Go 1.27.1; chi 5.3.2, pgx 5.10.0, http-swagger/v2 2.0.2; security fixes x/crypto 0.56.0, x/text 0.41.0, x/mod 0.40.0. Остальные версии — текущий Auth graph, не обещание «latest». Argon2 compatibility/resource-bound tests. |
 | `deploy/Dockerfile.dev`, `Dockerfile.prod`, `.dockerignore`, `.gitignore` | Auth Dockerfiles + secrets/data exclusion. Dev bind mount и Go caches; prod multi-architecture build args, static nonroot/read-only runtime. Реальная host architecture проверяется build/smoke; cross-platform coverage не заявляется. |
-| `.air.toml` | Air отклонён как необязательная дополнительная dependency. Dev — ручной restart `go run`; hot reload не заявляется. |
+| `.air.toml` | Первоначально Air отклонён. По явному запросу пользователя 6 октября добавлены Auth `.air.toml` и Air `v1.67.4` в dev image; Go/HTML watch, graceful restart, без изменения production image или go.mod. |
 | `deploy/compose.dev.yml`, `compose.prod.yml`, `.env.example`, `.env.prod.example` | Отдельные base/dev/prod/check profiles: Redis auth consistent, Mailpit, health/migration ordering, isolated named volumes, localhost dev ports, no prod storage ports. Runtime role отдельно от owner, `deploy/runtime-grants.sql`. Existing `out/pgdata` не используется и не удаляется. |
 | `Taskfile.yml`, `.github/workflows/ci.yml` | Перенесли команды Make в один Taskfile, сохранили tasks в `Taskfile.yml`: check/race/integration/security/Swagger/Compose/shell. CI actions pinned SHA, permissions read-only, no persisted credentials, same checks; Task включён по отдельному запросу пользователя. |
 | `docs/docs.go`, `swagger.json`, `swagger.yaml` | Template API spec отклонён; Auth spec сгенерирован заново pinned swag 1.16.6. Исправлены title/base/path, health routes, UI policy и generation drift job. OpenAPI 3 не вводили. |
@@ -32,7 +32,7 @@
 - Один project — одна изолированная БД/Redis deployment. Volume names scope задаётся APP_NAME; эксплуатационные writers должны быть перечислены перед restore. PostgreSQL — authoritative persistent data; Redis session consistency пока не пересмотрена.
 - Outbound integrations: trusted HTTPS destinations, explicit request context/timeout, limited successful/error response, no body/token/URL query in logged errors, controlled redirects/SSRF, provider-specific idempotency/retry, close/reuse connections. Проверки cancellation, concurrent use, redirects, body limits и failure semantics выполняются при появлении adapter, а не копируются из чужого wrapper.
 - Owner/migration и runtime credentials различаются; runtime — только schema usage/DML. SQL grants проверяются отдельно и повторяются после restore. Bootstrap/password provisioning остаётся operator action.
-- No automatic deployment, Air или log dashboard. Эти отклонения завершают выбор компонентов первого этапа, не оставляют задачу чтения удалённого reference.
+- No automatic deployment или log dashboard. Air первоначально отклонён, затем включён отдельным явным запросом пользователя. Эти отклонения завершают выбор компонентов первого этапа, не оставляют задачу чтения удалённого reference.
 
 ## Проверки и границы
 

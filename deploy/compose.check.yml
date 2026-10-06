@@ -30,6 +30,7 @@ services:
       - .:/workspace:ro
       - test-go-mod-cache:/go/pkg/mod
       - test-go-build-cache:/root/.cache/go-build
+      - test-air-tmp:/workspace/tmp
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -61,3 +62,4 @@ volumes:
   backups:
   test-go-mod-cache:
   test-go-build-cache:
+  test-air-tmp:

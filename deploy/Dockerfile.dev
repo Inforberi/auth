@@ -1,5 +1,6 @@
 FROM golang:1.27.1-bookworm
 WORKDIR /workspace
 ENV GOTOOLCHAIN=local CGO_ENABLED=0 GOTMPDIR=/root/.cache/go-build
-# Standard Go watcher-free profile: restart with task dev-up after changes.
-CMD ["go", "run", "./cmd/auth"]
+# Air is a pinned development tool, not a runtime application dependency.
+RUN go install github.com/air-verse/air@v1.67.4
+CMD ["air", "-c", ".air.toml"]

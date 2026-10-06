@@ -15,6 +15,7 @@ services:
       - .:/workspace
       - go-mod-cache:/go/pkg/mod
       - go-build-cache:/root/.cache/go-build
+      - air-tmp:/workspace/tmp
     ports: ['127.0.0.1:${PORT:-8080}:${PORT:-8080}']
     depends_on:
       migrate:
@@ -27,3 +28,4 @@ services:
 volumes:
   go-mod-cache:
   go-build-cache:
+  air-tmp:
