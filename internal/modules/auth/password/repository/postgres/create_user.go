@@ -3,8 +3,10 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"time"
 
 	accountmodel "github.com/Inforberi/financial-intelligence/internal/modules/auth/account/model"
+	emailmodel "github.com/Inforberi/financial-intelligence/internal/modules/auth/email/model"
 )
 
 func (r *PasswordRepo) CreateUser(ctx context.Context, email, passwordHash string) (accountmodel.UserID, error) {
@@ -13,7 +15,11 @@ func (r *PasswordRepo) CreateUser(ctx context.Context, email, passwordHash strin
 		return "", fmt.Errorf("error to start transaction %w", err)
 	}
 
-	defer func() { _ = tx.Rollback(ctx) }() //nolint:gosec // Rollback after Commit reports ErrTxClosed; original errors take precedence.
+	defer func() {
+		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		_ = tx.Rollback(cleanup) //nolint:gosec // Commit closes the transaction; keep the original error.
+	}()
 
 	var userId accountmodel.UserID
 
@@ -27,15 +33,22 @@ func (r *PasswordRepo) CreateUser(ctx context.Context, email, passwordHash strin
 		return "", fmt.Errorf("insert users: %w", err)
 	}
 
+	var emailID emailmodel.AddressID
+	err = tx.QueryRow(ctx, `INSERT INTO auth.user_emails(user_id, email)
+		VALUES ($1, $2) RETURNING id`, userId, email).Scan(&emailID)
+	if err != nil {
+		return "", registrationError(err)
+	}
+
 	sql = `
 	INSERT INTO auth.password_credentials(
 		user_id,
-		email,
+		email_id,
 		password_hash
 	)
 	VALUES ($1, $2, $3)
 	`
-	_, err = tx.Exec(ctx, sql, userId, email, passwordHash)
+	_, err = tx.Exec(ctx, sql, userId, emailID, passwordHash)
 	if err != nil {
 		return "", fmt.Errorf("insert password_credentials: %w", err)
 	}

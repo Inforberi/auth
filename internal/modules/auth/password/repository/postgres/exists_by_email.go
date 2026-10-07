@@ -9,7 +9,7 @@ func (r *PasswordRepo) ExistsByEmail(ctx context.Context, email string) (bool, e
 	sql := `
 	SELECT EXISTS(
 		SELECT 1
-		FROM auth.password_credentials
+		FROM auth.user_emails
 		WHERE email = $1
 	)
 	`

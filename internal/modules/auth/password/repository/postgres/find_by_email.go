@@ -13,9 +13,10 @@ import (
 
 func (l *PasswordRepo) FindByEmail(ctx context.Context, email string) (*domain_password_auth.FindByEmailResult, error) {
 	sql := `
-	SELECT user_id, password_hash
-	FROM auth.password_credentials
-	WHERE email = $1
+	SELECT pc.user_id, pc.password_hash
+	FROM auth.password_credentials pc
+	JOIN auth.user_emails e ON e.id = pc.email_id AND e.user_id = pc.user_id
+	WHERE e.email = $1
 	`
 	var userID accountmodel.UserID
 	var passwordHash string
