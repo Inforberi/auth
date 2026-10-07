@@ -111,6 +111,9 @@ Auth — переиспользуемый Go-шаблон, который мож
 
 Проверить существующие users/profile/password credentials, UUID, constraints, индексы, статусы, soft deletion и правила email ownership. Разделить контактный email и credential при подготовке verification. Редактировать текущие миграции, протестировать чистую схему. Новые identities/access/billing сущности добавлять в эти же SQL-файлы вместе с соответствующим этапом, без лишних таблиц заранее.
 
+- [x] 4.1. Схема/domain/repositories: отдельный contact email, account status/deletion/auth_version, ownership FK и timestamps; проверено на disposable PostgreSQL. Правила применения и ограничения — [schema](schema.md).
+- [ ] 4.4. Следующий шаг: schema/API contract checks, воспроизводимая Swagger generation, соответствие routes/status/DTO/security.
+
 Привести Swagger metadata к универсальному Auth, проверить реальные paths/basePath, DTO/json names, errors и security. Настроить UI для dev/prod и pinned generation. Swagger UI major v2 не означает OpenAPI v3; текущий генератор выпускает Swagger 2.0. Cookie/CSRF ограничения формата документировать; переход на OpenAPI 3 — отдельное решение, не автоматическое обновление.
 
 Строгий JSON decoder и Swagger policy переносятся в 1.4 с сохранением Auth error contract; здесь проверить их соответствие обновлённой схеме/API, не переносить повторно. Любое изменение response status/JSON документировать.
@@ -323,7 +326,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 ## 6. Текущий статус
 
-Этап 0 завершён 6 октября 2026: architecture, threat model, ADR 001–003 и независимые access/entitlements/billing settings. Этап 1: перенос и cleanup завершены; provenance — [template-adoption](template-adoption.md). Tests/lint и production migration/restore/negative drill прошли ранее. 6 октября dev image build и isolated startup/SMTP smoke после CGO fix прошли; технический долг dev-запуска закрыт. Новые auth/session/RBAC/MFA/billing возможности не реализованы, baseline P0 ещё требуют этапов 5/6. Подэтап 4.0 завершён: модульная структура и лимит файлов. Следующий шаг — 4.1: схема/domain.
+Этап 0 завершён 6 октября 2026: architecture, threat model, ADR 001–003 и независимые access/entitlements/billing settings. Этап 1: перенос и cleanup завершены; provenance — [template-adoption](template-adoption.md). Tests/lint и production migration/restore/negative drill прошли ранее. 6 октября dev image build и isolated startup/SMTP smoke после CGO fix прошли; технический долг dev-запуска закрыт. Новые auth/session/RBAC/MFA/billing возможности не реализованы, baseline P0 ещё требуют этапов 5/6. Подэтапы 4.0 и 4.1 завершены: модульная структура, лимит файлов, схема/domain/repositories. Следующий шаг — 4.4: API/schema contract.
 
 Проверка этого шага: `docker build -f deploy/Dockerfile.dev -t auth:devcheck .`; `AUTH_TEST_IMAGE=auth:devcheck AUTH_TEST_APP_ENV=dev AUTH_SMOKE_ONLY=true task check-integration` — exit 0. Проверены dev startup, migration up, runtime DB connection, PostgreSQL/Redis readiness, liveness, Swagger disabled (404), локальная SMTP отправка в Mailpit. Disposable project `auth-check-1791315226-3825` и его volumes удалены runner; существующая БД не затронута. Это не полный integration/backup drill или external SMTP delivery. На этапе 0 изменения были документационными; tests/lint/security scan и GitHub CI тогда повторно не запускались. Проверка local Markdown links и `git diff --check` прошла. Release checks этапа 14 сохраняются.
 
@@ -333,7 +336,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 1. Перенос и удаление reference | Перенос и cleanup завершены | Tests/lint и prod drill ранее; dev startup/SMTP smoke прошёл 06.10.2026 |
 | 2. Инфраструктура | Выполнено в 1.2 | Durable audit sink — отдельно по ADR; здесь только контракт |
 | 3. Toolchain/окружение/deps | Адаптировано в 1.3 | Dev startup/SMTP smoke после CGO fix подтверждён 06.10.2026 |
-| 4. Структура/схема/API | 4.0 завершён | Перенос пакетов проверен; далее 4.1 и 4.4 |
+| 4. Структура/схема/API | 4.0 и 4.1 завершены | Структура и схема проверены; далее 4.4 |
 | 5. Account lifecycle | Частичная основа | Register/login/change уже есть; verification/reset/lifecycle не завершены |
 | 6. Безопасность сессий | Частичная основа | Cookie/Argon2/Redis есть; подтверждённые дефекты не исправлены |
 | 7. Identities / SSO boundary | Не начат | После 0, 4, 6; общий SSO optional |
@@ -346,6 +349,14 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 14. Release/переносимость | Не начат | После обязательных модулей и checklist; документация ведётся по ходу |
 
 Текущий порядок: 0 и 1.1–1.8 завершены → 4 → 5/6 → 7/8 → 9/10 → 11/12 → 14. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется сразу после 6 до включения любых production admin действий. После 1.8 все следующие этапы используют только рабочий Auth и его документацию.
+
+### Результат 4.1 — 7 октября 2026
+
+Обновлены исходные SQL up/down, account/contact models и password PostgreSQL repositories. Email вынесен в `auth.user_emails`, добавлены `auth_version`, timestamps/trigger и ownership FK; soft deletion сохраняет уникальность контакта. Регистрация атомарна, конкурентный duplicate email сохраняет существующий error contract. Email validation теперь принимает только адрес без display name/обёртки/комментариев; неправильный input возвращает существующую ошибку валидации. DTO/routes не менялись.
+
+Проверено: `task go:fmt`, `task check` (tests + lint, 0 issues), `AUTH_SCHEMA_TEST_DATABASE_URL=<disposable localhost fixture> go test ./internal/modules/auth/password/repository/postgres -run TestPostgresSchema -count=1 -v`. PostgreSQL 18.6: SQL up/down/up, repository round-trip, timestamps, CHECK/FK/UNIQUE, rollback, cascade, soft-deleted email reservation, concurrent registration — PASS. Созданный временный контейнер удалён; рабочая БД не затронута. Новый sh-скрипт не добавлен, полный инфраструктурный drill не повторялся.
+
+Исходная миграция несовместима с уже применённой 000001 без отдельного переноса данных; reset рабочей БД не выполнялся и не разрешён этим этапом. Account status/version enforcement, verification, SQL session ledger и audit/outbox остаются этапами 5/6. Правила — [schema](schema.md). Следующий шаг — 4.4; этап 4 целиком ещё не закрыт.
 
 ### Результат 4.0 — 6 октября 2026
 

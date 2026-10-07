@@ -133,6 +133,6 @@ Auth-only deployment не требует payment secrets, provider connections �
 
 Приняты [ADR 001](adr/001-deployment-and-reuse.md), [ADR 002](adr/002-sessions-and-transactions.md), [ADR 003](adr/003-access-and-optional-billing.md). [Модель угроз](threat-model.md) задаёт негативные acceptance tests.
 
-Следующий этап — 4: схема/domain/API по этим решениям. Затем 5/6; MFA 13.1 сразу после 6 до административных действий; 7–10, 11 и опционально 12, release 14. В 4 проектируется session ledger, но реальный enforcement и concurrency tests завершаются в 6: один SQL-файл сам по себе не закрывает дефекты.
+Структура 4.0 и схема/domain 4.1 выполнены; текущие таблицы и ограничения — [schema](schema.md). Следующий шаг — 4.4: API/schema contract. Затем 5/6; MFA 13.1 сразу после 6 до административных действий; 7–10, 11 и опционально 12, release 14. Session ledger и реальный enforcement/concurrency tests завершаются в 6: один SQL-файл сам по себе не закрывает дефекты.
 
 До 12.1 пользователь выбирает merchant profile: страна/юридический статус продавца, валюты, товары, разовая/recurring оплата, refund/cancel требования. Затем выбирается и проверяется один hosted-checkout provider; конкретный поставщик сейчас не объявлен поддержанным. Native/SSO/organizations/Telegram commerce требуют отдельного подтверждения scope перед своими подэтапами.

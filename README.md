@@ -25,6 +25,8 @@ Checks используют `.env.example`/`.env.prod.example`, не читаю�
 
 ## Конфигурация
 
+Текущая схема и правила её применения — [schema](docs/schema.md). Исходная миграция изменена до production release; уже применённая `000001` автоматически не обновляется. Не сбрасывайте существующую БД: перенос её данных требует отдельной миграции.
+
 Полные примеры — `.env.example` и `.env.prod.example`; источник runtime validation — `internal/app/config/config.go`. `APP_ENV=dev|test|prod`, `LOG_LEVEL` задаёт logger. `PORT`, `DATABASE_URL`, pool limits, `REDIS_HOST/PORT/PASSWORD` обязательны для startup. `SESSION_TTL`, **отдельный** `ABSOLUTE_SESSION_TTL` и `SESSION_REFRESH_THRESHOLD` должны быть согласованы. Reset URL берётся только из `PASSWORD_RESET_URL`, TTL — `PASSWORD_RESET_TOKEN_TTL`; публичный reset API пока выключен.
 
 Код Auth расположен в `internal/modules/auth` по фичам; инфраструктура — в `internal/infra`, HTTP router — в `internal/transport/http`, DI/config — в `internal/app`. Карта переноса и правила добавления кода — в [архитектуре](docs/architecture.md). Рукописные Go/HTML-файлы, включая tests, ограничены 150 строками; лимит и основные границы зависимостей проверяет обычный `task check`.
