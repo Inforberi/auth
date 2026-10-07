@@ -23,7 +23,8 @@ func NewEmail(raw string) (Email, error) {
 	if len(value) > 255 {
 		return Email{}, ErrEmailInvalid
 	}
-	if _, err := mail.ParseAddress(value); err != nil {
+	address, err := mail.ParseAddress(value)
+	if err != nil || address.Address != value || address.Name != "" {
 		return Email{}, ErrEmailInvalid
 	}
 
