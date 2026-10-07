@@ -1,6 +1,6 @@
 # План реализации универсального production Auth-шаблона
 
-Обновлено 6 октября 2026. Рабочий проект: `/Users/inforberi/Desktop/Projects/auth`, ветка `feat/register-ai`. Исходный анализ: HEAD `5e8f5e5` и незакоммиченные изменения reset HTML/HTTP-ошибок. Источник инфраструктурных улучшений: `/Users/inforberi/Desktop/Projects/go-template`, main, изученный HEAD `4acce0b`.
+Обновлено 7 октября 2026. Рабочий проект: `/Users/inforberi/Desktop/Projects/auth`, ветка `feat/register-ai`. Исходный анализ: HEAD `5e8f5e5` и незакоммиченные изменения reset HTML/HTTP-ошибок. Источник инфраструктурных улучшений: `/Users/inforberi/Desktop/Projects/go-template`, main, изученный HEAD `4acce0b`.
 
 ## 1. Назначение и правила
 
@@ -22,7 +22,7 @@ Auth — переиспользуемый Go-шаблон, который мож
 
 - Безопасный жизненный цикл аккаунта: регистрация, подтверждение/смена email, вход, восстановление, смена пароля, привязка/отвязка методов, блокировка и удаление.
 - Сессии с немедленным отзывом, управлением устройствами и защитой чувствительных действий; MFA для административного доступа.
-- Независимые модули identity/authentication, sessions, authorization, entitlements, billing и infrastructure. Продуктовые функции, цены, роли и лимиты задаются настройками/расширениями проекта.
+- Независимые account/auth methods, session, access, entitlement, billing и infrastructure; внешние identities принадлежат account. Продуктовые функции, цены, роли и лимиты задаются настройками/расширениями проекта.
 - Версионированный API, SQL-схема, проверяемые dev/prod окружения, наблюдаемость, backup/restore и воспроизводимый CI.
 - Инструкция переноса в другой проект, пример адаптации и отдельный процесс безопасного обновления зависимостей.
 
@@ -112,7 +112,8 @@ Auth — переиспользуемый Go-шаблон, который мож
 Проверить существующие users/profile/password credentials, UUID, constraints, индексы, статусы, soft deletion и правила email ownership. Разделить контактный email и credential при подготовке verification. Редактировать текущие миграции, протестировать чистую схему. Новые identities/access/billing сущности добавлять в эти же SQL-файлы вместе с соответствующим этапом, без лишних таблиц заранее.
 
 - [x] 4.1. Схема/domain/repositories: отдельный contact email, account status/deletion/auth_version, ownership FK и timestamps; проверено на disposable PostgreSQL. Правила применения и ограничения — [schema](schema.md).
-- [ ] 4.4. Следующий шаг: schema/API contract checks, воспроизводимая Swagger generation, соответствие routes/status/DTO/security.
+- [ ] 4.5. Следующий шаг, до 4.4: перенести реализованный код на [согласованную архитектуру](architecture.md) от 7 октября 2026. `app/auth` — сборка/lifecycle, отдельные `config` и `server/http`; `auth/account`, `auth/methods/password`, `auth/session`; model → domain с распределением service results/HTTP DTO по владельцам, email и linked identities — account; audit — отдельный модуль. Не вводить bootstrap, app/wiring, contact/identity/authentication или будущие пустые пакеты. Repositories остаются у фич. 150 строк оставить целевым ориентиром для рукописного Go-кода: делить до 150 только по самостоятельной ответственности, связную операцию можно оставить длиннее без фиксированного потолка. Тесты/generated без лимита, HTML/SQL по смысловой целостности. Убрать автоматический отказ по длине, осмысленно объединить tests/SQL/templates, адаптировать контроль зависимостей. Отдельные access/entitlement/billing/settings добавляются на своих этапах. Не менять API/schema/security поведение или зависимости этим переносом; transaction ownership спроектировать явно, enforcement — этапы 5/6.
+- [ ] 4.4. После 4.5: schema/API contract checks, воспроизводимая Swagger generation, соответствие routes/status/DTO/security.
 
 Привести Swagger metadata к универсальному Auth, проверить реальные paths/basePath, DTO/json names, errors и security. Настроить UI для dev/prod и pinned generation. Swagger UI major v2 не означает OpenAPI v3; текущий генератор выпускает Swagger 2.0. Cookie/CSRF ограничения формата документировать; переход на OpenAPI 3 — отдельное решение, не автоматическое обновление.
 
@@ -326,7 +327,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 ## 6. Текущий статус
 
-Этап 0 завершён 6 октября 2026: architecture, threat model, ADR 001–003 и независимые access/entitlements/billing settings. Этап 1: перенос и cleanup завершены; provenance — [template-adoption](template-adoption.md). Tests/lint и production migration/restore/negative drill прошли ранее. 6 октября dev image build и isolated startup/SMTP smoke после CGO fix прошли; технический долг dev-запуска закрыт. Новые auth/session/RBAC/MFA/billing возможности не реализованы, baseline P0 ещё требуют этапов 5/6. Подэтапы 4.0 и 4.1 завершены: модульная структура, лимит файлов, схема/domain/repositories. Следующий шаг — 4.4: API/schema contract.
+Этап 0 завершён 6 октября 2026: architecture, threat model, ADR 001–003 и независимые access/entitlements/billing settings. Этап 1: перенос и cleanup завершены; provenance — [template-adoption](template-adoption.md). Tests/lint и production migration/restore/negative drill прошли ранее. 6 октября dev image build и isolated startup/SMTP smoke после CGO fix прошли; технический долг dev-запуска закрыт. Новые auth/session/RBAC/MFA/billing возможности не реализованы, baseline P0 ещё требуют этапов 5/6. Подэтапы 4.0 и 4.1 завершены: модульная структура, лимит файлов, схема/domain/repositories. Следующий шаг — 4.5: согласованный архитектурный перенос, затем 4.4: API/schema contract.
 
 Проверка этого шага: `docker build -f deploy/Dockerfile.dev -t auth:devcheck .`; `AUTH_TEST_IMAGE=auth:devcheck AUTH_TEST_APP_ENV=dev AUTH_SMOKE_ONLY=true task check-integration` — exit 0. Проверены dev startup, migration up, runtime DB connection, PostgreSQL/Redis readiness, liveness, Swagger disabled (404), локальная SMTP отправка в Mailpit. Disposable project `auth-check-1791315226-3825` и его volumes удалены runner; существующая БД не затронута. Это не полный integration/backup drill или external SMTP delivery. На этапе 0 изменения были документационными; tests/lint/security scan и GitHub CI тогда повторно не запускались. Проверка local Markdown links и `git diff --check` прошла. Release checks этапа 14 сохраняются.
 
@@ -336,7 +337,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 1. Перенос и удаление reference | Перенос и cleanup завершены | Tests/lint и prod drill ранее; dev startup/SMTP smoke прошёл 06.10.2026 |
 | 2. Инфраструктура | Выполнено в 1.2 | Durable audit sink — отдельно по ADR; здесь только контракт |
 | 3. Toolchain/окружение/deps | Адаптировано в 1.3 | Dev startup/SMTP smoke после CGO fix подтверждён 06.10.2026 |
-| 4. Структура/схема/API | 4.0 и 4.1 завершены | Структура и схема проверены; далее 4.4 |
+| 4. Структура/схема/API | 4.0 и 4.1 завершены | Целевая архитектура пересогласована; далее 4.5 → 4.4 |
 | 5. Account lifecycle | Частичная основа | Register/login/change уже есть; verification/reset/lifecycle не завершены |
 | 6. Безопасность сессий | Частичная основа | Cookie/Argon2/Redis есть; подтверждённые дефекты не исправлены |
 | 7. Identities / SSO boundary | Не начат | После 0, 4, 6; общий SSO optional |
@@ -348,7 +349,13 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 13. MFA/cabinet | Не начат | 13.1 после 6 и до публикации admin API; остальное по API готовности |
 | 14. Release/переносимость | Не начат | После обязательных модулей и checklist; документация ведётся по ходу |
 
-Текущий порядок: 0 и 1.1–1.8 завершены → 4 → 5/6 → 7/8 → 9/10 → 11/12 → 14. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется сразу после 6 до включения любых production admin действий. После 1.8 все следующие этапы используют только рабочий Auth и его документацию.
+Текущий порядок: 0 и 1.1–1.8 завершены → 4.5 → 4.4 → 5/6 → 7/8 → 9/10 → 11/12 → 14. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется сразу после 6 до включения любых production admin действий. После 1.8 все следующие этапы используют только рабочий Auth и его документацию.
+
+### Архитектура согласована — 7 октября 2026
+
+Пользователь утвердил feature-first дерево с явными domain/service/repository/transport, методами password/emailotp/oidc/telegram и общими account/session/mfa. Contact и внешние linked identities входят в account; отдельный authentication-модуль заранее не создаём. App/auth собирает приложение и управляет ресурсами; config и server/http выделены отдельно. Access, entitlement, billing и audit — отдельные модули; product settings остаются у владельцев, billing опционален. Полное дерево, правила зависимостей/транзакций и пример фичи — [architecture](architecture.md).
+
+Это документационное решение, не выполненный refactor. Жёсткий лимит заменён ориентиром 150 строк при осмысленном разделении; связные операции могут быть длиннее без фиксированного потолка. Тесты/generated не ограничиваются, HTML/SQL сохраняют смысловую целостность. Существующая проверка будет изменена в 4.5. Номер 4.5 добавлен без перенумерации уже выполненных задач, выполняется перед 4.4. Текущий код/SQL/API и рабочие данные не менялись.
 
 ### Результат 4.1 — 7 октября 2026
 

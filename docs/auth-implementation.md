@@ -79,6 +79,15 @@
 - [x] 4.1. Проверить/адаптировать существующие `migrations/000001_init.up.sql/.down.sql`, domain models и PostgreSQL repos: UUID, status/deletion, contacts/credentials, timestamps, UNIQUE/FK/CHECK/indexes. Up/down/up выполнен на disposable PostgreSQL 18.6; pre-production правило редактирования текущей миграции сохраняется. Проверены rollback, конкурентный email conflict, ownership и cascade; ограничения — [schema](schema.md).
 - [x] 4.2. Из REF `httpx/request.go`, `json.go`, `request_test.go` адаптировать текущий `internal/transport/http/httpx`: content type/body bounds, single value, unknown fields, DTO validation. Сохранить Auth error envelope и документировать изменения statuses. Negative tests malformed/oversized/trailing JSON; не применить decoder к подписываемому webhook до raw-body verification.
 - [x] 4.3. Из REF router/Swagger jobs перенести policy и pinned generation в `Taskfile.yml`/Auth router. Убрать наследие finance metadata из `cmd/auth/main.go` и generated `docs/*`. UI off in prod; dev mail endpoint unavailable in prod. Swagger 2.0 остаётся текущим контрактом до отдельного решения о OpenAPI 3.
+### 4.5. Согласованный архитектурный перенос (выполнить до 4.4)
+
+- [ ] 4.5a. Зафиксировать карту текущих и целевых пакетов по [architecture](architecture.md), владельцев account/contact/credential/session/audit и транзакционных операций. Исторические 4.0/4.1 не откатывать; будущие фичи не создавать пустыми.
+- [ ] 4.5b. Перенести composition root в `internal/app/auth` (App/constructor и Run), aggregate config в `internal/config`, HTTP server в `internal/server/http`. Signal context передаётся из main; app управляет ресурсами и порядком завершения, server — Serve/Shutdown с deadline. Не вводить bootstrap или app/wiring. Сохранить корректную очистку частичного startup и закрывать DB/Redis после завершения HTTP работы.
+- [ ] 4.5c. Перенести password в `internal/auth/methods/password`, account/session в `internal/auth`; email domain — account, audit contract — `internal/audit`. Разделить model types: предметные — domain, inputs/results — service, DTO — transport; feature config не смешивать с domain-сущностями. Repositories остаются внутри фич, clients/connections — infra. Внешние linked identities проектируются внутри account при этапе linking, не реализуются раньше.
+- [ ] 4.5d. Заменить жёсткий лимит целевым ориентиром 150 физических строк для рукописного Go-кода: осмысленно делить до 150, но не разрывать связную операцию ради числа; фиксированного потолка нет. Тесты/generated без ограничения длины; HTML/SQL по смысловой целостности. Убрать автоматический отказ по длине из layout test, сохранить/адаптировать полезные проверки imports. Не вводить новый size-check script или числовой release gate. Объединить tests по операции/сценариям, SQL по ответственности, HTML без искусственного дробления; сохранить покрытие и escaping. Не создавать universal CRUD/framework или interfaces ради симметрии.
+- [ ] 4.5e. Обновить imports, DI, generator/mock paths, runtime/docs navigation и ссылки. Сохранить UUID/schema/SQL и API/status/Swagger schema names; не внедрять security changes, новые auth methods или зависимости в structural diff. Подготовить контракт межфичевых SQL-транзакций без независимых commit, фактическая атомарность lifecycle/security — задачи 5/6.
+- [ ] 4.5f. Выполнить formatter и обычный `task check`; Swagger generation/drift после переноса annotированных пакетов. Целевые lifecycle tests для изменённой сборки/Shutdown: startup failure, bounded shutdown и порядок cleanup. Без повторного полного Docker/backup/security drill и новых sh-скриптов. Отметить фактические результаты, обновить README и текущую карту путей.
+
 - [ ] 4.4. Добавить schema/API contract checks, generation drift и реальное совпадение routes/status/DTO/security. Snapshot Swagger — пример структуры, не API Auth.
 
 ## 5. Email/password lifecycle
@@ -90,7 +99,7 @@
 - [ ] 5.5. Confirmed email change с fresh auth, уведомлением старого адреса и unique ownership; проверить чужой email/link race.
 - [ ] 5.6. Account deletion/retention: revoke methods/sessions, согласовать subscription cancellation и сохранение платёжной истории; запретить takeover через переиспользование связанной identity.
 
-Рабочие места: `internal/modules/auth/password/*`, session module, core domains/mailer, SQL и router. Схема/DTO/docs/tests обновляются в каждом подэтапе. Email delivery проверяется в staging отдельно от mocks.
+Рабочие места после 4.5: internal/auth/account, internal/auth/methods/password, internal/auth/session, infra/mailer, SQL и router. Схема/DTO/docs/tests обновляются в каждом подэтапе. Email delivery проверяется в staging отдельно от mocks.
 
 ## 6. Session и authentication security
 
@@ -181,7 +190,7 @@ Template не содержит identities/SSO/RBAC: эти задачи реал
 
 ## Учёт выполнения
 
-Текущий результат: 4.0 и 4.1 завершены, структура и схема адаптированы, Go/HTML ≤150 строк. 7 октября 2026 `task check` и отдельная PostgreSQL schema/repository проверка прошли. Следующий шаг — 4.4: API/schema contract. Рабочая БД не изменялась; уже применённой 000001 нужен отдельный перенос данных. Этап 0 задокументирован; tests/lint и production drill прошли ранее, reference удалён. 6 октября 2026 dev image build и isolated startup/SMTP smoke после CGO fix прошли (команды/границы в основном плане). Runtime auth/security/billing задачи остаются впереди. Не повторять полный набор проверок для правок документации.
+Текущий результат: 4.0 и 4.1 завершены, структура и схема адаптированы, Go/HTML ≤150 строк. 7 октября 2026 `task check` и отдельная PostgreSQL schema/repository проверка прошли. Следующий шаг — 4.5: согласованный архитектурный перенос, затем 4.4: API/schema contract. Рабочая БД не изменялась; уже применённой 000001 нужен отдельный перенос данных. Этап 0 задокументирован; tests/lint и production drill прошли ранее, reference удалён. 6 октября 2026 dev image build и isolated startup/SMTP smoke после CGO fix прошли (команды/границы в основном плане). Runtime auth/security/billing задачи остаются впереди. Не повторять полный набор проверок для правок документации.
 
 При завершении подэтапа добавить в основной план: номер, изменённые файлы/commit при наличии, команды и результаты checks, schema/API change, ограничения и следующий шаг. Статусы «материалы собраны», «адаптировано» и «проверено в staging» различаются. Этап 1.1–1.7 адаптирован; cleanup 1.8 выполнен; dev smoke после CGO fix подтверждён 6 октября 2026. Новые auth flows не реализовывались.
 
