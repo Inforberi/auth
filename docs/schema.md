@@ -27,7 +27,7 @@ PK/UNIQUE уже создают необходимые индексы. `(user_id
 
 ## Минимальная проверка
 
-Обычный `task check` запускает unit tests и lint. Реальная schema-проверка opt-in: переменная `AUTH_SCHEMA_TEST_DATABASE_URL`, команда `go test ./internal/modules/auth/password/repository/postgres -run TestPostgresSchema -count=1 -v`.
+Обычный `task check` запускает unit tests и lint. Реальная schema-проверка opt-in: переменная `AUTH_SCHEMA_TEST_DATABASE_URL`, команда `go test ./internal/auth/methods/password/repository/postgres -run TestPostgresSchema -count=1 -v`.
 
 Fixture допускает только localhost, пользователя/БД `auth_schema_test` и отсутствие исходной схемы `auth`. Использовать исключительно отдельный временный PostgreSQL: тест применяет SQL up/down/up и записывает тестовые данные. Без переменной он пропускается. Временный контейнер создаёт и удаляет оператор; новый sh-скрипт не добавлен.
 

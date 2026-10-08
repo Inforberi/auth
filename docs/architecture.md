@@ -8,7 +8,7 @@
 
 ## Согласованное решение — 7 октября 2026
 
-Целевая архитектура ниже утверждена пользователем. Это план переноса 4.5, не уже выполненный refactor: сейчас код находится в `internal/modules/auth`, сборка — в `internal/app/auth.go`, config — в `internal/app/config`, server — в `internal/infra/httpserver`. Выполненные 4.0/4.1 сохраняются в истории; их правила структуры и лимит 150 строк заменены этим решением. Schema/API/security поведение не меняется самим переносом. Legacy module rename остаётся отдельной задачей 14.4.
+Целевая архитектура утверждена 7 октября; перенос существующего кода 4.5 выполнен 8 октября 2026. Реализованы app/auth, config, server/http, account/domain, methods/password, session и audit contract. Остальные модули в дереве — будущие, не пустые пакеты в checkout. API/SQL/dependencies сохранены; выполненные 4.0/4.1 остаются в истории, их правила структуры заменены этим решением. Legacy module rename остаётся задачей 14.4.
 
 ## Структура кода и правила пакетов
 
@@ -198,11 +198,40 @@ Transport → service → domain. Repository реализует малые consu
 
 Repository локален фиче; таблица не равна фиче. Определить владельца каждой операции, особенно существующего `PasswordRepo.CreateUser`, который создаёт account/contact/profile/credential. Регистрация и security-критические межфичевые изменения требуют одной согласованной SQL-транзакции: service не получает `pgx.Tx`, repositories не коммитят части независимо. Не считать Redis/SMTP частью SQL-транзакции; audit/outbox и частичные сбои обрабатываются по ADR 002. Ownership/transaction contract сначала проектируется, затем реализуется в lifecycle/security этапах, без универсального CRUD/UoW framework заранее.
 
-150 физических строк — целевой ориентир для рукописного Go-кода, а не жёсткий лимит. Если код можно осмысленно разделить на файлы до 150 строк с самостоятельной ответственностью — разделяем. Если разделение разрывает связную операцию или создаёт искусственные файлы/пакеты — оставляем больше; фиксированного верхнего порога нет. Не уплотнять код, не сокращать полезные комментарии и не вводить part1/part2 ради числа строк. Тесты и generated-файлы не ограничиваем по длине: tests группируются по операции с именованными сценариями, большой suite делится только по смыслу. HTML и SQL сохраняем смыслово цельными. Generated файлы не редактировать вручную. Существующий enforcing test пока действует: в 4.5 убрать автоматический отказ по числу строк, сохранить/адаптировать полезные import-boundary checks; ориентир применять при разработке и review, без нового скрипта или числового release gate.
+150 физических строк — целевой ориентир для рукописного Go-кода, а не жёсткий лимит. Если код можно осмысленно разделить на файлы до 150 строк с самостоятельной ответственностью — разделяем. Если разделение разрывает связную операцию или создаёт искусственные файлы/пакеты — оставляем больше; фиксированного верхнего порога нет. Не уплотнять код, не сокращать полезные комментарии и не вводить part1/part2 ради числа строк. Тесты и generated-файлы не ограничиваем по длине: tests группируются по операции с именованными сценариями, большой suite делится только по смыслу. HTML и SQL сохраняем смыслово цельными. Generated файлы не редактировать вручную. В 4.5 автоматический отказ по числу строк убран; TestPackageBoundaries в internal/app/auth/layout_test.go сохраняет проверки направления imports; ориентир применять при разработке и review, без нового скрипта или числового release gate.
 
-Не вводить `core/common/utils`, глобальный склад domain types, пустые слои или interfaces на каждую функцию. Не экспортировать детали ради tests. Пакеты с одинаковыми именами импортировать с понятными aliases. У развитых пакетов короткая документация ответственности, а не обязательные пустые `doc.go`.
+Не вводить `core/common/utils`, глобальный склад domain types, пустые слои или interfaces на каждую функцию. Не экспортировать детали ради tests. Пакеты с одинаковыми именами импортировать с понятными aliases. Комментарии объясняют неочевидные ограничения, безопасность и причины решений, а не пересказывают названия пакетов или шаги кода. Отдельные doc.go с очевидным описанием не создаём; навигация и границы ответственности описаны здесь.
 
 
+
+### Текущая карта кода — 8 октября 2026
+
+| Ответственность | Путь |
+| --- | --- |
+| Точка входа, signal context | `cmd/auth/main.go` |
+| Сборка, Run, cleanup ресурсов | `internal/app/auth/app.go`, `run.go` |
+| Configuration load / validation | `internal/config/config.go`, `validation.go` |
+| HTTP serve / bounded shutdown | `internal/server/http/server.go`, `shutdown.go` |
+| UUID, status, profile, email/contact | `internal/auth/account/domain` |
+| Password rules / credential | `internal/auth/methods/password/domain` |
+| Password scenarios / ports / config / results | `internal/auth/methods/password/service` |
+| Credential SQL / atomic legacy registration | `internal/auth/methods/password/repository/postgres` |
+| Reset token storage | `internal/auth/methods/password/repository/redis` |
+| Password JSON API | `internal/auth/methods/password/transport/http` |
+| Argon2 / complete reset HTML | `internal/auth/methods/password/hasher`, `templates` |
+| Session entity / errors / token ID | `internal/auth/session/domain` |
+| Session scenarios / ports / config / results | `internal/auth/session/service` |
+| Session Redis / HTTP cookies/context/middleware | `internal/auth/session/repository/redis`, `transport/http` |
+| Security event / recording contract | `internal/audit/domain`, `service` |
+| Router, health, common HTTP helpers | `internal/transport/http` |
+
+Tests находятся рядом с кодом; register/login/change-password/validate сгруппированы по операции без потери прежних сценариев. HTML письма снова цельный, исходные байты сохранены. Рукописный Go-код ориентирован на 150 строк без числового gate; tests не ограничены. Clock/token helpers остаются в узких существующих infra-пакетах: не переносить их лишь ради внешней симметрии дерева.
+
+### Контракт межфичевой регистрации и security-транзакций
+
+В structural refactor сохранён текущий `passwordRepo.CreateUser`: account/contact/profile/credential создаются одной SQL-транзакцией. Метод и интерфейс явно помечены как legacy cross-feature write; SQL и поведение не менялись. Разделение на независимые commit запрещено.
+
+При lifecycle реализации account отвечает за пользователя/контакт/профиль, password — credential, session — SQL ledger. Service сценария получает transaction-aware port с узкими операциями этих владельцев; composition root связывает PostgreSQL adapters на одном pool и одном tx. Общий tx не передаётся как pgx.Tx в бизнес-сервис и не хранится неявно в context. Конкретный контракт вводится под операцию, без универсального CRUD или framework. Повышение auth_version, отзыв и security audit/outbox входят в ту же SQL-транзакцию; сетевые отправки — после commit через outbox. Повторная/конкурентная обработка проверяется в этапах 5/6. Эта схема владения согласована, но durable session/audit enforcement ещё не реализован.
 
 ### Историческая карта переноса 4.0 (до согласования 4.5)
 
@@ -261,6 +290,6 @@ Auth-only deployment не требует payment secrets, provider connections �
 
 Приняты [ADR 001](adr/001-deployment-and-reuse.md), [ADR 002](adr/002-sessions-and-transactions.md), [ADR 003](adr/003-access-and-optional-billing.md). [Модель угроз](threat-model.md) задаёт негативные acceptance tests.
 
-Структура 4.0 и схема/domain 4.1 выполнены. 7 октября согласована новая целевая структура: сначала перенос 4.5, затем API/schema contract 4.4. Далее 5/6; MFA 13.1 сразу после 6 до административных действий; 7–10, 11 и опционально 12, release 14. Session ledger/enforcement и межфичевые security-транзакции завершаются в 5/6: перенос каталогов сам по себе не закрывает дефекты.
+4.0/4.1 и перенос 4.5 выполнены. Следующий шаг — API/schema contract 4.4. Далее 5/6, MFA 13.1 сразу после 6 до административных действий; 7–10, 11 и опционально 12, release 14. Session ledger/enforcement и межфичевые security-транзакции завершаются в 5/6: перенос каталогов сам по себе не закрывает дефекты.
 
 До 12.1 пользователь выбирает merchant profile: страна/юридический статус продавца, валюты, товары, разовая/recurring оплата, refund/cancel требования. Затем выбирается и проверяется один hosted-checkout provider; конкретный поставщик сейчас не объявлен поддержанным. Native/SSO/organizations/Telegram commerce требуют отдельного подтверждения scope перед своими подэтапами.
