@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Inforberi/financial-intelligence/internal/app/config"
+	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
 func TestHealthAndSwaggerPolicy(t *testing.T) {

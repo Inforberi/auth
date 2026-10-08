@@ -1,0 +1,44 @@
+package config
+
+import (
+	"fmt"
+
+	"github.com/ilyakaznacheev/cleanenv"
+
+	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
+	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
+	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
+	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
+	redisclient "github.com/Inforberi/financial-intelligence/internal/infra/redis"
+	"github.com/Inforberi/financial-intelligence/internal/server/http"
+)
+
+type Config struct {
+	Postgres   postgres.Config
+	Logger     logger.Config
+	Session    sessionservice.Config
+	Server     httpserver.Config
+	Redis      redisclient.Config
+	MailSender mailer.Config
+	Password   passwordservice.Config
+	Swagger    SwaggerConfig
+}
+
+func New() (*Config, error) {
+	var cfg Config
+	if err := cleanenv.ReadEnv(&cfg); err != nil {
+		return nil, fmt.Errorf("failed to read configuration (check required variables and types)")
+	}
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}
+
+type SwaggerConfig struct {
+	Enabled  bool   `env:"SWAGGER_ENABLED" env-default:"false"`
+	Username string `env:"SWAGGER_USERNAME"`
+	Password string `env:"SWAGGER_PASSWORD"`
+}

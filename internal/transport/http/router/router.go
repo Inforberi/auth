@@ -9,9 +9,9 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"go.uber.org/zap"
 
-	"github.com/Inforberi/financial-intelligence/internal/app/config"
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/modules/auth/password/transport/http"
-	sessionhttp "github.com/Inforberi/financial-intelligence/internal/modules/auth/session/transport/http"
+	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
