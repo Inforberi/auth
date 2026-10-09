@@ -11,6 +11,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/docs"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
@@ -63,6 +64,7 @@ func readAPI(t *testing.T) apiDocument {
 func contractHandlers(env string) Handlers {
 	log := zap.NewNop()
 	return Handlers{
+		Account:         accounthttp.New(contractAccounts{}, log),
 		Config:          &config.Config{Logger: logger.Config{Env: env}},
 		PasswordHandler: passwordhttp.New(contractPasswords{}, log),
 		Middleware:      sessionhttp.New(contractSessions{}, log),
@@ -97,3 +99,10 @@ func (contractSessions) ValidateSession(_ context.Context, token string) (*sessi
 type contractMail struct{}
 
 func (contractMail) Send(string, string, string) error { return nil }
+
+type contractAccounts struct{}
+
+func (contractAccounts) AllowRegistration(context.Context, string) error             { return nil }
+func (contractAccounts) Resend(context.Context, string, string) error                { return nil }
+func (contractAccounts) Confirm(context.Context, string, string) error               { return nil }
+func (contractAccounts) RequireVerified(context.Context, accountdomain.UserID) error { return nil }

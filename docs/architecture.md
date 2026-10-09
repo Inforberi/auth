@@ -23,6 +23,7 @@ internal/
 ├── app/
 │   └── auth/
 │       ├── app.go
+│       ├── account.go
 │       └── run.go
 ├── config/
 │   ├── config.go
@@ -36,7 +37,9 @@ internal/
 │   ├── account/
 │   │   ├── domain/
 │   │   ├── service/
-│   │   ├── repository/postgres/
+│   │   ├── repository/
+│   │   │   ├── postgres/
+│   │   │   └── redis/
 │   │   └── transport/http/
 │   ├── methods/
 │   │   ├── password/
@@ -204,7 +207,7 @@ Repository локален фиче; таблица не равна фиче. О�
 
 
 
-### Текущая карта кода — 8 октября 2026
+### Текущая карта кода — 9 октября 2026
 
 | Ответственность | Путь |
 | --- | --- |
@@ -213,6 +216,11 @@ Repository локален фиче; таблица не равна фиче. О�
 | Configuration load / validation | `internal/config/config.go`, `validation.go` |
 | HTTP serve / bounded shutdown | `internal/server/http/server.go`, `shutdown.go` |
 | UUID, status, profile, email/contact | `internal/auth/account/domain` |
+| Verification scenarios/config/encrypted delivery | `internal/auth/account/service` |
+| Verification/audit/outbox SQL, Redis limits | `internal/auth/account/repository` |
+| Verify/resend JSON API, verified-email gate | `internal/auth/account/transport/http` |
+| Registration transaction composition / worker startup | `internal/app/auth/account.go` |
+| AES-GCM payload / HMAC keys, bounded SMTP | `internal/infra/secretbox`, `internal/infra/mailer` |
 | Password rules / credential | `internal/auth/methods/password/domain` |
 | Password scenarios / ports / config / results | `internal/auth/methods/password/service` |
 | Credential SQL / atomic legacy registration | `internal/auth/methods/password/repository/postgres` |
@@ -279,6 +287,7 @@ UUID пользователя неизменен; email, username и provider di
 Это будущий контракт этапов 9–12, ещё не существующие env-переменные или endpoints:
 
 - `access`: permission/role catalog отдельно от назначений пользователям. Продукт расширяет каталог без hardcoded business enum. Системные permissions защищены от произвольного переопределения.
+- `auth`: независимый выбор методов входа, registration enabled, email verification enabled/required для password, TTL/cooldown и frontend URL. Optional verification не подменяет verified_at; OTP/reset/change-email/linking всё равно доказывают контроль почты. Настройки/API/UI реализуются в самом конце, 14.4s–14.4u, после backend и permissions + MFA; сейчас используются нынешние operational env и политики.
 - `entitlements`: features/plans/limits, версии и manual/trial grants отдельно от access. Free/Pro — пример, а не обязательные названия.
 - `billing`: подключение выбранного provider, checkout/recurring capabilities и режим новых продаж отдельно от entitlement catalog. Secrets — только operational configuration.
 
@@ -286,10 +295,12 @@ Auth-only deployment не требует payment secrets, provider connections �
 
 Доступ к настройкам ролей, назначениям, тарифам и оплате защищают разные permissions. Admin не получает Pro, Pro не получает admin. Защищённые admin API публикуются после MFA 13.1: fresh auth, audit, проверка scope и optimistic version/conflict при изменении. Bootstrap первого admin — одноразовая operator operation; последний административный доступ сохраняется.
 
+UI также позволит вводить/заменять SMTP/provider secrets через отдельный protected API. Чтение даст только configured/masked state, storage защищается шифрованием/secret storage, audit исключает payload. Минимальные operational root key и первый admin остаются вне этой UI-зависимости. Настройки и UI — последние функциональные задачи 14.4s–14.4u перед release 14.5, не уже реализованная возможность; текущие email env остаются startup configuration.
+
 ## Реализация и открытые условия
 
 Приняты [ADR 001](adr/001-deployment-and-reuse.md), [ADR 002](adr/002-sessions-and-transactions.md), [ADR 003](adr/003-access-and-optional-billing.md). [Модель угроз](threat-model.md) задаёт негативные acceptance tests.
 
-4.0/4.1, перенос 4.5 и API contract 4.4 выполнены. Текущие HTTP ограничения — [API-контракт](api-contract.md). Следующий шаг — 5.1, email verification и зависимые challenge/outbox механизмы. Далее 5/6, MFA 13.1 сразу после 6 до административных действий; 7–10, 11 и опционально 12, release 14. Session ledger/enforcement и межфичевые security-транзакции завершаются в 5/6: перенос каталогов сам по себе не закрывает дефекты.
+Этап 4 выполнен; 5.1 реализован и локально проверен, внешний email/browser staging впереди. Текущие ограничения — [API-контракт](api-contract.md) и [verification](email-verification.md). Следующий шаг — 5.2 с SQL durable invalidation по 6.2/6.3. Далее 5/6, MFA 13.1 сразу после 6 до административных действий; 7–10, 11 и опционально 12, release 14. Session ledger/enforcement и межфичевые security-транзакции завершаются в 5/6.
 
 До 12.1 пользователь выбирает merchant profile: страна/юридический статус продавца, валюты, товары, разовая/recurring оплата, refund/cancel требования. Затем выбирается и проверяется один hosted-checkout provider; конкретный поставщик сейчас не объявлен поддержанным. Native/SSO/organizations/Telegram commerce требуют отдельного подтверждения scope перед своими подэтапами.

@@ -1,6 +1,7 @@
 package mailer
 
 type Config struct {
+	RequireTLS   bool   `env:"SMTP_REQUIRE_TLS" env-default:"false"`
 	SMTPHost     string `env:"SMTP_HOST" env-required:"true"`
 	SMTPPort     string `env:"SMTP_PORT" env-required:"true"`
 	SMTPUsername string `env:"SMTP_USERNAME"`

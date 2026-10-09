@@ -76,7 +76,12 @@ func (p *PasswordRepo) FindUserByUserID(ctx context.Context, userID accountdomai
 }
 
 type PasswordRepo struct {
-	db *pgxpool.Pool
+	db           *pgxpool.Pool
+	registration func(context.Context, pgx.Tx, accountdomain.UserID, accountdomain.AddressID, string) error
+}
+
+func NewWithRegistration(db *pgxpool.Pool, queue func(context.Context, pgx.Tx, accountdomain.UserID, accountdomain.AddressID, string) error) *PasswordRepo {
+	return &PasswordRepo{db: db, registration: queue}
 }
 
 func New(db *pgxpool.Pool) *PasswordRepo {

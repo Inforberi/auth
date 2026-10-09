@@ -1,3 +1,7 @@
+DROP TABLE IF EXISTS auth.email_verification_audit;
+DROP TABLE IF EXISTS auth.email_verification_outbox;
+DROP TABLE IF EXISTS auth.email_verifications;
+
 DROP TABLE IF EXISTS auth.password_credentials;
 
 DROP TABLE IF EXISTS auth.user_profile;

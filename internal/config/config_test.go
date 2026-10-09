@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
@@ -15,6 +16,7 @@ import (
 
 func validConfig() Config {
 	return Config{
+		Account:  accountservice.Config{URL: "https://example.com/verify-email", EncryptionKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", TTL: 30 * time.Minute, ResendInterval: time.Minute},
 		Postgres: postgres.Config{URL: "postgres://app:secret@localhost/app", MaxConns: 10, MinConns: 2, MaxConnLifetime: time.Hour, MaxConnIdleTime: time.Minute},
 		Server:   httpserver.Config{Port: "8080"}, Logger: logger.Config{Env: "dev", Level: "info"},
 		Redis:      redisclient.Config{Host: "localhost", Port: "6379"},

@@ -1,5 +1,26 @@
 basePath: /
 definitions:
+  account_http.ConfirmRequest:
+    properties:
+      token:
+        type: string
+    required:
+    - token
+    type: object
+  account_http.ResendRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+    required:
+    - email
+    type: object
+  account_http.VerificationResponse:
+    properties:
+      status:
+        example: ok
+        type: string
+    type: object
   dev.SendMailRequest:
     properties:
       body:
@@ -101,8 +122,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Requires a valid __Host-session cookie. Missing or rejected sessions
-        return 401. Response retains the legacy uppercase Status field. CSRF/fresh-auth
+      description: Requires a valid __Host-session cookie and a verified login email
+        on an active account. Missing or rejected sessions return 401; unverified
+        accounts return 403. Response retains the legacy uppercase Status field. CSRF/fresh-auth
         checks and atomic SQL session revocation are not implemented yet. New-password
         policy failures currently return 500 internal_error; this mapping is a lifecycle
         follow-up.
@@ -129,6 +151,10 @@ paths:
           description: 'code: unauthorized'
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: email_not_verified'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
         "404":
           description: 'code: not_found'
           schema:
@@ -137,17 +163,94 @@ paths:
           description: 'code: internal_error'
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: 'code: temporarily_unavailable'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
       summary: change password
       tags:
       - Auth
+  /api/v1/auth/email/resend:
+    post:
+      consumes:
+      - application/json
+      description: Always returns accepted for unknown, verified, blocked and cooldown
+        addresses. Enqueues encrypted delivery for eligible addresses. Limits use
+        socket peer IP; forwarded headers are not trusted.
+      parameters:
+      - description: email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/account_http.ResendRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/account_http.VerificationResponse'
+        "400":
+          description: 'codes: invalid_json, invalid_email'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: 'code: rate_limited'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: 'code: temporarily_unavailable'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Request email verification
+      tags:
+      - Account
+  /api/v1/auth/email/verify:
+    post:
+      consumes:
+      - application/json
+      description: Consumes a 256-bit token once. Expired, replaced, replayed, blocked
+        or unknown tokens share one error. Does not create a session. POST only; opening
+        an email link must not confirm automatically.
+      parameters:
+      - description: token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/account_http.ConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/account_http.VerificationResponse'
+        "400":
+          description: 'codes: invalid_json, invalid_verification'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: 'code: rate_limited'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: 'code: temporarily_unavailable'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Confirm email ownership
+      tags:
+      - Account
   /api/v1/auth/login/email:
     post:
       consumes:
       - application/json
       description: Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on
-        success. HTTPS is required for browser sessions. Invalid credentials return
-        400, not 401. Account status/auth-version checks and CSRF enforcement are
-        not implemented yet.
+        success. Unverified users can sign in, but sensitive routes require a verified
+        email. HTTPS is required for browser sessions. Invalid credentials return
+        400, not 401. Global account status/auth-version checks and CSRF enforcement
+        are not implemented yet.
       parameters:
       - description: login payload
         in: body
@@ -178,10 +281,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates an account and sets the Secure, HttpOnly, SameSite=Lax
-        __Host-session cookie. HTTPS is required for browser sessions. Email is normalized
-        and limited to 255 bytes; password is 8-128 bytes with a letter, digit and
-        uppercase letter. Email verification and CSRF enforcement are not implemented
+      description: Creates an account, queues email verification atomically and sets
+        the Secure, HttpOnly, SameSite=Lax __Host-session cookie. Unverified accounts
+        can sign in but cannot change their password. HTTPS is required for browser
+        sessions. Email is normalized and limited to 255 bytes; password is 8-128
+        bytes with a letter, digit and uppercase letter. CSRF enforcement is not implemented
         yet.
       parameters:
       - description: Register payload
@@ -207,8 +311,16 @@ paths:
           description: 'code: email_already_exists'
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: 'code: rate_limited'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: 'code: internal_error'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: 'code: temporarily_unavailable'
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
       summary: Register by email

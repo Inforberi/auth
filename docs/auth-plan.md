@@ -123,7 +123,7 @@ Auth — переиспользуемый Go-шаблон, который мож
 
 ### Этап 5. Завершить email/password account lifecycle
 
-- 5.1. Email verification: verified_at, ограниченный доступ unverified пользователя, confirm/resend.
+- 5.1. Реализовано и локально проверено 9 октября: email verification, ограничение sensitive routes, confirm/resend, encrypted outbox/audit/worker и fail-closed limits. Внешний SMTP и browser HTTPS staging smoke остаются приёмкой перед release; [детали](email-verification.md).
 - 5.2. Forgot/reset: выдача, доставка, expiry, атомарное одноразовое потребление и согласованность password update.
 - 5.3. HTTP logout/logout-all/me, cookie cleanup, список/отзыв собственных сессий.
 - 5.4. Blocked/deleted users: запрет нового входа и прекращение существующего доступа.
@@ -258,6 +258,9 @@ Free/Pro — демонстрационный каталог, не ограни�
 - 14.2. Runbooks: потеря Redis, недоступность SMTP/provider, утечка/ротация secrets, компрометация аккаунта, восстановление БД и billing reconciliation. Off-site encrypted backups с ограниченным доступом, согласованные RPO/RTO и реальный restore drill. Восстановление DB/Redis не должно возрождать отозванные sessions/challenges; billing сверяется до возобновления обработки.
 - 14.3. Документы `README`, configuration reference, extension guide, security policy, release/upgrade notes. Конкретные API examples и поддерживаемые deployment profiles.
 - 14.4. Перенос в тестовый продукт с новым module path/name, отдельными credentials, собственной ролью, тарифом и business feature. Общий auth/session flow продолжает проходить тесты; базовый запуск не требует всех optional providers.
+- 14.4s. В самом конце функциональной реализации добавить сохраняемые Auth settings и server-side policy: независимый выбор password/email OTP/Telegram/OIDC, registration enabled, verification enabled/required после password registration, TTL/cooldown/URL. Required/optional/disabled profiles; не подделывать verified_at, при disabled verification не отправлять автоматическое письмо, required=true/enabled=false отклонять. Проверить existing users/sessions, fail-closed dependencies и последний административный способ входа. OTP/reset/change-email/linking сохраняют собственное доказательство владения почтой.
+- 14.4t. Тогда же protected integration settings/secrets API: SMTP/provider configuration и ввод/замена secrets, чтение только configured/masked state. Permissions + MFA/fresh auth, encryption/secret storage, version/conflict/validation, audit без payload, rotation и безопасные connection tests. Root encryption key и первоначальный admin требуют минимального внешнего operational setup.
+- 14.4u. Последней функциональной задачей реализовать UI настроек поверх 14.4s/14.4t: выбор методов, обязательность email verification после password registration, SMTP/providers/secrets, отдельно роли и оплата. UI не заменяет backend enforcement. После завершения backend этапов 5–13; frontend stack выбрать перед работой. До этого работают нынешние operational env и политики, UI/динамические настройки не реализуем. Финальные copy/acceptance проверки и release 14.5 выполняются после этих задач.
 - 14.5. Подтверждение release checklist ниже и тег первой поддерживаемой версии; записать результаты/ограничения, а не только отметить наличие инструментов.
 
 Готово: clean checkout стартует по документации, migrations/API/Swagger/security checks и staging smoke подтверждены, exact dependency versions зафиксированы, выбран release scope, tag соответствует поддерживаемым функциям. Дальнейшие schema changes после production идут отдельными миграциями.
@@ -329,7 +332,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 ## 6. Текущий статус
 
-Этапы 0, 1 и 4 завершены: архитектура/scope, перенос и удаление reference, SQL schema, согласованное дерево и API contract checks. Provenance — [template-adoption](template-adoption.md); команды и границы проверок — в результатах ниже. Ориентир 150 строк смысловой, не жёсткий лимит. Следующий шаг — 5.1, email verification и зависимые challenge/outbox механизмы. Новые auth/session/RBAC/MFA/billing возможности ещё не реализованы; baseline P0 требуют этапов 5/6, шаблон не готов к production release.
+Этапы 0, 1 и 4 завершены. 5.1 реализован и локально проверен: email verification, encrypted delivery и unverified gate. Provenance — [template-adoption](template-adoption.md); команды и границы проверок — в результатах ниже. Следующий шаг — 5.2, forgot/reset с SQL durable invalidation по 6.2/6.3. Внешняя почта/browser staging ещё не проверены; baseline P0 и auth/RBAC/MFA/billing release gates остаются впереди, шаблон не готов к production release.
 
 Проверка этого шага: `docker build -f deploy/Dockerfile.dev -t auth:devcheck .`; `AUTH_TEST_IMAGE=auth:devcheck AUTH_TEST_APP_ENV=dev AUTH_SMOKE_ONLY=true task check-integration` — exit 0. Проверены dev startup, migration up, runtime DB connection, PostgreSQL/Redis readiness, liveness, Swagger disabled (404), локальная SMTP отправка в Mailpit. Disposable project `auth-check-1791315226-3825` и его volumes удалены runner; существующая БД не затронута. Это не полный integration/backup drill или external SMTP delivery. На этапе 0 изменения были документационными; tests/lint/security scan и GitHub CI тогда повторно не запускались. Проверка local Markdown links и `git diff --check` прошла. Release checks этапа 14 сохраняются.
 
@@ -340,7 +343,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 2. Инфраструктура | Выполнено в 1.2 | Durable audit sink — отдельно по ADR; здесь только контракт |
 | 3. Toolchain/окружение/deps | Адаптировано в 1.3 | Dev startup/SMTP smoke после CGO fix подтверждён 06.10.2026 |
 | 4. Структура/схема/API | Завершён | Дерево, SQL schema и API contract checks; security enforcement впереди |
-| 5. Account lifecycle | Частичная основа | Register/login/change уже есть; verification/reset/lifecycle не завершены |
+| 5. Account lifecycle | 5.1 локально реализован/проверен | Verification готов; staging smoke, reset и остальной lifecycle впереди |
 | 6. Безопасность сессий | Частичная основа | Cookie/Argon2/Redis есть; подтверждённые дефекты не исправлены |
 | 7. Identities / SSO boundary | Не начат | После 0, 4, 6; общий SSO optional |
 | 8. Telegram/OIDC/OTP | Не начат | После 5–7; Mini Apps optional |
@@ -352,6 +355,14 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 14. Release/переносимость | Не начат | После обязательных модулей и checklist; документация ведётся по ходу |
 
 Текущий порядок: 0, 1.1–1.8 и 4 завершены → 5/6 → 7/8 → 9/10 → 11/12 → 14. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется сразу после 6 до включения любых production admin действий. После 1.8 все следующие этапы используют только рабочий Auth и его документацию.
+
+### Результат 5.1 — 9 октября 2026
+
+Добавлены account domain/service/repositories PostgreSQL+Redis/HTTP verify+resend, encrypted outbox и специализированный audit. Registration composition связывает account callback с той же SQL-транзакцией password repo; SMTP после commit. Resend заменяет challenge, confirm одноразово меняет verified_at вместе с audit. Worker — lease, до 5 попыток, backoff/expiry cleanup; SMTP — context/deadline и production STARTTLS. Register/resend/confirm ограничены Redis; change-password — SQL verified-email gate. Зависимости и новые shell-скрипты не добавлены, рабочие secrets/БД не тронуты.
+
+Расширена исходная 000001; применённой БД нужен отдельно согласованный перенос, не reset. API: POST `/auth/email/resend` и `/auth/email/verify` под `/api/v1`; register теперь 429/503 при limiter failure, change-password — 403/503 при gate failure. Swagger/DTO/contract tests обновлены. Конфигурация требует EMAIL_VERIFICATION_URL/EMAIL_OUTBOX_KEY; примеры обновлены. Политика, ограничения и frontend integration — [verification](email-verification.md).
+
+Проверено: `task go:fmt`, `task check` (tests + lint, 0 issues), `task swagger`, `task check:api`, `git diff --check`; `TestPostgresSchema` на disposable PostgreSQL 18.6 (up/down/up, cooldown/replacement/replay/expiry, concurrent consume, audit/registration rollback, blocked account, stale lease, retry limit/cleanup), `TestLimiterRedis` на disposable Redis 8.2 (30 concurrent attempts, ровно 5 accepted, TTL/failure). SMTP unit tests — локальный protocol fixture, TLS requirement и cancellation; SQL delivery — test double. Созданные временные контейнеры и тестовые volumes удалены, пользовательские данные не затронуты. GitHub CI, полный infrastructure/backup drill, external SMTP/browser HTTPS staging и production deploy не выполнялись. Общий session ledger/auth-version/CSRF/fresh-auth/audit enforcement и defect password-policy → 500 остаются 5/6; не объявлять production readiness. Следующий шаг — 5.2 с зависимыми 6.2/6.3.
 
 ### Результат 4.4 — 9 октября 2026
 

@@ -19,6 +19,7 @@ func TestPostgresSchema(t *testing.T) {
 	}
 	migrateFixture(t, db, ctx, "up")
 	repo := New(db)
+	t.Run("email verification", func(t *testing.T) { checkVerification(t, db, ctx) })
 	t.Run("repository", func(t *testing.T) { checkRepository(t, db, ctx, repo) })
 	t.Run("constraints", func(t *testing.T) { checkConstraints(t, db, ctx, repo) })
 	t.Run("concurrent registration", func(t *testing.T) { checkConcurrentRegistration(t, db, ctx, repo) })

@@ -5,6 +5,7 @@ import (
 
 	"github.com/ilyakaznacheev/cleanenv"
 
+	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
@@ -15,6 +16,7 @@ import (
 )
 
 type Config struct {
+	Account    accountservice.Config
 	Postgres   postgres.Config
 	Logger     logger.Config
 	Session    sessionservice.Config

@@ -6,8 +6,8 @@ import (
 
 	"go.uber.org/zap"
 
+	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
-	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/redis"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
@@ -62,10 +62,14 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	now := clock.UTCClock{}
 	tokenGen := tokengenerate.New()
 	mail := mailer.New(cfg.MailSender)
+	accountSvc, passwordRepo, err := assembleAccount(pool, rdb, mail, cfg.Account)
+	if err != nil {
+		return nil, fmt.Errorf("assemble account: %w", err)
+	}
 	argonHash := hasher.NewArgon2idHash(1, 32, 64*1024, 32, 256)
 	sessionSvc := sessionservice.New(now, sessionredis.New(rdb), tokenGen, cfg.Session)
 	passwordSvc := passwordservice.New(
-		passwordpostgres.New(pool), sessionSvc, argonHash, now, tokenGen,
+		passwordRepo, sessionSvc, argonHash, now, tokenGen,
 		passwordredis.New(rdb), cfg.Password, mail,
 	)
 	passwordHandler := passwordhttp.New(passwordSvc,
@@ -77,6 +81,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		mailTest = dev.NewMailTest(mail, log)
 	}
 	handler := router.New(router.Handlers{
+		Account:         accounthttp.New(accountSvc, log),
 		PasswordHandler: passwordHandler,
 		Middleware:      middleware,
 		MailTest:        mailTest,
@@ -92,6 +97,8 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	return &App{
 		resources: resources,
 		serve: func(ctx context.Context) error {
+			stop := startDelivery(ctx, accountSvc, log)
+			defer stop()
 			return httpserver.Run(ctx, log, cfg.Server, handler)
 		},
 	}, nil

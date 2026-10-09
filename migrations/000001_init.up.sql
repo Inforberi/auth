@@ -21,6 +21,7 @@ CREATE TABLE auth.user_emails (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   email public.CITEXT NOT NULL,
   verified_at TIMESTAMPTZ,
+  verification_sent_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT user_emails_email_key UNIQUE (email),
@@ -78,3 +79,31 @@ CREATE TRIGGER user_profile_updated_at BEFORE UPDATE ON auth.user_profile
   FOR EACH ROW EXECUTE FUNCTION auth.set_updated_at();
 CREATE TRIGGER password_credentials_updated_at BEFORE UPDATE ON auth.password_credentials
   FOR EACH ROW EXECUTE FUNCTION auth.set_updated_at();
+
+CREATE TABLE auth.email_verifications (
+  digest TEXT PRIMARY KEY CHECK (digest ~ '^[a-f0-9]{64}$'),
+  email_id UUID NOT NULL UNIQUE REFERENCES auth.user_emails(id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (expires_at > created_at)
+);
+
+CREATE TABLE auth.email_verification_outbox (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  digest TEXT NOT NULL UNIQUE REFERENCES auth.email_verifications(digest) ON DELETE CASCADE,
+  payload BYTEA NOT NULL CHECK (octet_length(payload) BETWEEN 28 AND 8192),
+  expires_at TIMESTAMPTZ NOT NULL,
+  available_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+  lease UUID,
+  lease_until TIMESTAMPTZ,
+  CHECK ((lease IS NULL) = (lease_until IS NULL))
+);
+CREATE INDEX email_verification_outbox_due ON auth.email_verification_outbox(available_at);
+
+CREATE TABLE auth.email_verification_audit (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  event TEXT NOT NULL CHECK (event IN ('email_verification_issued', 'email_verified')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

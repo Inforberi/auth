@@ -1,6 +1,6 @@
 # Auth template
 
-Рабочая инфраструктурная основа Go Auth, **ещё не готовый production auth продукт**. Email verification/reset API, полноценная session security, Telegram, RBAC, MFA и payments реализуются по [плану](docs/auth-plan.md) и [шагам](docs/auth-implementation.md). Результат переноса инфраструктуры: [template-adoption](docs/template-adoption.md).
+Рабочая основа Go Auth, **ещё не готовый production auth продукт**. Register/login/change и [email verification](docs/email-verification.md) реализованы; reset API, полноценная session security, Telegram, RBAC, MFA и payments — по [плану](docs/auth-plan.md) и [шагам](docs/auth-implementation.md). Результат переноса инфраструктуры: [template-adoption](docs/template-adoption.md).
 
 ## Локальный запуск
 
@@ -11,6 +11,8 @@
 Dev запускает Air `v1.67.4` через `.air.toml`: пересборка `./cmd/auth` при изменении Go/HTML, tests и временные каталоги исключены. `task dev:up` собирает dev-образ; `task dev:logs` показывает build/restart. Go caches и бинарник в `tmp` используют отдельные volumes. Изменения `.env`, `go.mod/go.sum` или конфигурации Air требуют явного restart через `task dev:down` → `task dev:up`; Air не загружает новое окружение приложения автоматически. Production Air не использует.
 
 ## Проверки
+
+Существующий `.env` дополните verification-настройками из примера; secrets не перезаписывались. Production требует отдельного случайного `EMAIL_OUTBOX_KEY`, HTTPS verification URL и `SMTP_REQUIRE_TLS=true`. Применённая `000001` не обновит БД автоматически: нужен согласованный перенос, не reset. Login разрешён до подтверждения, change-password — после него. Письмо ведёт на frontend явного подтверждения, подключаемый проектом, а не на автоматический GET API.
 
 ```sh
 task check

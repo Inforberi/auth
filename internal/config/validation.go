@@ -17,6 +17,9 @@ func (cfg Config) Validate() error {
 	if _, err := zapcore.ParseLevel(cfg.Logger.Level); err != nil {
 		return fmt.Errorf("invalid LOG_LEVEL")
 	}
+	if err := cfg.Account.Validate(cfg.Logger.Env == "prod"); err != nil {
+		return err
+	}
 	if err := cfg.validatePorts(); err != nil {
 		return err
 	}
@@ -72,6 +75,9 @@ func (cfg Config) validateIdentity() error {
 
 func (cfg Config) validateProduction(reset *url.URL) error {
 	if cfg.Logger.Env == "prod" {
+		if !cfg.MailSender.RequireTLS {
+			return fmt.Errorf("production verification delivery requires SMTP_REQUIRE_TLS")
+		}
 		if reset.Scheme != "https" {
 			return fmt.Errorf("production reset URL must use HTTPS")
 		}

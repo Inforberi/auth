@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/api/v1/auth/change-password": {
             "post": {
-                "description": "Requires a valid __Host-session cookie. Missing or rejected sessions return 401. Response retains the legacy uppercase Status field. CSRF/fresh-auth checks and atomic SQL session revocation are not implemented yet. New-password policy failures currently return 500 internal_error; this mapping is a lifecycle follow-up.",
+                "description": "Requires a valid __Host-session cookie and a verified login email on an active account. Missing or rejected sessions return 401; unverified accounts return 403. Response retains the legacy uppercase Status field. CSRF/fresh-auth checks and atomic SQL session revocation are not implemented yet. New-password policy failures currently return 500 internal_error; this mapping is a lifecycle follow-up.",
                 "consumes": [
                     "application/json"
                 ],
@@ -58,6 +58,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "403": {
+                        "description": "code: email_not_verified",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "404": {
                         "description": "code: not_found",
                         "schema": {
@@ -69,13 +75,123 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
+                    },
+                    "503": {
+                        "description": "code: temporarily_unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/email/resend": {
+            "post": {
+                "description": "Always returns accepted for unknown, verified, blocked and cooldown addresses. Enqueues encrypted delivery for eligible addresses. Limits use socket peer IP; forwarded headers are not trusted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Request email verification",
+                "parameters": [
+                    {
+                        "description": "email",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/account_http.ResendRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/account_http.VerificationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "codes: invalid_json, invalid_email",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "code: temporarily_unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/email/verify": {
+            "post": {
+                "description": "Consumes a 256-bit token once. Expired, replaced, replayed, blocked or unknown tokens share one error. Does not create a session. POST only; opening an email link must not confirm automatically.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Confirm email ownership",
+                "parameters": [
+                    {
+                        "description": "token",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/account_http.ConfirmRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/account_http.VerificationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "codes: invalid_json, invalid_verification",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "code: temporarily_unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
                     }
                 }
             }
         },
         "/api/v1/auth/login/email": {
             "post": {
-                "description": "Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on success. HTTPS is required for browser sessions. Invalid credentials return 400, not 401. Account status/auth-version checks and CSRF enforcement are not implemented yet.",
+                "description": "Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on success. Unverified users can sign in, but sensitive routes require a verified email. HTTPS is required for browser sessions. Invalid credentials return 400, not 401. Global account status/auth-version checks and CSRF enforcement are not implemented yet.",
                 "consumes": [
                     "application/json"
                 ],
@@ -121,7 +237,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/register/email": {
             "post": {
-                "description": "Creates an account and sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie. HTTPS is required for browser sessions. Email is normalized and limited to 255 bytes; password is 8-128 bytes with a letter, digit and uppercase letter. Email verification and CSRF enforcement are not implemented yet.",
+                "description": "Creates an account, queues email verification atomically and sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie. Unverified accounts can sign in but cannot change their password. HTTPS is required for browser sessions. Email is normalized and limited to 255 bytes; password is 8-128 bytes with a letter, digit and uppercase letter. CSRF enforcement is not implemented yet.",
                 "consumes": [
                     "application/json"
                 ],
@@ -162,8 +278,20 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "429": {
+                        "description": "code: rate_limited",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "code: temporarily_unavailable",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -282,6 +410,38 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "account_http.ConfirmRequest": {
+            "type": "object",
+            "required": [
+                "token"
+            ],
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "account_http.ResendRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                }
+            }
+        },
+        "account_http.VerificationResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                }
+            }
+        },
         "dev.SendMailRequest": {
             "type": "object",
             "required": [

@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
@@ -54,6 +55,9 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 		name string
 		dto  any
 	}{
+		{"account_http.ResendRequest", accounthttp.ResendRequest{}},
+		{"account_http.ConfirmRequest", accounthttp.ConfirmRequest{}},
+		{"account_http.VerificationResponse", accounthttp.VerificationResponse{}},
 		{"password_http.RegisterRequest", passwordhttp.RegisterRequest{}},
 		{"password_http.RegisterResponse", passwordhttp.RegisterResponse{}},
 		{"password_http.LoginByEmailRequest", passwordhttp.LoginByEmailRequest{}},
@@ -107,6 +111,8 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 func TestSwaggerRequestAndResponseReferences(t *testing.T) {
 	doc := readAPI(t)
 	requests := map[string]string{
+		"/api/v1/auth/email/resend":    "account_http.ResendRequest",
+		"/api/v1/auth/email/verify":    "account_http.ConfirmRequest",
 		"/api/v1/auth/register/email":  "password_http.RegisterRequest",
 		"/api/v1/auth/login/email":     "password_http.LoginByEmailRequest",
 		"/api/v1/auth/change-password": "password_http.ChangePasswordRequest",

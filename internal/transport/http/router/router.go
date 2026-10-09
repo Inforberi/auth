@@ -9,6 +9,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"go.uber.org/zap"
 
+	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
@@ -17,6 +18,7 @@ import (
 )
 
 type Handlers struct {
+	Account         *accounthttp.Handler
 	PasswordHandler *passwordhttp.PasswordHandler
 	Middleware      *sessionhttp.Middleware
 	MailTest        *dev.MailTestHandler
@@ -49,7 +51,14 @@ func New(h Handlers) *chi.Mux {
 
 	r.Route("/api/v1/", func(r chi.Router) {
 		r.Route("/auth", func(r chi.Router) {
+			if h.Account != nil {
+				r.Post("/email/resend", h.Account.Resend)
+				r.Post("/email/verify", h.Account.Confirm)
+			}
 			r.Route("/register", func(r chi.Router) {
+				if h.Account != nil {
+					r.Use(h.Account.LimitRegistration)
+				}
 				r.Post("/email", h.PasswordHandler.Register)
 			})
 
@@ -59,6 +68,9 @@ func New(h Handlers) *chi.Mux {
 
 			r.Group(func(r chi.Router) {
 				r.Use(h.Middleware.Auth)
+				if h.Account != nil {
+					r.Use(h.Account.RequireVerified)
+				}
 				r.Post("/change-password", h.PasswordHandler.ChangePassword)
 			})
 		})

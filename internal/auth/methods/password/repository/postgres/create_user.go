@@ -63,6 +63,12 @@ func (r *PasswordRepo) CreateUser(ctx context.Context, email, passwordHash strin
 		return "", fmt.Errorf("insert user_profile: %w", err)
 	}
 
+	if r.registration != nil {
+		if err := r.registration(ctx, tx, userId, emailID, email); err != nil {
+			return "", fmt.Errorf("queue registration verification: %w", err)
+		}
+	}
+
 	if err = tx.Commit(ctx); err != nil {
 		return "", fmt.Errorf("insert users: %w", err)
 	}

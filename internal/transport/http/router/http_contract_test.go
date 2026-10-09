@@ -18,6 +18,9 @@ func TestHTTPResponsesMatchSwagger(t *testing.T) {
 		status                  int
 		cookie                  bool
 	}{
+		{"/api/v1/auth/email/resend", `{"email":"user@example.com"}`, "", "", 202, false},
+		{"/api/v1/auth/email/verify", `{"token":"token"}`, "", "", 200, false},
+		{"/api/v1/auth/email/resend", `{}`, "", "invalid_email", 400, false},
 		{"/api/v1/auth/register/email", `{"email":"user@example.com","password":"ExamplePass1"}`, "", "", 201, true},
 		{"/api/v1/auth/login/email", `{"email":"user@example.com","password":"ExamplePass1"}`, "", "", 200, true},
 		{"/api/v1/auth/change-password", `{"oldPassword":"ExamplePass1","newPassword":"ExamplePass2","confirmPassword":"ExamplePass2"}`, "valid", "", 200, false},

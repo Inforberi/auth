@@ -37,7 +37,7 @@ type LoginByEmailResponse struct {
 } // @name password_http.LoginByEmailResponse
 
 // @Summary login by email
-// @Description Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on success. HTTPS is required for browser sessions. Invalid credentials return 400, not 401. Account status/auth-version checks and CSRF enforcement are not implemented yet.
+// @Description Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on success. Unverified users can sign in, but sensitive routes require a verified email. HTTPS is required for browser sessions. Invalid credentials return 400, not 401. Global account status/auth-version checks and CSRF enforcement are not implemented yet.
 // @Tags Auth
 // @Accept json
 // @Produce json
