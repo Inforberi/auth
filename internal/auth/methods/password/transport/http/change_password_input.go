@@ -62,13 +62,13 @@ var changePasswordErrors = []clientError{
 }
 
 type ChangePasswordRequest struct {
-	OldPassword     string `json:"oldPassword"`
-	NewPassword     string `json:"newPassword"`
-	ConfirmPassword string `json:"confirmPassword"`
+	OldPassword     string `json:"oldPassword" binding:"required" example:"ExamplePass1"`
+	NewPassword     string `json:"newPassword" binding:"required" example:"ExamplePass2"`
+	ConfirmPassword string `json:"confirmPassword" binding:"required" example:"ExamplePass2"`
 } // @name password_http.ChangePasswordRequest
 
 type ChangePasswordResponse struct {
-	Status string
+	Status string `json:"Status" example:"ok"`
 } // @name password_http.ChangePasswordResponse
 
 func validateChangePasswordInput(input ChangePasswordRequest) error {

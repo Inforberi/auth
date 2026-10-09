@@ -88,7 +88,7 @@
 - [x] 4.5e. Обновить imports, DI, generator/mock paths, runtime/docs navigation и ссылки. Сохранить UUID/schema/SQL и API/status/Swagger schema names; не внедрять security changes, новые auth methods или зависимости в structural diff. Подготовить контракт межфичевых SQL-транзакций без независимых commit, фактическая атомарность lifecycle/security — задачи 5/6.
 - [x] 4.5f. Выполнить formatter и обычный `task check`; Swagger generation/drift после переноса annotированных пакетов. Целевые lifecycle tests для изменённой сборки/Shutdown: startup failure, bounded shutdown и порядок cleanup. Без повторного полного Docker/backup/security drill и новых sh-скриптов. Отметить фактические результаты, обновить README и текущую карту путей.
 
-- [ ] 4.4. Добавить schema/API contract checks, generation drift и реальное совпадение routes/status/DTO/security. Snapshot Swagger — пример структуры, не API Auth.
+- [x] 4.4. API contract tests и generation drift выполнены 9 октября 2026; SQL schema проверена в 4.1. Реальные routes/status/DTO/errors/cookie metadata и ограничения проверок — [API-контракт](api-contract.md). Runtime security enforcement остаётся 5/6.
 
 Результат 4.5 и границы проверок — в [основном плане](auth-plan.md). Legacy регистрационная транзакция сохранена; целевой межфичевой контракт описан в [архитектуре](architecture.md), enforcement остаётся 5/6.
 
@@ -108,11 +108,14 @@
 - [ ] 6.1. `ValidateSession`, cookie helpers и middleware: expiry на равенстве, clamp absolute deadline, cookie refresh, rotation/fresh auth. Table tests boundaries и реальный browser smoke.
 - [ ] 6.2. По ADR 002 внедрить PostgreSQL session ledger/verifier и проверку актуального user status/auth version на каждом защищённом запросе. Conditional refresh/revoke в SQL, Redis cache/index cleanup без resurrection; согласованные create/logout-all. Проверка чувствительной записи внутри SQL transaction. Concurrency/partial failure tests с настоящими PostgreSQL/Redis.
 - [ ] 6.3. По ADR внедрить durable auth version/invalidation при password reset/change/block. Проверить PostgreSQL/Redis partial failures и concurrent session issuance; outbox alone не заменяет enforcement актуальности.
+
 - [ ] 6.4. Distributed limits по IP/account/challenge, parser bounds и hashing concurrency. Fuzz corrupted hashes, load/resource checks, rate-limit bypass/proxy/failure tests.
 - [ ] 6.5. CSRF/Origin/CORS/security headers, local HTTPS для `__Host-session`, SMTP TLS/deadlines и secret redaction. Проверить login/linking/изменяющие запросы и email/OIDC browser compatibility.
 - [ ] 6.6. Register UNIQUE race, registration-success/session-failure и retry contract. Содержательные transaction tests, стабильные domain errors.
 - [ ] 6.7. Password policy + compromised passwords + safe rehash. Не менять существующие пароли молча; проверить старые корректные hashes, malformed data и migration path.
 - [ ] После 6 выполнить **13.1 MFA** до административных production APIs. Этот шаг не откладывается до завершения billing.
+
+В password lifecycle 5.2/6.3 исправить mapping ошибок политики нового пароля при change-password: сейчас 500 `internal_error`, целевой ответ — 400 с согласованным domain code. Проверить HTTP и Swagger; технические failures оставить отдельными.
 
 ## 7. Модель identities
 
@@ -192,7 +195,7 @@ Template не содержит identities/SSO/RBAC: эти задачи реал
 
 ## Учёт выполнения
 
-Текущий результат: 4.0, 4.1 и 4.5 завершены; согласованное дерево реализовано, 150 строк — смысловой ориентир, tests/generated без лимита. 7 октября 2026 `task check` и отдельная PostgreSQL schema/repository проверка прошли. Перенос 4.5 выполнен; следующий шаг — 4.4: API/schema contract. Рабочая БД не изменялась; уже применённой 000001 нужен отдельный перенос данных. Этап 0 задокументирован; tests/lint и production drill прошли ранее, reference удалён. 6 октября 2026 dev image build и isolated startup/SMTP smoke после CGO fix прошли (команды/границы в основном плане). Runtime auth/security/billing задачи остаются впереди. Не повторять полный набор проверок для правок документации.
+Текущий результат: этап 4 завершён, включая 4.4 от 9 октября 2026. Согласованное дерево реализовано, 150 строк — смысловой ориентир, tests/generated без лимита. SQL schema/repository проверены в 4.1; API contract tests и Swagger generation drift — в 4.4. Следующий шаг — 5.1, email verification и зависимые challenge/outbox механизмы. Рабочая БД не изменялась; уже применённой 000001 нужен отдельный перенос данных. Этапы 0/1 завершены, reference удалён; dev startup/SMTP smoke и production drill проверены ранее. Runtime auth/security/billing задачи остаются впереди. Команды и границы проверок — в основном плане; полный набор для документационных правок не повторять.
 
 При завершении подэтапа добавить в основной план: номер, изменённые файлы/commit при наличии, команды и результаты checks, schema/API change, ограничения и следующий шаг. Статусы «материалы собраны», «адаптировано» и «проверено в staging» различаются. Этап 1.1–1.7 адаптирован; cleanup 1.8 выполнен; dev smoke после CGO fix подтверждён 6 октября 2026. Новые auth flows не реализовывались.
 

@@ -25,9 +25,9 @@ func NewMailTest(mail MailSender, log *zap.Logger) *MailTestHandler {
 }
 
 type SendMailRequest struct {
-	To      string `json:"to"`
-	Subject string `json:"subject"`
-	Body    string `json:"body"`
+	To      string `json:"to" binding:"required" example:"user@example.com"`
+	Subject string `json:"subject" binding:"required" example:"Test email"`
+	Body    string `json:"body" binding:"required" example:"Local SMTP test"`
 }
 
 type SendMailResponse struct {

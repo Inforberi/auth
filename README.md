@@ -15,13 +15,14 @@ Dev запускает Air `v1.67.4` через `.air.toml`: пересборк�
 ```sh
 task check
 task swagger # только после изменения HTTP API
+task check:api # проверить, что Swagger воспроизводим и сохранён
 ```
 
 Checks используют `.env.example`/`.env.prod.example`, не читают рабочие secrets. Integration создаёт уникальный `auth-check-*` Compose project с временными volumes и удаляет только его при выходе. Не заменяйте его конфигурацию рабочей `.env`. Docker image `auth:stage1` нужно пересобрать после изменений Go. При аварии Docker daemon сначала проверьте оставшиеся test projects, не удаляйте пользовательские volumes.
 
 Команды сгруппированы как `dev:*`, `migrate:*`, `go:*`, `check:*`, `prod:*`; старые имена сохранены как aliases. `task go:build` собирает `bin/auth`. `task go:fmt` применяет закреплённые formatters; `task swagger` обновляет контракт. JSON endpoints требуют `Content-Type: application/json`, максимум 1 MiB, один JSON value, без неизвестных полей. Ошибки декодирования возвращают существующий `400 invalid_json`. Cookies/CSRF/security contract уточняется на этапах 4–6.
 
-По умолчанию выполняйте только `task check` (tests + lint). `task check:security` и `task check:integration` нужны после обновления зависимостей либо перед релизом; не повторяйте их после каждой правки. В CI tests/lint, security и image build; race/integration не выполняются на каждый push. Осталось три shell-файла: backup, host restore и один acceptance runner.
+По умолчанию выполняйте только `task check` (tests + lint, включая API contract tests). `task check:api` проверяет generation drift после изменения API и в CI. Текущее поведение и security gaps — [API-контракт](docs/api-contract.md). `task check:security` и `task check:integration` нужны после обновления зависимостей либо перед релизом; не повторяйте их после каждой правки. В CI tests/lint, API drift, security и image build; race/integration не выполняются на каждый push. Осталось три shell-файла: backup, host restore и один acceptance runner.
 
 ## Конфигурация
 

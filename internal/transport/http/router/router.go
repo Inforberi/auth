@@ -37,11 +37,7 @@ func New(h Handlers) *chi.Mux {
 	r.Get("/health/live", live)
 	r.Get("/health/ready", readiness(h.ReadyCheck))
 
-	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
-		if _, err := w.Write([]byte("pong")); err != nil {
-			return
-		}
-	})
+	r.Get("/ping", ping)
 
 	if h.Config != nil && h.Config.Swagger.Enabled {
 		swagger := r.With(middleware.BasicAuth("swagger", map[string]string{h.Config.Swagger.Username: h.Config.Swagger.Password}))

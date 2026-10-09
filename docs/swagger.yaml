@@ -3,11 +3,18 @@ definitions:
   dev.SendMailRequest:
     properties:
       body:
+        example: Local SMTP test
         type: string
       subject:
+        example: Test email
         type: string
       to:
+        example: user@example.com
         type: string
+    required:
+    - body
+    - subject
+    - to
     type: object
   dev.SendMailResponse:
     properties:
@@ -25,23 +32,36 @@ definitions:
   password_http.ChangePasswordRequest:
     properties:
       confirmPassword:
+        example: ExamplePass2
         type: string
       newPassword:
+        example: ExamplePass2
         type: string
       oldPassword:
+        example: ExamplePass1
         type: string
+    required:
+    - confirmPassword
+    - newPassword
+    - oldPassword
     type: object
   password_http.ChangePasswordResponse:
     properties:
-      status:
+      Status:
+        example: ok
         type: string
     type: object
   password_http.LoginByEmailRequest:
     properties:
       email:
+        example: user@example.com
         type: string
       password:
+        example: ExamplePass1
         type: string
+    required:
+    - email
+    - password
     type: object
   password_http.LoginByEmailResponse:
     properties:
@@ -51,9 +71,14 @@ definitions:
   password_http.RegisterRequest:
     properties:
       email:
+        example: user@example.com
         type: string
       password:
+        example: ExamplePass1
         type: string
+    required:
+    - email
+    - password
     type: object
   password_http.RegisterResponse:
     properties:
@@ -76,7 +101,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: change password
+      description: Requires a valid __Host-session cookie. Missing or rejected sessions
+        return 401. Response retains the legacy uppercase Status field. CSRF/fresh-auth
+        checks and atomic SQL session revocation are not implemented yet. New-password
+        policy failures currently return 500 internal_error; this mapping is a lifecycle
+        follow-up.
       parameters:
       - description: change password payload
         in: body
@@ -115,7 +144,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: login by email/password
+      description: Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on
+        success. HTTPS is required for browser sessions. Invalid credentials return
+        400, not 401. Account status/auth-version checks and CSRF enforcement are
+        not implemented yet.
       parameters:
       - description: login payload
         in: body
@@ -146,7 +178,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates a new user account using email/password.
+      description: Creates an account and sets the Secure, HttpOnly, SameSite=Lax
+        __Host-session cookie. HTTPS is required for browser sessions. Email is normalized
+        and limited to 255 bytes; password is 8-128 bytes with a letter, digit and
+        uppercase letter. Email verification and CSRF enforcement are not implemented
+        yet.
       parameters:
       - description: Register payload
         in: body
@@ -235,6 +271,18 @@ paths:
           schema:
             $ref: '#/definitions/router.HealthResponse'
       summary: PostgreSQL and Redis readiness
+      tags:
+      - Health
+  /ping:
+    get:
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: pong
+          schema:
+            type: string
+      summary: Legacy process ping
       tags:
       - Health
 schemes:

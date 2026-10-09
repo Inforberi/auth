@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/api/v1/auth/change-password": {
             "post": {
-                "description": "change password",
+                "description": "Requires a valid __Host-session cookie. Missing or rejected sessions return 401. Response retains the legacy uppercase Status field. CSRF/fresh-auth checks and atomic SQL session revocation are not implemented yet. New-password policy failures currently return 500 internal_error; this mapping is a lifecycle follow-up.",
                 "consumes": [
                     "application/json"
                 ],
@@ -75,7 +75,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/login/email": {
             "post": {
-                "description": "login by email/password",
+                "description": "Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on success. HTTPS is required for browser sessions. Invalid credentials return 400, not 401. Account status/auth-version checks and CSRF enforcement are not implemented yet.",
                 "consumes": [
                     "application/json"
                 ],
@@ -121,7 +121,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/register/email": {
             "post": {
-                "description": "Creates a new user account using email/password.",
+                "description": "Creates an account and sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie. HTTPS is required for browser sessions. Email is normalized and limited to 255 bytes; password is 8-128 bytes with a letter, digit and uppercase letter. Email verification and CSRF enforcement are not implemented yet.",
                 "consumes": [
                     "application/json"
                 ],
@@ -260,20 +260,47 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/ping": {
+            "get": {
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Legacy process ping",
+                "responses": {
+                    "200": {
+                        "description": "pong",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
         "dev.SendMailRequest": {
             "type": "object",
+            "required": [
+                "body",
+                "subject",
+                "to"
+            ],
             "properties": {
                 "body": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Local SMTP test"
                 },
                 "subject": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Test email"
                 },
                 "to": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user@example.com"
                 }
             }
         },
@@ -299,34 +326,49 @@ const docTemplate = `{
         },
         "password_http.ChangePasswordRequest": {
             "type": "object",
+            "required": [
+                "confirmPassword",
+                "newPassword",
+                "oldPassword"
+            ],
             "properties": {
                 "confirmPassword": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "ExamplePass2"
                 },
                 "newPassword": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "ExamplePass2"
                 },
                 "oldPassword": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "ExamplePass1"
                 }
             }
         },
         "password_http.ChangePasswordResponse": {
             "type": "object",
             "properties": {
-                "status": {
-                    "type": "string"
+                "Status": {
+                    "type": "string",
+                    "example": "ok"
                 }
             }
         },
         "password_http.LoginByEmailRequest": {
             "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user@example.com"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "ExamplePass1"
                 }
             }
         },
@@ -340,12 +382,18 @@ const docTemplate = `{
         },
         "password_http.RegisterRequest": {
             "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user@example.com"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "ExamplePass1"
                 }
             }
         },

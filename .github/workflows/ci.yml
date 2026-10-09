@@ -15,5 +15,6 @@ jobs:
           cache-dependency-path: go.sum
       - run: go install github.com/go-task/task/v3/cmd/task@v3.53.1
       - run: task check
+      - run: task check:api
       - run: task check:security
       - run: docker build -f deploy/Dockerfile.prod -t auth:stage1 .

@@ -32,8 +32,8 @@ var registerClientErrors = []clientError{
 }
 
 type RegisterRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email" binding:"required" example:"user@example.com"`
+	Password string `json:"password" binding:"required" example:"ExamplePass1"`
 } // @name password_http.RegisterRequest
 
 type RegisterResponse struct {
@@ -41,7 +41,7 @@ type RegisterResponse struct {
 } // @name password_http.RegisterResponse
 
 // @Summary Register by email
-// @Description Creates a new user account using email/password.
+// @Description Creates an account and sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie. HTTPS is required for browser sessions. Email is normalized and limited to 255 bytes; password is 8-128 bytes with a letter, digit and uppercase letter. Email verification and CSRF enforcement are not implemented yet.
 // @Tags Auth
 // @Accept json
 // @Produce json

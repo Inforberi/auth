@@ -8,7 +8,7 @@ import (
 )
 
 // @Summary change password
-// @Description change password
+// @Description Requires a valid __Host-session cookie. Missing or rejected sessions return 401. Response retains the legacy uppercase Status field. CSRF/fresh-auth checks and atomic SQL session revocation are not implemented yet. New-password policy failures currently return 500 internal_error; this mapping is a lifecycle follow-up.
 // @Tags Auth
 // @Accept json
 // @Produce json

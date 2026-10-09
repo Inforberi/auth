@@ -28,8 +28,8 @@ var loginClientErrors = []clientError{
 }
 
 type LoginByEmailRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email" binding:"required" example:"user@example.com"`
+	Password string `json:"password" binding:"required" example:"ExamplePass1"`
 } // @name password_http.LoginByEmailRequest
 
 type LoginByEmailResponse struct {
@@ -37,7 +37,7 @@ type LoginByEmailResponse struct {
 } // @name password_http.LoginByEmailResponse
 
 // @Summary login by email
-// @Description login by email/password
+// @Description Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on success. HTTPS is required for browser sessions. Invalid credentials return 400, not 401. Account status/auth-version checks and CSRF enforcement are not implemented yet.
 // @Tags Auth
 // @Accept json
 // @Produce json
