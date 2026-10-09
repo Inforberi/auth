@@ -5,6 +5,7 @@ import (
 )
 
 type Credential struct {
+	AuthVersion  int64
 	UserID       accountdomain.UserID
 	PasswordHash string
 }

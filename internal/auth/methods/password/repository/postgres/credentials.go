@@ -33,15 +33,17 @@ func (r *PasswordRepo) ExistsByEmail(ctx context.Context, email string) (bool, e
 
 func (l *PasswordRepo) FindByEmail(ctx context.Context, email string) (*passworddomain.Credential, error) {
 	sql := `
-	SELECT pc.user_id, pc.password_hash
+	SELECT pc.user_id, pc.password_hash, u.auth_version
 	FROM auth.password_credentials pc
 	JOIN auth.user_emails e ON e.id = pc.email_id AND e.user_id = pc.user_id
-	WHERE e.email = $1
+	JOIN auth.users u ON u.id=pc.user_id
+	WHERE e.email = $1 AND u.status='active' AND u.deleted_at IS NULL
 	`
 	var userID accountdomain.UserID
 	var passwordHash string
+	var version int64
 
-	err := l.db.QueryRow(ctx, sql, email).Scan(&userID, &passwordHash)
+	err := l.db.QueryRow(ctx, sql, email).Scan(&userID, &passwordHash, &version)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("FindByEmail: %w", passworddomain.ErrUserNotFound)
@@ -50,6 +52,7 @@ func (l *PasswordRepo) FindByEmail(ctx context.Context, email string) (*password
 	}
 
 	return &passworddomain.Credential{
+		AuthVersion:  version,
 		UserID:       userID,
 		PasswordHash: passwordHash,
 	}, nil
@@ -89,19 +92,17 @@ func New(db *pgxpool.Pool) *PasswordRepo {
 }
 
 func (p *PasswordRepo) UpdatePasswordHash(ctx context.Context, userID accountdomain.UserID, passwordHash string) error {
-	sql := `
-	UPDATE auth.password_credentials
-	SET password_hash = $2
-	WHERE user_id = $1
-	`
-	result, err := p.db.Exec(ctx, sql, userID, passwordHash)
-	if err != nil {
-		return fmt.Errorf("update password hash: %w", err)
-	}
-
-	if result.RowsAffected() == 0 {
-		return passworddomain.ErrNotFound
-	}
-
-	return nil
+	return p.recoveryTransaction(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var id accountdomain.UserID
+		if err := tx.QueryRow(ctx, "SELECT id FROM auth.users WHERE id=$1 FOR UPDATE", userID).Scan(&id); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return passworddomain.ErrNotFound
+			}
+			return err
+		}
+		if _, err := tx.Exec(ctx, "UPDATE auth.password_credentials SET password_hash=$2 WHERE user_id=$1", userID, passwordHash); err != nil {
+			return err
+		}
+		return revokeForPassword(ctx, tx, userID, "password_changed")
+	})
 }

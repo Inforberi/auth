@@ -3,7 +3,6 @@ package router
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
@@ -64,6 +64,7 @@ func readAPI(t *testing.T) apiDocument {
 func contractHandlers(env string) Handlers {
 	log := zap.NewNop()
 	return Handlers{
+		Recovery:        passwordhttp.NewRecovery(contractRecovery{}, log),
 		Account:         accounthttp.New(contractAccounts{}, log),
 		Config:          &config.Config{Logger: logger.Config{Env: env}},
 		PasswordHandler: passwordhttp.New(contractPasswords{}, log),
@@ -91,7 +92,7 @@ type contractSessions struct{}
 
 func (contractSessions) ValidateSession(_ context.Context, token string) (*sessionservice.ValidateSession, error) {
 	if token != "valid" {
-		return nil, errors.New("rejected session")
+		return nil, sessiondomain.ErrSessionNotFound
 	}
 	return &sessionservice.ValidateSession{UserID: "user-1", TokenHash: "hash"}, nil
 }
@@ -101,6 +102,11 @@ type contractMail struct{}
 func (contractMail) Send(string, string, string) error { return nil }
 
 type contractAccounts struct{}
+
+type contractRecovery struct{}
+
+func (contractRecovery) Forgot(context.Context, string, string) error                { return nil }
+func (contractRecovery) Reset(context.Context, string, string, string, string) error { return nil }
 
 func (contractAccounts) AllowRegistration(context.Context, string) error             { return nil }
 func (contractAccounts) Resend(context.Context, string, string) error                { return nil }

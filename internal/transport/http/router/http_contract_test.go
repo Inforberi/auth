@@ -18,6 +18,8 @@ func TestHTTPResponsesMatchSwagger(t *testing.T) {
 		status                  int
 		cookie                  bool
 	}{
+		{"/api/v1/auth/forgot-password", `{"email":"user@example.com"}`, "", "", 202, false},
+		{"/api/v1/auth/reset-password", `{"token":"token","newPassword":"ExamplePass2","confirmPassword":"ExamplePass2"}`, "", "", 200, false},
 		{"/api/v1/auth/email/resend", `{"email":"user@example.com"}`, "", "", 202, false},
 		{"/api/v1/auth/email/verify", `{"token":"token"}`, "", "", 200, false},
 		{"/api/v1/auth/email/resend", `{}`, "", "invalid_email", 400, false},
@@ -64,11 +66,16 @@ func TestHTTPResponsesMatchSwagger(t *testing.T) {
 				t.Fatalf("unexpected error code: %v", fields)
 			}
 			cookies := w.Result().Cookies()
-			if tc.cookie {
+			switch {
+			case tc.cookie:
 				if len(cookies) != 1 || cookies[0].Name != sessionhttp.SessionCookieName || !cookies[0].Secure || !cookies[0].HttpOnly || cookies[0].Path != "/" || cookies[0].Domain != "" || cookies[0].SameSite != http.SameSiteLaxMode {
 					t.Fatal("session cookie contract changed")
 				}
-			} else if len(cookies) != 0 {
+			case tc.status == 200 && (tc.path == "/api/v1/auth/change-password" || tc.path == "/api/v1/auth/reset-password"):
+				if len(cookies) != 1 || cookies[0].MaxAge != -1 {
+					t.Fatal("session cookie not cleared")
+				}
+			case len(cookies) != 0:
 				t.Fatal("unexpected Set-Cookie")
 			}
 		})

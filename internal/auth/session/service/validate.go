@@ -17,8 +17,11 @@ func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (
 
 	now := s.now.NowUTC()
 	absoluteTime := session.CreatedAt.Add(s.cfg.AbsoluteSessionTTL)
+	if !session.AbsoluteExpiresAt.IsZero() {
+		absoluteTime = session.AbsoluteExpiresAt
+	}
 
-	if now.After(session.ExpiresAt) || now.After(absoluteTime) {
+	if !now.Before(session.ExpiresAt) || !now.Before(absoluteTime) {
 		return nil, sessiondomain.ErrSessionExpired
 	}
 
@@ -26,8 +29,11 @@ func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (
 
 	if timeLeft <= s.cfg.SessionRefreshThreshold {
 		session.ExpiresAt = now.Add(s.cfg.SessionTTL)
+		if session.ExpiresAt.After(absoluteTime) {
+			session.ExpiresAt = absoluteTime
+		}
 
-		if err := s.repo.UpdateSession(ctx, hashToken, session, s.cfg.SessionTTL); err != nil {
+		if err := s.repo.UpdateSession(ctx, hashToken, session, session.ExpiresAt.Sub(now)); err != nil {
 			return nil, fmt.Errorf("UpdateSession: %w", err)
 		}
 

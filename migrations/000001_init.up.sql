@@ -107,3 +107,43 @@ CREATE TABLE auth.email_verification_audit (
   event TEXT NOT NULL CHECK (event IN ('email_verification_issued', 'email_verified')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE TABLE auth.sessions (
+  token_hash TEXT PRIMARY KEY CHECK (token_hash ~ '^[a-f0-9]{64}$'),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  created_at TIMESTAMPTZ NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  absolute_expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ,
+  user_agent TEXT NOT NULL,
+  ip_address TEXT NOT NULL,
+  CHECK (created_at<expires_at AND expires_at<=absolute_expires_at)
+);
+CREATE INDEX sessions_owner ON auth.sessions(user_id);
+
+CREATE TABLE auth.password_resets (
+  digest TEXT PRIMARY KEY CHECK (digest ~ '^[a-f0-9]{64}$'),
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.password_credentials(user_id) ON DELETE CASCADE,
+  auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL CHECK (expires_at>created_at)
+);
+CREATE TABLE auth.password_reset_outbox (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  digest TEXT NOT NULL UNIQUE REFERENCES auth.password_resets(digest) ON DELETE CASCADE,
+  payload BYTEA NOT NULL CHECK (octet_length(payload) BETWEEN 28 AND 131072),
+  expires_at TIMESTAMPTZ NOT NULL,
+  available_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+  lease UUID,
+  lease_until TIMESTAMPTZ,
+  CHECK ((lease IS NULL)=(lease_until IS NULL))
+);
+CREATE INDEX password_reset_outbox_due ON auth.password_reset_outbox(available_at);
+CREATE TABLE auth.password_audit (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  event TEXT NOT NULL CHECK (event IN ('password_reset_issued','password_reset','password_changed','sessions_revoked')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

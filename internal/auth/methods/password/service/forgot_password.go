@@ -2,45 +2,93 @@ package service
 
 import (
 	"context"
-	"errors"
-	"fmt"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"time"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/templates"
 )
 
-func (p *PasswordService) ForgotPassword(ctx context.Context, email string) error {
-	mail, err := accountdomain.NewEmail(email)
-	if err != nil {
-		return fmt.Errorf("forgot password invalid email %w", err)
-	}
+type resetMail struct {
+	To   string
+	Body string
+}
 
-	findResult, err := p.repo.FindByEmail(ctx, mail.String())
-	if err != nil {
-		if errors.Is(err, passworddomain.ErrNotFound) {
-			return nil
-		}
-		return fmt.Errorf("forgot password lookup: %w", err)
-	}
+func resetDigest(token string) string {
+	d := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(d[:])
+}
 
-	rawToken, err := p.tm.GenerateToken(32)
-	if err != nil {
-		return fmt.Errorf("forgot password generate token %w", err)
+func (r *RecoveryService) Forgot(ctx context.Context, input, ip string) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := r.limit(ctx, "forgot-ip:"+ip, 10, time.Minute); err != nil {
+		return err
 	}
-	hashToken := p.tm.Hash(rawToken)
-	body, err := templates.RenderResetPassword(p.cfg.ResetURL, rawToken, p.cfg.ResetTokenTTL, p.now.NowUTC())
+	email, err := accountdomain.NewEmail(input)
 	if err != nil {
 		return err
 	}
-
-	err = p.redis.SaveResetToken(ctx, hashToken, findResult.UserID, p.cfg.ResetTokenTTL)
+	if err := r.limit(ctx, "forgot-email:"+email.String(), 3, 15*time.Minute); err != nil {
+		return err
+	}
+	var raw [32]byte
+	if _, err := rand.Read(raw[:]); err != nil {
+		return err
+	}
+	token := base64.RawURLEncoding.EncodeToString(raw[:])
+	now := time.Now().UTC()
+	body, err := templates.RenderResetPassword(r.cfg.ResetURL, token, r.cfg.ResetTokenTTL, now)
 	if err != nil {
-		return fmt.Errorf("save reset token: %w", err)
+		return err
 	}
+	plain, err := json.Marshal(resetMail{To: email.String(), Body: body})
+	if err != nil {
+		return err
+	}
+	payload, err := r.cipher.Seal(plain)
+	if err != nil {
+		return err
+	}
+	return r.repo.IssueReset(ctx, email.String(), domain.ResetChallenge{Digest: resetDigest(token), Payload: payload, ExpiresAt: now.Add(r.cfg.ResetTokenTTL)})
+}
 
-	if err := p.mailer.Send(mail.String(), "Сброс пароля", body); err != nil {
-		return fmt.Errorf("forgot password delivery: %w", err)
+func (r *RecoveryService) Reset(ctx context.Context, token, password, confirmation, ip string) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	if err := r.limit(ctx, "reset-ip:"+ip, 10, time.Minute); err != nil {
+		return err
 	}
-	return nil
+	if err := r.limit(ctx, "reset-global", 100, time.Minute); err != nil {
+		return err
+	}
+	if len(token) != 43 {
+		return domain.ErrInvalidReset
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(token)
+	if err != nil || len(raw) != 32 || base64.RawURLEncoding.EncodeToString(raw) != token {
+		return domain.ErrInvalidReset
+	}
+	if password != confirmation {
+		return domain.ErrPasswordConfirmation
+	}
+	if err := domain.ValidatePassword(password); err != nil {
+		return err
+	}
+	select {
+	case r.hashSlots <- struct{}{}:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	hash, err := r.hash.GenerateHash([]byte(password))
+	<-r.hashSlots
+	if err != nil {
+		return err
+	}
+	return r.repo.ConsumeReset(ctx, resetDigest(token), hash)
 }

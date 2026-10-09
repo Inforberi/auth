@@ -27,7 +27,7 @@ func (l *PasswordService) Login(ctx context.Context, input LoginInput) (*LoginRe
 		return nil, passworddomain.ErrInvalidEmailOrPassword
 	}
 
-	session, err := l.session.CreateSession(ctx, authData.UserID, input.UserAgent, input.IP)
+	session, err := l.session.CreateSessionAtVersion(ctx, authData.UserID, input.UserAgent, input.IP, authData.AuthVersion)
 	if err != nil {
 		return nil, fmt.Errorf("CreateSession: %w", err)
 	}

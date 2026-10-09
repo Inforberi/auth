@@ -105,35 +105,6 @@ func TestChangePassword_GenerateHashError(t *testing.T) {
 	session.AssertNotCalled(t, "LogoutAllExcept", mock.Anything, mock.Anything, mock.Anything)
 }
 
-func TestChangePassword_LogoutAllError(t *testing.T) {
-	logoutAllErr := errors.New("change password session logout")
-
-	repo := &mockPasswordRepo{}
-	hasher := &mockHasher{}
-	session := &mockSession{}
-
-	repo.On("FindUserByUserID", context.Background(), userID).Return(&passworddomain.Credential{
-		PasswordHash: oldPasswordHash,
-	}, nil)
-
-	hasher.On("Compare", oldPassword, oldPasswordHash).Return(nil)
-	hasher.On("GenerateHash", []byte(newPassword)).Return(newPasswordHash, nil)
-
-	repo.On("UpdatePasswordHash", context.Background(), userID, newPasswordHash).Return(nil)
-
-	session.On("LogoutAllExcept", context.Background(), currentTokenHash, userID).Return(logoutAllErr)
-
-	svc := newTestService(repo, session, hasher)
-
-	err := svc.ChangePassword(context.Background(), userID, currentTokenHash, oldPassword, newPassword)
-
-	assert.ErrorIs(t, err, logoutAllErr)
-
-	repo.AssertExpectations(t)
-	hasher.AssertExpectations(t)
-	session.AssertExpectations(t)
-}
-
 func TestChangePassword_SamePasswordError(t *testing.T) {
 	newPassword := oldPassword
 
@@ -173,8 +144,6 @@ func TestChangePassword_Success(t *testing.T) {
 	hasher.On("GenerateHash", []byte(newPassword)).Return(newPasswordHash, nil)
 
 	repo.On("UpdatePasswordHash", context.Background(), userID, newPasswordHash).Return(nil)
-
-	session.On("LogoutAllExcept", context.Background(), currentTokenHash, userID).Return(nil)
 
 	svc := newTestService(repo, session, hasher)
 

@@ -8,6 +8,10 @@ import (
 )
 
 func (s *SessionService) CreateSession(ctx context.Context, userID accountdomain.UserID, userAgent, ip string) (*CreatedSession, error) {
+	return s.CreateSessionAtVersion(ctx, userID, userAgent, ip, 0)
+}
+
+func (s *SessionService) CreateSessionAtVersion(ctx context.Context, userID accountdomain.UserID, userAgent, ip string, version int64) (*CreatedSession, error) {
 	rawToken, err := s.token.GenerateToken()
 	if err != nil {
 		return nil, err
@@ -21,12 +25,14 @@ func (s *SessionService) CreateSession(ctx context.Context, userID accountdomain
 	err = s.repo.CreateSession(
 		ctx,
 		CreateSessionParams{
-			UserID:    userID,
-			CreatedAt: now,
-			ExpiresAt: expiresAt,
-			TokenHash: tokenHash,
-			UserAgent: userAgent,
-			IPAddress: ip,
+			AuthVersion:       version,
+			AbsoluteExpiresAt: now.Add(s.cfg.AbsoluteSessionTTL),
+			UserID:            userID,
+			CreatedAt:         now,
+			ExpiresAt:         expiresAt,
+			TokenHash:         tokenHash,
+			UserAgent:         userAgent,
+			IPAddress:         ip,
 		})
 	if err != nil {
 		return nil, fmt.Errorf("service create session %w", err)

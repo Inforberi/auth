@@ -223,13 +223,13 @@ Repository локален фиче; таблица не равна фиче. О�
 | AES-GCM payload / HMAC keys, bounded SMTP | `internal/infra/secretbox`, `internal/infra/mailer` |
 | Password rules / credential | `internal/auth/methods/password/domain` |
 | Password scenarios / ports / config / results | `internal/auth/methods/password/service` |
-| Credential SQL / atomic legacy registration | `internal/auth/methods/password/repository/postgres` |
-| Reset token storage | `internal/auth/methods/password/repository/redis` |
+| Credential SQL / atomic registration, reset/change, outbox/audit | `internal/auth/methods/password/repository/postgres` |
+| Recovery Redis limits | `internal/auth/methods/password/repository/redis` |
 | Password JSON API | `internal/auth/methods/password/transport/http` |
 | Argon2 / complete reset HTML | `internal/auth/methods/password/hasher`, `templates` |
 | Session entity / errors / token ID | `internal/auth/session/domain` |
 | Session scenarios / ports / config / results | `internal/auth/session/service` |
-| Session Redis / HTTP cookies/context/middleware | `internal/auth/session/repository/redis`, `transport/http` |
+| Session SQL ledger / HTTP cookies/context/middleware | `internal/auth/session/repository/postgres`, `transport/http` |
 | Security event / recording contract | `internal/audit/domain`, `service` |
 | Router, health, common HTTP helpers | `internal/transport/http` |
 
@@ -239,7 +239,7 @@ Tests находятся рядом с кодом; register/login/change-passwor
 
 В structural refactor сохранён текущий `passwordRepo.CreateUser`: account/contact/profile/credential создаются одной SQL-транзакцией. Метод и интерфейс явно помечены как legacy cross-feature write; SQL и поведение не менялись. Разделение на независимые commit запрещено.
 
-При lifecycle реализации account отвечает за пользователя/контакт/профиль, password — credential, session — SQL ledger. Service сценария получает transaction-aware port с узкими операциями этих владельцев; composition root связывает PostgreSQL adapters на одном pool и одном tx. Общий tx не передаётся как pgx.Tx в бизнес-сервис и не хранится неявно в context. Конкретный контракт вводится под операцию, без универсального CRUD или framework. Повышение auth_version, отзыв и security audit/outbox входят в ту же SQL-транзакцию; сетевые отправки — после commit через outbox. Повторная/конкурентная обработка проверяется в этапах 5/6. Эта схема владения согласована, но durable session/audit enforcement ещё не реализован.
+При lifecycle реализации account отвечает за пользователя/контакт/профиль, password — credential, session — SQL ledger. Service сценария получает transaction-aware port с узкими операциями этих владельцев; composition root связывает PostgreSQL adapters на одном pool и одном tx. Общий tx не передаётся как pgx.Tx в бизнес-сервис и не хранится неявно в context. Конкретный контракт вводится под операцию, без универсального CRUD или framework. Повышение auth_version, отзыв и security audit/outbox входят в ту же SQL-транзакцию; сетевые отправки — после commit через outbox. Повторная/конкурентная обработка проверяется в этапах 5/6. В 5.2 SQL ledger и atomic reset/change с auth_version/revoke/audit реализованы; Redis session adapter больше не подключён в app и не является fallback. Общие audit/lifecycle policies и полная security-приёмка остаются впереди.
 
 ### Историческая карта переноса 4.0 (до согласования 4.5)
 

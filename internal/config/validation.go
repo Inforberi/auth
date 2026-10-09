@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"go.uber.org/zap/zapcore"
 )
@@ -51,11 +52,11 @@ func (cfg Config) validateStorage() error {
 }
 
 func (cfg Config) validateIdentity() error {
-	if cfg.Password.ResetTokenTTL <= 0 {
-		return fmt.Errorf("PASSWORD_RESET_TOKEN_TTL must be positive")
+	if cfg.Password.ResetTokenTTL < time.Minute || cfg.Password.ResetTokenTTL > time.Hour {
+		return fmt.Errorf("PASSWORD_RESET_TOKEN_TTL must be between 1m and 1h")
 	}
 	reset, err := url.Parse(cfg.Password.ResetURL)
-	if err != nil || reset.Hostname() == "" || reset.User != nil || reset.Fragment != "" || (reset.Scheme != "https" && reset.Scheme != "http") {
+	if err != nil || len(cfg.Password.ResetURL) > 2048 || reset.Hostname() == "" || reset.User != nil || reset.RawQuery != "" || reset.Fragment != "" || (reset.Scheme != "https" && reset.Scheme != "http") {
 		return fmt.Errorf("invalid PASSWORD_RESET_URL")
 	}
 	if strings.TrimSpace(cfg.Redis.Host) == "" || strings.TrimSpace(cfg.MailSender.SMTPHost) == "" {

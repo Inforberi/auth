@@ -1,4 +1,4 @@
-# Схема Auth — этапы 4.1 и 5.1
+# Схема Auth — этапы 4.1, 5.1 и 5.2
 
 Источник: `migrations/000001_init.up.sql` и `.down.sql`. Один экземпляр Auth обслуживает один проект; внутренний UUID пользователя не зависит от метода входа.
 
@@ -13,8 +13,12 @@
 | `auth.email_verifications` | SHA-256 verifier, один challenge на контакт, expiry; purpose фиксирован таблицей, owner — FK. |
 | `auth.email_verification_outbox` | AES-GCM payload, expiry, due time, до 5 attempts, UUID lease; удаляется вместе с challenge. |
 | `auth.email_verification_audit` | Issuance/confirmation с user UUID, без email/token/payload. Общая audit policy впереди. |
+| `auth.sessions` | Digest token, owner, auth_version, idle/absolute expiry, revoked_at, device metadata; SQL authority. |
+| `auth.password_resets` | Digest, один challenge на credential owner, auth_version, expiry; одноразовый consume. |
+| `auth.password_reset_outbox` | Encrypted payload, expiry, attempts, lease; каскадно удаляется с challenge. |
+| `auth.password_audit` | Reset issuance/reset/change/revoke events с user UUID, без token/password. |
 
-Все четыре таблицы имеют `created_at/updated_at`; BEFORE UPDATE trigger поддерживает `updated_at`. FK на пользователя каскадно удаляет дочерние записи при явном hard delete. Soft deletion ничего физически не удаляет.
+Первые четыре таблицы имеют `created_at/updated_at`; BEFORE UPDATE trigger поддерживает `updated_at`. FK на пользователя каскадно удаляет дочерние записи при явном hard delete. Soft deletion ничего физически не удаляет.
 
 Email нормализуется приложением: trim + lower, максимум 255 байт, только адрес без display name, комментариев и обёртки `<…>`. SQL дополнительно проверяет базовую нормализацию, длину и наличие `@`; полный разбор адреса остаётся в приложении. Уникальность сохраняется после soft deletion: автоматическое освобождение адреса запрещено, политика повторного использования/удаления персональных данных определяется отдельно на этапе lifecycle.
 
@@ -26,7 +30,7 @@ PK/UNIQUE уже создают необходимые индексы. `(user_id
 
 До первого production release редактируется исходная миграция. Уже применённая версия `000001` **не обновится автоматически**: для существующей БД нужен отдельно согласованный перенос данных/новая миграция. Не выполнять down/reset рабочей БД ради этой схемы. В этом этапе рабочие данные не изменялись.
 
-Verification, специализированные audit/outbox и verified-email gate смены пароля реализованы в 5.1. Регистрационная транзакция через composition callback включает challenge/outbox/audit; их failure откатывает регистрацию. Resend блокирует контакт/пользователя и заменяет challenge. Confirm проверяет expiry/status и меняет verified_at/consumes/audit одним commit. Подробности — [verification](email-verification.md). Login ещё не проверяет все account policies; смена пароля ещё не повышает версию и не обеспечивает SQL-отзыв сессий. Session ledger, общий audit/outbox, роли и billing остаются впереди.
+Verification, специализированные audit/outbox и verified-email gate смены пароля реализованы в 5.1. Регистрационная транзакция через composition callback включает challenge/outbox/audit; их failure откатывает регистрацию. Resend блокирует контакт/пользователя и заменяет challenge. Confirm проверяет expiry/status и меняет verified_at/consumes/audit одним commit. Подробности — [verification](email-verification.md). В 5.2 добавлены SQL session ledger и recovery: password reset/change повышают auth_version, отзывают все сессии и пишут audit одной транзакцией. Login issuance повторно проверяет status/version; stale refresh не воскрешает session. Подробности — [recovery](password-recovery.md). Общие account policies/audit, полная session security, роли и billing остаются впереди.
 
 ## Минимальная проверка
 
@@ -37,3 +41,5 @@ Fixture допускает только localhost, пользователя/БД
 7 октября 2026 на отдельном PostgreSQL 18.6 подтверждены up/down/up, repository round-trip, timestamps, UNIQUE/FK/CHECK, cascade delete, rollback регистрации, soft-deleted email reservation и конкурентная регистрация. Это проверка SQL/репозиториев, не полная HTTP/security acceptance.
 
 9 октября проверка повторена для 5.1: registration+outbox rollback, cooldown/replacement, expiry/replay, concurrent consume, audit failure rollback, blocked account, lease/stale completion, retry limit и ciphertext cleanup. Redis concurrent limiter проверен отдельно. Рабочая БД не затронута.
+
+9 октября проверка повторена для 5.2: reset cooldown/replacement/expiry/replay, ровно один concurrent consume, audit rollback, stale session issuance/refresh, атомарные reset/change с отзывом сессий и blocked account. Проверено на отдельном PostgreSQL 18.6; SQL delivery использует test double.

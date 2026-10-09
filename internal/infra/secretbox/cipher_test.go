@@ -11,9 +11,16 @@ func TestCipher(t *testing.T) {
 		t.Fatal(err)
 	}
 	plain := []byte("secret verification link")
+	other, err := NewScoped("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "password-reset:v1")
+	if err != nil {
+		t.Fatal(err)
+	}
 	a, err := c.Seal(plain)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if _, err := other.Open(a); err == nil {
+		t.Fatal("cross-purpose payload accepted")
 	}
 	b, err := c.Seal(plain)
 	if err != nil {

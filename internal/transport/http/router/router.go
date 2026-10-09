@@ -18,6 +18,7 @@ import (
 )
 
 type Handlers struct {
+	Recovery        *passwordhttp.RecoveryHandler
 	Account         *accounthttp.Handler
 	PasswordHandler *passwordhttp.PasswordHandler
 	Middleware      *sessionhttp.Middleware
@@ -51,6 +52,10 @@ func New(h Handlers) *chi.Mux {
 
 	r.Route("/api/v1/", func(r chi.Router) {
 		r.Route("/auth", func(r chi.Router) {
+			if h.Recovery != nil {
+				r.Post("/forgot-password", h.Recovery.Forgot)
+				r.Post("/reset-password", h.Recovery.Reset)
+			}
 			if h.Account != nil {
 				r.Post("/email/resend", h.Account.Resend)
 				r.Post("/email/verify", h.Account.Confirm)

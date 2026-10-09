@@ -1,8 +1,10 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 
+	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -25,7 +27,11 @@ func (m *Middleware) Auth(next http.Handler) http.Handler {
 
 		session, err := m.session.ValidateSession(r.Context(), token)
 		if err != nil {
-			unauthorized(w)
+			if errors.Is(err, sessiondomain.ErrSessionNotFound) || errors.Is(err, sessiondomain.ErrSessionExpired) {
+				unauthorized(w)
+			} else {
+				httpx.Error(w, 503, "temporarily_unavailable", "temporarily unavailable")
+			}
 			return
 		}
 
@@ -36,6 +42,9 @@ func (m *Middleware) Auth(next http.Handler) http.Handler {
 				TokenHash: session.TokenHash,
 			})
 
+		if session.Extended {
+			SetSessionCookie(w, token, session.ExpiresAt)
+		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

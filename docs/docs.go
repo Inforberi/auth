@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/api/v1/auth/change-password": {
             "post": {
-                "description": "Requires a valid __Host-session cookie and a verified login email on an active account. Missing or rejected sessions return 401; unverified accounts return 403. Response retains the legacy uppercase Status field. CSRF/fresh-auth checks and atomic SQL session revocation are not implemented yet. New-password policy failures currently return 500 internal_error; this mapping is a lifecycle follow-up.",
+                "description": "Requires a valid SQL-backed __Host-session and a verified login email. Atomically updates password, revokes all sessions and records audit; sign in again. Response retains legacy uppercase Status. CSRF/fresh-auth are not implemented yet.",
                 "consumes": [
                     "application/json"
                 ],
@@ -47,7 +47,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "codes: invalid_json, password_mismatch, invalid_email_or_password, same_password, empty_new_password, empty_old_password, empty_confirm_password",
+                        "description": "codes: password_policy, invalid_json, password_mismatch, invalid_email_or_password, same_password, empty_new_password, empty_old_password, empty_confirm_password",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -189,9 +189,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/auth/forgot-password": {
+            "post": {
+                "description": "Generic accepted response for unknown, blocked and cooldown addresses. Enqueues an encrypted email after SQL commit; does not guarantee delivery. Socket IP limits; forwarded headers are not trusted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Request password recovery",
+                "parameters": [
+                    {
+                        "description": "email",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/password_http.ForgotRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/password_http.RecoveryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "codes: invalid_json, invalid_email",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "code: temporarily_unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/login/email": {
             "post": {
-                "description": "Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on success. Unverified users can sign in, but sensitive routes require a verified email. HTTPS is required for browser sessions. Invalid credentials return 400, not 401. Global account status/auth-version checks and CSRF enforcement are not implemented yet.",
+                "description": "Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on success. Unverified users can sign in, but sensitive routes require a verified email. HTTPS is required for browser sessions. Invalid credentials return 400, not 401. SQL session issuance checks current account status and auth version. CSRF enforcement is not implemented yet.",
                 "consumes": [
                     "application/json"
                 ],
@@ -286,6 +338,58 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "code: internal_error",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "code: temporarily_unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/reset-password": {
+            "post": {
+                "description": "Single-use 256-bit token. SQL commit atomically updates the password, consumes the token, revokes all sessions and records audit. Does not verify email or create a session; sign in again. New password: 8-128 bytes, letter, digit and uppercase. POST only, never automatic GET confirmation.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Reset password",
+                "parameters": [
+                    {
+                        "description": "token and new password",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/password_http.ResetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/password_http.RecoveryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "codes: invalid_json, invalid_reset, password_mismatch, password_policy",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -515,6 +619,18 @@ const docTemplate = `{
                 }
             }
         },
+        "password_http.ForgotRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                }
+            }
+        },
         "password_http.LoginByEmailRequest": {
             "type": "object",
             "required": [
@@ -540,6 +656,15 @@ const docTemplate = `{
                 }
             }
         },
+        "password_http.RecoveryResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                }
+            }
+        },
         "password_http.RegisterRequest": {
             "type": "object",
             "required": [
@@ -561,6 +686,27 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "userID": {
+                    "type": "string"
+                }
+            }
+        },
+        "password_http.ResetRequest": {
+            "type": "object",
+            "required": [
+                "confirmPassword",
+                "newPassword",
+                "token"
+            ],
+            "properties": {
+                "confirmPassword": {
+                    "type": "string",
+                    "example": "ExamplePass2"
+                },
+                "newPassword": {
+                    "type": "string",
+                    "example": "ExamplePass2"
+                },
+                "token": {
                     "type": "string"
                 }
             }

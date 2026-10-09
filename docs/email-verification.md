@@ -4,9 +4,9 @@
 
 ## Сценарий
 
-Регистрация создаёт account/contact/credential/profile, verification challenge, зашифрованный outbox и audit одной транзакцией. Outbox/audit failure откатывает регистрацию. Сессия создаётся после commit; существующий дефект «account создан, Redis session не создан» остаётся 6.6.
+Регистрация создаёт account/contact/credential/profile, verification challenge, зашифрованный outbox и audit одной транзакцией. Outbox/audit failure откатывает регистрацию. Сессия создаётся после commit; частичный сбой «account создан, SQL session не создан» остаётся задачей 6.6.
 
-Login/register разрешены без подтверждения. Из существующих чувствительных routes `change-password` требует verified login email активного, не удалённого пользователя: 403 `email_not_verified`, при недоступности SQL — 503. Это не полноценный session ledger/status/version enforcement: он завершается в 5.4/6.2. Будущие продуктовые/roles/billing routes обязаны явно применять соответствующие политики.
+Login/register разрешены без подтверждения. Из существующих чувствительных routes `change-password` требует verified login email активного, не удалённого пользователя: 403 `email_not_verified`, при недоступности SQL — 503. С этапа 5.2 session middleware использует SQL ledger и проверяет status/version; полная приёмка и управление блокировками остаются 5.4/6.2. Будущие продуктовые/roles/billing routes обязаны явно применять соответствующие политики.
 
 `POST /api/v1/auth/email/resend` с `{"email":"user@example.com"}` возвращает 202 `{"status":"accepted"}` для существующего/неизвестного/подтверждённого/заблокированного email и cooldown. Malformed email — 400, limit — 429, dependency failure — 503. Успешная постановка не обещает успешную доставку.
 
@@ -26,7 +26,7 @@ Audit сейчас покрывает только `email_verification_issued` �
 
 ## Настройки и ограничения
 
-Обязательны `EMAIL_VERIFICATION_URL` и `EMAIL_OUTBOX_KEY` (base64 32 случайных байт). `EMAIL_VERIFICATION_TTL=30m` (1m–1h), `EMAIL_VERIFICATION_RESEND_INTERVAL=1m` (не меньше минуты и меньше TTL). Production требует HTTPS, отдельный ключ вместо локального примера и `SMTP_REQUIRE_TLS=true`; проверяется сертификат STARTTLS, TLS не ниже 1.2. Новый context-aware SMTP sender используется verification worker; legacy reset/dev Send остаётся отдельной задачей 6.5.
+Обязательны `EMAIL_VERIFICATION_URL` и `EMAIL_OUTBOX_KEY` (base64 32 случайных байт). `EMAIL_VERIFICATION_TTL=30m` (1m–1h), `EMAIL_VERIFICATION_RESEND_INTERVAL=1m` (не меньше минуты и меньше TTL). Production требует HTTPS, отдельный ключ вместо локального примера и `SMTP_REQUIRE_TLS=true`; проверяется сертификат STARTTLS, TLS не ниже 1.2. Context-aware SMTP sender используется verification и reset workers; legacy dev Send остаётся отдельной задачей 6.5. EMAIL_OUTBOX_KEY шифрует обе очереди с разными authenticated purposes; ротация требует согласованной обработки обеих.
 
 Ключ хранить в secrets manager, не в Git/логах. Смена ключа не поддерживает keyring: до ротации остановить issuance и дождаться очистки outbox, затем согласованно сменить ключ у всех экземпляров. После аварийной смены reissue через resend; старый ciphertext не расшифруется. Новый проект получает новый ключ. Изменение URL/key/durations проверяется при startup, placeholders production example не рабочие secrets.
 

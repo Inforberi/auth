@@ -7,9 +7,10 @@ import (
 )
 
 type Session struct {
-	UserID    accountdomain.UserID `json:"userId"`
-	UserAgent string               `json:"userAgent"`
-	IPAddress string               `json:"ipAddress"`
-	CreatedAt time.Time            `json:"createdAt"`
-	ExpiresAt time.Time            `json:"expiresAt"`
+	AbsoluteExpiresAt time.Time            `json:"absoluteExpiresAt"`
+	UserID            accountdomain.UserID `json:"userId"`
+	UserAgent         string               `json:"userAgent"`
+	IPAddress         string               `json:"ipAddress"`
+	CreatedAt         time.Time            `json:"createdAt"`
+	ExpiresAt         time.Time            `json:"expiresAt"`
 }

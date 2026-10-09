@@ -34,12 +34,15 @@ func assembleAccount(pool *pgxpool.Pool, redis *redis.Client, mail *mailer.Maile
 	return service, passwordRepo, nil
 }
 
-func startDelivery(ctx context.Context, service *accountservice.Service, log *zap.Logger) func() {
+func startDelivery(ctx context.Context, service interface {
+	RunDelivery(context.Context, func(error))
+}, log *zap.Logger,
+) func() {
 	workerCtx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		service.RunDelivery(workerCtx, func(error) { log.Warn("verification delivery processing failed") })
+		service.RunDelivery(workerCtx, func(error) { log.Warn("email delivery processing failed") })
 	}()
 	return func() { cancel(); <-done }
 }

@@ -8,13 +8,13 @@ import (
 )
 
 // @Summary change password
-// @Description Requires a valid __Host-session cookie and a verified login email on an active account. Missing or rejected sessions return 401; unverified accounts return 403. Response retains the legacy uppercase Status field. CSRF/fresh-auth checks and atomic SQL session revocation are not implemented yet. New-password policy failures currently return 500 internal_error; this mapping is a lifecycle follow-up.
+// @Description Requires a valid SQL-backed __Host-session and a verified login email. Atomically updates password, revokes all sessions and records audit; sign in again. Response retains legacy uppercase Status. CSRF/fresh-auth are not implemented yet.
 // @Tags Auth
 // @Accept json
 // @Produce json
 // @Param body body ChangePasswordRequest true "change password payload"
 // @Success 200 {object} ChangePasswordResponse
-// @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, password_mismatch, invalid_email_or_password, same_password, empty_new_password, empty_old_password, empty_confirm_password"
+// @Failure 400 {object} httpx.ErrorResponse "codes: password_policy, invalid_json, password_mismatch, invalid_email_or_password, same_password, empty_new_password, empty_old_password, empty_confirm_password"
 // @Failure 401 {object} httpx.ErrorResponse "code: unauthorized"
 // @Failure 403 {object} httpx.ErrorResponse "code: email_not_verified"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
@@ -57,10 +57,15 @@ func (p *PasswordHandler) ChangePassword(w http.ResponseWriter, r *http.Request)
 		input.NewPassword,
 	)
 	if err != nil {
-		p.respondError(w, r, err, "change password", changePasswordErrors)
+		if passwordPolicyError(err) {
+			httpx.Error(w, 400, "password_policy", "invalid password")
+		} else {
+			p.respondError(w, r, err, "change password", changePasswordErrors)
+		}
 		return
 	}
 
+	sessionhttp.ClearSessionCookie(w)
 	httpx.JSON(
 		w,
 		http.StatusOK,

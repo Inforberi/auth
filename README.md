@@ -1,6 +1,6 @@
 # Auth template
 
-Рабочая основа Go Auth, **ещё не готовый production auth продукт**. Register/login/change и [email verification](docs/email-verification.md) реализованы; reset API, полноценная session security, Telegram, RBAC, MFA и payments — по [плану](docs/auth-plan.md) и [шагам](docs/auth-implementation.md). Результат переноса инфраструктуры: [template-adoption](docs/template-adoption.md).
+Рабочая основа Go Auth, **ещё не готовый production auth продукт**. Register/login/change, [email verification](docs/email-verification.md) и [password recovery](docs/password-recovery.md) реализованы; полноценная session security, Telegram, RBAC, MFA и payments — по [плану](docs/auth-plan.md) и [шагам](docs/auth-implementation.md). Результат переноса инфраструктуры: [template-adoption](docs/template-adoption.md).
 
 ## Локальный запуск
 
@@ -12,7 +12,7 @@ Dev запускает Air `v1.67.4` через `.air.toml`: пересборк�
 
 ## Проверки
 
-Существующий `.env` дополните verification-настройками из примера; secrets не перезаписывались. Production требует отдельного случайного `EMAIL_OUTBOX_KEY`, HTTPS verification URL и `SMTP_REQUIRE_TLS=true`. Применённая `000001` не обновит БД автоматически: нужен согласованный перенос, не reset. Login разрешён до подтверждения, change-password — после него. Письмо ведёт на frontend явного подтверждения, подключаемый проектом, а не на автоматический GET API.
+Существующий `.env` дополните verification-настройками из примера; secrets не перезаписывались. Production требует отдельного случайного `EMAIL_OUTBOX_KEY`, HTTPS verification URL и `SMTP_REQUIRE_TLS=true`. Применённая `000001` не обновит БД автоматически: нужен согласованный перенос, не reset. Login разрешён до подтверждения, change-password — после него. Reset/change-password отзывают все SQL-сессии; нужно войти заново. Письмо ведёт на frontend явного подтверждения, подключаемый проектом, а не на автоматический GET API.
 
 ```sh
 task check
@@ -30,11 +30,11 @@ Checks используют `.env.example`/`.env.prod.example`, не читаю�
 
 Текущая схема и правила её применения — [schema](docs/schema.md). Исходная миграция изменена до production release; уже применённая `000001` автоматически не обновляется. Не сбрасывайте существующую БД: перенос её данных требует отдельной миграции.
 
-Полные примеры — `.env.example` и `.env.prod.example`; источник runtime validation — `internal/config/config.go` и `validation.go`. `APP_ENV=dev|test|prod`, `LOG_LEVEL` задаёт logger. `PORT`, `DATABASE_URL`, pool limits, `REDIS_HOST/PORT/PASSWORD` обязательны для startup. `SESSION_TTL`, **отдельный** `ABSOLUTE_SESSION_TTL` и `SESSION_REFRESH_THRESHOLD` должны быть согласованы. Reset URL берётся только из `PASSWORD_RESET_URL`, TTL — `PASSWORD_RESET_TOKEN_TTL`; публичный reset API пока выключен.
+Полные примеры — `.env.example` и `.env.prod.example`; источник runtime validation — `internal/config/config.go` и `validation.go`. `APP_ENV=dev|test|prod`, `LOG_LEVEL` задаёт logger. `PORT`, `DATABASE_URL`, pool limits, `REDIS_HOST/PORT/PASSWORD` обязательны для startup. `SESSION_TTL`, **отдельный** `ABSOLUTE_SESSION_TTL` и `SESSION_REFRESH_THRESHOLD` должны быть согласованы. Reset URL берётся только из `PASSWORD_RESET_URL`, TTL — `PASSWORD_RESET_TOKEN_TTL`; forgot/reset API включён; письмо ведёт на frontend форму, которая отправляет POST reset.
 
 Код Auth расположен в `internal/auth`: `account/domain`, `methods/password` и `session`; внутри развитой фичи — domain/service/repository/transport. Сборка/lifecycle — `internal/app/auth`, aggregate config — `internal/config`, HTTP server/Shutdown — `internal/server/http`, подключения — `internal/infra`, router — `internal/transport/http`. Карта путей и будущие модули — в [архитектуре](docs/architecture.md). Ориентир рукописного Go-кода — до 150 строк при осмысленном разделении, без жёсткого потолка; tests/generated без лимита. `task check` проверяет направление imports, не размер файлов.
 
-`SMTP_HOST/PORT/USERNAME/PASSWORD/FROM/DOMAIN` задают mailer. В dev SMTP идёт в Mailpit. Production SMTP delivery, TLS/timeouts/outbox ещё требуют отдельной проверки. `SWAGGER_ENABLED=false` по умолчанию; при включении нужны credentials. В prod dev mail route отсутствует, reset URL требует HTTPS, Redis password — минимум 16 символов. Validation не заменяет secret provisioning и review.
+`SMTP_HOST/PORT/USERNAME/PASSWORD/FROM/DOMAIN` задают mailer. В dev SMTP идёт в Mailpit. Workers используют encrypted SQL outbox, deadlines и production STARTTLS; внешняя production SMTP доставка ещё требует отдельной проверки. `SWAGGER_ENABLED=false` по умолчанию; при включении нужны credentials. В prod dev mail route отсутствует, reset URL требует HTTPS, Redis password — минимум 16 символов. Validation не заменяет secret provisioning и review.
 
 Compose дополнительно использует `APP_NAME`, `POSTGRES_IMAGE/DB/USER/PASSWORD`, `MIGRATION_DATABASE_URL`, `BACKUP_INTERVAL`, `BACKUP_RETENTION_COUNT`, `RESTORE_HEALTHCHECK_SQL`. Migration URL закрепляет `search_path=public`: metadata не должна переезжать при создании одноимённой user/schema. Real `.env` файлы исключены из Git и Docker context. Другой env file: `task dev:up DEV_ENV=config/dev.env` или `task prod:up PROD_ENV=config/prod.env`; Taskfile сам задаёт одинаковый путь для Compose interpolation и API env_file.
 

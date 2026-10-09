@@ -11,7 +11,7 @@ import (
 	passwordredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/redis"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
-	sessionredis "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/redis"
+	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
@@ -20,6 +20,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
 	redisclient "github.com/Inforberi/financial-intelligence/internal/infra/redis"
+	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 	httpserver "github.com/Inforberi/financial-intelligence/internal/server/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
@@ -67,11 +68,13 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		return nil, fmt.Errorf("assemble account: %w", err)
 	}
 	argonHash := hasher.NewArgon2idHash(1, 32, 64*1024, 32, 256)
-	sessionSvc := sessionservice.New(now, sessionredis.New(rdb), tokenGen, cfg.Session)
-	passwordSvc := passwordservice.New(
-		passwordRepo, sessionSvc, argonHash, now, tokenGen,
-		passwordredis.New(rdb), cfg.Password, mail,
-	)
+	sessionSvc := sessionservice.New(now, sessionpostgres.New(pool), tokenGen, cfg.Session)
+	passwordSvc := passwordservice.New(passwordRepo, sessionSvc, argonHash)
+	resetCipher, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "password-reset:v1")
+	if err != nil {
+		return nil, err
+	}
+	recoverySvc := passwordservice.NewRecovery(passwordRepo, resetCipher, passwordredis.New(rdb), mail, argonHash, cfg.Password)
 	passwordHandler := passwordhttp.New(passwordSvc,
 		log.With(zap.String("feature", "password_auth"), zap.String("layer", "transport")))
 	middleware := sessionhttp.New(sessionSvc, log)
@@ -81,6 +84,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		mailTest = dev.NewMailTest(mail, log)
 	}
 	handler := router.New(router.Handlers{
+		Recovery:        passwordhttp.NewRecovery(recoverySvc, log),
 		Account:         accounthttp.New(accountSvc, log),
 		PasswordHandler: passwordHandler,
 		Middleware:      middleware,
@@ -97,6 +101,8 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	return &App{
 		resources: resources,
 		serve: func(ctx context.Context) error {
+			stopRecovery := startDelivery(ctx, recoverySvc, log)
+			defer stopRecovery()
 			stop := startDelivery(ctx, accountSvc, log)
 			defer stop()
 			return httpserver.Run(ctx, log, cfg.Server, handler)

@@ -43,7 +43,7 @@ func (r *PasswordService) Register(
 		return nil, fmt.Errorf("register by email create user %w", err)
 	}
 
-	session, err := r.session.CreateSession(ctx, userID, userAgent, ip)
+	session, err := r.session.CreateSessionAtVersion(ctx, userID, userAgent, ip, 1)
 	if err != nil {
 		return nil, fmt.Errorf("register by email create session %w", err)
 	}

@@ -14,10 +14,12 @@ type ValidateSession struct {
 }
 
 type CreateSessionParams struct {
-	UserID    accountdomain.UserID
-	CreatedAt time.Time
-	ExpiresAt time.Time
-	TokenHash string
-	UserAgent string
-	IPAddress string
+	AuthVersion       int64
+	AbsoluteExpiresAt time.Time
+	UserID            accountdomain.UserID
+	CreatedAt         time.Time
+	ExpiresAt         time.Time
+	TokenHash         string
+	UserAgent         string
+	IPAddress         string
 }

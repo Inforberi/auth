@@ -26,12 +26,13 @@ func TestCreateSession_Success(t *testing.T) {
 		Return("HashedToken", nil)
 
 	expected := CreateSessionParams{
-		UserID:    "user-1",
-		CreatedAt: now,
-		ExpiresAt: now.Add(cfg.SessionTTL),
-		TokenHash: "HashedToken",
-		UserAgent: userAgent,
-		IPAddress: ip,
+		AbsoluteExpiresAt: now.Add(cfg.AbsoluteSessionTTL),
+		UserID:            "user-1",
+		CreatedAt:         now,
+		ExpiresAt:         now.Add(cfg.SessionTTL),
+		TokenHash:         "HashedToken",
+		UserAgent:         userAgent,
+		IPAddress:         ip,
 	}
 
 	clock.

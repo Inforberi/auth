@@ -12,16 +12,11 @@ import (
 )
 
 func newTestService(repo *mockPasswordRepo, session *mockSession, hash *mockHasher) *PasswordService {
-	return New(
-		repo,
-		session,
-		hash,
-		nil,
-		&mockTokenManager{},
-		&mockRedisRepo{},
-		Config{ResetTokenTTL: 1 * time.Hour},
-		&mockMailer{},
-	)
+	return New(repo, session, hash)
+}
+
+func (m *mockPasswordRepo) ChangePassword(ctx context.Context, id accountdomain.UserID, _, _, hash string) error {
+	return m.UpdatePasswordHash(ctx, id, hash)
 }
 
 type mockPasswordRepo struct {
@@ -86,6 +81,10 @@ type mockSession struct {
 	mock.Mock
 }
 
+func (m *mockSession) CreateSessionAtVersion(ctx context.Context, id accountdomain.UserID, agent, ip string, _ int64) (*sessionservice.CreatedSession, error) {
+	return m.CreateSession(ctx, id, agent, ip)
+}
+
 func (m *mockSession) CreateSession(
 	ctx context.Context,
 	userID accountdomain.UserID,
@@ -106,34 +105,5 @@ func (m *mockSession) CreateSession(
 
 func (m *mockSession) LogoutAllExcept(ctx context.Context, tokenHash string, userID accountdomain.UserID) error {
 	args := m.Called(ctx, tokenHash, userID)
-	return args.Error(0)
-}
-
-type mockTokenManager struct{ mock.Mock }
-
-func (m *mockTokenManager) GenerateToken(lengths ...int) (string, error) {
-	args := m.Called(lengths)
-	if args.Get(0) == nil {
-		return "", args.Error(1)
-	}
-	return args.String(0), args.Error(1)
-}
-
-func (m *mockTokenManager) Hash(rawToken string) string {
-	args := m.Called(rawToken)
-	return args.String(0)
-}
-
-type mockRedisRepo struct{ mock.Mock }
-
-func (m *mockRedisRepo) SaveResetToken(ctx context.Context, tokenHash string, userID accountdomain.UserID, ttl time.Duration) error {
-	args := m.Called(ctx, tokenHash, userID, ttl)
-	return args.Error(0)
-}
-
-type mockMailer struct{ mock.Mock }
-
-func (m *mockMailer) Send(to, subject, htmlBody string) error {
-	args := m.Called(to, subject, htmlBody)
 	return args.Error(0)
 }

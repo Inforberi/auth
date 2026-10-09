@@ -95,7 +95,7 @@
 ## 5. Email/password lifecycle
 
 - [x] 5.1. Реализовано и локально проверено 9 октября: schema/service/repositories/HTTP verify/resend, unverified gate, generic replies, encrypted outbox/audit, bounded worker/SMTP/Redis limits. Expiry/replay/replacement/concurrent consume/audit rollback/lease/retry проверены на disposable PostgreSQL/Redis. Внешний SMTP и browser HTTPS staging smoke не выполнены — отдельная приёмка, не скрытая гарантия. Детали — [verification](email-verification.md).
-- [ ] 5.2. Завершить forgot/reset challenge storage/consumption и password update с durable invalidation. URL из trusted config; not-found отличать от DB failure внутренне. Проверить конкурирующий reset, expired/replayed token и SQL/Redis/email failures.
+- [x] 5.2. Реализовано и локально проверено 9 октября: forgot/reset API, одноразовый version-bound SQL challenge, encrypted outbox/worker, атомарные password update + auth_version + revoke всех сессий + audit. SQL ledger введён как необходимая часть 6.2/6.3. Concurrent consume/replay/expiry/audit rollback/stale issuance/refresh проверены на disposable PostgreSQL; Redis/SMTP failure mapping — unit tests. Внешний SMTP/browser staging и полный Redis fault E2E не выполнены. Детали — [recovery](password-recovery.md).
 - [ ] 5.3. Session HTTP API: logout/logout-all/me/list/revoke-own и cookie cleanup. Проверить ownership/CSRF, current session и очистку индексов.
 - [ ] 5.4. Enforce blocked/deleted users/auth version в session validation и login. Проверить existing sessions и racing requests; поведение зависимостей fail-closed по ADR.
 - [ ] 5.5. Confirmed email change с fresh auth, уведомлением старого адреса и unique ownership; проверить чужой email/link race.
@@ -115,7 +115,7 @@
 - [ ] 6.7. Password policy + compromised passwords + safe rehash. Не менять существующие пароли молча; проверить старые корректные hashes, malformed data и migration path.
 - [ ] После 6 выполнить **13.1 MFA** до административных production APIs. Этот шаг не откладывается до завершения billing.
 
-В password lifecycle 5.2/6.3 исправить mapping ошибок политики нового пароля при change-password: сейчас 500 `internal_error`, целевой ответ — 400 с согласованным domain code. Проверить HTTP и Swagger; технические failures оставить отдельными.
+В 5.2 исправлен mapping password policy для change/reset: 400 `password_policy`, HTTP/Swagger проверены. Из 6.1 выполнены strict expiry и absolute deadline/clamped refresh; из 6.2 — SQL authority/status/version и conditional refresh; из 6.3 — atomic reset/change с durable revocation/audit. Этап 6 не закрыт: rotation, полный lifecycle/blocking, CSRF/fresh-auth, нагрузка и fault acceptance остаются.
 
 ## 7. Модель identities
 
@@ -198,7 +198,7 @@ Template не содержит identities/SSO/RBAC: эти задачи реал
 
 ## Учёт выполнения
 
-Текущий результат: этап 4 завершён; 5.1 реализован и локально проверен, внешний staging smoke ещё не выполнен. Следующий шаг — 5.2, forgot/reset с durable invalidation по 6.2/6.3, не Redis-only consume. Согласованное дерево сохранено, 150 строк — смысловой ориентир. SQL schema, verification/limits и Swagger generation проверены на disposable fixtures. Рабочая БД и secrets не менялись; уже применённой 000001 нужен отдельно согласованный перенос. Auth/security/billing release gates остаются впереди. Команды и границы проверок — в основном плане.
+Текущий результат: этап 4 завершён; 5.1/5.2 реализованы и локально проверены, внешний staging smoke ещё не выполнен. Следующий шаг — 5.3, session HTTP API. Согласованное дерево сохранено, 150 строк — смысловой ориентир. SQL ledger/recovery/verification и Swagger generation проверены; этап 6 закрыт лишь частично. Рабочая БД и secrets не менялись; уже применённой 000001 нужен отдельно согласованный перенос. UI и сохраняемые настройки — только 14.4s–14.4u. Auth/security/billing release gates остаются впереди. Команды и границы проверок — в основном плане.
 
 При завершении подэтапа добавить в основной план: номер, изменённые файлы/commit при наличии, команды и результаты checks, schema/API change, ограничения и следующий шаг. Статусы «материалы собраны», «адаптировано», «локально проверено» и «проверено в staging» различаются. Этап 1.1–1.7 адаптирован; cleanup 1.8 выполнен; dev smoke после CGO fix подтверждён 6 октября 2026.
 

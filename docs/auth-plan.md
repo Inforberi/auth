@@ -124,7 +124,7 @@ Auth — переиспользуемый Go-шаблон, который мож
 ### Этап 5. Завершить email/password account lifecycle
 
 - 5.1. Реализовано и локально проверено 9 октября: email verification, ограничение sensitive routes, confirm/resend, encrypted outbox/audit/worker и fail-closed limits. Внешний SMTP и browser HTTPS staging smoke остаются приёмкой перед release; [детали](email-verification.md).
-- 5.2. Forgot/reset: выдача, доставка, expiry, атомарное одноразовое потребление и согласованность password update.
+- 5.2. Реализовано и локально проверено 9 октября: forgot/reset, encrypted outbox/worker, version-bound одноразовый SQL challenge, atomic password update/auth_version/revoke/audit. SQL ledger — необходимая часть 6.2/6.3, не закрытие всего этапа 6. Внешний SMTP/browser staging остаётся приёмкой; [детали](password-recovery.md).
 - 5.3. HTTP logout/logout-all/me, cookie cleanup, список/отзыв собственных сессий.
 - 5.4. Blocked/deleted users: запрет нового входа и прекращение существующего доступа.
 - 5.5. Смена email: подтверждение нового адреса и свежая аутентификация, уведомление старого адреса, отсутствие возможности перехватить чужой credential. Смена контакта и login identity — явно разные операции.
@@ -144,7 +144,7 @@ Auth — переиспользуемый Go-шаблон, который мож
 - 6.6. Registration UNIQUE race и user-created/session-store-failed scenario; стабильные domain errors и повторный вход.
 - 6.7. Парольная политика и rehash: разрешить password managers/paste, достаточную длину, проверку скомпрометированных паролей, отсутствие произвольной периодической смены. Изменение Argon2-параметров поддерживает старые hashes и безопасное обновление после успешного входа.
 
-При реализации password lifecycle 5.2/6.3 исправить error mapping смены пароля: нарушения политики нового пароля сейчас дают 500 `internal_error`, должны возвращать согласованный 400 с domain code. Добавить HTTP tests и обновить Swagger; SQL/Redis failures не маскировать под validation.
+В 5.2 исправлен error mapping политики нового пароля: change/reset возвращают 400 `password_policy`, HTTP/Swagger проверены. SQL/Redis failures не маскируются под validation. Из 6.1 выполнены expiry/absolute deadline, из 6.2 — SQL authority/status/version/conditional refresh, из 6.3 — atomic reset/change с durable revoke/audit. Rotation, CSRF/fresh-auth, общий lifecycle/block и полный fault/load acceptance остаются.
 
 `__Host-session`: Secure, HttpOnly, Path=/, без Domain; безопасный local HTTPS профиль. Cookie/BFF остаётся базовым browser-контрактом; не вводить JWT/refresh tokens без отдельного сценария. При таком расширении обязательны rotation, reuse detection, revocation и изоляция audience. Определить fail-closed поведение для auth/rights при недоступности зависимостей и различать 401/403/503 без раскрытия внутренних ошибок.
 
@@ -343,8 +343,8 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 2. Инфраструктура | Выполнено в 1.2 | Durable audit sink — отдельно по ADR; здесь только контракт |
 | 3. Toolchain/окружение/deps | Адаптировано в 1.3 | Dev startup/SMTP smoke после CGO fix подтверждён 06.10.2026 |
 | 4. Структура/схема/API | Завершён | Дерево, SQL schema и API contract checks; security enforcement впереди |
-| 5. Account lifecycle | 5.1 локально реализован/проверен | Verification готов; staging smoke, reset и остальной lifecycle впереди |
-| 6. Безопасность сессий | Частичная основа | Cookie/Argon2/Redis есть; подтверждённые дефекты не исправлены |
+| 5. Account lifecycle | 5.1/5.2 локально реализованы/проверены | Verification/recovery готовы; далее 5.3, staging smoke и остальной lifecycle впереди |
+| 6. Безопасность сессий | Частично выполнен в 5.2 | SQL ledger/status/version, expiry, atomic reset/change; CSRF/fresh-auth/rotation и полная приёмка впереди |
 | 7. Identities / SSO boundary | Не начат | После 0, 4, 6; общий SSO optional |
 | 8. Telegram/OIDC/OTP | Не начат | После 5–7; Mini Apps optional |
 | 9. Policy/linking | Не начат | После 7–8; admin API зависит от 10 и 13.1 |
@@ -355,6 +355,14 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 14. Release/переносимость | Не начат | После обязательных модулей и checklist; документация ведётся по ходу |
 
 Текущий порядок: 0, 1.1–1.8 и 4 завершены → 5/6 → 7/8 → 9/10 → 11/12 → 14. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется сразу после 6 до включения любых production admin действий. После 1.8 все следующие этапы используют только рабочий Auth и его документацию.
+
+### Результат 5.2 — 9 октября 2026
+
+Добавлены POST `/api/v1/auth/forgot-password` и `/api/v1/auth/reset-password`, generic recovery replies, одноразовые SQL challenges, encrypted outbox с purpose isolation и bounded SMTP worker. Reset/change-password меняют hash, повышают auth_version, отзывают все сессии и пишут специализированный audit одним commit; после успеха cookie очищается, нужен новый login. Reset не подтверждает email. Password-policy error теперь 400. UI/settings остаются 14.4s–14.4u; env/dependencies/scripts не добавлены.
+
+PostgreSQL session ledger подключён вместо Redis authority. Login issuance проверяет version, прочитанную вместе с password hash, и актуальный user status; protected requests проверяют SQL version/revocation/status/expiry, refresh не воскрешает отозванный доступ. Недоступность SQL — fail-closed. Прежний Redis session adapter не подключён; старые сессии не импортируются. Это зависимая часть 6.1–6.3, не полная security-готовность.
+
+Проверено: `task go:fmt`, `task check` (tests + lint, 0 issues), `task swagger`, `task check:api`, `git diff --check`; `TestPostgresSchema` на отдельном PostgreSQL 18.6: up/down/up, reset cooldown/replacement/expiry/replay/concurrent consume, audit rollback, stale issuance/refresh, atomic change/revoke, blocked account. Redis/SMTP recovery failures — unit tests/test doubles; внешняя SMTP доставка, browser HTTPS, полный Redis fault E2E, нагрузка, GitHub CI и deployment не выполнялись. Исходная 000001 расширена; рабочая БД и secrets не менялись, применённой схеме нужен отдельно согласованный перенос. Подробности — [recovery](password-recovery.md). Следующий шаг — 5.3.
 
 ### Результат 5.1 — 9 октября 2026
 

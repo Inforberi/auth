@@ -43,12 +43,8 @@ func (p *PasswordService) ChangePassword(
 		return fmt.Errorf("change password generateHash %w", err)
 	}
 
-	if err := p.repo.UpdatePasswordHash(ctx, userID, passwordHash); err != nil {
+	if err := p.repo.ChangePassword(ctx, userID, currentTokenHash, result.PasswordHash, passwordHash); err != nil {
 		return fmt.Errorf("change password update password hash %w", err)
-	}
-
-	if err := p.session.LogoutAllExcept(ctx, currentTokenHash, userID); err != nil {
-		return fmt.Errorf("change password session logout %w", err)
 	}
 
 	return nil
