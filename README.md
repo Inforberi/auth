@@ -1,6 +1,8 @@
 # Auth template
 
-Рабочая основа Go Auth, **ещё не готовый production auth продукт**. Register/login/change, [email verification](docs/email-verification.md) и [password recovery](docs/password-recovery.md) реализованы; полноценная session security, Telegram, RBAC, MFA и payments — по [плану](docs/auth-plan.md) и [шагам](docs/auth-implementation.md). Результат переноса инфраструктуры: [template-adoption](docs/template-adoption.md).
+Документация — [карта разделов](docs/README.md). Для точечной работы над проектом — [указатель контекста](docs/ai/index.md) и [текущий шаг](docs/ai/current-task.md). Swagger — в `docs/api/generated`, документы фич — в `docs/features`, планы и история — в `docs/planning`.
+
+Рабочая основа Go Auth, **ещё не готовый production auth продукт**. Register/login/change, [email verification](docs/features/email-verification.md) и [password recovery](docs/features/password-recovery.md) реализованы; полноценная session security, Telegram, RBAC, MFA и payments — по [плану](docs/planning/roadmap.md) и [шагам](docs/planning/implementation.md). Результат переноса инфраструктуры: [template-adoption](docs/template-adoption.md).
 
 ## Локальный запуск
 
@@ -14,7 +16,7 @@ Dev запускает Air `v1.67.4` через `.air.toml`: пересборк�
 
 Существующий `.env` дополните verification-настройками из примера; secrets не перезаписывались. Production требует отдельного случайного `EMAIL_OUTBOX_KEY`, HTTPS verification URL и `SMTP_REQUIRE_TLS=true`. Применённая `000001` не обновит БД автоматически: нужен согласованный перенос, не reset. Login разрешён до подтверждения, change-password — после него. Reset/change-password отзывают все SQL-сессии; нужно войти заново. Письмо ведёт на frontend явного подтверждения, подключаемый проектом, а не на автоматический GET API.
 
-[Смена login email](docs/email-change.md) реализована как opt-in `EMAIL_CHANGE_ENABLED=false`: request/confirm/«Это не я» и восстановление password-профиля через старый подтверждённый email с обязательной заменой пароля. При включении нужны три доверенные frontend URL из `.env.example`; сами страницы ещё не созданы. Backend 5.5d локально проверен, приёмка 5.5e и production release gates остаются открытыми. Recovery-схема включена в исходную миграцию 000001; настоящие `.env` и рабочая БД не изменялись.
+[Смена login email](docs/features/email-change.md) реализована как opt-in `EMAIL_CHANGE_ENABLED=false`: request/confirm/«Это не я» и восстановление password-профиля через старый подтверждённый email с обязательной заменой пароля. При включении нужны три доверенные frontend URL из `.env.example`; сами страницы ещё не созданы. Backend 5.5a–d и локальная приёмка 5.5e проверены; внешняя SMTP/browser-приёмка и production release gates остаются открытыми. Recovery-схема включена в исходную миграцию 000001; настоящие `.env` и рабочая БД не изменялись.
 
 ```sh
 task check
@@ -26,11 +28,11 @@ Checks используют `.env.example`/`.env.prod.example`, не читаю�
 
 Команды сгруппированы как `dev:*`, `migrate:*`, `go:*`, `check:*`, `prod:*`; старые имена сохранены как aliases. `task go:build` собирает `bin/auth`. `task go:fmt` применяет закреплённые formatters; `task swagger` обновляет контракт. JSON endpoints требуют `Content-Type: application/json`, максимум 1 MiB, один JSON value, без неизвестных полей. Ошибки декодирования возвращают существующий `400 invalid_json`. Cookies/CSRF/security contract уточняется на этапах 4–6.
 
-По умолчанию выполняйте только `task check` (tests + lint, включая API contract tests). `task check:api` проверяет generation drift после изменения API и в CI. Текущее поведение и security gaps — [API-контракт](docs/api-contract.md). `task check:security` и `task check:integration` нужны после обновления зависимостей либо перед релизом; не повторяйте их после каждой правки. В CI tests/lint, API drift, security и image build; race/integration не выполняются на каждый push. Осталось три shell-файла: backup, host restore и один acceptance runner.
+По умолчанию выполняйте только `task check` (tests + lint, включая API contract tests). `task check:api` проверяет generation drift после изменения API и в CI. Текущее поведение и security gaps — [API-контракт](docs/api/contract.md). `task check:security` и `task check:integration` нужны после обновления зависимостей либо перед релизом; не повторяйте их после каждой правки. В CI tests/lint, API drift, security и image build; race/integration не выполняются на каждый push. Осталось три shell-файла: backup, host restore и один acceptance runner.
 
 ## Конфигурация
 
-Session API требует `AUTH_ALLOWED_ORIGINS`: точные HTTPS origins через запятую, например `https://localhost:8443`, без завершающего `/`. Для logout/logout-all/revoke браузер отправляет `Origin`; CLI должен передать его явно вместе с cookie. `.env.example`/`.env.prod.example` обновлены; настоящие env и БД не изменялись. Контракт и ограничения — [API](docs/api-contract.md).
+Session API требует `AUTH_ALLOWED_ORIGINS`: точные HTTPS origins через запятую, например `https://localhost:8443`, без завершающего `/`. Для logout/logout-all/revoke браузер отправляет `Origin`; CLI должен передать его явно вместе с cookie. `.env.example`/`.env.prod.example` обновлены; настоящие env и БД не изменялись. Контракт и ограничения — [API](docs/api/contract.md).
 
 Текущая схема и правила её применения — [schema](docs/schema.md). Исходная миграция изменена до production release; уже применённая `000001` автоматически не обновляется. Не сбрасывайте существующую БД: перенос её данных требует отдельной миграции.
 

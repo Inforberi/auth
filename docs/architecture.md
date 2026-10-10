@@ -1,6 +1,6 @@
 # Архитектура универсального Auth
 
-Решения этапа 0 приняты 6 октября 2026. Это целевая архитектура, а не описание уже реализованных возможностей. Текущее состояние и порядок изменений — в [плане](auth-plan.md) и [пошаговой реализации](auth-implementation.md).
+Решения этапа 0 приняты 6 октября 2026. Это целевая архитектура, а не описание уже реализованных возможностей. Текущее состояние и порядок изменений — в [плане](planning/roadmap.md) и [пошаговой реализации](planning/implementation.md).
 
 ## Профиль и границы
 
@@ -120,6 +120,21 @@ internal/
 migrations/
 deploy/
 docs/
+├── api/
+│   ├── contract.md
+│   └── generated/
+├── features/
+├── planning/
+│   ├── roadmap.md
+│   ├── implementation.md
+│   └── history.md
+├── ai/
+│   ├── index.md
+│   └── current-task.md
+├── adr/
+├── architecture.md
+├── schema.md
+└── threat-model.md
 .air.toml
 .env.example
 .env.prod.example
@@ -314,7 +329,7 @@ UUID пользователя неизменен; email, username и provider di
 
 5.4: `account/service/StatusService.Change` — внутренний сценарий active/blocked с actor/target UUID и expected auth_version. PostgreSQL владеет lock/conflict/deleted проверкой и атомарной записью status/version/revoke/challenge cleanup/audit. Status audit failure отменяет весь transition. `ActorID` — attribution, не проверка permissions; сервис не подключён к router и не публикуется до authorization/MFA/fresh-auth/CSRF/last-admin guards этапов 10/13.1. Account deletion/retention и восстановление удалённых пользователей сюда не входят. Вход/сессии используют прежние active/not-deleted/version SQL gates; права доступа не дублируются в HTTP/domain.
 
-5.6a: `account/service/DeletionService.Delete` — внутренний lifecycle без router/UI. Одна SQL transaction помечает account blocked/deleted, повышает version, отзывает и очищает metadata сессий, удаляет password/profile/challenges/change intents/outbox, снимает verification, записывает deletion audit. UUID/контакты/audit сохранены; автоматического восстановления и освобождения email нет. Verification lock order — user перед contact. 5.6b с окончательным purge/retention и integration billing остаётся открытым; [контракт](account-deletion.md).
+5.6a: `account/service/DeletionService.Delete` — внутренний lifecycle без router/UI. Одна SQL transaction помечает account blocked/deleted, повышает version, отзывает и очищает metadata сессий, удаляет password/profile/challenges/change intents/outbox, снимает verification, записывает deletion audit. UUID/контакты/audit сохранены; автоматического восстановления и освобождения email нет. Verification lock order — user перед contact. 5.6b с окончательным purge/retention и integration billing остаётся открытым; [контракт](features/account-deletion.md).
 
 ## Независимые настройки
 
@@ -335,7 +350,7 @@ UI также позволит вводить/заменять SMTP/provider sec
 
 Приняты [ADR 001](adr/001-deployment-and-reuse.md), [ADR 002](adr/002-sessions-and-transactions.md), [ADR 003](adr/003-access-and-optional-billing.md). [Модель угроз](threat-model.md) задаёт негативные acceptance tests.
 
-Этап 4 и 5.1–5.4 выполнены локально; 5.5a–d реализованы как opt-in [email change/report/protected password recovery](email-change.md), локальная backend-приёмка 5.5e-local завершена. Далее backend 5.6; внешняя приёмка 5.5e-staging с настоящим email/browser и операционными процедурами остаётся открытой. Ограничения — [API-контракт](api-contract.md), [verification](email-verification.md), [recovery](password-recovery.md). После 5.2r/5.2h дерево сохранено: app/auth остаётся app.go/account.go/run.go, независимые HTTP-сценарии и feature-local error rules отделены, общий mapper не импортирует business domain. EmailChangeService собирается в существующем app.go; account worker переиспользуется, отдельного lifecycle нет. Request/confirm/report и PostgreSQL операции находятся в своих смысловых файлах. Далее остальное 5/6, MFA 13.1 до административных действий; 7–10, 11 и optional 12, release 14. Полная session security и нагрузочная приёмка 6.8 остаются впереди; 6.9 optional.
+Этап 4 и 5.1–5.4 выполнены локально; 5.5a–d реализованы как opt-in [email change/report/protected password recovery](features/email-change.md), локальная backend-приёмка 5.5e-local завершена. 5.6a deletion также реализован и проверен; далее retention/reuse 5.6b и provisioning 5.7; внешняя приёмка 5.5e-staging с настоящим email/browser и операционными процедурами остаётся открытой. Ограничения — [API-контракт](api/contract.md), [verification](features/email-verification.md), [recovery](features/password-recovery.md). После 5.2r/5.2h дерево сохранено: app/auth остаётся app.go/account.go/run.go, независимые HTTP-сценарии и feature-local error rules отделены, общий mapper не импортирует business domain. EmailChangeService собирается в существующем app.go; account worker переиспользуется, отдельного lifecycle нет. Request/confirm/report и PostgreSQL операции находятся в своих смысловых файлах. Далее остальное 5/6, MFA 13.1 до административных действий; 7–10, 11 и optional 12, release 14. Полная session security и нагрузочная приёмка 6.8 остаются впереди; 6.9 optional.
 
 5.5d: policy/hash сценарий защищённого восстановления находится в password `service/protected_recovery.go`, его DTO/HTTP mapper — в password `transport/http/protected_recovery.go`. Узкий порт связывается с account `repository/postgres/protected_recovery.go`, который владеет атомарным восстановлением user/contact/credential/version/challenges/audit. Password service не импортирует repository; app только собирает dependencies. ProtectedRecoveryService использует существующий RecoveryService для общего Redis/hash budget, не вводит второй worker или lifecycle. Mail intent подготавливает account email-change service; при report SQL выдаёт version-bound authority и помещает отдельный encrypted payload старому contact в тот же outbox. Future MFA/non-password recovery требует собственного доказательства и не наследует mailbox-only unblock.
 
