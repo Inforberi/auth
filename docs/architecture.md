@@ -314,6 +314,8 @@ UUID пользователя неизменен; email, username и provider di
 
 5.4: `account/service/StatusService.Change` — внутренний сценарий active/blocked с actor/target UUID и expected auth_version. PostgreSQL владеет lock/conflict/deleted проверкой и атомарной записью status/version/revoke/challenge cleanup/audit. Status audit failure отменяет весь transition. `ActorID` — attribution, не проверка permissions; сервис не подключён к router и не публикуется до authorization/MFA/fresh-auth/CSRF/last-admin guards этапов 10/13.1. Account deletion/retention и восстановление удалённых пользователей сюда не входят. Вход/сессии используют прежние active/not-deleted/version SQL gates; права доступа не дублируются в HTTP/domain.
 
+5.6a: `account/service/DeletionService.Delete` — внутренний lifecycle без router/UI. Одна SQL transaction помечает account blocked/deleted, повышает version, отзывает и очищает metadata сессий, удаляет password/profile/challenges/change intents/outbox, снимает verification, записывает deletion audit. UUID/контакты/audit сохранены; автоматического восстановления и освобождения email нет. Verification lock order — user перед contact. 5.6b с окончательным purge/retention и integration billing остаётся открытым; [контракт](account-deletion.md).
+
 ## Независимые настройки
 
 Это будущий контракт этапов 9–12, ещё не существующие env-переменные или endpoints:

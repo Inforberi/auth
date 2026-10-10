@@ -1,4 +1,4 @@
-# Схема Auth — этапы 4.1 и 5.1–5.5d
+# Схема Auth — этапы 4.1 и 5.1–5.6a
 
 Источник: `migrations/000001_init` (up/down). Один экземпляр Auth обслуживает один проект; внутренний UUID пользователя не зависит от метода входа.
 
@@ -22,8 +22,9 @@
 | `auth.password_reset_outbox` | Encrypted payload, expiry, attempts, lease; каскадно удаляется с challenge. |
 | `auth.password_audit` | Reset issuance/reset/change/revoke events с user UUID, без token/password. |
 | `auth.account_status_audit` | Actor/target UUID, предыдущий и новый active/blocked status, новая auth_version и timestamp. Пишется в одной транзакции с изменением статуса/отзывом; FK сохраняют существование actor/target, индекс owner/date/id. |
+| `auth.account_deletion_audit` | Один event на target UUID, actor/version/timestamp; restrictive FK сохраняют tombstone и attribution. Без email/пароля/raw token. |
 
-Первые четыре таблицы имеют `created_at/updated_at`; BEFORE UPDATE trigger поддерживает `updated_at`. Основные дочерние записи имеют каскадные FK при явном hard delete. Status audit использует restrictive FK actor/target: hard delete не должен незаметно стирать историю, его retention/anonymization policy определяется в 5.6. Soft deletion ничего физически не удаляет.
+Первые четыре таблицы имеют `created_at/updated_at`; BEFORE UPDATE trigger поддерживает `updated_at`. Основные дочерние записи имеют каскадные FK при явном hard delete. Status/deletion audit используют restrictive FK actor/target: hard delete не должен незаметно стирать историю, его retention/anonymization policy определяется в 5.6b. Сам SQL soft-delete не делает cleanup; внутренний DeletionService физически удаляет credentials/profile/challenges/change intents/outbox, отзывает сессии и очищает их metadata. Email reservations, UUID и audit сохраняются; [контракт](account-deletion.md).
 
 Email нормализуется приложением: trim + lower, максимум 255 байт, только адрес без display name, комментариев и обёртки `<…>`. SQL дополнительно проверяет базовую нормализацию, длину и наличие `@`; полный разбор адреса остаётся в приложении. Уникальность сохраняется после soft deletion: автоматическое освобождение адреса запрещено, политика повторного использования/удаления персональных данных определяется отдельно на этапе lifecycle.
 
