@@ -9,6 +9,10 @@ import (
 )
 
 func CreateLogger(cfg Config) *zap.Logger {
+	return zap.Must(loggerConfig(cfg).Build(zap.AddStacktrace(zapcore.ErrorLevel)))
+}
+
+func loggerConfig(cfg Config) zap.Config {
 	encoderCfg := zap.NewProductionEncoderConfig()
 	development := cfg.Env == "dev"
 	encoding := "json"
@@ -40,13 +44,10 @@ func CreateLogger(cfg Config) *zap.Logger {
 		},
 	}
 
-	logger := zap.Must(
-		config.Build(
-			zap.AddStacktrace(zapcore.ErrorLevel),
-		),
-	)
-
-	return logger
+	if cfg.Env == "prod" {
+		config.Sampling = &zap.SamplingConfig{Initial: 100, Thereafter: 100}
+	}
+	return config
 }
 
 func getConfigLevel(lvl string) zapcore.Level {
