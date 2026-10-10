@@ -15,14 +15,19 @@ func (r *Repository) Issue(ctx context.Context, email string, prepared domain.Ve
 		var id domain.AddressID
 		var user domain.UserID
 		var eligible bool
-		err := tx.QueryRow(ctx, `SELECT e.id, e.user_id,
-			e.verified_at IS NULL AND (e.verification_sent_at IS NULL OR e.verification_sent_at <= now() - $2::double precision * interval '1 second')
+		err := tx.QueryRow(ctx, `SELECT e.id, e.user_id
 			FROM auth.user_emails e JOIN auth.users u ON u.id=e.user_id
-			WHERE e.email=$1 AND u.status='active' AND u.deleted_at IS NULL FOR UPDATE OF e,u`, email, cooldown.Seconds()).Scan(&id, &user, &eligible)
+			WHERE e.email=$1 AND u.status='active' AND u.deleted_at IS NULL FOR UPDATE OF u`, email).Scan(&id, &user)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
 		if err != nil {
+			return err
+		}
+		// Lock the account before its contact, then read eligibility after any competing commit.
+		if err := tx.QueryRow(ctx, `SELECT verified_at IS NULL AND
+			(verification_sent_at IS NULL OR verification_sent_at <= now() - $2::double precision * interval '1 second')
+			FROM auth.user_emails WHERE id=$1 FOR UPDATE`, id, cooldown.Seconds()).Scan(&eligible); err != nil {
 			return err
 		}
 		if !eligible {

@@ -15,7 +15,7 @@ func (r *Repository) Confirm(ctx context.Context, digest string) error {
 		var user domain.UserID
 		err := tx.QueryRow(ctx, `SELECT e.id,e.user_id FROM auth.email_verifications v
 			JOIN auth.user_emails e ON e.id=v.email_id JOIN auth.users u ON u.id=e.user_id
-			WHERE v.digest=$1 FOR UPDATE OF e,u`, digest).Scan(&email, &user)
+			WHERE v.digest=$1 FOR UPDATE OF u`, digest).Scan(&email, &user)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.ErrInvalidVerification
 		}
