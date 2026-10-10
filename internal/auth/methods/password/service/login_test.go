@@ -11,6 +11,7 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 )
 
@@ -375,4 +376,25 @@ func TestLogin_UserNotFound(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 	)
+}
+
+func TestLogin_AccountRevokedDuringAuthentication(t *testing.T) {
+	for _, revoked := range []error{sessiondomain.ErrSessionNotFound, sessiondomain.ErrSessionExpired} {
+		t.Run(revoked.Error(), func(t *testing.T) {
+			repo := &mockPasswordRepo{}
+			hasher := &mockHasher{}
+			sessions := &mockSession{}
+			user := accountdomain.UserID("user-1")
+			repo.On("FindByEmail", mock.Anything, "test@mail.ru").Return(&passworddomain.Credential{UserID: user, PasswordHash: "hash", AuthVersion: 1}, nil)
+			hasher.On("Compare", "Password12345", "hash").Return(nil)
+			sessions.On("CreateSessionAtVersion", mock.Anything, user, "", "", int64(1)).Return(nil, revoked)
+			result, err := newTestService(repo, sessions, hasher).Login(context.Background(), LoginInput{Email: "test@mail.ru", Password: "Password12345"})
+			if result != nil || !errors.Is(err, passworddomain.ErrInvalidEmailOrPassword) {
+				t.Fatal("racing revoke revealed account state or issued session", err)
+			}
+			repo.AssertExpectations(t)
+			hasher.AssertExpectations(t)
+			sessions.AssertExpectations(t)
+		})
+	}
 }

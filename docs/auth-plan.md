@@ -1,6 +1,6 @@
 # План реализации универсального production Auth-шаблона
 
-Обновлено 9 октября 2026. Рабочий проект: `/Users/inforberi/Desktop/Projects/auth`, ветка `feat/register-ai`. Исходный анализ: HEAD `5e8f5e5` и незакоммиченные изменения reset HTML/HTTP-ошибок. Источник инфраструктурных улучшений: `/Users/inforberi/Desktop/Projects/go-template`, main, изученный HEAD `4acce0b`.
+Обновлено 10 октября 2026. Рабочий проект: `/Users/inforberi/Desktop/Projects/auth`, ветка `feat/register-ai`. Исходный анализ: HEAD `5e8f5e5` и незакоммиченные изменения reset HTML/HTTP-ошибок. Источник инфраструктурных улучшений: `/Users/inforberi/Desktop/Projects/go-template`, main, изученный HEAD `4acce0b`.
 
 ## 1. Назначение и правила
 
@@ -9,6 +9,8 @@ Auth — переиспользуемый Go-шаблон, который мож
 Основной сценарий — отдельный экземпляр Auth для каждого проекта, с собственной БД, secrets и пользователями. Общий аккаунт и SSO между независимыми проектами — отдельный профиль, который требует решения об IdP и прототипа; копирование шаблона само по себе не означает общий вход. Первый релиз работает с одним приложением; границы app scope проектируются так, чтобы позднее добавить несколько приложений без потери user UUID. Не вводить полноценную multi-tenancy, организации и свой OAuth server ради абстрактной универсальности.
 
 Вход отвечает на вопрос «кто пользователь», permissions — «что ему разрешено», entitlements — «какие функции доступны по тарифу». Pro не даёт административные права; admin не получает Pro автоматически. Роли и подписки могут различаться по приложениям.
+
+Уточнено 10 октября: поддержать ручное создание/приглашение пользователей и назначение ролей/разрешений через защищённый backend API; UI добавляется в конце. Оплата опциональна и может обрабатываться отдельным сервисом, но приём подтверждённых событий и API доступа остаются в Auth. Возможность закрепляем границами модулей и этапами ниже; сейчас не добавляем пустые interfaces, таблицы, endpoints или обязательные подключения ради будущего сценария.
 
 Работать непосредственно в указанном каталоге и ветке; не выполнять реализацию в прежнем worktree. Незакоммиченные изменения пользователя сохранять. Один рабочий заход — один этап или подэтап, отдельный проверяемый diff; не смешивать инфраструктуру, обновление зависимостей, новые login methods и billing в одно изменение.
 
@@ -130,9 +132,10 @@ Auth — переиспользуемый Go-шаблон, который мож
 - 5.2r. Выполнен и проверен 9 октября: рефакторинг читаемости после 5.2, до новой функциональности 5.3. Дерево папок и app/auth из app.go/account.go/run.go сохранены; смешение обязанностей и лишняя дробность уменьшены. Детализация ниже и в [пошаговой реализации](auth-implementation.md#52r-рефакторинг-читаемости--выполнен-9-октября).
 - 5.2h. Выполнен и проверен 10 октября: независимые HTTP-сценарии разделены, общий механизм ошибок подключён с локальными правилами фич. Порядок и результаты — ниже и в [пошаговой реализации](auth-implementation.md#52h-http-сценарии-и-общий-механизм-ошибок--выполнен-10-октября).
 - 5.3. Реализовано и локально проверено 10 октября: HTTP me/logout/logout-all/list/revoke-own, независимый публичный UUID, cookie cleanup, bounded keyset pagination и атомарный caller/ownership/revoke/audit. Новые mutations защищены exact Origin allowlist; общая CSRF/CORS policy остаётся 6.5. Результат и ограничения ниже.
-- 5.4. Blocked/deleted users: запрет нового входа и прекращение существующего доступа.
+- 5.4. Реализовано и локально проверено 10 октября: active/not-deleted enforcement, внутренний block/unblock с expected version, atomic status/version/revoke/challenge cleanup/audit, нейтральный login при stale issuance. Deleted account не разблокируется; admin HTTP ещё не публикуется. Подробности и границы ниже.
 - 5.5. Смена email: подтверждение нового адреса и свежая аутентификация, уведомление старого адреса, отсутствие возможности перехватить чужой credential. Смена контакта и login identity — явно разные операции.
 - 5.6. Удаление аккаунта и политика retention: отзыв сессий/методов, согласованное поведение активной подписки, минимизация PII при сохранении обязательной платёжной истории. Не освобождать identity для незаметного takeover старых привязок.
+- 5.7. Ручное создание пользователя/приглашение: account use cases независимо от публичной регистрации; создание не выдаёт сессию, роли, платный доступ или отметку verified. Стабильный UUID, контакт по выбранному профилю с уникальностью email, безопасная активация с одноразовым purpose-bound приглашением: установка собственного пароля либо доказательство владения включённым методом входа. Не передавать общий пароль администратору. Повторная операция не создаёт дубль и не объединяет существующий аккаунт по email. Административный transport включить только после 10 + 13.1 + CSRF/fresh-auth; публичное registration=false не блокирует разрешённое ручное добавление. Invitation delivery использует существующий outbox после появления этого сценария, не дублирует mail infrastructure.
 
 Для verification/reset challenges определить назначение, владельца, TTL, число попыток и правила замены/одноразовости. Consumption и изменение credentials должны быть согласованы при сбоях. Email URL строится из доверенной конфигурации, не из пользовательского Host; callback/return URL ограничены allowlist. Письма доставляются с bounded retries через outbox или другое проверенное решение. Шаблоны экранируют данные; токены не попадают в логи, analytics и Referrer. Повторная доставка одного письма не создаёт дополнительный grant.
 
@@ -231,6 +234,10 @@ Roles → permissions, permissions + resource ownership проверяются b
 
 Дополнительный подэтап 10.5: отдельные access catalog settings и user role assignments, независимые permissions управления, валидация ссылок и optimistic version. Nonsecret operator config сначала; защищённый settings API только после 13.1. Проверки: custom role, запрещённое permission, конфликт параллельных изменений, last-admin guard. Настройки тарифов/оплаты здесь не находятся.
 
+Подэтап 10.6: административное управление пользователями и доступом поверх 5.7/10.1–10.5. Раздельные permissions создания/приглашения, просмотра пользователей, назначения ролей и изменения каталога; администратор не может выдавать полномочия за пределами собственной явно разрешённой области делегирования. Основной способ назначения — роли; прямые user permission grants допустимы как включаемый сценарий с источником/scope/expiry/audit, без неявного override-framework. Проверять effective permissions после назначения/отзыва, запрет self-promotion и last-admin guard также для прямых grants. Backend доступен без UI; будущая панель использует те же use cases/API.
+
+Предварительные API-контракты (не реализованы и не добавляются в текущий Swagger): POST `/api/v1/admin/users` — создание/приглашение; GET `/api/v1/admin/users` — bounded список; управление `/api/v1/admin/users/{id}/roles` и optional `/permissions`; GET `/api/v1/admin/users/{id}/access` — effective permissions. Методы/DTO назначения/отзыва и permissions зафиксировать перед 10.6. Domain account не зависит от access/billing: роли назначаются отдельной операцией, не свободными privileged полями create-user DTO. Audit содержит actor/target/scope/action/result, а secrets приглашений не раскрываются через список пользователей.
+
 Готово: no self-promotion/cross-app/cross-owner bypass, актуальный Swagger, audit и fresh authentication для admin изменений.
 
 ### Этап 11. Free/Pro и лимиты без платежей
@@ -240,6 +247,8 @@ Plans/features/entitlement grants независимо от roles. Продук�
 Free/Pro — демонстрационный каталог, не ограничения ядра. Поддержать произвольные plan/price/features и версии каталога; право на возможность описывается ключом feature, scope и периодом действия. Личный billing account — базовый владелец; team/organization ownership добавляется отдельным профилем с проверками membership. Trial/manual grant не выдаёт роль и имеет audit, источник и срок. Зафиксировать часовой пояс/границы расчётных периодов, правила quota reset и upgrade/downgrade.
 
 Подэтап 11.4: отдельные настройки каталога features/plans/limits и выдачи grants; version/conflict/audit, независимые от role catalog и payment provider. Проверить entitlements-only профиль без payment secrets и запрет admin→paid bypass.
+
+Подэтап 11.5: API текущего плана/доступных features/срока действия/лимитов и отдельное protected управление manual grants. Показываемое в UI «оплачен/Pro» выводится из действующих entitlement grants и их периодов, не хранится в `account.status` и не делает пользователя admin. Payment/subscription state и account status имеют разных владельцев. Manual/trial/payment источники не перетирают друг друга; отзыв одной покупки затрагивает только связанные grants. Проверить expiry, несколько источников и отключённый payment module без утраты ручного управления доступом.
 
 Подэтапы: каталог возможностей и manual grants с expiry; проверки backend; atomic quotas/usage; bounded policy cache/invalidation. Критические permissions не доверяются долгоживущим JWT как единственному источнику.
 
@@ -271,6 +280,7 @@ Free/Pro — демонстрационный каталог, не ограни�
 - [ ] 12.5. Полный/частичный refund и dispute по capabilities, политика отзыва grants, сверка provider state с локальными orders/subscriptions, reconciliation job и alert. Локальная отмена не считается подтверждением отмены recurring у provider.
 - [ ] 12.6. Для Telegram commerce: аутентификация Bot API webhook, проверка payload/покупателя/цены/валюты в pre-checkout, grant только после `successful_payment`, дедупликация charge/update, refunds и `/paysupport`. Test environment до включения профиля; pre-checkout approval не подтверждает оплату.
 - [ ] 12.7. Документация подключения второго adapter и contract tests; sandbox сценарии: success/failure/pending/refund/retry/out-of-order/lost-event и отсутствие double fulfillment.
+- [ ] 12.8. Optional external-payments профиль: платёжный сервис владеет checkout/provider secrets/financial state и проверяет provider; Auth владеет users/access/entitlements и сохраняет внутренний endpoint приёма событий, ориентир POST `/api/v1/internal/billing/events`. Service identity с ограниченной областью grant delivery, аутентификация/защита replay, server-side соответствие user UUID/app/order/plan/period и allowlisted event types; browser cookie, client redirect и запрос «сделать paid» не являются подтверждением. Source + event ID + business operation IDs, версии переходов, durable inbox и идемпотентный локальный grant/revoke + audit + receipt/outbox до ACK. Межсервисной SQL-транзакции нет: sender outbox, retries, подтверждение/повтор и reconciliation устраняют потерю доставки; duplicate/unordered/refund/expiry не выдают доступ дважды и не отзывают чужие manual grants. Контракт transport/auth/versioning определить до реализации, не копировать raw provider schema. В Auth остаются public access/plan API и admin manual grants; external adapter не требует provider secrets/полной payment schema. Проверить отсутствие admin promotion/account unblocking через событие и выключенный endpoint в auth-only профиле. Отдельный сервис сейчас не создаём.
 
 Схема и новые capabilities вводятся с соответствующим подэтапом. Базовый релиз не требует реализации всех существующих providers или методов оплаты.
 
@@ -280,7 +290,7 @@ Free/Pro — демонстрационный каталог, не ограни�
 
 13.1. MFA/TOTP и recovery codes обязательны до включения production administrative endpoints. Enrollment требует fresh auth и подтверждения фактора; TOTP secret защищён at rest, коды восстановления хранятся как verifiers и потребляются одноразово. Challenge ограничен по времени/попыткам, повторный TOTP не допускается в принятом окне. Lost-factor recovery не слабее защиты аккаунта. Session хранит authentication context; MFA проверяется backend, а не только UI. Зависимость: после безопасных сессий этапа 6; admin settings этапов 9.4/10 не публикуются до 13.1.
 
-13.2. Кабинет: профиль, проверенные методы входа, смена email/пароля, сессии, MFA, тариф/лимиты, checkout, отмена подписки и история оплат. Админ API: users/status, role assignments, provider policy и manual grants с audit. Frontend — отдельный adapter; UI реализуется, если выбран в release scope, API обязателен. Поля raw tokens/provider secrets не выдаются пользователю.
+13.2. Кабинет: профиль, проверенные методы входа, смена email/пароля, сессии, MFA, тариф/лимиты, checkout, отмена подписки и история оплат. Админ API: users/status, ручное создание/приглашение, role assignments/optional user permissions, provider policy и manual grants с audit; использовать 5.7/10.6/11.5, не создавать второй набор правил. Frontend — отдельный adapter; UI реализуется, если выбран в release scope, API обязателен. Поля raw tokens/provider secrets не выдаются пользователю. При external payments checkout/history/cancel принадлежат платёжному сервису; Auth показывает свой effective access, не становится вторым финансовым ledger.
 
 13.3. Passkeys/WebAuthn — последующее расширение с verified origin/RP ID и replay protection. SMS/enterprise OIDC/SAML при реальной потребности. User/admin UI использует защищённые APIs и не содержит implementation деталей для пользователя.
 
@@ -297,6 +307,7 @@ Free/Pro — демонстрационный каталог, не ограни�
 - 14.4s. В самом конце функциональной реализации добавить сохраняемые Auth settings и server-side policy: независимый выбор password/email OTP/Telegram/OIDC, registration enabled, verification enabled/required после password registration, TTL/cooldown/URL. Required/optional/disabled profiles; не подделывать verified_at, при disabled verification не отправлять автоматическое письмо, required=true/enabled=false отклонять. Проверить existing users/sessions, fail-closed dependencies и последний административный способ входа. OTP/reset/change-email/linking сохраняют собственное доказательство владения почтой.
 - 14.4t. Тогда же protected integration settings/secrets API: SMTP/provider configuration и ввод/замена secrets, чтение только configured/masked state. Permissions + MFA/fresh auth, encryption/secret storage, version/conflict/validation, audit без payload, rotation и безопасные connection tests. Root encryption key и первоначальный admin требуют минимального внешнего operational setup.
 - 14.4u. Последней функциональной задачей реализовать UI настроек поверх 14.4s/14.4t: выбор методов, обязательность email verification после password registration, SMTP/providers/secrets, отдельно роли и оплата. UI не заменяет backend enforcement. После завершения backend этапов 5–13; frontend stack выбрать перед работой. До этого работают нынешние operational env и политики, UI/динамические настройки не реализуем. Финальные copy/acceptance проверки и release 14.5 выполняются после этих задач.
+- 14.4u-admin. В той же финальной UI-задаче добавить пользователей: создание/приглашение, поиск и bounded список, блокировка, роли и optional прямые permissions, просмотр effective access и отдельное управление manual grants. Платный доступ/срок/источник показывать отдельно от account status и административных прав. Платёжный раздел виден только в выбранном профиле; подтверждение оплаты берётся с backend, не из success redirect. Протестировать одинаковую защиту операций через UI и прямой API; отсутствие UI не блокирует backend provisioning/integration.
 - 14.5. Подтверждение release checklist ниже и тег первой поддерживаемой версии; записать результаты/ограничения, а не только отметить наличие инструментов.
 
 Готово: clean checkout стартует по документации, migrations/API/Swagger/security checks и staging smoke подтверждены, exact dependency versions зафиксированы, выбран release scope, tag соответствует поддерживаемым функциям. Дальнейшие schema changes после production идут отдельными миграциями.
@@ -368,7 +379,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 ## 6. Текущий статус
 
-Этапы 0, 1 и 4 завершены. 5.1/5.2/5.3 реализованы и локально проверены: verification/recovery/session HTTP API и необходимая часть SQL session security. 5.2r и 5.2h выполнены без изменения дерева папок и API; следующий шаг — 5.4. Provenance — [template-adoption](template-adoption.md); команды и границы проверок — в результатах ниже. Внешняя почта/browser staging ещё не проверены; baseline P0 и auth/RBAC/MFA/billing release gates остаются впереди, шаблон не готов к production release.
+Этапы 0, 1 и 4 завершены. 5.1–5.4 реализованы и локально проверены: verification/recovery/session HTTP API/account status и необходимая часть SQL session security. 5.2r и 5.2h выполнены без изменения дерева папок и API; следующий шаг — 5.5. Provenance — [template-adoption](template-adoption.md); команды и границы проверок — в результатах ниже. Внешняя почта/browser staging ещё не проверены; baseline P0 и auth/RBAC/MFA/billing release gates остаются впереди, шаблон не готов к production release.
 
 Проверка этого шага: `docker build -f deploy/Dockerfile.dev -t auth:devcheck .`; `AUTH_TEST_IMAGE=auth:devcheck AUTH_TEST_APP_ENV=dev AUTH_SMOKE_ONLY=true task check-integration` — exit 0. Проверены dev startup, migration up, runtime DB connection, PostgreSQL/Redis readiness, liveness, Swagger disabled (404), локальная SMTP отправка в Mailpit. Disposable project `auth-check-1791315226-3825` и его volumes удалены runner; существующая БД не затронута. Это не полный integration/backup drill или external SMTP delivery. На этапе 0 изменения были документационными; tests/lint/security scan и GitHub CI тогда повторно не запускались. Проверка local Markdown links и `git diff --check` прошла. Release checks этапа 14 сохраняются.
 
@@ -379,18 +390,28 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 2. Инфраструктура | Выполнено в 1.2 | Durable audit sink — отдельно по ADR; здесь только контракт |
 | 3. Toolchain/окружение/deps | Адаптировано в 1.3 | Dev startup/SMTP smoke после CGO fix подтверждён 06.10.2026 |
 | 4. Структура/схема/API | Завершён | Дерево, SQL schema и API contract checks; security enforcement впереди |
-| 5. Account lifecycle | 5.1/5.2/5.3 локально реализованы/проверены | 5.2r/5.2h выполнены; далее 5.4, staging smoke и остальной lifecycle |
+| 5. Account lifecycle | 5.1–5.4 локально реализованы/проверены | 5.2r/5.2h выполнены; далее 5.5, staging smoke и остальной lifecycle |
 | 6. Безопасность сессий | Частично выполнен в 5.2/5.3 | SQL ledger/status/version, expiry, atomic reset/change/revoke; Origin для новых mutations; общий CSRF/CORS/fresh-auth/rotation и полная приёмка впереди |
 | 7. Identities / SSO boundary | Не начат | После 0, 4, 6; общий SSO optional |
 | 8. Telegram/OIDC/OTP | Не начат | После 5–7; Mini Apps optional |
 | 9. Policy/linking | Не начат | После 7–8; admin API зависит от 10 и 13.1 |
-| 10. Roles/permissions | Не начат | После 4, 6; single-app first, multi-app optional |
-| 11. Plans/entitlements | Не начат | После 10 |
-| 12. Payments | Не начат | После 11 и выбора provider; Stars зависит от commerce profile |
+| 10. Roles/permissions | Не начат | После 4, 6; single-app first, provisioning/assignments API после MFA; multi-app/прямые grants optional |
+| 11. Plans/entitlements | Не начат | После 10; manual grants и effective access без payment provider |
+| 12. Payments | Не начат | После 11; local provider или optional external events adapter; Stars зависит от commerce profile |
 | 13. MFA/cabinet | Не начат | 13.1 после 6 и до публикации admin API; остальное по API готовности |
 | 14. Release/переносимость | Не начат | После обязательных модулей и checklist; документация ведётся по ходу |
 
-Текущий порядок: 0, 1.1–1.8, 4, 5.1/5.2, 5.2r, 5.2h и 5.3 завершены → 5.4 и остальное 5/6 → 7/8 → 9/10 → 11/12 → 14. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется сразу после 6 до включения любых production admin действий. После 1.8 все следующие этапы используют только рабочий Auth и его документацию.
+Текущий порядок: 0, 1.1–1.8, 4, 5.1–5.4, 5.2r и 5.2h завершены → 5.5 и остальное 5/6 → 7/8 → 9/10 → 11/12 → 14. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется сразу после 6 до включения любых production admin действий. После 1.8 все следующие этапы используют только рабочий Auth и его документацию.
+
+### Результат 5.4 — 10 октября 2026
+
+Существующие SQL gates login/session/create/refresh уже проверяли active/not-deleted/auth_version; дополнительные одинаковые HTTP/domain проверки не добавлялись. Добавлены domain StatusChange/validation/errors, внутренний StatusService и PostgreSQL ChangeStatus: deadline, lock пользователя, expected auth_version/conflict, запрет изменения deleted, no-op при том же статусе/актуальной version. Реальный transition меняет status/version, отзывает все сессии, удаляет reset/verification challenges с outbox и записывает actor/target/status/version audit одним commit. Audit/FK failure откатывает всё; block/unblock не возрождает credentials snapshots и старые сессии/challenges. `auth.account_status_audit` имеет restrictive FK; hard deletion/retention согласуются отдельно в 5.6.
+
+Исправлены два пропуска: credential lookup для change-password теперь исключает inactive/deleted; отказ в выдаче login session из-за stale/blocked/version snapshot переводится в существующий 400 invalid_credentials без cookie. Logical inactive отказ внутри password change транзакции не выдаётся за неизвестную SQL failure. Настоящие dependency errors сохраняют прежний fallback; новые endpoints/DTO/annotations/env/dependencies/Redis не добавлены. ActorID — attribution, не authorization: нет admin route/app registration до 10/13.1, last-admin/MFA/permission guards остаются prerequisites. Нельзя заменять сценарий отдельными ручными SQL UPDATE status/revoke; account deletion здесь не реализовывалась.
+
+Проверено: `task go:fmt`, `task check` (tests + lint, 0 issues), `TestPostgresSchema` на отдельном PostgreSQL 18.6: up/down/up + предыдущий набор и status block/unblock/no-op/conflict, deleted/unknown account, invalidation challenges/outbox, audit/actor FK rollback, login block-unblock snapshot, concurrent issuance/refresh/status changes и cancellation. `git diff --check`. pgx v5.10.0 API сверён через Context7; dependencies не обновлялись. Swagger generation/drift не повторялись: routes/DTO/annotations не менялись, исправленные ошибки входят в существующий контракт. Browser/нагрузка/SMTP/общий Docker-Redis-backup drill/CI не выполнялись.
+
+Расширены существующие 000001 up/down; рабочая БД и secrets не изменялись, применённой схеме нужен отдельно согласованный перенос. Временный PostgreSQL удалён после проверки вместе с тестовыми данными; fixture не сохранялась. Согласованные ранее provisioning/roles/external-payments задачи сохранены. Далее 5.5 — подтверждённая смена email.
 
 ### Результат 5.3 — 10 октября 2026
 

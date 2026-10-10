@@ -240,6 +240,7 @@ Register/login используют service/credentials.go для однокра
 | Выдача/валидация сессии | `session/service/create.go`, `validate.go`; PostgreSQL `sessions.go` |
 | Список/отзыв собственных сессий | `session/service/management.go`, PostgreSQL `management.go`; HTTP `me.go`, `list.go`, `logout.go`, `logout_all.go`, `revoke.go` |
 | Проверка доверенного Origin | `internal/transport/http/middleware/origin.go`; конфигурация загружается в `internal/config` |
+| Block/unblock account / optimistic conflict / atomic revoke и audit | `internal/auth/account/domain/status.go`, `service/status.go`, `repository/postgres/status.go`; HTTP adapter пока отсутствует |
 | Security event / recording contract | `internal/audit/domain`, `service` |
 | Router, health, common HTTP helpers | `internal/transport/http` |
 | Общий mapper / запись ошибки / безопасное логирование | `internal/transport/http/httpx/errors.go` |
@@ -295,6 +296,10 @@ HTML reset-письма разделён на header/content, которые с�
 
 Взаимодействие — через явные сервисные контракты и транзакционные domain operations. Billing переводит подтверждённые события в grants через entitlement service; другие модули не интерпретируют raw provider payload. Операция продукта проверяет permission + ownership и, если требуется каталогом, entitlement/квоту.
 
+Уточнено 10 октября: ручное создание/приглашение принадлежит account (5.7), назначение ролей/optional персональных permissions — access (10.6), manual/paid grants и effective access — entitlement (11.5). Будущий UI использует защищённые APIs этих фич, не переносит правила в frontend. Создание пользователя само не назначает роли; paid entitlement не меняет `account.status` и не выдаёт admin.
+
+Billing может быть включён внутри приложения либо вынесен в отдельный payments service. Во втором профиле Auth сохраняет минимальный billing event adapter (12.8), собственный durable inbox и локальные атомарные entitlement/audit операции; provider secrets, checkout и финансовый ledger остаются снаружи. Интеграция — через authenticated versioned events/retries/reconciliation, не shared DB и не distributed SQL transaction. Event endpoint выключен без выбранного профиля. Текущее дерево сохраняется, заранее пустые пакеты/interfaces не добавляются; детали в [ADR 003](adr/003-access-and-optional-billing.md).
+
 ## Источники истины
 
 PostgreSQL хранит пользователей/status/auth version, identities, session ledger, одноразовые challenges, назначения прав, каталоги/grants, billing state, audit и inbox/outbox. Изменение credentials/status, инвалидация и запись security audit выполняются одной SQL-транзакцией. Redis — ограничители нагрузки и ускорение, но не единственное доказательство действительности сессии/прав/оплаты. Детали отказов — [ADR 002](adr/002-sessions-and-transactions.md).
@@ -304,6 +309,8 @@ PostgreSQL хранит пользователей/status/auth version, identiti
 Производительность подтверждается измеримым load profile, несколькими API instances, bounded pools/hash concurrency/deadlines, контролируемым refresh и защитой от stampede. Failover/restore не возвращает revoked access; отказы кеша не превращаются в безлимитный SQL fallback. Шаблон не требует JWT, микросервисов или plugin framework; методы входа, роли и оплата остаются независимыми. Общий multi-project SSO — отдельное расширение, не следствие повторного использования кода.
 
 UUID пользователя неизменен; email, username и provider display name не являются идентификатором владельца. Identity определяется проверенным issuer/subject с областью выбранного адаптера. В базовом профиле scope одного приложения задаётся сервером; client app/user/owner ID не расширяет доступ. Цена и владелец покупки фиксируются сервером.
+
+5.4: `account/service/StatusService.Change` — внутренний сценарий active/blocked с actor/target UUID и expected auth_version. PostgreSQL владеет lock/conflict/deleted проверкой и атомарной записью status/version/revoke/challenge cleanup/audit. Status audit failure отменяет весь transition. `ActorID` — attribution, не проверка permissions; сервис не подключён к router и не публикуется до authorization/MFA/fresh-auth/CSRF/last-admin guards этапов 10/13.1. Account deletion/retention и восстановление удалённых пользователей сюда не входят. Вход/сессии используют прежние active/not-deleted/version SQL gates; права доступа не дублируются в HTTP/domain.
 
 ## Независимые настройки
 

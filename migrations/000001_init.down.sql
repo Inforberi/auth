@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS auth.account_status_audit;
 DROP TABLE IF EXISTS auth.password_audit;
 DROP TABLE IF EXISTS auth.password_reset_outbox;
 DROP TABLE IF EXISTS auth.password_resets;

@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -16,6 +17,9 @@ func (r *PasswordRepo) ChangePassword(ctx context.Context, user accountdomain.Us
 	return r.transaction(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		var version int64
 		if err := tx.QueryRow(ctx, `SELECT auth_version FROM auth.users WHERE id=$1 AND status='active' AND deleted_at IS NULL FOR UPDATE`, user).Scan(&version); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return domain.ErrInvalidEmailOrPassword
+			}
 			return err
 		}
 		var valid bool

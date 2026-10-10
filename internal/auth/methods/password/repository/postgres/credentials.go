@@ -61,9 +61,9 @@ func (r *PasswordRepo) FindByEmail(ctx context.Context, email string) (*password
 
 func (r *PasswordRepo) FindUserByUserID(ctx context.Context, userID accountdomain.UserID) (*passworddomain.Credential, error) {
 	sql := `
-	SELECT password_hash
-	FROM auth.password_credentials
-	WHERE user_id = $1
+	SELECT p.password_hash
+	FROM auth.password_credentials p JOIN auth.users u ON u.id=p.user_id
+	WHERE p.user_id = $1 AND u.status='active' AND u.deleted_at IS NULL
 	`
 	var passwordHash string
 	err := r.db.QueryRow(ctx, sql, userID).Scan(&passwordHash)

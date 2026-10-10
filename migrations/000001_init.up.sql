@@ -148,3 +148,15 @@ CREATE TABLE auth.password_audit (
   event TEXT NOT NULL CHECK (event IN ('password_reset_issued','password_reset','password_changed','sessions_revoked')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE TABLE auth.account_status_audit (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  actor_id UUID NOT NULL REFERENCES auth.users(id),
+  previous_status TEXT NOT NULL CHECK (previous_status IN ('active','blocked')),
+  new_status TEXT NOT NULL CHECK (new_status IN ('active','blocked')),
+  auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (previous_status<>new_status)
+);
+CREATE INDEX account_status_audit_owner ON auth.account_status_audit(user_id,created_at DESC,id DESC);

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 )
 
 func (l *PasswordService) Login(ctx context.Context, input LoginInput) (*LoginResult, error) {
@@ -28,6 +29,9 @@ func (l *PasswordService) Login(ctx context.Context, input LoginInput) (*LoginRe
 
 	session, err := l.session.CreateSessionAtVersion(ctx, authData.UserID, input.UserAgent, input.IP, authData.AuthVersion)
 	if err != nil {
+		if errors.Is(err, sessiondomain.ErrSessionNotFound) || errors.Is(err, sessiondomain.ErrSessionExpired) {
+			return nil, passworddomain.ErrInvalidEmailOrPassword
+		}
 		return nil, fmt.Errorf("CreateSession: %w", err)
 	}
 

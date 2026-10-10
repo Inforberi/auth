@@ -1,4 +1,4 @@
-# Схема Auth — этапы 4.1 и 5.1–5.3
+# Схема Auth — этапы 4.1 и 5.1–5.4
 
 Источник: `migrations/000001_init.up.sql` и `.down.sql`. Один экземпляр Auth обслуживает один проект; внутренний UUID пользователя не зависит от метода входа.
 
@@ -17,8 +17,9 @@
 | `auth.password_resets` | Digest, один challenge на credential owner, auth_version, expiry; одноразовый consume. |
 | `auth.password_reset_outbox` | Encrypted payload, expiry, attempts, lease; каскадно удаляется с challenge. |
 | `auth.password_audit` | Reset issuance/reset/change/revoke events с user UUID, без token/password. |
+| `auth.account_status_audit` | Actor/target UUID, предыдущий и новый active/blocked status, новая auth_version и timestamp. Пишется в одной транзакции с изменением статуса/отзывом; FK сохраняют существование actor/target, индекс owner/date/id. |
 
-Первые четыре таблицы имеют `created_at/updated_at`; BEFORE UPDATE trigger поддерживает `updated_at`. FK на пользователя каскадно удаляет дочерние записи при явном hard delete. Soft deletion ничего физически не удаляет.
+Первые четыре таблицы имеют `created_at/updated_at`; BEFORE UPDATE trigger поддерживает `updated_at`. Основные дочерние записи имеют каскадные FK при явном hard delete. Status audit использует restrictive FK actor/target: hard delete не должен незаметно стирать историю, его retention/anonymization policy определяется в 5.6. Soft deletion ничего физически не удаляет.
 
 Email нормализуется приложением: trim + lower, максимум 255 байт, только адрес без display name, комментариев и обёртки `<…>`. SQL дополнительно проверяет базовую нормализацию, длину и наличие `@`; полный разбор адреса остаётся в приложении. Уникальность сохраняется после soft deletion: автоматическое освобождение адреса запрещено, политика повторного использования/удаления персональных данных определяется отдельно на этапе lifecycle.
 
@@ -45,3 +46,7 @@ Fixture допускает только localhost, пользователя/БД
 9 октября проверка повторена для 5.2: reset cooldown/replacement/expiry/replay, ровно один concurrent consume, audit rollback, stale session issuance/refresh, атомарные reset/change с отзывом сессий и blocked account. Проверено на отдельном PostgreSQL 18.6; SQL delivery использует test double.
 
 5.3 добавляет публичный UUID, не связанный с token/hash. Отзыв оставляет ledger-запись с `revoked_at`: действующий список её не возвращает, физическая очистка/retention остаются отдельной задачей. Logout-all увеличивает `auth_version`; проверка caller, отзыв и audit атомарны. Расширена исходная 000001 для свежих экземпляров. Уже применённую схему нельзя исправить повторным `migrate up`: нужен отдельно согласованный перенос, не reset рабочей БД.
+
+5.4 добавляет account status use case: user row lock, expected `auth_version`, смена active/blocked + увеличение version + revoke всех сессий + удаление reset/verification challenges (outbox каскадно) + status audit одной транзакцией. При unchanged status и актуальной version запись не меняется; stale version — conflict, deleted account не разблокируется. Unblock тоже повышает version и не возрождает старые tokens/challenges. Для смены статуса использовать `account/service/StatusService`, а не отдельные UPDATE status/revoke/audit. Автоматический SQL trigger для этих бизнес-операций не добавлялся; прямой SQL не является поддерживаемым lifecycle workflow. Старый login snapshot после block/unblock не может выпустить новую сессию.
+
+10 октября TestPostgresSchema прошёл на отдельном PostgreSQL 18.6: up/down/up и весь прежний набор, дополнительно block/unblock/no-op/conflict, actor/audit failure rollback, blocked/deleted credential/session checks, invalidation challenges/outbox, stale login snapshot, concurrent issuance/refresh/status writes и cancellation. Реальная рабочая БД не изменялась; новая audit table также требует отдельно согласованного переноса уже применённой схемы.
