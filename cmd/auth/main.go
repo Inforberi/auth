@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	_ "github.com/Inforberi/financial-intelligence/docs"
+	_ "github.com/Inforberi/financial-intelligence/docs/api/generated"
 	authapp "github.com/Inforberi/financial-intelligence/internal/app/auth"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )

@@ -88,7 +88,7 @@ tasks:
     swagger:
         desc: Пересобрать Swagger
         cmds:
-            - go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g cmd/auth/main.go --parseInternal --packageName docs -o docs
+            - go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g cmd/auth/main.go --parseInternal --packageName docs -o docs/api/generated
 
     # Редкие проверки — отдельно по риску или перед релизом
     check:api:
@@ -99,9 +99,9 @@ tasks:
                 api_docs=$(mktemp -d)
                 trap 'rm -f "$api_docs/docs.go" "$api_docs/swagger.json" "$api_docs/swagger.yaml"; rmdir "$api_docs"' EXIT
                 go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g cmd/auth/main.go --parseInternal --packageName docs -o "$api_docs"
-                cmp docs/docs.go "$api_docs/docs.go"
-                cmp docs/swagger.json "$api_docs/swagger.json"
-                cmp docs/swagger.yaml "$api_docs/swagger.yaml"
+                cmp docs/api/generated/docs.go "$api_docs/docs.go"
+                cmp docs/api/generated/swagger.json "$api_docs/swagger.json"
+                cmp docs/api/generated/swagger.yaml "$api_docs/swagger.yaml"
 
     check:security:
         desc: Проверить уязвимости Go-зависимостей

@@ -8,7 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/Inforberi/financial-intelligence/docs"
+	"github.com/Inforberi/financial-intelligence/docs/api/generated"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"

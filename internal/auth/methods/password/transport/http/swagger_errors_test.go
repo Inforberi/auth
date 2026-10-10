@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Inforberi/financial-intelligence/docs"
+	"github.com/Inforberi/financial-intelligence/docs/api/generated"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
