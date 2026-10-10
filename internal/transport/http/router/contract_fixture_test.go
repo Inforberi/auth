@@ -65,15 +65,16 @@ func readAPI(t *testing.T) apiDocument {
 func contractHandlers(env string) Handlers {
 	log := zap.NewNop()
 	return Handlers{
-		Session:         sessionhttp.NewHandler(contractManagement{}, log),
-		Recovery:        passwordhttp.NewRecovery(contractRecovery{}, log),
-		Account:         accounthttp.New(contractAccounts{}, log),
-		EmailChange:     accounthttp.NewEmailChange(contractEmailChange{}, log),
-		Config:          &config.Config{Logger: logger.Config{Env: env}, Browser: requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}}},
-		PasswordHandler: passwordhttp.New(contractPasswords{}, log),
-		Middleware:      sessionhttp.New(contractSessions{}, log),
-		MailTest:        dev.NewMailTest(contractMail{}, log),
-		ReadyCheck:      func(context.Context) error { return nil },
+		Session:           sessionhttp.NewHandler(contractManagement{}, log),
+		Recovery:          passwordhttp.NewRecovery(contractRecovery{}, log),
+		Account:           accounthttp.New(contractAccounts{}, log),
+		EmailChange:       accounthttp.NewEmailChange(contractEmailChange{}, log),
+		ProtectedRecovery: passwordhttp.NewProtectedRecovery(contractProtectedRecovery{}, log),
+		Config:            &config.Config{Logger: logger.Config{Env: env}, Browser: requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}}},
+		PasswordHandler:   passwordhttp.New(contractPasswords{}, log),
+		Middleware:        sessionhttp.New(contractSessions{}, log),
+		MailTest:          dev.NewMailTest(contractMail{}, log),
+		ReadyCheck:        func(context.Context) error { return nil },
 	}
 }
 
@@ -134,6 +135,12 @@ func (contractAccounts) Confirm(context.Context, string, string) error          
 func (contractAccounts) RequireVerified(context.Context, accountdomain.UserID) error { return nil }
 
 type contractEmailChange struct{}
+
+type contractProtectedRecovery struct{}
+
+func (contractProtectedRecovery) Recover(context.Context, string, string, string, string) error {
+	return nil
+}
 
 func (contractEmailChange) Request(context.Context, accountdomain.UserID, string, string, string, string) error {
 	return nil

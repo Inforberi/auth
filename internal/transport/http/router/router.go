@@ -18,16 +18,17 @@ import (
 )
 
 type Handlers struct {
-	Session         *sessionhttp.Handler
-	Recovery        *passwordhttp.RecoveryHandler
-	Account         *accounthttp.Handler
-	EmailChange     *accounthttp.EmailChangeHandler
-	PasswordHandler *passwordhttp.PasswordHandler
-	Middleware      *sessionhttp.Middleware
-	MailTest        *dev.MailTestHandler
-	Config          *config.Config
-	Logger          *zap.Logger
-	ReadyCheck      func(context.Context) error
+	Session           *sessionhttp.Handler
+	Recovery          *passwordhttp.RecoveryHandler
+	Account           *accounthttp.Handler
+	EmailChange       *accounthttp.EmailChangeHandler
+	ProtectedRecovery *passwordhttp.ProtectedRecoveryHandler
+	PasswordHandler   *passwordhttp.PasswordHandler
+	Middleware        *sessionhttp.Middleware
+	MailTest          *dev.MailTestHandler
+	Config            *config.Config
+	Logger            *zap.Logger
+	ReadyCheck        func(context.Context) error
 }
 
 func New(h Handlers) *chi.Mux {
@@ -131,4 +132,7 @@ func emailChangeRoutes(r chi.Router, h Handlers) {
 	mutations.With(h.Middleware.Auth).Post("/email/change", h.EmailChange.Request)
 	mutations.Post("/email/change/confirm", h.EmailChange.Confirm)
 	mutations.Post("/email/change/report", h.EmailChange.Report)
+	if h.ProtectedRecovery != nil {
+		mutations.Post("/email/change/recover", h.ProtectedRecovery.Recover)
+	}
 }

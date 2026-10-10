@@ -63,9 +63,11 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		log.With(zap.String("feature", "password_auth"), zap.String("layer", "transport")))
 	middleware := sessionhttp.New(sessionSvc, log)
 	var emailChange *accounthttp.EmailChangeHandler
+	var protectedRecovery *passwordhttp.ProtectedRecoveryHandler
 	if cfg.EmailChange.Enabled {
 		changeSvc := accountservice.NewEmailChange(accountRepo, argonHash, accountSvc, cfg.EmailChange)
 		emailChange = accounthttp.NewEmailChange(changeSvc, log)
+		protectedRecovery = passwordhttp.NewProtectedRecovery(passwordservice.NewProtectedRecovery(accountRepo, recoverySvc), log)
 	}
 
 	var mailTest *dev.MailTestHandler
@@ -73,15 +75,16 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		mailTest = dev.NewMailTest(mail, log)
 	}
 	handler := router.New(router.Handlers{
-		Session:         sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
-		Recovery:        passwordhttp.NewRecovery(recoverySvc, log),
-		Account:         accounthttp.New(accountSvc, log),
-		EmailChange:     emailChange,
-		PasswordHandler: passwordHandler,
-		Middleware:      middleware,
-		MailTest:        mailTest,
-		Config:          cfg,
-		Logger:          log,
+		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
+		Recovery:          passwordhttp.NewRecovery(recoverySvc, log),
+		Account:           accounthttp.New(accountSvc, log),
+		EmailChange:       emailChange,
+		ProtectedRecovery: protectedRecovery,
+		PasswordHandler:   passwordHandler,
+		Middleware:        middleware,
+		MailTest:          mailTest,
+		Config:            cfg,
+		Logger:            log,
 		ReadyCheck: func(ctx context.Context) error {
 			if err := pool.Ping(ctx); err != nil {
 				return err

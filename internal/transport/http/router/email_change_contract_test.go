@@ -8,7 +8,7 @@ import (
 )
 
 func TestEmailChangeRoutes(t *testing.T) {
-	for _, path := range []string{"/api/v1/auth/email/change", "/api/v1/auth/email/change/confirm", "/api/v1/auth/email/change/report"} {
+	for _, path := range []string{"/api/v1/auth/email/change", "/api/v1/auth/email/change/confirm", "/api/v1/auth/email/change/report", "/api/v1/auth/email/change/recover"} {
 		t.Run(path, func(t *testing.T) {
 			for _, tc := range []struct {
 				method, origin, cookie string
@@ -22,6 +22,9 @@ func TestEmailChangeRoutes(t *testing.T) {
 				r := httptest.NewRequest(tc.method, path, strings.NewReader(`{"token":"token"}`))
 				if path == "/api/v1/auth/email/change" {
 					r = httptest.NewRequest(tc.method, path, strings.NewReader(`{"email":"new@example.com","password":"current"}`))
+				}
+				if path == "/api/v1/auth/email/change/recover" {
+					r = httptest.NewRequest(tc.method, path, strings.NewReader(`{"token":"token","newPassword":"ExamplePass2","confirmPassword":"ExamplePass2"}`))
 				}
 				r.Header.Set("Content-Type", "application/json")
 				if tc.origin != "" {
@@ -51,7 +54,7 @@ func TestEmailChangeRoutes(t *testing.T) {
 		})
 	}
 	h := contractHandlers("test")
-	for _, path := range []string{"/api/v1/auth/email/change/confirm", "/api/v1/auth/email/change/report"} {
+	for _, path := range []string{"/api/v1/auth/email/change/confirm", "/api/v1/auth/email/change/report", "/api/v1/auth/email/change/recover"} {
 		r := httptest.NewRequest("POST", path, strings.NewReader(`{"token":"token"}`))
 		r.Header.Set("Content-Type", "application/json")
 		r.Header.Set("Origin", "https://localhost:8443")

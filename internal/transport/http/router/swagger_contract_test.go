@@ -58,6 +58,7 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 	}{
 		{"password_http.ForgotRequest", passwordhttp.ForgotRequest{}},
 		{"password_http.ResetRequest", passwordhttp.ResetRequest{}},
+		{"password_http.ProtectedRecoveryRequest", passwordhttp.ProtectedRecoveryRequest{}},
 		{"password_http.RecoveryResponse", passwordhttp.RecoveryResponse{}},
 		{"account_http.ResendRequest", accounthttp.ResendRequest{}},
 		{"account_http.ConfirmRequest", accounthttp.ConfirmRequest{}},
@@ -126,6 +127,7 @@ func TestSwaggerRequestAndResponseReferences(t *testing.T) {
 		"/api/v1/auth/email/change":         "account_http.EmailChangeRequest",
 		"/api/v1/auth/email/change/confirm": "account_http.EmailChangeConfirmRequest",
 		"/api/v1/auth/email/change/report":  "account_http.EmailChangeReportRequest",
+		"/api/v1/auth/email/change/recover": "password_http.ProtectedRecoveryRequest",
 		"/api/v1/auth/register/email":       "password_http.RegisterRequest",
 		"/api/v1/auth/login/email":          "password_http.LoginByEmailRequest",
 		"/api/v1/auth/change-password":      "password_http.ChangePasswordRequest",

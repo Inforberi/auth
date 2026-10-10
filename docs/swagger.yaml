@@ -147,6 +147,15 @@ definitions:
       status:
         type: string
     type: object
+  password_http.ProtectedRecoveryRequest:
+    properties:
+      confirmPassword:
+        type: string
+      newPassword:
+        type: string
+      token:
+        type: string
+    type: object
   password_http.RecoveryResponse:
     properties:
       status:
@@ -341,6 +350,49 @@ paths:
       summary: Confirm a login email change
       tags:
       - Account
+  /api/v1/auth/email/change/recover:
+    post:
+      consumes:
+      - application/json
+      description: Optional password-only profile. Distinct single-use token delivered
+        to the old verified address after protective blocking. Atomically replaces
+        the compromised password, restores that address, revokes access and invalidates
+        previous protection links before activating the account. Does not bypass administrative
+        blocking, create a session or run on GET.
+      parameters:
+      - description: recovery token and new password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/password_http.ProtectedRecoveryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/password_http.RecoveryResponse'
+        "400":
+          description: 'codes: invalid_json, invalid_account_recovery, password_mismatch,
+            password_policy, same_password'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: 'code: rate_limited'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: 'code: temporarily_unavailable'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Recover an account after an unauthorized email change
+      tags:
+      - Auth
   /api/v1/auth/email/change/report:
     post:
       consumes:
