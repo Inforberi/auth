@@ -1,6 +1,8 @@
-# Схема Auth — этапы 4.1 и 5.1–5.6a
+# Схема Auth — этапы 4.1 и 5.1–5.6b
 
 Источник: `migrations/000001_init` (up/down). Один экземпляр Auth обслуживает один проект; внутренний UUID пользователя не зависит от метода входа.
+
+Оптимизация 6.8a: expiry indexes challenges/outbox, partial exhausted-job indexes; email_changes index совпадает с GREATEST(protect_until,recovery_expires_at). Retention/candidate cutoffs используют statement_timestamp, consumption/lease сохраняют текущие часы. Claim не запускает global cleanup; indexed bounded GC выполняется отдельно. Изменения исходной 000001 не применяются автоматически к существующей БД; [performance](operations/performance.md).
 
 Схема recovery включена в исходную 000001: recovery digest/encrypted payload/TTL и nullable issued version/expiry в email_changes, owner index для lifecycle cleanup, recovery kind в outbox и recovered event в audit. Все recovery поля для старых intents остаются NULL, они не получают recovery authority. Срок начинается при защитном report; worker сохраняет intent до максимума protection/recovery expiry. Успешное восстановление меняет password credential и verified contacts, отзывает доступ и инвалидирует прежние intents/jobs одной транзакцией. Повторный административный block отменяет даже уже выданный recovery. Подробный контракт — [email change](features/email-change.md).
 
@@ -26,7 +28,9 @@
 
 Первые четыре таблицы имеют `created_at/updated_at`; BEFORE UPDATE trigger поддерживает `updated_at`. Основные дочерние записи имеют каскадные FK при явном hard delete. Status/deletion audit используют restrictive FK actor/target: hard delete не должен незаметно стирать историю, его retention/anonymization policy определяется в 5.6b. Сам SQL soft-delete не делает cleanup; внутренний DeletionService физически удаляет credentials/profile/challenges/change intents/outbox, отзывает сессии и очищает их metadata. Email reservations, UUID и audit сохраняются; [контракт](features/account-deletion.md).
 
-Email нормализуется приложением: trim + lower, максимум 255 байт, только адрес без display name, комментариев и обёртки `<…>`. SQL дополнительно проверяет базовую нормализацию, длину и наличие `@`; полный разбор адреса остаётся в приложении. Уникальность сохраняется после soft deletion: автоматическое освобождение адреса запрещено, политика повторного использования/удаления персональных данных определяется отдельно на этапе lifecycle.
+Email нормализуется приложением: trim + lower, максимум 255 байт, только адрес без display name, комментариев и обёртки `<…>`. SQL дополнительно проверяет базовую нормализацию, длину и наличие `@`; полный разбор адреса остаётся в приложении. Уникальность после deletion сохраняется до retention release; blocked-before-deletion reservation автоматически не освобождается. Release удаляет contact, повторная регистрация создаёт новый UUID/неподтверждённый контакт.
+
+5.6b добавляет `users.email_reuse_blocked` (CHECK: только с deleted_at), nullable `email_released_at` и partial index по due deleted owners без уже завершённых reservations. Block marker записывается атомарно при deletion из предыдущего status; не вычисляется по audit, который очищается отдельно. Released marker ставится в той же транзакции после удаления последнего contact; старые tombstones не сканируются повторно. Users/tombstones и restrictive FK сохраняются. Expression index на `LEAST(revoked_at,expires_at,absolute_expires_at),id` поддерживает retention завершённых sessions, индексы `(created_at,id)` — purge пяти audit tables. Worker не чистит active users/contacts/sessions и не управляет payment history. Bounded SQL/повторная регистрация и текущие ограничения — [retention](features/account-deletion.md#worker-и-повторная-регистрация).
 
 PK/UNIQUE уже создают необходимые индексы. `(user_id, id)` поддерживает ownership FK и выборку контактов владельца; отдельные дублирующие индексы не добавлены. Индексы административных фильтров появятся вместе с реальными запросами.
 

@@ -11,8 +11,9 @@
 | Email verification | [email-verification](../features/email-verification.md) | `internal/auth/account` — `verification_*`, delivery |
 | Обычный password recovery | [password-recovery](../features/password-recovery.md) | `internal/auth/methods/password` — forgot/reset/change |
 | Смена email и защитный recovery | [email-change](../features/email-change.md) | `internal/auth/account` — `email_change_*`; password `protected_recovery*` |
-| Account status/deletion | [account-deletion](../features/account-deletion.md), [architecture](../architecture.md) | Account `status.go`/`deletion.go`; SQL integration tests |
+| Account status/deletion/retention | [account-deletion](../features/account-deletion.md), [architecture](../architecture.md) | Account `status.go`/`deletion.go`/`retention*.go`, `internal/config`, app lifecycle; SQL/env tests |
 | Sessions | [ADR 002](../adr/002-sessions-and-transactions.md), [contract](../api/contract.md) | `internal/auth/session` |
+| Нагрузка и бюджеты | [performance](../operations/performance.md) | Password hasher/login limits, HTTP admission/proxy/readiness, retention/delivery queries |
 | Security boundaries | [threat-model](../threat-model.md), нужный ADR | Проверки по затронутому сценарию |
 | Почему принято старое решение | Нужный раздел [history](../planning/history.md) | История Git и исходные checks |
 

@@ -26,11 +26,11 @@ PostgreSQL — источник действительности сессии. L
 
 Payload очереди зашифрован AES-GCM существующим `EMAIL_OUTBOX_KEY`, с отдельным authenticated purpose `password-reset:v1`; verification payload имеет другой purpose. Ключ не возвращается API и не логируется. При ротации нужно согласованно обработать обе очереди, иначе старые payload не расшифруются.
 
-SQL lease 30 секунд, `SKIP LOCKED`, SMTP deadline 20 секунд, максимум 5 попыток и backoff 30/60/120/240 секунд. После успеха/исчерпания попыток payload удаляется; cleanup expired/invalid-version challenges выполняется работающим worker. После crash возможна повторная доставка; exactly-once SMTP не обещается. Старое уже взятое письмо может уйти после замены challenge, но его token недействителен.
+SQL lease 30 секунд, `SKIP LOCKED`, SMTP deadline 20 секунд, максимум 5 попыток и backoff 30/60/120/240 секунд. После успеха/исчерпания попыток payload удаляется. Claim проверяет текущие status/version/expiry без global DELETE; физическая очистка expired challenges/outbox выполняется отдельными bounded batches retention worker. Mutations удаляют свои invalidated challenges атомарно; оставшиеся stale записи не отправляются. После crash возможна повторная доставка; exactly-once SMTP не обещается. Старое уже взятое письмо может уйти после замены challenge, но его token недействителен.
 
-Новых env не добавлено. `PASSWORD_RESET_TOKEN_TTL` — 1m–1h; `PASSWORD_RESET_URL` — доверенный frontend URL без userinfo/query/fragment, в production HTTPS. SMTP использует существующие настройки и обязательный production STARTTLS. Runtime secrets и политика через UI вводятся в конце, не сейчас.
+`PASSWORD_RESET_TOKEN_TTL` — 1m–1h; `PASSWORD_RESET_URL` — доверенный frontend URL без userinfo/query/fragment, в production HTTPS. SMTP использует существующие настройки и обязательный production STARTTLS. Runtime secrets и политика через UI вводятся в конце, не сейчас.
 
-Redis limits: forgot 10/IP/min + 3/email/15min; reset 10/IP/min + 100/global/min. Ключи purpose-scoped HMAC, без открытых адресов/IP; Redis failure закрывает операцию. Peer IP берётся из socket, не пользовательского X-Forwarded-For. Reset hashing ограничен двумя параллельными задачами на процесс; нагрузочная настройка и login/register hashing остаются 6.4.
+Redis limits: forgot 10/IP/min + 3/email/15min; reset 10/IP/min + PASSWORD_RESET_GLOBAL_LIMIT (default 100/min), общий с защитным recovery. Ключи purpose-scoped HMAC, без открытых адресов/IP; Redis failure закрывает операцию. Доверенный forwarded IP определяется только через настроенные CIDR. Все password hash/compare используют единый PASSWORD_HASH_CONCURRENCY (default 2) без очереди ожидания; перегрузка — 503. Настройки и границы — [performance](../operations/performance.md).
 
 ## Проверено и что осталось
 

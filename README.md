@@ -36,6 +36,8 @@ Session API требует `AUTH_ALLOWED_ORIGINS`: точные HTTPS origins ч
 
 Текущая схема и правила её применения — [schema](docs/schema.md). Исходная миграция изменена до production release; уже применённая `000001` автоматически не обновляется. Не сбрасывайте существующую БД: перенос её данных требует отдельной миграции.
 
+Согласованная [retention policy](docs/features/account-deletion.md#согласованная-политика-и-env) пока задаётся env: `ACCOUNT_EMAIL_RESERVATION_DAYS=30`, `SESSION_RETENTION_DAYS=30`, `SECURITY_AUDIT_RETENTION_DAYS=180`. Читаются целые положительные дни с валидацией при старте; после изменения нужен restart. Worker раз в минуту очищает небольшие партии контактов удалённых аккаунтов, завершённых сессий и security audit. Если аккаунт был заблокирован перед удалением, его email автоматически не освобождается. UI настроек — в конце. Для уже применённой старой 000001 нужен отдельно согласованный перенос схемы; restore reconciliation ещё не реализован.
+
 Полные примеры — `.env.example` и `.env.prod.example`; источник runtime validation — `internal/config/config.go` и `validation.go`. `APP_ENV=dev|test|prod`, `LOG_LEVEL` задаёт logger. `PORT`, `DATABASE_URL`, pool limits, `REDIS_HOST/PORT/PASSWORD` обязательны для startup. `SESSION_TTL`, **отдельный** `ABSOLUTE_SESSION_TTL` и `SESSION_REFRESH_THRESHOLD` должны быть согласованы. Reset URL берётся только из `PASSWORD_RESET_URL`, TTL — `PASSWORD_RESET_TOKEN_TTL`; forgot/reset API включён; письмо ведёт на frontend форму, которая отправляет POST reset.
 
 Код Auth расположен в `internal/auth`: `account/domain`, `methods/password` и `session`; внутри развитой фичи — domain/service/repository/transport. Сборка/lifecycle — `internal/app/auth`, aggregate config — `internal/config`, HTTP server/Shutdown — `internal/server/http`, подключения — `internal/infra`, router — `internal/transport/http`. Карта путей и будущие модули — в [архитектуре](docs/architecture.md). Ориентир рукописного Go-кода — до 150 строк при осмысленном разделении, без жёсткого потолка; tests/generated без лимита. `task check` проверяет направление imports, не размер файлов.
@@ -55,7 +57,9 @@ Compose дополнительно использует `APP_NAME`, `POSTGRES_IM
 3. `task db:runtime-grants`; проверьте DML от runtime и запрет DDL. SQL `deploy/runtime-grants.sql` содержит template identifiers `auth`, `auth_owner`, `auth_runtime`: при адаптации другого проекта измените их согласованно с env.
 4. После закрытия auth security release gates: `task prod:up`. Сейчас это команда инфраструктуры, не подтверждение готовности приложения.
 
-API — nonroot, readonly, cap drop, localhost port; PostgreSQL/Redis без host ports. Нужен отдельный TLS ingress. `sslmode=disable` в примере допустим только внутри доверенной Docker network на одном host; для внешней БД настройте проверяемый TLS. `/health/live` проверяет процесс, `/health/ready` — PostgreSQL и Redis с deadline, без details/DSN. Reverse-proxy headers не доверяются; trusted-proxy policy вводится отдельно.
+API — nonroot, readonly, cap drop, localhost port; PostgreSQL/Redis без host ports. Нужен отдельный TLS ingress. `sslmode=disable` в примере допустим только внутри доверенной Docker network на одном host; для внешней БД настройте проверяемый TLS. `/health/live` проверяет процесс, `/health/ready` — PostgreSQL и Redis с deadline, без details/DSN, с coalescing и кешем результата до 1s. Forwarded IP доверяется только `HTTP_TRUSTED_PROXY_CIDRS`; пустой default игнорирует headers. Proxy обязан корректно формировать цепочку и закрывать прямой обход.
+
+Бюджеты HTTP/Argon2, distributed login/register/reset limits, batch/interval очистки и результаты локальных нагрузочных проверок — [нагрузка и защита ресурсов](docs/operations/performance.md). Defaults в env examples — стартовые ограничения, не гарантия API RPS; для продукта нужна отдельная multi-instance приёмка.
 
 ## Backup / restore
 
