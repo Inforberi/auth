@@ -51,7 +51,8 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	}
 	passwordRepo := assembleRegistration(pool, accountSvc, accountRepo)
 	argonHash := hasher.NewArgon2idHash(1, 32, 64*1024, 32, 256)
-	sessionSvc := sessionservice.New(now, sessionpostgres.New(pool), tokenGen, cfg.Session)
+	sessionRepo := sessionpostgres.New(pool)
+	sessionSvc := sessionservice.New(now, sessionRepo, tokenGen, cfg.Session)
 	passwordSvc := passwordservice.New(passwordRepo, sessionSvc, argonHash)
 	resetCipher, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "password-reset:v1")
 	if err != nil {
@@ -67,6 +68,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		mailTest = dev.NewMailTest(mail, log)
 	}
 	handler := router.New(router.Handlers{
+		Session:         sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
 		Recovery:        passwordhttp.NewRecovery(recoverySvc, log),
 		Account:         accounthttp.New(accountSvc, log),
 		PasswordHandler: passwordHandler,

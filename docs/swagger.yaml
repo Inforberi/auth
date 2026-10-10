@@ -43,6 +43,39 @@ definitions:
         example: ok
         type: string
     type: object
+  http.MeResponse:
+    properties:
+      sessionId:
+        type: string
+      userId:
+        type: string
+    type: object
+  http.SessionResponse:
+    properties:
+      absoluteExpiresAt:
+        type: string
+      createdAt:
+        type: string
+      current:
+        type: boolean
+      expiresAt:
+        type: string
+      id:
+        type: string
+      ipAddress:
+        type: string
+      userAgent:
+        type: string
+    type: object
+  http.SessionsResponse:
+    properties:
+      nextCursor:
+        type: string
+      sessions:
+        items:
+          $ref: '#/definitions/http.SessionResponse'
+        type: array
+    type: object
   httpx.ErrorResponse:
     properties:
       code:
@@ -340,6 +373,88 @@ paths:
       summary: login by email
       tags:
       - Auth
+  /api/v1/auth/logout:
+    post:
+      description: Missing or invalid sessions return 401 and clear the stale cookie.
+        Dependency failures do not clear it. Requires an allowed Origin.
+      parameters:
+      - description: Exact HTTPS origin from AUTH_ALLOWED_ORIGINS
+        in: header
+        name: Origin
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Revoke current session and clear browser cookie
+      tags:
+      - Session
+  /api/v1/auth/logout-all:
+    post:
+      description: Requires an allowed Origin. Auth version increment prevents stale
+        in-flight issuance.
+      parameters:
+      - description: Exact HTTPS origin from AUTH_ALLOWED_ORIGINS
+        in: header
+        name: Origin
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Revoke all own sessions including current and clear browser cookie
+      tags:
+      - Session
+  /api/v1/auth/me:
+    get:
+      description: Requires __Host-session cookie. Returns IDs only; profile and contact
+        management are separate features.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.MeResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Get authenticated user and current session IDs
+      tags:
+      - Session
   /api/v1/auth/register/email:
     post:
       consumes:
@@ -426,6 +541,78 @@ paths:
       summary: Reset password
       tags:
       - Auth
+  /api/v1/auth/sessions:
+    get:
+      description: Up to 50 items ordered by creation time and public UUID descending;
+        pass nextCursor as before. No session secrets are returned.
+      parameters:
+      - description: Public session UUID cursor
+        in: query
+        name: before
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.SessionsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: List own active sessions
+      tags:
+      - Session
+  /api/v1/auth/sessions/{id}:
+    delete:
+      description: Foreign, unknown and inactive sessions share 404. Revoking current
+        session also clears the cookie. Requires an allowed Origin.
+      parameters:
+      - description: Exact HTTPS origin from AUTH_ALLOWED_ORIGINS
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Public session UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Revoke one own active session
+      tags:
+      - Session
   /api/v1/dev/send-mail:
     post:
       consumes:

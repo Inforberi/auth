@@ -7,6 +7,7 @@ import (
 )
 
 type ValidateSession struct {
+	SessionID string
 	UserID    accountdomain.UserID `json:"userId"`
 	TokenHash string
 	ExpiresAt time.Time `json:"expiresAt"`

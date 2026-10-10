@@ -109,6 +109,7 @@ CREATE TABLE auth.email_verification_audit (
 );
 
 CREATE TABLE auth.sessions (
+  id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
   token_hash TEXT PRIMARY KEY CHECK (token_hash ~ '^[a-f0-9]{64}$'),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
@@ -120,7 +121,7 @@ CREATE TABLE auth.sessions (
   ip_address TEXT NOT NULL,
   CHECK (created_at<expires_at AND expires_at<=absolute_expires_at)
 );
-CREATE INDEX sessions_owner ON auth.sessions(user_id);
+CREATE INDEX sessions_owner ON auth.sessions(user_id,created_at DESC,id DESC);
 
 CREATE TABLE auth.password_resets (
   digest TEXT PRIMARY KEY CHECK (digest ~ '^[a-f0-9]{64}$'),

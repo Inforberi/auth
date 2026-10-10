@@ -12,6 +12,7 @@ import (
 
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
@@ -71,6 +72,7 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 		{"dev.SendMailResponse", dev.SendMailResponse{}},
 		{"httpx.ErrorResponse", httpx.ErrorResponse{}},
 		{"router.HealthResponse", HealthResponse{}},
+		{"http.MeResponse", sessionhttp.MeResponse{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			schema, ok := doc.Definitions[tc.name]
@@ -146,7 +148,7 @@ func TestSwaggerRequestAndResponseReferences(t *testing.T) {
 					if _, ok := doc.Definitions[name]; !ok {
 						t.Errorf("%s %s: broken schema reference %s", path, status, name)
 					}
-				} else if response.Schema.Type != "string" {
+				} else if response.Schema.Type != "string" && status != "204" {
 					t.Errorf("%s %s: unknown inline response schema", path, status)
 				}
 			}

@@ -29,11 +29,11 @@ func (r *Repository) FindSession(ctx context.Context, token string) (*domain.Ses
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	var session domain.Session
-	err := r.db.QueryRow(ctx, `SELECT s.user_id,s.user_agent,s.ip_address,s.created_at,s.expires_at,s.absolute_expires_at
+	err := r.db.QueryRow(ctx, `SELECT s.id,s.user_id,s.user_agent,s.ip_address,s.created_at,s.expires_at,s.absolute_expires_at
 		FROM auth.sessions s JOIN auth.users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL
 		AND s.auth_version=u.auth_version AND u.status='active' AND u.deleted_at IS NULL
 		AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()`, token).
-		Scan(&session.UserID, &session.UserAgent, &session.IPAddress, &session.CreatedAt, &session.ExpiresAt, &session.AbsoluteExpiresAt)
+		Scan(&session.ID, &session.UserID, &session.UserAgent, &session.IPAddress, &session.CreatedAt, &session.ExpiresAt, &session.AbsoluteExpiresAt)
 	if err != nil {
 		return nil, sessionError(err)
 	}

@@ -24,6 +24,7 @@ func TestPostgresSchema(t *testing.T) {
 	t.Run("repository", func(t *testing.T) { checkRepository(t, db, ctx, repo) })
 	t.Run("constraints", func(t *testing.T) { checkConstraints(t, db, ctx, repo) })
 	t.Run("concurrent registration", func(t *testing.T) { checkConcurrentRegistration(t, db, ctx, repo) })
+	t.Run("session management", func(t *testing.T) { checkSessionManagement(t, db, ctx) })
 }
 
 func expectSQLState(t *testing.T, db *pgxpool.Pool, ctx context.Context, code, sql string, args ...any) {

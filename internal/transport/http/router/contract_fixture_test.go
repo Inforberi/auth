@@ -19,6 +19,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
+	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
 type apiSchema struct {
@@ -64,9 +65,10 @@ func readAPI(t *testing.T) apiDocument {
 func contractHandlers(env string) Handlers {
 	log := zap.NewNop()
 	return Handlers{
+		Session:         sessionhttp.NewHandler(contractManagement{}, log),
 		Recovery:        passwordhttp.NewRecovery(contractRecovery{}, log),
 		Account:         accounthttp.New(contractAccounts{}, log),
-		Config:          &config.Config{Logger: logger.Config{Env: env}},
+		Config:          &config.Config{Logger: logger.Config{Env: env}, Browser: requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}}},
 		PasswordHandler: passwordhttp.New(contractPasswords{}, log),
 		Middleware:      sessionhttp.New(contractSessions{}, log),
 		MailTest:        dev.NewMailTest(contractMail{}, log),
@@ -94,8 +96,22 @@ func (contractSessions) ValidateSession(_ context.Context, token string) (*sessi
 	if token != "valid" {
 		return nil, sessiondomain.ErrSessionNotFound
 	}
-	return &sessionservice.ValidateSession{UserID: "user-1", TokenHash: "hash"}, nil
+	return &sessionservice.ValidateSession{UserID: "user-1", TokenHash: "hash", SessionID: currentSessionID}, nil
 }
+
+const currentSessionID = "11111111-1111-4111-8111-111111111111"
+
+type contractManagement struct{}
+
+func (contractManagement) List(context.Context, accountdomain.UserID, string, string) (*sessionservice.SessionPage, error) {
+	return &sessionservice.SessionPage{Sessions: []sessiondomain.Session{{ID: currentSessionID}}}, nil
+}
+
+func (contractManagement) Revoke(context.Context, accountdomain.UserID, string, string) error {
+	return nil
+}
+
+func (contractManagement) LogoutAll(context.Context, accountdomain.UserID, string) error { return nil }
 
 type contractMail struct{}
 

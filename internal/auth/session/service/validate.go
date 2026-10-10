@@ -38,6 +38,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (
 		}
 
 		return &ValidateSession{
+			SessionID: session.ID,
 			UserID:    session.UserID,
 			TokenHash: hashToken,
 			ExpiresAt: session.ExpiresAt,
@@ -46,6 +47,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (
 	}
 
 	return &ValidateSession{
+		SessionID: session.ID,
 		UserID:    session.UserID,
 		TokenHash: hashToken,
 		ExpiresAt: session.ExpiresAt,

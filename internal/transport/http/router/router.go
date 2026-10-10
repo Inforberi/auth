@@ -18,6 +18,7 @@ import (
 )
 
 type Handlers struct {
+	Session         *sessionhttp.Handler
 	Recovery        *passwordhttp.RecoveryHandler
 	Account         *accounthttp.Handler
 	PasswordHandler *passwordhttp.PasswordHandler
@@ -52,6 +53,9 @@ func New(h Handlers) *chi.Mux {
 
 	r.Route("/api/v1/", func(r chi.Router) {
 		r.Route("/auth", func(r chi.Router) {
+			if h.Session != nil {
+				sessionRoutes(r, h)
+			}
 			if h.Recovery != nil {
 				r.Post("/forgot-password", h.Recovery.Forgot)
 				r.Post("/reset-password", h.Recovery.Reset)
@@ -88,4 +92,28 @@ func New(h Handlers) *chi.Mux {
 	})
 
 	return r
+}
+
+func sessionRoutes(r chi.Router, h Handlers) {
+	var cfg requestmiddleware.OriginConfig
+	if h.Config != nil {
+		cfg = h.Config.Browser
+	}
+	origin := requestmiddleware.RequireOrigin(cfg)
+	reads := r.With(noStore, h.Middleware.Auth)
+	reads.Get("/me", h.Session.Me)
+	reads.Get("/sessions", h.Session.List)
+	mutations := r.With(noStore, origin, h.Middleware.Auth)
+	mutations.Post("/logout-all", h.Session.LogoutAll)
+	mutations.Delete("/sessions/{id}", func(w http.ResponseWriter, r *http.Request) {
+		h.Session.Revoke(w, r, chi.URLParam(r, "id"))
+	})
+	r.With(noStore, origin, h.Middleware.LogoutAuth).Post("/logout", h.Session.Logout)
+}
+
+func noStore(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		next.ServeHTTP(w, r)
+	})
 }
