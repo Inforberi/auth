@@ -2,15 +2,24 @@ package postgres
 
 import (
 	"context"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Repository struct{ db *pgxpool.Pool }
+type Repository struct {
+	db                  *pgxpool.Pool
+	deliveryTurn        atomic.Uint64
+	emailChangeDelivery bool
+}
 
 func New(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
+
+func NewWithEmailChanges(db *pgxpool.Pool) *Repository {
+	return &Repository{db: db, emailChangeDelivery: true}
+}
 
 func (r *Repository) transaction(ctx context.Context, fn func(pgx.Tx) error) error {
 	tx, err := r.db.Begin(ctx)

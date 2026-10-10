@@ -10,6 +10,13 @@ import (
 )
 
 func (r *Repository) ClaimDelivery(ctx context.Context) (*domain.VerificationDelivery, error) {
+	// Alternate the first queue so verification traffic cannot starve security notifications.
+	if r.emailChangeDelivery && r.deliveryTurn.Add(1)%2 == 1 {
+		job, err := r.claimChangeDelivery(ctx)
+		if err != nil || job != nil {
+			return job, err
+		}
+	}
 	if _, err := r.db.Exec(ctx, `DELETE FROM auth.email_verifications v USING auth.user_emails e,auth.users u
 		WHERE v.email_id=e.id AND e.user_id=u.id AND
 		(v.expires_at<=clock_timestamp() OR e.verified_at IS NOT NULL OR u.status<>'active' OR u.deleted_at IS NOT NULL)`); err != nil {
@@ -27,12 +34,18 @@ func (r *Repository) ClaimDelivery(ctx context.Context) (*domain.VerificationDel
 		lease_until=clock_timestamp()+interval '30 seconds' FROM due WHERE o.id=due.id
 		RETURNING o.id,o.lease,o.payload,o.attempts`).Scan(&job.ID, &job.Lease, &job.Payload, &job.Attempts)
 	if errors.Is(err, pgx.ErrNoRows) {
+		if r.emailChangeDelivery {
+			return r.claimChangeDelivery(ctx)
+		}
 		return nil, nil
 	}
 	return &job, err
 }
 
 func (r *Repository) FinishDelivery(ctx context.Context, job domain.VerificationDelivery, sent bool) error {
+	if job.EmailChange {
+		return r.finishChangeDelivery(ctx, job, sent)
+	}
 	if sent || job.Attempts >= 5 {
 		_, err := r.db.Exec(ctx, `DELETE FROM auth.email_verification_outbox WHERE id=$1 AND lease=$2`, job.ID, job.Lease)
 		return err

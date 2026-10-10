@@ -18,8 +18,9 @@ type Verification struct {
 }
 
 type VerificationDelivery struct {
-	ID       string
-	Lease    string
-	Payload  []byte
-	Attempts int
+	EmailChange bool
+	ID          string
+	Lease       string
+	Payload     []byte
+	Attempts    int
 }

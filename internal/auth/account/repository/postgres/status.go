@@ -43,6 +43,12 @@ func (r *Repository) ChangeStatus(ctx context.Context, change domain.StatusChang
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.email_verifications v USING auth.user_emails e WHERE v.email_id=e.id AND e.user_id=$1`, change.UserID); err != nil {
 			return err
 		}
+		if _, err := tx.Exec(ctx, `UPDATE auth.email_changes SET state='cancelled' WHERE user_id=$1 AND state IN ('pending','completed')`, change.UserID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM auth.email_change_outbox o USING auth.email_changes c WHERE o.change_id=c.id AND c.user_id=$1 AND o.kind='confirm'`, change.UserID); err != nil {
+			return err
+		}
 		_, err = tx.Exec(ctx, `INSERT INTO auth.account_status_audit(user_id,actor_id,previous_status,new_status,auth_version) VALUES ($1,$2,$3,$4,$5)`, change.UserID, change.ActorID, status, change.Status, version)
 		return err
 	})

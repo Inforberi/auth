@@ -1,0 +1,83 @@
+package service
+
+import (
+	"context"
+	"time"
+
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+)
+
+type emailChangeRepository interface {
+	EmailChangeSnapshot(context.Context, domain.UserID) (domain.EmailChangeSnapshot, error)
+	RequestEmailChange(context.Context, domain.EmailChangeSnapshot, string, string, domain.EmailChangeIntent) error
+	ConfirmEmailChange(context.Context, string) error
+	ReportEmailChange(context.Context, string) error
+}
+
+type passwordVerifier interface {
+	Compare(string, string) error
+}
+
+type EmailChangeService struct {
+	repo    emailChangeRepository
+	hash    passwordVerifier
+	account *Service
+	cfg     EmailChangeConfig
+}
+
+func NewEmailChange(repo emailChangeRepository, hash passwordVerifier, account *Service, cfg EmailChangeConfig) *EmailChangeService {
+	return &EmailChangeService{repo: repo, hash: hash, account: account, cfg: cfg}
+}
+
+func (s *EmailChangeService) Request(ctx context.Context, user domain.UserID, session, rawEmail, password, ip string) error {
+	email, err := domain.NewEmail(rawEmail)
+	if err != nil {
+		return err
+	}
+	if !domain.ValidUserID(user) || len(session) != 64 || password == "" || len(password) > 1024 {
+		return domain.ErrFreshAuthRequired
+	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := s.account.limit(ctx, "email-change-user:"+string(user), 5, time.Hour); err != nil {
+		return err
+	}
+	if err := s.account.limit(ctx, "email-change-request-ip:"+ip, 20, time.Minute); err != nil {
+		return err
+	}
+	snapshot, err := s.repo.EmailChangeSnapshot(ctx, user)
+	if err != nil {
+		return err
+	}
+	if err := s.hash.Compare(password, snapshot.PasswordHash); err != nil {
+		return domain.ErrFreshAuthRequired
+	}
+	if email.String() == snapshot.Email {
+		return domain.ErrInvalidEmailChange
+	}
+	prepared, err := s.prepareChange(snapshot.Email, email.String())
+	if err != nil {
+		return err
+	}
+	return s.repo.RequestEmailChange(ctx, snapshot, session, email.String(), prepared)
+}
+
+func (s *EmailChangeService) Confirm(ctx context.Context, token, ip string) error {
+	return s.consume(ctx, token, ip, "email-change-confirm:", s.repo.ConfirmEmailChange)
+}
+
+func (s *EmailChangeService) Report(ctx context.Context, token, ip string) error {
+	return s.consume(ctx, token, ip, "email-change-report:", s.repo.ReportEmailChange)
+}
+
+func (s *EmailChangeService) consume(ctx context.Context, token, ip, purpose string, consume func(context.Context, string) error) error {
+	if !validChangeToken(token) {
+		return domain.ErrInvalidEmailChange
+	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := s.account.limit(ctx, purpose+ip, 20, time.Minute); err != nil {
+		return err
+	}
+	return consume(ctx, tokenDigest(token))
+}

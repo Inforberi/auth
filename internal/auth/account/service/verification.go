@@ -13,8 +13,10 @@ import (
 )
 
 type verificationMail struct {
-	To   string `json:"to"`
-	Link string `json:"link"`
+	To      string `json:"to"`
+	Link    string `json:"link"`
+	Subject string `json:"subject,omitempty"`
+	Body    string `json:"body,omitempty"`
 }
 
 func (s *Service) Prepare(email string) (domain.Verification, error) {

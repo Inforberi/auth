@@ -160,3 +160,50 @@ CREATE TABLE auth.account_status_audit (
   CHECK (previous_status<>new_status)
 );
 CREATE INDEX account_status_audit_owner ON auth.account_status_audit(user_id,created_at DESC,id DESC);
+
+CREATE TABLE auth.email_changes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  email_id UUID NOT NULL,
+  old_email public.CITEXT NOT NULL,
+  new_email public.CITEXT NOT NULL,
+  auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  session_hash TEXT NOT NULL CHECK (session_hash ~ '^[a-f0-9]{64}$'),
+  confirm_digest TEXT NOT NULL UNIQUE CHECK (confirm_digest ~ '^[a-f0-9]{64}$'),
+  report_digest TEXT NOT NULL UNIQUE CHECK (report_digest ~ '^[a-f0-9]{64}$'),
+  completion_payload BYTEA NOT NULL CHECK (octet_length(completion_payload) BETWEEN 28 AND 8192),
+  state TEXT NOT NULL DEFAULT 'pending' CHECK (state IN ('pending','completed','cancelled','reported','expired')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL CHECK (expires_at>created_at),
+  protect_until TIMESTAMPTZ NOT NULL CHECK (protect_until>expires_at),
+  FOREIGN KEY (user_id,email_id) REFERENCES auth.user_emails(user_id,id),
+  CHECK (old_email<>new_email),
+  CHECK (octet_length(new_email::TEXT) BETWEEN 3 AND 255 AND new_email::TEXT=lower(btrim(new_email::TEXT)) AND position('@' IN new_email::TEXT)>1)
+);
+CREATE UNIQUE INDEX email_changes_pending ON auth.email_changes(user_id) WHERE state='pending';
+CREATE INDEX email_changes_expiry ON auth.email_changes(protect_until);
+
+CREATE TABLE auth.email_change_outbox (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  change_id UUID NOT NULL REFERENCES auth.email_changes(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('confirm','notice','completed')),
+  payload BYTEA NOT NULL CHECK (octet_length(payload) BETWEEN 28 AND 8192),
+  expires_at TIMESTAMPTZ NOT NULL,
+  available_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+  lease UUID,
+  lease_until TIMESTAMPTZ,
+  UNIQUE(change_id,kind),
+  CHECK ((lease IS NULL)=(lease_until IS NULL))
+);
+CREATE INDEX email_change_outbox_due ON auth.email_change_outbox(available_at);
+CREATE INDEX email_change_outbox_expiry ON auth.email_change_outbox(expires_at);
+
+CREATE TABLE auth.email_change_audit (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  change_id UUID NOT NULL,
+  event TEXT NOT NULL CHECK (event IN ('requested','confirmed','cancelled','reported')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX email_change_audit_owner ON auth.email_change_audit(user_id,created_at DESC,id DESC);

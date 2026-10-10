@@ -60,6 +60,9 @@ func (s *Service) send(ctx context.Context, payload []byte) error {
 	if err := json.Unmarshal(plain, &message); err != nil {
 		return err
 	}
+	if message.Subject != "" {
+		return s.mail.SendContext(ctx, message.To, message.Subject, message.Body)
+	}
 	body := `<p>Подтвердите email: <a href="` + html.EscapeString(message.Link) + `">подтвердить адрес</a>.</p>`
 	return s.mail.SendContext(ctx, message.To, "Подтверждение email", body)
 }
