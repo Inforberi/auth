@@ -12,14 +12,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 )
 
-type verificationMail struct {
-	To      string `json:"to"`
-	Link    string `json:"link"`
-	Subject string `json:"subject,omitempty"`
-	Body    string `json:"body,omitempty"`
-}
-
-func (s *Service) Prepare(email string) (domain.Verification, error) {
+func (s *Service) PrepareVerification(email string) (domain.Verification, error) {
 	var secret [32]byte
 	if _, err := rand.Read(secret[:]); err != nil {
 		return domain.Verification{}, err
@@ -32,7 +25,7 @@ func (s *Service) Prepare(email string) (domain.Verification, error) {
 	q := u.Query()
 	q.Set("token", token)
 	u.RawQuery = q.Encode()
-	plain, err := json.Marshal(verificationMail{To: email, Link: u.String()})
+	plain, err := json.Marshal(emailMessage{To: email, Link: u.String()})
 	if err != nil {
 		return domain.Verification{}, err
 	}

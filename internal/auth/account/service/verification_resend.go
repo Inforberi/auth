@@ -20,7 +20,7 @@ func (s *Service) Resend(ctx context.Context, input, ip string) error {
 	if err := s.limit(ctx, "resend-email:"+email.String(), 3, 15*time.Minute); err != nil {
 		return err
 	}
-	prepared, err := s.Prepare(email.String())
+	prepared, err := s.PrepareVerification(email.String())
 	if err != nil {
 		return err
 	}

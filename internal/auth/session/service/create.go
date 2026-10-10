@@ -3,9 +3,27 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 )
+
+type CreateSessionParams struct {
+	AuthVersion       int64
+	AbsoluteExpiresAt time.Time
+	UserID            accountdomain.UserID
+	CreatedAt         time.Time
+	ExpiresAt         time.Time
+	TokenHash         string
+	UserAgent         string
+	IPAddress         string
+}
+
+// RawToken is returned to the caller; only its digest is stored in the ledger.
+type CreatedSession struct {
+	RawToken  string
+	ExpiresAt time.Time
+}
 
 func (s *SessionService) CreateSessionAtVersion(ctx context.Context, userID accountdomain.UserID, userAgent, ip string, version int64) (*CreatedSession, error) {
 	rawToken, err := s.token.GenerateToken()

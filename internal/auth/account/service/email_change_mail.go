@@ -29,7 +29,7 @@ func (s *EmailChangeService) prepareChange(oldEmail, newEmail string) (domain.Em
 		return domain.EmailChangeIntent{}, err
 	}
 	seal := func(to, subject, body string) ([]byte, error) {
-		plain, err := json.Marshal(verificationMail{To: to, Subject: subject, Body: body})
+		plain, err := json.Marshal(emailMessage{To: to, Subject: subject, Body: body})
 		if err != nil {
 			return nil, err
 		}

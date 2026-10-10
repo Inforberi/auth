@@ -101,7 +101,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 
 func assembleRegistration(pool *pgxpool.Pool, service *accountservice.Service, repo *accountpostgres.Repository) *passwordpostgres.PasswordRepo {
 	return passwordpostgres.NewWithRegistration(pool, func(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, emailID accountdomain.AddressID, email string) error {
-		prepared, err := service.Prepare(email)
+		prepared, err := service.PrepareVerification(email)
 		if err != nil {
 			return err
 		}

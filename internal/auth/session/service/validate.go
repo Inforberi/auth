@@ -3,11 +3,21 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 )
 
-func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (*ValidateSession, error) {
+type ValidationResult struct {
+	SessionID string
+	UserID    accountdomain.UserID `json:"userId"`
+	TokenHash string
+	ExpiresAt time.Time `json:"expiresAt"`
+	Extended  bool
+}
+
+func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (*ValidationResult, error) {
 	hashToken := s.token.Hash(rawToken)
 
 	session, err := s.repo.FindSession(ctx, hashToken)
@@ -37,7 +47,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (
 			return nil, fmt.Errorf("UpdateSession: %w", err)
 		}
 
-		return &ValidateSession{
+		return &ValidationResult{
 			SessionID: session.ID,
 			UserID:    session.UserID,
 			TokenHash: hashToken,
@@ -46,7 +56,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (
 		}, nil
 	}
 
-	return &ValidateSession{
+	return &ValidationResult{
 		SessionID: session.ID,
 		UserID:    session.UserID,
 		TokenHash: hashToken,

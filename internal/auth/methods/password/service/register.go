@@ -3,9 +3,17 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 )
+
+type RegisterResult struct {
+	UserID    accountdomain.UserID
+	Token     string
+	ExpiresAt time.Time
+}
 
 func (r *PasswordService) Register(
 	ctx context.Context,

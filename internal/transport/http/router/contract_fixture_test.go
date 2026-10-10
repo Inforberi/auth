@@ -93,11 +93,11 @@ func (contractPasswords) ChangePassword(context.Context, accountdomain.UserID, s
 
 type contractSessions struct{}
 
-func (contractSessions) ValidateSession(_ context.Context, token string) (*sessionservice.ValidateSession, error) {
+func (contractSessions) ValidateSession(_ context.Context, token string) (*sessionservice.ValidationResult, error) {
 	if token != "valid" {
 		return nil, sessiondomain.ErrSessionNotFound
 	}
-	return &sessionservice.ValidateSession{UserID: "user-1", TokenHash: "hash", SessionID: currentSessionID}, nil
+	return &sessionservice.ValidationResult{UserID: "user-1", TokenHash: "hash", SessionID: currentSessionID}, nil
 }
 
 const currentSessionID = "11111111-1111-4111-8111-111111111111"

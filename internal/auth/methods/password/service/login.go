@@ -4,10 +4,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 )
+
+type LoginInput struct {
+	Email     string
+	Password  string
+	UserAgent string
+	IP        string
+}
+
+type LoginResult struct {
+	UserID    accountdomain.UserID
+	Token     string
+	ExpiresAt time.Time
+}
 
 func (l *PasswordService) Login(ctx context.Context, input LoginInput) (*LoginResult, error) {
 	email, err := parseCredentials(input.Email, input.Password)

@@ -20,12 +20,12 @@ type sessionStub struct {
 	calls int
 }
 
-func (s *sessionStub) ValidateSession(context.Context, string) (*service.ValidateSession, error) {
+func (s *sessionStub) ValidateSession(context.Context, string) (*service.ValidationResult, error) {
 	s.calls++
 	if s.err != nil {
 		return nil, s.err
 	}
-	return &service.ValidateSession{UserID: "user", TokenHash: "hash", Extended: true, ExpiresAt: time.Now().Add(time.Hour)}, nil
+	return &service.ValidationResult{UserID: "user", TokenHash: "hash", Extended: true, ExpiresAt: time.Now().Add(time.Hour)}, nil
 }
 
 func TestAuthContract(t *testing.T) {

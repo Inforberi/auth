@@ -37,7 +37,7 @@ func (f recoveryFault) Reset(context.Context, string, string, string, string) er
 
 type sessionFault struct{ err error }
 
-func (f sessionFault) ValidateSession(context.Context, string) (*sessionservice.ValidateSession, error) {
+func (f sessionFault) ValidateSession(context.Context, string) (*sessionservice.ValidationResult, error) {
 	return nil, f.err
 }
 

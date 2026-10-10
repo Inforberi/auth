@@ -63,7 +63,7 @@ func (m *Middleware) authenticate(next http.Handler, clearInvalid bool) http.Han
 }
 
 type SessionService interface {
-	ValidateSession(ctx context.Context, rawToken string) (*sessionservice.ValidateSession, error)
+	ValidateSession(ctx context.Context, rawToken string) (*sessionservice.ValidationResult, error)
 }
 
 type Middleware struct {

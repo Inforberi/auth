@@ -29,7 +29,7 @@ func checkVerification(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	svc := accountservice.New(repo, verificationLimits{}, cipher, mail, accountservice.Config{URL: "https://example.com/verify", TTL: 30 * time.Minute, ResendInterval: time.Minute})
 	var last domain.Verification
 	prepare := func(ctx context.Context, tx pgx.Tx, user domain.UserID, id domain.AddressID, email string) error {
-		prepared, err := svc.Prepare(email)
+		prepared, err := svc.PrepareVerification(email)
 		if err != nil {
 			return err
 		}
