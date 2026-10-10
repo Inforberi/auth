@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"golang.org/x/crypto/argon2"
+
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 )
 
 type Argon2idHash struct {
@@ -21,7 +23,7 @@ type Argon2idHash struct {
 
 var (
 	ErrInvalidHashFormat = errors.New("invalid password hash format")
-	ErrPasswordMismatch  = errors.New("password mismatch")
+	ErrPasswordMismatch  = domain.ErrPasswordHashMismatch
 )
 
 func NewArgon2idHash(time, saltLen, memory uint32, threads uint8, keyLen uint32) *Argon2idHash {

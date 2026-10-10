@@ -59,9 +59,10 @@ func (r *Repository) RequestEmailChange(ctx context.Context, snapshot domain.Ema
 		}
 		var id string
 		if err := tx.QueryRow(ctx, `INSERT INTO auth.email_changes(user_id,email_id,old_email,new_email,auth_version,session_hash,
-			confirm_digest,report_digest,completion_payload,expires_at,protect_until)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`, snapshot.UserID, snapshot.EmailID, snapshot.Email, email,
-			version, session, intent.ConfirmDigest, intent.ReportDigest, intent.CompletionPayload, intent.ExpiresAt, intent.ProtectUntil).Scan(&id); err != nil {
+			confirm_digest,report_digest,completion_payload,expires_at,protect_until,recovery_digest,recovery_payload,recovery_ttl_seconds)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`, snapshot.UserID, snapshot.EmailID, snapshot.Email, email,
+			version, session, intent.ConfirmDigest, intent.ReportDigest, intent.CompletionPayload, intent.ExpiresAt, intent.ProtectUntil,
+			intent.RecoveryDigest, intent.RecoveryPayload, int(intent.RecoveryTTL.Seconds())).Scan(&id); err != nil {
 			return err
 		}
 		if err := queueChangeMail(ctx, tx, id, "confirm", intent.ConfirmPayload, intent.ExpiresAt); err != nil {

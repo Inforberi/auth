@@ -48,7 +48,22 @@ func (r *Repository) ReportEmailChange(ctx context.Context, digest string) error
 			if _, err := tx.Exec(ctx, `UPDATE auth.email_changes SET state='reported' WHERE user_id=$1 AND state='completed'`, user); err != nil {
 				return err
 			}
+			if err := issueProtectedRecovery(ctx, tx, user, id); err != nil {
+				return err
+			}
 		}
 		return auditEmailChange(ctx, tx, user, id, event)
 	})
+}
+
+func issueProtectedRecovery(ctx context.Context, tx pgx.Tx, user domain.UserID, id string) error {
+	// Pre-upgrade intents can still protect the account, but have no recovery authority.
+	_, err := tx.Exec(ctx, `WITH issued AS (
+		UPDATE auth.email_changes c SET recovery_version=u.auth_version,
+			recovery_expires_at=clock_timestamp()+make_interval(secs=>c.recovery_ttl_seconds)
+		FROM auth.users u WHERE c.id=$1 AND c.user_id=u.id AND u.id=$2 AND c.recovery_digest IS NOT NULL
+		RETURNING c.id,c.recovery_payload,c.recovery_expires_at
+	) INSERT INTO auth.email_change_outbox(change_id,kind,payload,expires_at)
+		SELECT id,'recovery',recovery_payload,recovery_expires_at FROM issued`, id, user)
+	return err
 }

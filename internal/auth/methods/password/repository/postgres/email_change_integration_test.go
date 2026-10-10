@@ -38,7 +38,7 @@ func newChangeFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, name 
 		t.Fatal(err)
 	}
 	hash := tokengenerate.New()
-	f.intent = accountdomain.EmailChangeIntent{ConfirmDigest: hash.Hash("confirm-" + name), ReportDigest: hash.Hash("report-" + name), ConfirmPayload: make([]byte, 32), NoticePayload: make([]byte, 32), CompletionPayload: make([]byte, 32), ExpiresAt: time.Now().Add(30 * time.Minute), ProtectUntil: time.Now().Add(24 * time.Hour)}
+	f.intent = accountdomain.EmailChangeIntent{ConfirmDigest: hash.Hash("confirm-" + name), ReportDigest: hash.Hash("report-" + name), ConfirmPayload: make([]byte, 32), NoticePayload: make([]byte, 32), CompletionPayload: make([]byte, 32), RecoveryDigest: hash.Hash("recover-" + name), RecoveryPayload: make([]byte, 32), RecoveryTTL: 30 * time.Minute, ExpiresAt: time.Now().Add(30 * time.Minute), ProtectUntil: time.Now().Add(24 * time.Hour)}
 	return f
 }
 

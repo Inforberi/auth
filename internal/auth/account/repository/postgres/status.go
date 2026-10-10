@@ -28,6 +28,9 @@ func (r *Repository) ChangeStatus(ctx context.Context, change domain.StatusChang
 		if version != change.ExpectedVersion {
 			return domain.ErrAccountConflict
 		}
+		if err := cancelProtectedRecovery(ctx, tx, change.UserID); err != nil {
+			return err
+		}
 		if status == change.Status {
 			return nil
 		}

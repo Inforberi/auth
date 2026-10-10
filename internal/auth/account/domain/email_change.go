@@ -6,9 +6,10 @@ import (
 )
 
 var (
-	ErrInvalidEmailChange = errors.New("invalid email change")
-	ErrEmailChangePending = errors.New("email change already pending")
-	ErrFreshAuthRequired  = errors.New("fresh authentication required")
+	ErrInvalidEmailChange     = errors.New("invalid email change")
+	ErrEmailChangePending     = errors.New("email change already pending")
+	ErrFreshAuthRequired      = errors.New("fresh authentication required")
+	ErrInvalidAccountRecovery = errors.New("invalid account recovery")
 )
 
 type EmailChangeSnapshot struct {
@@ -25,6 +26,9 @@ type EmailChangeIntent struct {
 	ConfirmPayload    []byte
 	NoticePayload     []byte
 	CompletionPayload []byte
+	RecoveryDigest    string
+	RecoveryPayload   []byte
+	RecoveryTTL       time.Duration
 	ExpiresAt         time.Time
 	ProtectUntil      time.Time
 }

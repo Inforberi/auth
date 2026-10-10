@@ -11,12 +11,13 @@ type HashSalt struct {
 }
 
 var (
-	ErrPasswordTooShort = errors.New("password too short")
-	ErrPasswordTooLong  = errors.New("password too long")
-	ErrPasswordNoLetter = errors.New("password must contain at least one letter")
-	ErrPasswordNoDigit  = errors.New("password must contain at least one digit")
-	ErrPasswordNoUpper  = errors.New("password must contain at least one upper letter")
-	ErrHashFormat       = errors.New("invalid password hash format")
+	ErrPasswordTooShort     = errors.New("password too short")
+	ErrPasswordTooLong      = errors.New("password too long")
+	ErrPasswordNoLetter     = errors.New("password must contain at least one letter")
+	ErrPasswordNoDigit      = errors.New("password must contain at least one digit")
+	ErrPasswordNoUpper      = errors.New("password must contain at least one upper letter")
+	ErrHashFormat           = errors.New("invalid password hash format")
+	ErrPasswordHashMismatch = errors.New("password mismatch")
 )
 
 func ValidatePassword(password string) error {

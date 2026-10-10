@@ -48,8 +48,20 @@ func (s *EmailChangeService) prepareChange(oldEmail, newEmail string) (domain.Em
 	if err != nil {
 		return domain.EmailChangeIntent{}, err
 	}
+	recovery, err := changeToken()
+	if err != nil {
+		return domain.EmailChangeIntent{}, err
+	}
+	recoveryLink, err := changeLink(s.cfg.RecoveryURL, recovery)
+	if err != nil {
+		return domain.EmailChangeIntent{}, err
+	}
+	recoveryPayload, err := seal(oldEmail, "Восстановление защищённого аккаунта", `<p>Задайте новый пароль и верните прежний адрес входа: <a href="`+html.EscapeString(recoveryLink)+`">восстановить доступ</a>. Ссылка работает только после защитной блокировки и не выполняет вход автоматически.</p>`)
+	if err != nil {
+		return domain.EmailChangeIntent{}, err
+	}
 	now := time.Now().UTC()
-	return domain.EmailChangeIntent{ConfirmDigest: tokenDigest(confirm), ReportDigest: tokenDigest(report), ConfirmPayload: confirmPayload, NoticePayload: notice, CompletionPayload: completion, ExpiresAt: now.Add(s.cfg.TTL), ProtectUntil: now.Add(s.cfg.ProtectionTTL)}, nil
+	return domain.EmailChangeIntent{ConfirmDigest: tokenDigest(confirm), ReportDigest: tokenDigest(report), ConfirmPayload: confirmPayload, NoticePayload: notice, CompletionPayload: completion, RecoveryDigest: tokenDigest(recovery), RecoveryPayload: recoveryPayload, RecoveryTTL: s.cfg.RecoveryTTL, ExpiresAt: now.Add(s.cfg.TTL), ProtectUntil: now.Add(s.cfg.ProtectionTTL)}, nil
 }
 
 func changeToken() (string, error) {

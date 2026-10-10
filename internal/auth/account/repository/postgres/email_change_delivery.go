@@ -17,7 +17,7 @@ func (r *Repository) claimChangeDelivery(ctx context.Context) (*domain.Verificat
 	}
 	// Expired intents retain their audit, but encrypted completion payloads have a bounded lifetime.
 	if _, err := r.db.Exec(ctx, `DELETE FROM auth.email_changes WHERE id IN (
-		SELECT id FROM auth.email_changes WHERE protect_until<=clock_timestamp() ORDER BY protect_until LIMIT 100)`); err != nil {
+		SELECT id FROM auth.email_changes WHERE GREATEST(protect_until,recovery_expires_at)<=clock_timestamp() ORDER BY protect_until LIMIT 100)`); err != nil {
 		return nil, err
 	}
 	var job domain.VerificationDelivery
@@ -27,6 +27,9 @@ func (r *Repository) claimChangeDelivery(ctx context.Context) (*domain.Verificat
 		WHERE o.available_at<=clock_timestamp() AND o.expires_at>clock_timestamp() AND o.attempts<5
 		AND (o.lease_until IS NULL OR o.lease_until<=clock_timestamp())
 		AND (o.kind<>'confirm' OR (c.state='pending' AND c.expires_at>clock_timestamp()))
+		AND (o.kind<>'recovery' OR (c.state='reported' AND c.recovery_expires_at>clock_timestamp()
+			AND EXISTS(SELECT 1 FROM auth.users u WHERE u.id=c.user_id AND u.status='blocked'
+			AND u.deleted_at IS NULL AND u.auth_version=c.recovery_version)))
 		ORDER BY o.available_at FOR UPDATE OF o SKIP LOCKED LIMIT 1
 	) UPDATE auth.email_change_outbox o SET attempts=attempts+1,lease=gen_random_uuid(),
 		lease_until=clock_timestamp()+interval '30 seconds' FROM due WHERE o.id=due.id
