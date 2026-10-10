@@ -7,10 +7,6 @@ import (
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 )
 
-func (s *SessionService) CreateSession(ctx context.Context, userID accountdomain.UserID, userAgent, ip string) (*CreatedSession, error) {
-	return s.CreateSessionAtVersion(ctx, userID, userAgent, ip, 0)
-}
-
 func (s *SessionService) CreateSessionAtVersion(ctx context.Context, userID accountdomain.UserID, userAgent, ip string, version int64) (*CreatedSession, error) {
 	rawToken, err := s.token.GenerateToken()
 	if err != nil {

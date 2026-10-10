@@ -23,3 +23,9 @@ type CreateSessionParams struct {
 	UserAgent         string
 	IPAddress         string
 }
+
+// CreatedSession is the result of issuance; RawToken is never stored in the ledger.
+type CreatedSession struct {
+	RawToken  string
+	ExpiresAt time.Time
+}

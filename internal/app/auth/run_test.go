@@ -6,6 +6,9 @@ import (
 	stdlog "log"
 	"reflect"
 	"testing"
+	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
@@ -52,5 +55,59 @@ func TestNewReleasesResourcesOnStartupFailure(t *testing.T) {
 	}
 	if stdlog.Writer() != writer || stdlog.Flags() != flags || stdlog.Prefix() != prefix {
 		t.Fatal("failed startup did not restore the standard logger")
+	}
+}
+
+type testDeliveryWorker struct {
+	started chan struct{}
+	stopped chan struct{}
+}
+
+func (w *testDeliveryWorker) RunDelivery(ctx context.Context, _ func(error)) {
+	close(w.started)
+	<-ctx.Done()
+	close(w.stopped)
+}
+
+func TestDeliveryStopsBeforeResourcesClose(t *testing.T) {
+	for _, fail := range []bool{false, true} {
+		t.Run(map[bool]string{false: "shutdown", true: "serve failure"}[fail], func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+			defer cancel()
+			workers := []*testDeliveryWorker{
+				{started: make(chan struct{}), stopped: make(chan struct{})},
+				{started: make(chan struct{}), stopped: make(chan struct{})},
+			}
+			owned := &resources{}
+			owned.add(func() {
+				for _, worker := range workers {
+					select {
+					case <-worker.stopped:
+					default:
+						t.Error("resource closed before delivery stopped")
+					}
+				}
+			})
+			failure := errors.New("serve failure")
+			app := &App{resources: owned, serve: func(ctx context.Context) error {
+				return runWithDelivery(ctx, zap.NewNop(), func(ctx context.Context) error {
+					for _, worker := range workers {
+						select {
+						case <-worker.started:
+						case <-ctx.Done():
+							return ctx.Err()
+						}
+					}
+					if fail {
+						return failure
+					}
+					return nil
+				}, workers[0], workers[1])
+			}}
+			err := app.Run(ctx)
+			if fail && !errors.Is(err, failure) || !fail && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
 	}
 }

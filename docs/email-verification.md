@@ -1,6 +1,6 @@
 # Подтверждение email
 
-Реализация 5.1, 9 октября 2026. Владелец — `internal/auth/account`; registration composition — `internal/app/auth/account.go`. Password repository остаётся владельцем текущей регистрационной транзакции, callback связывает account adapter на том же `pgx.Tx`. Бизнес-сервисы не получают транзакцию или concrete repository.
+Реализация 5.1, 9 октября 2026. Владелец — `internal/auth/account`; registration composition — `internal/app/auth/app.go`. Password repository остаётся владельцем текущей регистрационной транзакции, callback связывает account adapter на том же `pgx.Tx`. Бизнес-сервисы не получают транзакцию или concrete repository.
 
 ## Сценарий
 

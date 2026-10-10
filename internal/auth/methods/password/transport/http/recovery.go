@@ -3,7 +3,6 @@ package http
 import (
 	"context"
 	"errors"
-	"net"
 	"net/http"
 
 	"go.uber.org/zap"
@@ -60,7 +59,7 @@ func (h *RecoveryHandler) Forgot(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 400, "invalid_json", "invalid JSON")
 		return
 	}
-	if err := h.service.Forgot(r.Context(), input.Email, recoveryIP(r)); err != nil {
+	if err := h.service.Forgot(r.Context(), input.Email, httpx.IP(r)); err != nil {
 		h.respondError(w, err)
 		return
 	}
@@ -89,24 +88,12 @@ func (h *RecoveryHandler) Reset(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 400, "invalid_reset", "invalid reset")
 		return
 	}
-	if err := h.service.Reset(r.Context(), input.Token, input.NewPassword, input.ConfirmPassword, recoveryIP(r)); err != nil {
+	if err := h.service.Reset(r.Context(), input.Token, input.NewPassword, input.ConfirmPassword, httpx.IP(r)); err != nil {
 		h.respondError(w, err)
 		return
 	}
 	sessionhttp.ClearSessionCookie(w)
 	httpx.JSON(w, 200, RecoveryResponse{Status: "ok"})
-}
-
-func recoveryIP(r *http.Request) string {
-	peer, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return peer
-}
-
-func passwordPolicyError(err error) bool {
-	return errors.Is(err, domain.ErrPasswordTooShort) || errors.Is(err, domain.ErrPasswordTooLong) || errors.Is(err, domain.ErrPasswordNoLetter) || errors.Is(err, domain.ErrPasswordNoDigit) || errors.Is(err, domain.ErrPasswordNoUpper)
 }
 
 func (h *RecoveryHandler) respondError(w http.ResponseWriter, err error) {

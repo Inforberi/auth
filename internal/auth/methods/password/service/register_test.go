@@ -28,7 +28,7 @@ func TestRegister_CreateSessionError(t *testing.T) {
 	repo.On("ExistsByEmail", context.Background(), email).Return(false, nil)
 	hasher.On("GenerateHash", []byte(password)).Return(hash, nil)
 	repo.On("CreateUser", context.Background(), email, hash).Return(user, nil)
-	session.On("CreateSession", context.Background(), user, "mobile", "12345").Return(nil, createSessionErr)
+	session.On("CreateSessionAtVersion", context.Background(), user, "mobile", "12345", int64(1)).Return(nil, createSessionErr)
 
 	svc := newTestService(repo, session, hasher)
 
@@ -79,7 +79,7 @@ func TestRegister_CreateUserError(t *testing.T) {
 
 	repo.AssertExpectations(t)
 	hasher.AssertExpectations(t)
-	session.AssertNotCalled(t, "CreateSession", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	session.AssertNotCalled(t, "CreateSessionAtVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestRegister_EmailPasswordErrors(t *testing.T) {
@@ -114,7 +114,7 @@ func TestRegister_EmailPasswordErrors(t *testing.T) {
 			repo.AssertNotCalled(t, "ExistsByEmail", mock.Anything, mock.Anything)
 			repo.AssertNotCalled(t, "CreateUser", mock.Anything, mock.Anything, mock.Anything)
 			hasher.AssertNotCalled(t, "GenerateHash", mock.Anything)
-			session.AssertNotCalled(t, "CreateSession", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+			session.AssertNotCalled(t, "CreateSessionAtVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 		})
 	}
 }
@@ -147,7 +147,7 @@ func TestRegister_ExistsByEmailError(t *testing.T) {
 		repo.AssertCalled(t, "ExistsByEmail", context.Background(), email)
 		repo.AssertNotCalled(t, "CreateUser", mock.Anything, mock.Anything)
 		hasher.AssertNotCalled(t, "GenerateHash", mock.Anything)
-		session.AssertNotCalled(t, "CreateSession", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+		session.AssertNotCalled(t, "CreateSessionAtVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	})
 
 	t.Run("repo error", func(t *testing.T) {
@@ -201,7 +201,7 @@ func TestRegister_GenerateHashError(t *testing.T) {
 	assert.Nil(t, registerResult)
 
 	repo.AssertExpectations(t)
-	session.AssertNotCalled(t, "CreateSession", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	session.AssertNotCalled(t, "CreateSessionAtVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	hasher.AssertExpectations(t)
 }
 
@@ -219,7 +219,7 @@ func TestRegister_Success(t *testing.T) {
 	repo.On("ExistsByEmail", context.Background(), email).Return(false, nil)
 	hasher.On("GenerateHash", []byte(password)).Return(hashPassword, nil)
 	repo.On("CreateUser", context.Background(), email, hashPassword).Return(user, nil)
-	session.On("CreateSession", context.Background(), user, "mobile", "12345").Return(&sessionservice.CreatedSession{
+	session.On("CreateSessionAtVersion", context.Background(), user, "mobile", "12345", int64(1)).Return(&sessionservice.CreatedSession{
 		RawToken:  rawToken,
 		ExpiresAt: now.Add(7 * 24 * time.Hour),
 	}, nil)

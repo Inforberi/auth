@@ -1,16 +1,9 @@
 package mailer
 
 import (
-	"bytes"
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
-	"mime"
-	"mime/quotedprintable"
 	"net/smtp"
-	"regexp"
 	"strings"
-	"time"
 )
 
 func (m *Mailer) Send(to, subject, htmlBody string) error {
@@ -45,84 +38,4 @@ func (m *Mailer) Send(to, subject, htmlBody string) error {
 		return fmt.Errorf("send email %w", err)
 	}
 	return nil
-}
-
-func buildMessage(from, to, subject, htmlBody, domain string) string {
-	boundary := "alt_" + randomHex(12)
-	messageID := newMessageID(domain)
-	plainBody := htmlToPlain(htmlBody)
-	encodedPlain := encodeQuotedPrintable(plainBody)
-	encodedHTML := encodeQuotedPrintable(htmlBody)
-
-	var sb strings.Builder
-	sb.WriteString("From: " + from + "\r\n")
-	sb.WriteString("To: " + to + "\r\n")
-	sb.WriteString("Subject: " + encodeSubject(subject) + "\r\n")
-	sb.WriteString("Date: " + time.Now().Format(time.RFC1123Z) + "\r\n")
-	sb.WriteString("Message-ID: " + messageID + "\r\n")
-	sb.WriteString("MIME-Version: 1.0\r\n")
-	sb.WriteString("Content-Type: multipart/alternative; boundary=\"" + boundary + "\"\r\n")
-	sb.WriteString("\r\n")
-
-	writePart := func(contentType, encodedBody string) {
-		sb.WriteString("--" + boundary + "\r\n")
-		sb.WriteString("Content-Type: " + contentType + "\r\n")
-		sb.WriteString("Content-Transfer-Encoding: quoted-printable\r\n\r\n")
-		sb.WriteString(encodedBody + "\r\n")
-	}
-	writePart("text/html; charset=UTF-8", encodedHTML)
-	writePart("text/plain; charset=UTF-8", encodedPlain)
-	sb.WriteString("--" + boundary + "--\r\n")
-
-	return sb.String()
-}
-
-func htmlToPlain(html string) string {
-	blockTags := regexp.MustCompile(`(?i)</?(div|p|h[1-6]|ul|ol|li|br)[^>]*>`)
-	allTags := regexp.MustCompile(`<[^>]+>`)
-
-	html = blockTags.ReplaceAllString(html, "\n")
-	plain := allTags.ReplaceAllString(html, "")
-
-	lines := strings.Split(plain, "\n")
-
-	for i, line := range lines {
-		lines[i] = strings.TrimSpace(line)
-	}
-	plain = strings.Join(lines, "\n")
-
-	return strings.TrimSpace(plain)
-}
-
-func randomHex(n int) string {
-	b := make([]byte, n)
-
-	rand.Read(b)
-
-	return hex.EncodeToString(b)
-}
-
-func encodeQuotedPrintable(text string) string {
-	var buf bytes.Buffer
-	w := quotedprintable.NewWriter(&buf)
-	if _, err := w.Write([]byte(text)); err != nil {
-		return ""
-	}
-	if err := w.Close(); err != nil {
-		return ""
-	}
-
-	return buf.String()
-}
-
-func encodeSubject(subject string) string {
-	if subject == "" {
-		return subject
-	}
-	return mime.QEncoding.Encode("utf-8", subject)
-}
-
-func newMessageID(domain string) string {
-	random := randomHex(16)
-	return fmt.Sprintf("<%s@%s>", random, domain)
 }

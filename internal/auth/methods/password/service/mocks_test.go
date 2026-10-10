@@ -15,8 +15,8 @@ func newTestService(repo *mockPasswordRepo, session *mockSession, hash *mockHash
 	return New(repo, session, hash)
 }
 
-func (m *mockPasswordRepo) ChangePassword(ctx context.Context, id accountdomain.UserID, _, _, hash string) error {
-	return m.UpdatePasswordHash(ctx, id, hash)
+func (m *mockPasswordRepo) ChangePassword(ctx context.Context, id accountdomain.UserID, session, expectedHash, newHash string) error {
+	return m.Called(ctx, id, session, expectedHash, newHash).Error(0)
 }
 
 type mockPasswordRepo struct {
@@ -55,11 +55,6 @@ func (m *mockPasswordRepo) FindUserByUserID(ctx context.Context, userID accountd
 	return args.Get(0).(*passworddomain.Credential), args.Error(1)
 }
 
-func (m *mockPasswordRepo) UpdatePasswordHash(ctx context.Context, userID accountdomain.UserID, passwordHash string) error {
-	args := m.Called(ctx, userID, passwordHash)
-	return args.Error(0)
-}
-
 type mockHasher struct {
 	mock.Mock
 }
@@ -81,29 +76,8 @@ type mockSession struct {
 	mock.Mock
 }
 
-func (m *mockSession) CreateSessionAtVersion(ctx context.Context, id accountdomain.UserID, agent, ip string, _ int64) (*sessionservice.CreatedSession, error) {
-	return m.CreateSession(ctx, id, agent, ip)
-}
-
-func (m *mockSession) CreateSession(
-	ctx context.Context,
-	userID accountdomain.UserID,
-	userAgent string,
-	ip string,
-) (*sessionservice.CreatedSession, error) {
-	args := m.Called(
-		ctx,
-		userID,
-		userAgent,
-		ip,
-	)
-
-	session, _ := args.Get(0).(*sessionservice.CreatedSession)
-
-	return session, args.Error(1)
-}
-
-func (m *mockSession) LogoutAllExcept(ctx context.Context, tokenHash string, userID accountdomain.UserID) error {
-	args := m.Called(ctx, tokenHash, userID)
-	return args.Error(0)
+func (m *mockSession) CreateSessionAtVersion(ctx context.Context, id accountdomain.UserID, agent, ip string, version int64) (*sessionservice.CreatedSession, error) {
+	args := m.Called(ctx, id, agent, ip, version)
+	result, _ := args.Get(0).(*sessionservice.CreatedSession)
+	return result, args.Error(1)
 }

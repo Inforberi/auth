@@ -125,6 +125,7 @@ Auth — переиспользуемый Go-шаблон, который мож
 
 - 5.1. Реализовано и локально проверено 9 октября: email verification, ограничение sensitive routes, confirm/resend, encrypted outbox/audit/worker и fail-closed limits. Внешний SMTP и browser HTTPS staging smoke остаются приёмкой перед release; [детали](email-verification.md).
 - 5.2. Реализовано и локально проверено 9 октября: forgot/reset, encrypted outbox/worker, version-bound одноразовый SQL challenge, atomic password update/auth_version/revoke/audit. SQL ledger — необходимая часть 6.2/6.3, не закрытие всего этапа 6. Внешний SMTP/browser staging остаётся приёмкой; [детали](password-recovery.md).
+- 5.2r. Выполнен и проверен 9 октября: рефакторинг читаемости после 5.2, до новой функциональности 5.3. Дерево папок и app/auth из app.go/account.go/run.go сохранены; смешение обязанностей и лишняя дробность уменьшены. Детализация ниже и в [пошаговой реализации](auth-implementation.md#52r-рефакторинг-читаемости--выполнен-9-октября).
 - 5.3. HTTP logout/logout-all/me, cookie cleanup, список/отзыв собственных сессий.
 - 5.4. Blocked/deleted users: запрет нового входа и прекращение существующего доступа.
 - 5.5. Смена email: подтверждение нового адреса и свежая аутентификация, уведомление старого адреса, отсутствие возможности перехватить чужой credential. Смена контакта и login identity — явно разные операции.
@@ -134,7 +135,21 @@ Auth — переиспользуемый Go-шаблон, который мож
 
 Готово: positive/negative tests и staging smoke с реальной почтой; generic recovery replies не скрывают технические ошибки от безопасных logs/metrics.
 
+### 5.2r. Рефакторинг читаемости — выполнен 9 октября
+
+Согласовано 9 октября 2026. Это уборка существующей реализации, не новая архитектура или оптимизация гарантий авторизации. Папки/пакетные границы сохраняются; существующие config.go/ports.go/domain models не объединяются автоматически только потому, что короткие. Ориентир 150 строк сохраняется без жёсткого gate. Число файлов не обязано увеличиваться.
+
+1. Проверить references и убрать реально неиспользуемое: SessionID, старый session creation wrapper с version=0 и отдельный UpdatePasswordHash, используемый тестами. Перевести tests на реальные version-bound create и atomic change/reset; не удалять рабочие операции или ослаблять проверку доступа.
+2. Объединить искусственно разнесённое: session/service/created.go с results.go; session/transport/http constructor/type из middleware.go с действием Auth из auth.go. Session domain errors оформить с правильным названием вместо вводящего в заблуждение token.go. Не создавать файлы по одному helper/type ради симметрии.
+3. Разделить только разные обязанности: middleware account HTTP отдельно от verification handlers, DTO рядом с endpoint; Forgot и Reset в файлах соответствующих сценариев; password repo constructor в repository.go, credential reads в credentials.go, mutation рядом с change/reset. Общую passwordPolicyError перенести в существующий HTTP errors.go. SMTP transport отделить от MIME message building. SQL security transaction оставить последовательной и целостной, не дробить каждую команду на helper.
+4. В существующих app.go/account.go/run.go упростить New до именованных шагов в тех же файлах. Account assembly возвращает только account dependencies; связывание account+password registration явно в app.go, общий запуск/остановка delivery workers в run.go. Сохранить partial startup cleanup, shutdown order и завершение workers до DB/Redis close. Не вводить infrastructure.go/session.go/password.go/delivery.go, bootstrap, wiring или DI framework только ради этого refactor.
+5. Исправить mocks: CreateSessionAtVersion проверяет auth_version; ChangePassword проверяет current session, expected hash и new hash, а не перенаправляется на старый UpdatePasswordHash. Использовать существующий httpx.IP вместо дубликатов peerIP/recoveryIP; policy не доверяет forwarded headers. Упростить receiver names и форматирование плотного SQL без изменения запросов/locks/expiry.
+6. Redis сохраняется, роли хранилищ по ADR 002 не меняются. Неподключённый старый Redis session adapter оценить отдельно по usages/назначению: не возвращать как fallback, не объявлять новой реализацией кеша и не удалять автоматически только потому, что основной путь SQL. Оставленное legacy явно отделить в документации от действующего пути.
+7. Проверить сохранение поведения: formatter + task check, целевые lifecycle/contract tests. Swagger generation/drift только при затрагивании annotations/DTO; disposable SQL fixture при изменении транзакционной реализации. Не менять API/status/JSON, schema, env, dependencies, security policy или рабочие данные. Если обнаружен behavioral defect, зафиксировать отдельной задачей, не маскировать fix под refactor. Обновить карту файлов и результаты; затем 5.3. Load/оптимизация — отдельный 6.8, cache-only extension — 6.9.
+
 ### Этап 6. Безопасность текущего входа и сессий
+
+Согласовано 9 октября 2026: **PostgreSQL + Redis сохраняются**. Базовый профиль — строгий SQL отзыв, без принятия сессии по устаревшему кешу. Redis обслуживает распределённые limits и кеширование с явно допустимой устарелостью; не считается заменой enforcement. Предложенные 5 секунд задержки отзыва не утверждены. Оптимизировать измеренные узкие места, не добавлять cache-only validation заранее. Политика — [ADR 002](adr/002-sessions-and-transactions.md).
 
 - 6.1. Absolute deadline, boundary expiry, cookie refresh и ротация после чувствительных действий.
 - 6.2. По ADR 002 PostgreSQL session ledger/verifier, актуальный user status/auth version на каждом защищённом запросе, atomic refresh/revoke и чувствительная запись с повторной проверкой в SQL transaction. Validate/logout и create/logout-all races не воскрешают session; Redis cache/indexes не являются authority.
@@ -143,6 +158,8 @@ Auth — переиспользуемый Go-шаблон, который мож
 - 6.5. CSRF/origin, fresh authentication, secure cookies/dev HTTPS, SMTP timeouts/TLS, secret redaction.
 - 6.6. Registration UNIQUE race и user-created/session-store-failed scenario; стабильные domain errors и повторный вход.
 - 6.7. Парольная политика и rehash: разрешить password managers/paste, достаточную длину, проверку скомпрометированных паролей, отсутствие произвольной периодической смены. Изменение Argon2-параметров поддерживает старые hashes и безопасное обновление после успешного входа.
+- 6.8. Приёмка производительности базового профиля: согласовать active sessions/RPS/login-reset rates/P95-P99/resource budget; измерить несколько API instances, SQL session validation/refresh, Argon2 и Redis limits. По результатам настроить bounded pools/concurrency/deadlines, refresh frequency, кеш некритичных чтений и защиту от cache stampede. Проверить overload, SQL/Redis timeout и восстановление без возврата revoked доступа; не заявлять поддержку произвольной нагрузки.
+- 6.9. Опциональное расширение, не release gate базового профиля: только если 6.8 подтверждает необходимость, предложить новый ADR для cached session validation. До реализации согласовать максимальную задержку revocation, неподлежащее продлению время SQL proof, race/failover/restore и bounded fallback/invalidation retry. Чувствительные записи сохраняют SQL enforcement. По умолчанию выключено; 5 секунд и любые новые env/settings не добавлять без согласования.
 
 В 5.2 исправлен error mapping политики нового пароля: change/reset возвращают 400 `password_policy`, HTTP/Swagger проверены. SQL/Redis failures не маскируются под validation. Из 6.1 выполнены expiry/absolute deadline, из 6.2 — SQL authority/status/version/conditional refresh, из 6.3 — atomic reset/change с durable revoke/audit. Rotation, CSRF/fresh-auth, общий lifecycle/block и полный fault/load acceptance остаются.
 
@@ -151,6 +168,8 @@ Auth — переиспользуемый Go-шаблон, который мож
 CSRF охватывает login, linking и все изменяющие cookie-auth запросы; SameSite не заменяет проверку. CORS использует точный список origins и не допускает wildcard с credentials. Security headers и redirect policy проверяются вместе с реальными email/OIDC/browser flows. Rate limits применяются к account/IP/challenge и стоимости операции, с явным режимом при сбое Redis; proxy headers не дают обходить лимиты.
 
 Готово: concurrency/integration tests с настоящим Redis/PostgreSQL, fault scenarios и HTTP/E2E. Защиты применяются и при добавлении всех последующих methods. Этапы 5/6 делятся по указанным подэтапам, не одним diff.
+
+Переиспользование: отдельный deployment на каждый проект, малые интерфейсы и repositories внутри фич; app только связывает реализации. Роли/methods/payments независимы. JWT, микросервисы и универсальный plugin framework не обязательны. Единый SSO для нескольких проектов — отдельно по 7.3, не скрытая multi-tenancy текущего шаблона.
 
 ### Этап 7. Общая модель способов входа и граница SSO
 
@@ -332,7 +351,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 ## 6. Текущий статус
 
-Этапы 0, 1 и 4 завершены. 5.1 реализован и локально проверен: email verification, encrypted delivery и unverified gate. Provenance — [template-adoption](template-adoption.md); команды и границы проверок — в результатах ниже. Следующий шаг — 5.2, forgot/reset с SQL durable invalidation по 6.2/6.3. Внешняя почта/browser staging ещё не проверены; baseline P0 и auth/RBAC/MFA/billing release gates остаются впереди, шаблон не готов к production release.
+Этапы 0, 1 и 4 завершены. 5.1/5.2 реализованы и локально проверены: verification/recovery и необходимая часть SQL session security. 5.2r выполнен без изменения дерева папок и поведения; следующий шаг — 5.3. Provenance — [template-adoption](template-adoption.md); команды и границы проверок — в результатах ниже. Внешняя почта/browser staging ещё не проверены; baseline P0 и auth/RBAC/MFA/billing release gates остаются впереди, шаблон не готов к production release.
 
 Проверка этого шага: `docker build -f deploy/Dockerfile.dev -t auth:devcheck .`; `AUTH_TEST_IMAGE=auth:devcheck AUTH_TEST_APP_ENV=dev AUTH_SMOKE_ONLY=true task check-integration` — exit 0. Проверены dev startup, migration up, runtime DB connection, PostgreSQL/Redis readiness, liveness, Swagger disabled (404), локальная SMTP отправка в Mailpit. Disposable project `auth-check-1791315226-3825` и его volumes удалены runner; существующая БД не затронута. Это не полный integration/backup drill или external SMTP delivery. На этапе 0 изменения были документационными; tests/lint/security scan и GitHub CI тогда повторно не запускались. Проверка local Markdown links и `git diff --check` прошла. Release checks этапа 14 сохраняются.
 
@@ -343,7 +362,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 2. Инфраструктура | Выполнено в 1.2 | Durable audit sink — отдельно по ADR; здесь только контракт |
 | 3. Toolchain/окружение/deps | Адаптировано в 1.3 | Dev startup/SMTP smoke после CGO fix подтверждён 06.10.2026 |
 | 4. Структура/схема/API | Завершён | Дерево, SQL schema и API contract checks; security enforcement впереди |
-| 5. Account lifecycle | 5.1/5.2 локально реализованы/проверены | Verification/recovery готовы; далее 5.3, staging smoke и остальной lifecycle впереди |
+| 5. Account lifecycle | 5.1/5.2 локально реализованы/проверены | 5.2r выполнен; далее 5.3, staging smoke и остальной lifecycle |
 | 6. Безопасность сессий | Частично выполнен в 5.2 | SQL ledger/status/version, expiry, atomic reset/change; CSRF/fresh-auth/rotation и полная приёмка впереди |
 | 7. Identities / SSO boundary | Не начат | После 0, 4, 6; общий SSO optional |
 | 8. Telegram/OIDC/OTP | Не начат | После 5–7; Mini Apps optional |
@@ -354,7 +373,13 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 13. MFA/cabinet | Не начат | 13.1 после 6 и до публикации admin API; остальное по API готовности |
 | 14. Release/переносимость | Не начат | После обязательных модулей и checklist; документация ведётся по ходу |
 
-Текущий порядок: 0, 1.1–1.8 и 4 завершены → 5/6 → 7/8 → 9/10 → 11/12 → 14. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется сразу после 6 до включения любых production admin действий. После 1.8 все следующие этапы используют только рабочий Auth и его документацию.
+Текущий порядок: 0, 1.1–1.8, 4, 5.1/5.2 и 5.2r завершены → 5.3 и остальное 5/6 → 7/8 → 9/10 → 11/12 → 14. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется сразу после 6 до включения любых production admin действий. После 1.8 все следующие этапы используют только рабочий Auth и его документацию.
+
+### Результат 5.2r — 9 октября 2026
+
+Папки и три app/auth файла сохранены. Resources/worker lifecycle — run.go; account assembly больше не возвращает password repository, registration composition явно в app.go. Объединены session created/results и HTTP middleware/auth; domain token.go заменён errors.go без неиспользуемого SessionID. Forgot/reset разделены, account HTTP middleware выделен, общая password policy mapping в errors.go; constructor/transaction helper password repo отделены от credential reads, mutation остаётся в сценариях. SMTP/MIME разделены. Старые version=0 create и test-only UpdatePasswordHash удалены, mocks проверяют auth_version/session/expected/new hash. Старый Redis session adapter оставлен неподключённым и описан как legacy, не fallback.
+
+Проверено: task go:fmt, task check (tests + lint, 0 issues), task check:api (три Swagger-артефакта совпали), TestPostgresSchema на отдельном PostgreSQL 18.6 (up/down/up, recovery/verification/repository/constraints/concurrent registration), git diff --check. Добавлена проверка завершения delivery workers до cleanup при shutdown/serve failure. API, SQL semantics/schema, env/dependencies и рабочая БД не менялись; полный Docker/backup/Redis fault/browser/load drill не повторялся. Созданная disposable БД удалена с тестовыми данными, рабочие данные не трогали. Далее 5.3, load optimization отдельно по 6.8.
 
 ### Результат 5.2 — 9 октября 2026
 

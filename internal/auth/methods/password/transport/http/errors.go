@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -77,4 +78,8 @@ func (h *PasswordHandler) respondError(
 	}
 
 	httpx.Error(w, mapped.Status, mapped.Code, mapped.Message)
+}
+
+func passwordPolicyError(err error) bool {
+	return errors.Is(err, domain.ErrPasswordTooShort) || errors.Is(err, domain.ErrPasswordTooLong) || errors.Is(err, domain.ErrPasswordNoLetter) || errors.Is(err, domain.ErrPasswordNoDigit) || errors.Is(err, domain.ErrPasswordNoUpper)
 }

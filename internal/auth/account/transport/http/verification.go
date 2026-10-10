@@ -3,13 +3,11 @@ package http
 import (
 	"context"
 	"errors"
-	"net"
 	"net/http"
 
 	"go.uber.org/zap"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -62,7 +60,7 @@ func (h *Handler) Resend(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 400, "invalid_email", "invalid email")
 		return
 	}
-	if err := h.service.Resend(r.Context(), input.Email, peerIP(r)); err != nil {
+	if err := h.service.Resend(r.Context(), input.Email, httpx.IP(r)); err != nil {
 		h.respondError(w, err)
 		return
 	}
@@ -91,20 +89,12 @@ func (h *Handler) Confirm(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 400, "invalid_verification", "invalid verification")
 		return
 	}
-	if err := h.service.Confirm(r.Context(), input.Token, peerIP(r)); err != nil {
+	if err := h.service.Confirm(r.Context(), input.Token, httpx.IP(r)); err != nil {
 		h.respondError(w, err)
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	httpx.JSON(w, 200, VerificationResponse{Status: "ok"})
-}
-
-func peerIP(r *http.Request) string {
-	peer, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return peer
 }
 
 func (h *Handler) respondError(w http.ResponseWriter, err error) {
@@ -118,34 +108,4 @@ func (h *Handler) respondError(w http.ResponseWriter, err error) {
 		h.log.Warn("email verification dependency failed")
 		httpx.Error(w, 503, "temporarily_unavailable", "temporarily unavailable")
 	}
-}
-
-func (h *Handler) RequireVerified(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth, ok := sessionhttp.GetAuthContext(r.Context())
-		if !ok {
-			httpx.Error(w, 401, "unauthorized", "unauthorized")
-			return
-		}
-		err := h.service.RequireVerified(r.Context(), auth.UserID)
-		if errors.Is(err, domain.ErrEmailUnverified) {
-			httpx.Error(w, 403, "email_not_verified", "email not verified")
-			return
-		}
-		if err != nil {
-			h.respondError(w, err)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (h *Handler) LimitRegistration(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := h.service.AllowRegistration(r.Context(), peerIP(r)); err != nil {
-			h.respondError(w, err)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
 }

@@ -1,10 +1,14 @@
 package http
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
+	"go.uber.org/zap"
+
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
+	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -47,4 +51,20 @@ func (m *Middleware) Auth(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+type SessionService interface {
+	ValidateSession(ctx context.Context, rawToken string) (*sessionservice.ValidateSession, error)
+}
+
+type Middleware struct {
+	session SessionService
+	log     *zap.Logger
+}
+
+func New(session SessionService, log *zap.Logger) *Middleware {
+	return &Middleware{
+		session: session,
+		log:     log,
+	}
 }

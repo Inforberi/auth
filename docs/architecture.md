@@ -178,8 +178,8 @@ internal/auth/methods/password/
       credentials_test.go
     redis/
       repository.go
-      reset_tokens.go
-      reset_tokens_test.go
+      limits.go
+      limits_test.go
   transport/http/
     handler.go
     register.go
@@ -219,10 +219,13 @@ Repository локален фиче; таблица не равна фиче. О�
 | Verification scenarios/config/encrypted delivery | `internal/auth/account/service` |
 | Verification/audit/outbox SQL, Redis limits | `internal/auth/account/repository` |
 | Verify/resend JSON API, verified-email gate | `internal/auth/account/transport/http` |
-| Registration transaction composition / worker startup | `internal/app/auth/account.go` |
+| Account assembly | `internal/app/auth/account.go` |
+| Registration transaction composition | `internal/app/auth/app.go` |
+| Resource lifecycle / delivery workers | `internal/app/auth/run.go` |
 | AES-GCM payload / HMAC keys, bounded SMTP | `internal/infra/secretbox`, `internal/infra/mailer` |
 | Password rules / credential | `internal/auth/methods/password/domain` |
 | Password scenarios / ports / config / results | `internal/auth/methods/password/service` |
+| Repository constructor / transaction helper | `internal/auth/methods/password/repository/postgres/repository.go` |
 | Credential SQL / atomic registration, reset/change, outbox/audit | `internal/auth/methods/password/repository/postgres` |
 | Recovery Redis limits | `internal/auth/methods/password/repository/redis` |
 | Password JSON API | `internal/auth/methods/password/transport/http` |
@@ -240,6 +243,12 @@ Tests находятся рядом с кодом; register/login/change-passwor
 В structural refactor сохранён текущий `passwordRepo.CreateUser`: account/contact/profile/credential создаются одной SQL-транзакцией. Метод и интерфейс явно помечены как legacy cross-feature write; SQL и поведение не менялись. Разделение на независимые commit запрещено.
 
 При lifecycle реализации account отвечает за пользователя/контакт/профиль, password — credential, session — SQL ledger. Service сценария получает transaction-aware port с узкими операциями этих владельцев; composition root связывает PostgreSQL adapters на одном pool и одном tx. Общий tx не передаётся как pgx.Tx в бизнес-сервис и не хранится неявно в context. Конкретный контракт вводится под операцию, без универсального CRUD или framework. Повышение auth_version, отзыв и security audit/outbox входят в ту же SQL-транзакцию; сетевые отправки — после commit через outbox. Повторная/конкурентная обработка проверяется в этапах 5/6. В 5.2 SQL ledger и atomic reset/change с auth_version/revoke/audit реализованы; Redis session adapter больше не подключён в app и не является fallback. Общие audit/lifecycle policies и полная security-приёмка остаются впереди.
+
+### Legacy session adapter
+
+`internal/auth/session/repository/redis` сохранён как прежняя, неподключённая реализация: imports из app/действующих фич отсутствуют. Он не проверяет актуальную SQL auth_version, а refresh использует безусловную запись; это не действующий authority, не безопасный fallback и не реализация optional cache-профиля 6.9. Redis клиента/limits не удаляли. Повторное использование адаптера требует отдельного проектирования по ADR 002.
+
+После 5.2r результат создания сессии находится в service/results.go, HTTP session middleware — в transport/http/auth.go, session domain errors — в domain/errors.go. Password repo constructor и transaction helper — в repository/postgres/repository.go; общий revoke helper используется change/reset в той же транзакции. MIME building — infra/mailer/message.go; отправка сохраняет прежнее поведение.
 
 ### Историческая карта переноса 4.0 (до согласования 4.5)
 
@@ -280,6 +289,10 @@ HTML reset-письма разделён на header/content, которые с�
 
 PostgreSQL хранит пользователей/status/auth version, identities, session ledger, одноразовые challenges, назначения прав, каталоги/grants, billing state, audit и inbox/outbox. Изменение credentials/status, инвалидация и запись security audit выполняются одной SQL-транзакцией. Redis — ограничители нагрузки и ускорение, но не единственное доказательство действительности сессии/прав/оплаты. Детали отказов — [ADR 002](adr/002-sessions-and-transactions.md).
 
+Согласовано 9 октября: от Redis не отказываемся. В базовом профиле session/status/version enforcement остаётся SQL с немедленным отзывом для проверок после commit. Redis кеширует только данные с явно допустимой устарелостью и обслуживает распределённые limits. Взаимодействие хранилищ находится в session feature, app только собирает зависимости. Cached session validation — optional extension после измерений 6.8 и нового ADR 6.9; задержка 5 секунд не согласована и не является default.
+
+Производительность подтверждается измеримым load profile, несколькими API instances, bounded pools/hash concurrency/deadlines, контролируемым refresh и защитой от stampede. Failover/restore не возвращает revoked access; отказы кеша не превращаются в безлимитный SQL fallback. Шаблон не требует JWT, микросервисов или plugin framework; методы входа, роли и оплата остаются независимыми. Общий multi-project SSO — отдельное расширение, не следствие повторного использования кода.
+
 UUID пользователя неизменен; email, username и provider display name не являются идентификатором владельца. Identity определяется проверенным issuer/subject с областью выбранного адаптера. В базовом профиле scope одного приложения задаётся сервером; client app/user/owner ID не расширяет доступ. Цена и владелец покупки фиксируются сервером.
 
 ## Независимые настройки
@@ -301,6 +314,6 @@ UI также позволит вводить/заменять SMTP/provider sec
 
 Приняты [ADR 001](adr/001-deployment-and-reuse.md), [ADR 002](adr/002-sessions-and-transactions.md), [ADR 003](adr/003-access-and-optional-billing.md). [Модель угроз](threat-model.md) задаёт негативные acceptance tests.
 
-Этап 4 выполнен; 5.1 реализован и локально проверен, внешний email/browser staging впереди. Текущие ограничения — [API-контракт](api-contract.md) и [verification](email-verification.md). Следующий шаг — 5.2 с SQL durable invalidation по 6.2/6.3. Далее 5/6, MFA 13.1 сразу после 6 до административных действий; 7–10, 11 и опционально 12, release 14. Session ledger/enforcement и межфичевые security-транзакции завершаются в 5/6.
+Этап 4 выполнен; 5.1/5.2 реализованы и локально проверены, внешний email/browser staging впереди. Текущие ограничения — [API-контракт](api-contract.md), [verification](email-verification.md) и [recovery](password-recovery.md). 5.2r выполнен: дерево папок сохранено, app/auth остаётся app.go/account.go/run.go; account assembly, регистрационная связь и worker lifecycle разделены в этих файлах. Forgot/reset, HTTP middleware и SMTP/MIME разделены по ответственности; мелкие session files объединены, устаревшие методы и mock forwarding убраны. Следующий шаг — 5.3. Далее 5/6, MFA 13.1 сразу после 6 до административных действий; 7–10, 11 и опционально 12, release 14. Полная session security, нагрузочная приёмка 6.8 и межфичевые security-транзакции завершаются в 5/6; 6.9 optional.
 
 До 12.1 пользователь выбирает merchant profile: страна/юридический статус продавца, валюты, товары, разовая/recurring оплата, refund/cancel требования. Затем выбирается и проверяется один hosted-checkout provider; конкретный поставщик сейчас не объявлен поддержанным. Native/SSO/organizations/Telegram commerce требуют отдельного подтверждения scope перед своими подэтапами.

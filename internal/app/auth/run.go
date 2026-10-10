@@ -2,7 +2,17 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"sync"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+
+	"github.com/Inforberi/financial-intelligence/internal/config"
+	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
+	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
+	redisclient "github.com/Inforberi/financial-intelligence/internal/infra/redis"
 )
 
 type App struct {
@@ -36,4 +46,58 @@ func (r *resources) close() {
 			r.closers[i]()
 		}
 	})
+}
+
+func (r *resources) open(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, *redis.Client, *zap.Logger, error) {
+	log := logger.CreateLogger(cfg.Logger)
+	r.add(func() {
+		if err := log.Sync(); err != nil {
+			return // stdout/stderr may not support fsync; no buffered logger remains.
+		}
+	})
+	r.add(zap.RedirectStdLog(log))
+
+	pool, err := postgres.New(ctx, cfg.Postgres)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("create postgres pool: %w", err)
+	}
+	r.add(pool.Close)
+	log.Info("postgres pool created successfully")
+
+	rdb, err := redisclient.New(ctx, cfg.Redis)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("init redis: %w", err)
+	}
+	r.add(func() {
+		if err := rdb.Close(); err != nil {
+			log.Error("failed to close Redis")
+		}
+	})
+	log.Info("redis created successfully")
+
+	return pool, rdb, log, nil
+}
+
+func startDelivery(ctx context.Context, service interface {
+	RunDelivery(context.Context, func(error))
+}, log *zap.Logger,
+) func() {
+	workerCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		service.RunDelivery(workerCtx, func(error) { log.Warn("email delivery processing failed") })
+	}()
+	return func() { cancel(); <-done }
+}
+
+func runWithDelivery(ctx context.Context, log *zap.Logger, serve func(context.Context) error, workers ...interface {
+	RunDelivery(context.Context, func(error))
+},
+) error {
+	for _, worker := range workers {
+		stop := startDelivery(ctx, worker, log)
+		defer stop()
+	}
+	return serve(ctx)
 }

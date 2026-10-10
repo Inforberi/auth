@@ -26,6 +26,7 @@ func TestCreateSession_Success(t *testing.T) {
 		Return("HashedToken", nil)
 
 	expected := CreateSessionParams{
+		AuthVersion:       3,
 		AbsoluteExpiresAt: now.Add(cfg.AbsoluteSessionTTL),
 		UserID:            "user-1",
 		CreatedAt:         now,
@@ -49,11 +50,12 @@ func TestCreateSession_Success(t *testing.T) {
 
 	svc := New(clock, repo, token, cfg)
 
-	session, err := svc.CreateSession(
+	session, err := svc.CreateSessionAtVersion(
 		context.Background(),
 		"user-1",
 		userAgent,
 		ip,
+		int64(3),
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, session)
@@ -83,11 +85,12 @@ func TestCreateSession_TokenError(t *testing.T) {
 
 	svc := New(clock, repo, token, cfg)
 
-	session, err := svc.CreateSession(
+	session, err := svc.CreateSessionAtVersion(
 		context.Background(),
 		"user-1",
 		"mobile",
 		"12345",
+		int64(3),
 	)
 
 	assert.Error(t, err)
@@ -131,11 +134,12 @@ func TestCreateSession_CreateSessionError(t *testing.T) {
 
 	svc := New(clock, repo, token, cfg)
 
-	session, err := svc.CreateSession(
+	session, err := svc.CreateSessionAtVersion(
 		context.Background(),
 		"user-1",
 		"mobile",
 		"12345",
+		int64(3),
 	)
 
 	assert.Error(t, err)

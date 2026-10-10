@@ -29,6 +29,7 @@ func TestLogin_CreateSessionError(t *testing.T) {
 		"test@mail.ru",
 	).Return(
 		&passworddomain.Credential{
+			AuthVersion:  7,
 			UserID:       user,
 			PasswordHash: "hashed",
 		},
@@ -42,11 +43,12 @@ func TestLogin_CreateSessionError(t *testing.T) {
 	).Return(nil)
 
 	session.On(
-		"CreateSession",
+		"CreateSessionAtVersion",
 		context.Background(),
 		user,
 		"mobile",
 		"127.0.0.1",
+		int64(7),
 	).Return(nil, createErr)
 
 	svc := newTestService(repo, session, hasher)
@@ -113,7 +115,8 @@ func TestLogin_FindByEmailError(t *testing.T) {
 
 	session.AssertNotCalled(
 		t,
-		"CreateSession",
+		"CreateSessionAtVersion",
+		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -176,7 +179,8 @@ func TestLogin_InvalidEmail(t *testing.T) {
 
 			session.AssertNotCalled(
 				t,
-				"CreateSession",
+				"CreateSessionAtVersion",
+				mock.Anything,
 				mock.Anything,
 				mock.Anything,
 				mock.Anything,
@@ -199,6 +203,7 @@ func TestLogin_InvalidPassword(t *testing.T) {
 		"test@mail.ru",
 	).Return(
 		&passworddomain.Credential{
+			AuthVersion:  7,
 			UserID:       user,
 			PasswordHash: "hashed",
 		},
@@ -236,7 +241,8 @@ func TestLogin_InvalidPassword(t *testing.T) {
 
 	session.AssertNotCalled(
 		t,
-		"CreateSession",
+		"CreateSessionAtVersion",
+		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -266,6 +272,7 @@ func TestLogin_Success(t *testing.T) {
 		input.Email,
 	).Return(
 		&passworddomain.Credential{
+			AuthVersion:  7,
 			UserID:       user,
 			PasswordHash: "hashed-password",
 		},
@@ -279,11 +286,12 @@ func TestLogin_Success(t *testing.T) {
 	).Return(nil)
 
 	session.On(
-		"CreateSession",
+		"CreateSessionAtVersion",
 		context.Background(),
 		user,
 		input.UserAgent,
 		input.IP,
+		int64(7),
 	).Return(
 		&sessionservice.CreatedSession{
 			RawToken:  "raw-token",
@@ -360,7 +368,8 @@ func TestLogin_UserNotFound(t *testing.T) {
 
 	session.AssertNotCalled(
 		t,
-		"CreateSession",
+		"CreateSessionAtVersion",
+		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,

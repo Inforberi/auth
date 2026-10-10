@@ -4,10 +4,16 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
+	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
+	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/redis"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
@@ -16,10 +22,7 @@ import (
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
-	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
-	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
-	redisclient "github.com/Inforberi/financial-intelligence/internal/infra/redis"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 	httpserver "github.com/Inforberi/financial-intelligence/internal/server/http"
@@ -34,39 +37,19 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 			resources.close()
 		}
 	}()
-	log := logger.CreateLogger(cfg.Logger)
-	resources.add(func() {
-		if err := log.Sync(); err != nil {
-			return // stdout/stderr may not support fsync; no buffered logger remains.
-		}
-	})
-	resources.add(zap.RedirectStdLog(log))
-
-	pool, err := postgres.New(ctx, cfg.Postgres)
+	pool, rdb, log, err := resources.open(ctx, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("create postgres pool: %w", err)
+		return nil, err
 	}
-	resources.add(pool.Close)
-	log.Info("postgres pool created successfully")
-
-	rdb, err := redisclient.New(ctx, cfg.Redis)
-	if err != nil {
-		return nil, fmt.Errorf("init redis: %w", err)
-	}
-	resources.add(func() {
-		if err := rdb.Close(); err != nil {
-			log.Error("failed to close Redis")
-		}
-	})
-	log.Info("redis created successfully")
 
 	now := clock.UTCClock{}
 	tokenGen := tokengenerate.New()
 	mail := mailer.New(cfg.MailSender)
-	accountSvc, passwordRepo, err := assembleAccount(pool, rdb, mail, cfg.Account)
+	accountSvc, accountRepo, err := assembleAccount(pool, rdb, mail, cfg.Account)
 	if err != nil {
 		return nil, fmt.Errorf("assemble account: %w", err)
 	}
+	passwordRepo := assembleRegistration(pool, accountSvc, accountRepo)
 	argonHash := hasher.NewArgon2idHash(1, 32, 64*1024, 32, 256)
 	sessionSvc := sessionservice.New(now, sessionpostgres.New(pool), tokenGen, cfg.Session)
 	passwordSvc := passwordservice.New(passwordRepo, sessionSvc, argonHash)
@@ -101,11 +84,19 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	return &App{
 		resources: resources,
 		serve: func(ctx context.Context) error {
-			stopRecovery := startDelivery(ctx, recoverySvc, log)
-			defer stopRecovery()
-			stop := startDelivery(ctx, accountSvc, log)
-			defer stop()
-			return httpserver.Run(ctx, log, cfg.Server, handler)
+			return runWithDelivery(ctx, log, func(ctx context.Context) error {
+				return httpserver.Run(ctx, log, cfg.Server, handler)
+			}, recoverySvc, accountSvc)
 		},
 	}, nil
+}
+
+func assembleRegistration(pool *pgxpool.Pool, service *accountservice.Service, repo *accountpostgres.Repository) *passwordpostgres.PasswordRepo {
+	return passwordpostgres.NewWithRegistration(pool, func(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, emailID accountdomain.AddressID, email string) error {
+		prepared, err := service.Prepare(email)
+		if err != nil {
+			return err
+		}
+		return repo.QueueInTransaction(ctx, tx, user, emailID, prepared)
+	})
 }

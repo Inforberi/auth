@@ -33,8 +33,7 @@ func TestChangePasswordCompareError(t *testing.T) {
 	hasher.AssertExpectations(t)
 	hasher.AssertNotCalled(t, "GenerateHash", mock.Anything)
 
-	repo.AssertNotCalled(t, "UpdatePasswordHash", mock.Anything, mock.Anything, mock.Anything)
-	session.AssertNotCalled(t, "LogoutAllExcept", mock.Anything, mock.Anything, mock.Anything)
+	repo.AssertNotCalled(t, "ChangePassword", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestChangePassword_FindUserError(t *testing.T) {
@@ -69,12 +68,10 @@ func TestChangePassword_FindUserError(t *testing.T) {
 			assert.ErrorIs(t, err, tt.err)
 
 			repo.AssertCalled(t, "FindUserByUserID", mock.Anything, mock.Anything)
-			repo.AssertNotCalled(t, "UpdatePasswordHash", mock.Anything, mock.Anything, mock.Anything)
+			repo.AssertNotCalled(t, "ChangePassword", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 
 			hasher.AssertNotCalled(t, "Compare", mock.Anything, mock.Anything)
 			hasher.AssertNotCalled(t, "GenerateHash", mock.Anything)
-
-			session.AssertNotCalled(t, "LogoutAllExcept", mock.Anything, mock.Anything, mock.Anything)
 		})
 	}
 }
@@ -101,8 +98,7 @@ func TestChangePassword_GenerateHashError(t *testing.T) {
 
 	repo.AssertExpectations(t)
 	hasher.AssertExpectations(t)
-	repo.AssertNotCalled(t, "UpdatePasswordHash", mock.Anything, mock.Anything, mock.Anything)
-	session.AssertNotCalled(t, "LogoutAllExcept", mock.Anything, mock.Anything, mock.Anything)
+	repo.AssertNotCalled(t, "ChangePassword", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestChangePassword_SamePasswordError(t *testing.T) {
@@ -127,8 +123,7 @@ func TestChangePassword_SamePasswordError(t *testing.T) {
 	repo.AssertExpectations(t)
 	hasher.AssertExpectations(t)
 	hasher.AssertNotCalled(t, "GenerateHash", mock.Anything)
-	repo.AssertNotCalled(t, "UpdatePasswordHash", mock.Anything, mock.Anything, mock.Anything)
-	session.AssertNotCalled(t, "LogoutAllExcept", mock.Anything, mock.Anything, mock.Anything)
+	repo.AssertNotCalled(t, "ChangePassword", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestChangePassword_Success(t *testing.T) {
@@ -143,7 +138,7 @@ func TestChangePassword_Success(t *testing.T) {
 	hasher.On("Compare", oldPassword, oldPasswordHash).Return(nil)
 	hasher.On("GenerateHash", []byte(newPassword)).Return(newPasswordHash, nil)
 
-	repo.On("UpdatePasswordHash", context.Background(), userID, newPasswordHash).Return(nil)
+	repo.On("ChangePassword", context.Background(), userID, currentTokenHash, oldPasswordHash, newPasswordHash).Return(nil)
 
 	svc := newTestService(repo, session, hasher)
 
@@ -178,7 +173,7 @@ func TestChangePassword_UpdatePasswordError(t *testing.T) {
 	hasher.On("Compare", oldPassword, oldPasswordHash).Return(nil)
 	hasher.On("GenerateHash", []byte(newPassword)).Return(newPasswordHash, nil)
 
-	repo.On("UpdatePasswordHash", context.Background(), userID, newPasswordHash).Return(updatePasswordErr)
+	repo.On("ChangePassword", context.Background(), userID, currentTokenHash, oldPasswordHash, newPasswordHash).Return(updatePasswordErr)
 
 	svc := newTestService(repo, session, hasher)
 
@@ -188,7 +183,6 @@ func TestChangePassword_UpdatePasswordError(t *testing.T) {
 
 	repo.AssertExpectations(t)
 	hasher.AssertExpectations(t)
-	session.AssertNotCalled(t, "LogoutAllExcept", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestChangePassword_ValidateError(t *testing.T) {
@@ -213,6 +207,5 @@ func TestChangePassword_ValidateError(t *testing.T) {
 	repo.AssertExpectations(t)
 	hasher.AssertExpectations(t)
 	hasher.AssertNotCalled(t, "GenerateHash", mock.Anything)
-	repo.AssertNotCalled(t, "UpdatePasswordHash", mock.Anything, mock.Anything, mock.Anything)
-	session.AssertNotCalled(t, "LogoutAllExcept", mock.Anything, mock.Anything, mock.Anything)
+	repo.AssertNotCalled(t, "ChangePassword", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
