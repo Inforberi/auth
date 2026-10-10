@@ -10,7 +10,7 @@
 
 Обычная проверка изменений Go: `task check` (tests + lint). Дополнительные race/integration/security/container/API checks — только по затронутому риску и перед release; весь набор не повторять после каждой мелкой правки. Если обязательная для конкретного изменения проверка недоступна или падает, записать результат и не заявлять её прохождение. Задачи ниже не разрешают prod deploy/restore ради проверки.
 
-Текущий порядок: 0, 1.1–1.8, 4, 5.1/5.2, 5.2r и 5.2h завершены → 5.3 и остальное 5/6 → 7/8 → 9/10 → 11/12 → 14. Детализация разделов 2–3 и перенос 4.2–4.3 выполнены внутри первого этапа. Этап 0 до зависимых решений; 13.1 после 6 до любых production admin endpoints. Docs и security audit ведутся на каждом шаге.
+Текущий порядок: 0, 1.1–1.8, 4, 5.1/5.2, 5.2r, 5.2h и 5.3 завершены → 5.4 и остальное 5/6 → 7/8 → 9/10 → 11/12 → 14. Детализация разделов 2–3 и перенос 4.2–4.3 выполнены внутри первого этапа. Этап 0 до зависимых решений; 13.1 после 6 до любых production admin endpoints. Docs и security audit ведутся на каждом шаге.
 
 ## 1. Адаптация go-template и удаление reference — первый этап
 
@@ -100,7 +100,7 @@
 - [x] 5.2. Реализовано и локально проверено 9 октября: forgot/reset API, одноразовый version-bound SQL challenge, encrypted outbox/worker, атомарные password update + auth_version + revoke всех сессий + audit. SQL ledger введён как необходимая часть 6.2/6.3. Concurrent consume/replay/expiry/audit rollback/stale issuance/refresh проверены на disposable PostgreSQL; Redis/SMTP failure mapping — unit tests. Внешний SMTP/browser staging и полный Redis fault E2E не выполнены. Детали — [recovery](password-recovery.md).
 - [x] 5.2r. Выполнен 9 октября: рефакторинг читаемости ниже; дерево папок, API и архитектурные гарантии сохранены.
 - [x] 5.2h. Выполнен 10 октября: HTTP-сценарии разделены, общий механизм ошибок подключён; результаты ниже. Далее 5.3.
-- [ ] 5.3. Session HTTP API: logout/logout-all/me/list/revoke-own и cookie cleanup. Проверить ownership/CSRF, current session и очистку индексов.
+- [x] 5.3. Реализовано и локально проверено 10 октября: me/logout/logout-all/list/revoke-own, public UUID/cookie cleanup, bounded keyset pagination, transaction caller/ownership/audit и Origin gate новых mutations. SQL concurrent revoke/logout-all vs issuance, audit rollback и HTTP/cookie/error contracts проверены. Ledger сохраняет revoked rows; retention отдельно, Redis indexes не вводились. Общий CSRF/CORS/browser staging остаётся 6.5/14. Подробности и запуск — [API](api-contract.md), [результат](auth-plan.md#результат-53--10-октября-2026).
 - [ ] 5.4. Enforce blocked/deleted users/auth version в session validation и login. Проверить existing sessions и racing requests; поведение зависимостей fail-closed по ADR.
 - [ ] 5.5. Confirmed email change с fresh auth, уведомлением старого адреса и unique ownership; проверить чужой email/link race.
 - [ ] 5.6. Account deletion/retention: revoke methods/sessions, согласовать subscription cancellation и сохранение платёжной истории; запретить takeover через переиспользование связанной identity.
@@ -257,7 +257,7 @@ Template не содержит identities/SSO/RBAC: эти задачи реал
 
 ## Учёт выполнения
 
-Текущий результат: этап 4 завершён; 5.1/5.2 реализованы и локально проверены, внешний staging smoke ещё не выполнен. 5.2r и 5.2h выполнены; следующий шаг — 5.3, session HTTP API. Согласованное дерево сохраняется, 150 строк — смысловой ориентир. SQL ledger/recovery/verification и Swagger generation проверены; этап 6 закрыт лишь частично. Рабочая БД и secrets не менялись; уже применённой 000001 нужен отдельно согласованный перенос. UI и сохраняемые настройки — только 14.4s–14.4u. Auth/security/billing release gates остаются впереди. Команды и границы проверок — в основном плане.
+Текущий результат: этап 4 завершён; 5.1/5.2/5.3 реализованы и локально проверены, внешний staging smoke ещё не выполнен. 5.2r и 5.2h выполнены; следующий шаг — 5.4, blocked/deleted account lifecycle. Согласованное дерево сохраняется, 150 строк — смысловой ориентир. SQL ledger/recovery/verification/session management и Swagger generation проверены; этап 6 закрыт лишь частично. Рабочая БД и secrets не менялись; уже применённой 000001 нужен отдельно согласованный перенос. Новая AUTH_ALLOWED_ORIGINS обязательна для startup. UI и сохраняемые настройки — только 14.4s–14.4u. Auth/security/billing release gates остаются впереди. Команды и границы проверок — в основном плане.
 
 При завершении подэтапа добавить в основной план: номер, изменённые файлы/commit при наличии, команды и результаты checks, schema/API change, ограничения и следующий шаг. Статусы «материалы собраны», «адаптировано», «локально проверено» и «проверено в staging» различаются. Этап 1.1–1.7 адаптирован; cleanup 1.8 выполнен; dev smoke после CGO fix подтверждён 6 октября 2026.
 

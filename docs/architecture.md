@@ -237,6 +237,9 @@ Register/login используют service/credentials.go для однокра
 | Session entity / errors | `internal/auth/session/domain` |
 | Session scenarios / ports / config / results | `internal/auth/session/service` |
 | Session SQL ledger / HTTP cookies/context/middleware | `internal/auth/session/repository/postgres`, `transport/http` |
+| Выдача/валидация сессии | `session/service/create.go`, `validate.go`; PostgreSQL `sessions.go` |
+| Список/отзыв собственных сессий | `session/service/management.go`, PostgreSQL `management.go`; HTTP `me.go`, `list.go`, `logout.go`, `logout_all.go`, `revoke.go` |
+| Проверка доверенного Origin | `internal/transport/http/middleware/origin.go`; конфигурация загружается в `internal/config` |
 | Security event / recording contract | `internal/audit/domain`, `service` |
 | Router, health, common HTTP helpers | `internal/transport/http` |
 | Общий mapper / запись ошибки / безопасное логирование | `internal/transport/http/httpx/errors.go` |

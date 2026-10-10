@@ -1,4 +1,4 @@
-# Схема Auth — этапы 4.1, 5.1 и 5.2
+# Схема Auth — этапы 4.1 и 5.1–5.3
 
 Источник: `migrations/000001_init.up.sql` и `.down.sql`. Один экземпляр Auth обслуживает один проект; внутренний UUID пользователя не зависит от метода входа.
 
@@ -13,7 +13,7 @@
 | `auth.email_verifications` | SHA-256 verifier, один challenge на контакт, expiry; purpose фиксирован таблицей, owner — FK. |
 | `auth.email_verification_outbox` | AES-GCM payload, expiry, due time, до 5 attempts, UUID lease; удаляется вместе с challenge. |
 | `auth.email_verification_audit` | Issuance/confirmation с user UUID, без email/token/payload. Общая audit policy впереди. |
-| `auth.sessions` | Digest token, owner, auth_version, idle/absolute expiry, revoked_at, device metadata; SQL authority. |
+| `auth.sessions` | Независимый публичный UUID `id`, digest token, owner, auth_version, idle/absolute expiry, revoked_at, device metadata; SQL authority. Индекс `(user_id,created_at DESC,id DESC)` для собственных сессий. |
 | `auth.password_resets` | Digest, один challenge на credential owner, auth_version, expiry; одноразовый consume. |
 | `auth.password_reset_outbox` | Encrypted payload, expiry, attempts, lease; каскадно удаляется с challenge. |
 | `auth.password_audit` | Reset issuance/reset/change/revoke events с user UUID, без token/password. |
@@ -43,3 +43,5 @@ Fixture допускает только localhost, пользователя/БД
 9 октября проверка повторена для 5.1: registration+outbox rollback, cooldown/replacement, expiry/replay, concurrent consume, audit failure rollback, blocked account, lease/stale completion, retry limit и ciphertext cleanup. Redis concurrent limiter проверен отдельно. Рабочая БД не затронута.
 
 9 октября проверка повторена для 5.2: reset cooldown/replacement/expiry/replay, ровно один concurrent consume, audit rollback, stale session issuance/refresh, атомарные reset/change с отзывом сессий и blocked account. Проверено на отдельном PostgreSQL 18.6; SQL delivery использует test double.
+
+5.3 добавляет публичный UUID, не связанный с token/hash. Отзыв оставляет ledger-запись с `revoked_at`: действующий список её не возвращает, физическая очистка/retention остаются отдельной задачей. Logout-all увеличивает `auth_version`; проверка caller, отзыв и audit атомарны. Расширена исходная 000001 для свежих экземпляров. Уже применённую схему нельзя исправить повторным `migrate up`: нужен отдельно согласованный перенос, не reset рабочей БД.

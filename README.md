@@ -28,6 +28,8 @@ Checks используют `.env.example`/`.env.prod.example`, не читаю�
 
 ## Конфигурация
 
+Session API требует `AUTH_ALLOWED_ORIGINS`: точные HTTPS origins через запятую, например `https://localhost:8443`, без завершающего `/`. Для logout/logout-all/revoke браузер отправляет `Origin`; CLI должен передать его явно вместе с cookie. `.env.example`/`.env.prod.example` обновлены; настоящие env и БД не изменялись. Контракт и ограничения — [API](docs/api-contract.md).
+
 Текущая схема и правила её применения — [schema](docs/schema.md). Исходная миграция изменена до production release; уже применённая `000001` автоматически не обновляется. Не сбрасывайте существующую БД: перенос её данных требует отдельной миграции.
 
 Полные примеры — `.env.example` и `.env.prod.example`; источник runtime validation — `internal/config/config.go` и `validation.go`. `APP_ENV=dev|test|prod`, `LOG_LEVEL` задаёт logger. `PORT`, `DATABASE_URL`, pool limits, `REDIS_HOST/PORT/PASSWORD` обязательны для startup. `SESSION_TTL`, **отдельный** `ABSOLUTE_SESSION_TTL` и `SESSION_REFRESH_THRESHOLD` должны быть согласованы. Reset URL берётся только из `PASSWORD_RESET_URL`, TTL — `PASSWORD_RESET_TOKEN_TTL`; forgot/reset API включён; письмо ведёт на frontend форму, которая отправляет POST reset.

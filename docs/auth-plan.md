@@ -129,7 +129,7 @@ Auth — переиспользуемый Go-шаблон, который мож
 - 5.2. Реализовано и локально проверено 9 октября: forgot/reset, encrypted outbox/worker, version-bound одноразовый SQL challenge, atomic password update/auth_version/revoke/audit. SQL ledger — необходимая часть 6.2/6.3, не закрытие всего этапа 6. Внешний SMTP/browser staging остаётся приёмкой; [детали](password-recovery.md).
 - 5.2r. Выполнен и проверен 9 октября: рефакторинг читаемости после 5.2, до новой функциональности 5.3. Дерево папок и app/auth из app.go/account.go/run.go сохранены; смешение обязанностей и лишняя дробность уменьшены. Детализация ниже и в [пошаговой реализации](auth-implementation.md#52r-рефакторинг-читаемости--выполнен-9-октября).
 - 5.2h. Выполнен и проверен 10 октября: независимые HTTP-сценарии разделены, общий механизм ошибок подключён с локальными правилами фич. Порядок и результаты — ниже и в [пошаговой реализации](auth-implementation.md#52h-http-сценарии-и-общий-механизм-ошибок--выполнен-10-октября).
-- 5.3. HTTP logout/logout-all/me, cookie cleanup, список/отзыв собственных сессий.
+- 5.3. Реализовано и локально проверено 10 октября: HTTP me/logout/logout-all/list/revoke-own, независимый публичный UUID, cookie cleanup, bounded keyset pagination и атомарный caller/ownership/revoke/audit. Новые mutations защищены exact Origin allowlist; общая CSRF/CORS policy остаётся 6.5. Результат и ограничения ниже.
 - 5.4. Blocked/deleted users: запрет нового входа и прекращение существующего доступа.
 - 5.5. Смена email: подтверждение нового адреса и свежая аутентификация, уведомление старого адреса, отсутствие возможности перехватить чужой credential. Смена контакта и login identity — явно разные операции.
 - 5.6. Удаление аккаунта и политика retention: отзыв сессий/методов, согласованное поведение активной подписки, минимизация PII при сохранении обязательной платёжной истории. Не освобождать identity для незаметного takeover старых привязок.
@@ -368,7 +368,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 ## 6. Текущий статус
 
-Этапы 0, 1 и 4 завершены. 5.1/5.2 реализованы и локально проверены: verification/recovery и необходимая часть SQL session security. 5.2r и 5.2h выполнены без изменения дерева папок и API; следующий шаг — 5.3. Provenance — [template-adoption](template-adoption.md); команды и границы проверок — в результатах ниже. Внешняя почта/browser staging ещё не проверены; baseline P0 и auth/RBAC/MFA/billing release gates остаются впереди, шаблон не готов к production release.
+Этапы 0, 1 и 4 завершены. 5.1/5.2/5.3 реализованы и локально проверены: verification/recovery/session HTTP API и необходимая часть SQL session security. 5.2r и 5.2h выполнены без изменения дерева папок и API; следующий шаг — 5.4. Provenance — [template-adoption](template-adoption.md); команды и границы проверок — в результатах ниже. Внешняя почта/browser staging ещё не проверены; baseline P0 и auth/RBAC/MFA/billing release gates остаются впереди, шаблон не готов к production release.
 
 Проверка этого шага: `docker build -f deploy/Dockerfile.dev -t auth:devcheck .`; `AUTH_TEST_IMAGE=auth:devcheck AUTH_TEST_APP_ENV=dev AUTH_SMOKE_ONLY=true task check-integration` — exit 0. Проверены dev startup, migration up, runtime DB connection, PostgreSQL/Redis readiness, liveness, Swagger disabled (404), локальная SMTP отправка в Mailpit. Disposable project `auth-check-1791315226-3825` и его volumes удалены runner; существующая БД не затронута. Это не полный integration/backup drill или external SMTP delivery. На этапе 0 изменения были документационными; tests/lint/security scan и GitHub CI тогда повторно не запускались. Проверка local Markdown links и `git diff --check` прошла. Release checks этапа 14 сохраняются.
 
@@ -379,8 +379,8 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 2. Инфраструктура | Выполнено в 1.2 | Durable audit sink — отдельно по ADR; здесь только контракт |
 | 3. Toolchain/окружение/deps | Адаптировано в 1.3 | Dev startup/SMTP smoke после CGO fix подтверждён 06.10.2026 |
 | 4. Структура/схема/API | Завершён | Дерево, SQL schema и API contract checks; security enforcement впереди |
-| 5. Account lifecycle | 5.1/5.2 локально реализованы/проверены | 5.2r/5.2h выполнены; далее 5.3, staging smoke и остальной lifecycle |
-| 6. Безопасность сессий | Частично выполнен в 5.2 | SQL ledger/status/version, expiry, atomic reset/change; CSRF/fresh-auth/rotation и полная приёмка впереди |
+| 5. Account lifecycle | 5.1/5.2/5.3 локально реализованы/проверены | 5.2r/5.2h выполнены; далее 5.4, staging smoke и остальной lifecycle |
+| 6. Безопасность сессий | Частично выполнен в 5.2/5.3 | SQL ledger/status/version, expiry, atomic reset/change/revoke; Origin для новых mutations; общий CSRF/CORS/fresh-auth/rotation и полная приёмка впереди |
 | 7. Identities / SSO boundary | Не начат | После 0, 4, 6; общий SSO optional |
 | 8. Telegram/OIDC/OTP | Не начат | После 5–7; Mini Apps optional |
 | 9. Policy/linking | Не начат | После 7–8; admin API зависит от 10 и 13.1 |
@@ -390,7 +390,19 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 13. MFA/cabinet | Не начат | 13.1 после 6 и до публикации admin API; остальное по API готовности |
 | 14. Release/переносимость | Не начат | После обязательных модулей и checklist; документация ведётся по ходу |
 
-Текущий порядок: 0, 1.1–1.8, 4, 5.1/5.2, 5.2r и 5.2h завершены → 5.3 и остальное 5/6 → 7/8 → 9/10 → 11/12 → 14. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется сразу после 6 до включения любых production admin действий. После 1.8 все следующие этапы используют только рабочий Auth и его документацию.
+Текущий порядок: 0, 1.1–1.8, 4, 5.1/5.2, 5.2r, 5.2h и 5.3 завершены → 5.4 и остальное 5/6 → 7/8 → 9/10 → 11/12 → 14. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется сразу после 6 до включения любых production admin действий. После 1.8 все следующие этапы используют только рабочий Auth и его документацию.
+
+### Результат 5.3 — 10 октября 2026
+
+Добавлены GET me/sessions, POST logout/logout-all, DELETE sessions/{id}. HTTP-сценарии раздельно с DTO/Swagger; общий Handler и локальные правила используют существующий mapper. `me` возвращает user/session IDs; профиль не добавлялся. Выдача/валидация и управление имеют малые отдельные service ports, один PostgreSQL adapter; сборка в существующем app.go. Старые неподключённые PostgreSQL/logout методы без caller-проверки заменены, лишние test doubles удалены. Redis/дерево/dependencies сохранены; референс не использовался.
+
+Публичный UUID не раскрывает credential. Активные собственные сессии читаются по 50, `(created_at,id)` DESC и owner-index, без OFFSET; cursor только собственный. Чужой/unknown/inactive target даёт одинаковый 404. SQL повторно проверяет caller/status/version/expiry под user row lock; revoke/audit и logout-all/version/revoke/audit атомарны. Caller после отзыва не может управлять сессиями; stale concurrent issuance не переживает logout-all. Revoked ledger сохраняется, не попадает в список; физическая очистка/retention отдельно. Redis session indexes не ведутся, cache-only fallback не вводился.
+
+Новая обязательная `AUTH_ALLOWED_ORIGINS`: список точных HTTPS origins, не из Host/forwarded headers. POST logout/logout-all и DELETE revoke отклоняют missing/null/foreign/multiple Origin до auth. Session API не требует verified email. Cookie очищается после успешного собственного logout/logout-all/current revoke, stale logout возвращает 401 с cleanup; dependency failure — 503 без ложного cleanup. Все новые ответы no-store. Защита остальных mutations, CORS и browser staging остаются 6.5/14: production release не заявляется.
+
+Проверено: `task go:fmt`, `task check` (tests + lint, 0 issues), `task swagger`, `task check:api` (три артефакта совпали), `TestPostgresSchema` на отдельном PostgreSQL 18.6 (up/down/up, ownership/cursor/isolation, concurrent revoke, current logout, logout-all vs issuance, stale/blocked caller, audit rollback), `git diff --check`. Context7 использован для сверки pgx/chi/cleanenv API; версии зависимостей не менялись. Browser HTTPS, load, external SMTP, общий Docker/backup/Redis drill и GitHub CI не выполнялись.
+
+Расширена исходная 000001: session UUID и owner pagination index. Рабочая БД, реальные env/secrets не менялись. Уже применённой БД нужен отдельно согласованный перенос, не reset; для запуска добавить `AUTH_ALLOWED_ORIGINS` в собственное окружение. Временный контейнер удалён после проверки вместе с исключительно тестовыми данными; fixture не сохранялась. Далее 5.4 — blocked/deleted account lifecycle.
 
 ### Результат 5.2r — 9 октября 2026
 

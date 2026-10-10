@@ -1,6 +1,6 @@
 # Текущий API-контракт
 
-Состояние на 9 октября 2026. Источник маршрутов — `internal/transport/http/router`; DTO и error mapping — transport каждой фичи. Спецификация — Swagger 2.0, не OpenAPI 3.
+Состояние на 10 октября 2026. Источник маршрутов — `internal/transport/http/router`; DTO и error mapping — transport каждой фичи. Спецификация — Swagger 2.0, не OpenAPI 3.
 
 | Метод и путь | Успех | Ошибки |
 | --- | --- | --- |
@@ -14,15 +14,26 @@
 | POST `/api/v1/auth/email/verify` | 200, `status: ok` | 400 input/invalid_verification, 429 limits, 503 dependency |
 | POST `/api/v1/auth/forgot-password` | 202, `status: accepted` | 400 input, 429 limits, 503 dependency |
 | POST `/api/v1/auth/reset-password` | 200, `status: ok`, очистка cookie, отзыв всех сессий | 400 input/invalid_reset/password_mismatch/password_policy, 429 limits, 503 dependency |
+| GET `/api/v1/auth/me` | 200, `userId`, `sessionId` | 401 unauthorized, 503 dependency |
+| GET `/api/v1/auth/sessions` | 200, `sessions`, optional `nextCursor` | 400 invalid_session_id, 401 unauthorized, 503 dependency |
+| POST `/api/v1/auth/logout` | 204, отзыв текущей сессии, очистка cookie | 401 unauthorized с очисткой stale cookie, 403 invalid_origin, 404 session_not_found при гонке expiry, 503 dependency |
+| POST `/api/v1/auth/logout-all` | 204, отзыв всех собственных сессий, очистка cookie | 401 unauthorized, 403 invalid_origin, 503 dependency |
+| DELETE `/api/v1/auth/sessions/{id}` | 204, отзыв собственной сессии; cookie очищается при отзыве текущей | 400 invalid_session_id, 401 unauthorized, 403 invalid_origin, 404 session_not_found, 503 dependency |
 | POST `/api/v1/dev/send-mail` | 200, `status` | Только dev; 400 input, 500 send_failed |
 
 Ошибка содержит `code` и `message`. Поле `Status` смены пароля сохранено с заглавной буквой для совместимости; это не желаемый новый стандарт. Изменение на `status` требует отдельного решения по контракту. Swagger теперь отражает текущий JSON, а не изменяет его.
 
-JSON endpoints требуют `Content-Type: application/json`, не более 1 MiB, один JSON value и отсутствие неизвестных полей. Ошибки декодирования возвращают 400 `invalid_json`. Required-поля описаны в DTO metadata и проверяются обработчиками; metadata не заменяет runtime validation.
+JSON endpoints с телом требуют `Content-Type: application/json`, не более 1 MiB, один JSON value и отсутствие неизвестных полей. Ошибки декодирования возвращают 400 `invalid_json`. Required-поля описаны в DTO metadata; предметные проверки выполняет service, metadata не заменяет runtime validation. Новые session endpoints не принимают JSON body.
 
 Email нормализуется trim/lower, до 255 байт, без display name и обёртки. Новый пароль — 8–128 байт, содержит букву, цифру и uppercase-букву. Это текущая политика, не рекомендация для всех продуктов. В Swagger длины не выражены через minLength/maxLength: байты UTF-8 не равны числу символов. При login новый-password policy повторно не применяется.
 
 ## Cookie и безопасность
+
+Session API 5.3 доступен и до подтверждения email. `me` возвращает только идентификаторы, не профиль. Список содержит до 50 активных сессий, `current`, даты, User-Agent/IP; сортировка по `(created_at,id)` DESC. `before=nextCursor` продолжает список без OFFSET. ID — самостоятельный lowercase UUID, не token/hash. Неверный/чужой cursor — 400; чужой/неизвестный/неактивный target для отзыва — одинаковый 404. Все ответы этих ручек, включая ошибки auth/Origin, имеют `Cache-Control: no-store`.
+
+Для POST logout/logout-all и DELETE session обязателен один точный HTTPS `Origin` из `AUTH_ALLOWED_ORIGINS` (через запятую, без пробелов и путей). Отсутствующий, `null`, чужой или повторный Origin — 403 до session lookup; Host/X-Forwarded-Host не задают доверие. Это защита от browser CSRF для новых mutations; не аутентификация для небраузерного клиента. CORS и другие state-changing auth endpoints пока не переведены на эту политику — общий этап 6.5 остаётся открытым. Cross-origin frontend потребует отдельного CORS/cookie профиля; базовый профиль — same-origin cookie/BFF.
+
+Управление сессиями повторно проверяет caller/status/version/expiry под user row lock в SQL-транзакции. Logout-all повышает `auth_version`, блокируя stale issuance; ошибка audit откатывает отзыв. 503 не очищает cookie как будто logout завершён. Logout при отсутствующем/просроченном/отозванном cookie возвращает 401 и очищает cookie; неизвестная зависимостная ошибка остаётся 503. SameSite не заменяет проверку Origin.
 
 Сессия передаётся через `__Host-session`: Secure, HttpOnly, Path=/, без Domain, SameSite=Lax, с Expires. Token отсутствует в JSON. Cookie требует HTTPS; браузерный dev-вход через обычный HTTP не считается проверенным рабочим профилем. Swagger 2.0 не поддерживает нативную cookie authentication scheme: не выдаём её за Bearer/API key, требование описано у операции. Swagger UI — отдельный интерфейс с Basic Auth при включении, не бизнес-API и не доказательство исправности cookie login.
 
