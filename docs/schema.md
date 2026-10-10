@@ -1,8 +1,10 @@
-# Схема Auth — этапы 4.1 и 5.1–5.4
+# Схема Auth — этапы 4.1 и 5.1–5.5c
 
 Источник: `migrations/000001_init.up.sql` и `.down.sql`. Один экземпляр Auth обслуживает один проект; внутренний UUID пользователя не зависит от метода входа.
 
 ## Владельцы данных
+
+5.5 добавляет `auth.email_changes` (user/contact/session/version binding, отдельные confirm/report digests, state/expiry/protection window, encrypted completion payload), `auth.email_change_outbox` (mail intents/lease/retries) и `auth.email_change_audit` (user/change UUID/event без email/raw token). Один pending intent на пользователя; старый подтверждённый контакт сохраняется при переводе password credential на новый. Audit переживает expiry cleanup intent; restrict user/contact FK не разрешает незаметную потерю security history. Удаление/retention согласуется в 5.6; [подробности](email-change.md).
 
 | Таблица | Назначение и ограничения |
 | --- | --- |
