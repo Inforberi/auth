@@ -14,7 +14,7 @@ Dev запускает Air `v1.67.4` через `.air.toml`: пересборк�
 
 Существующий `.env` дополните verification-настройками из примера; secrets не перезаписывались. Production требует отдельного случайного `EMAIL_OUTBOX_KEY`, HTTPS verification URL и `SMTP_REQUIRE_TLS=true`. Применённая `000001` не обновит БД автоматически: нужен согласованный перенос, не reset. Login разрешён до подтверждения, change-password — после него. Reset/change-password отзывают все SQL-сессии; нужно войти заново. Письмо ведёт на frontend явного подтверждения, подключаемый проектом, а не на автоматический GET API.
 
-[Смена login email](docs/email-change.md) реализована как opt-in `EMAIL_CHANGE_ENABLED=false`: request/confirm/«Это не я», уведомления старого подтверждённого адреса и отзыв сессий. При включении нужны две доверенные frontend URL из `.env.example`; сами страницы ещё не созданы. Восстановление после защитной блокировки — незавершённый 5.5d, до него функция не готова к production release. Настоящие `.env` и рабочая БД не изменялись.
+[Смена login email](docs/email-change.md) реализована как opt-in `EMAIL_CHANGE_ENABLED=false`: request/confirm/«Это не я» и восстановление password-профиля через старый подтверждённый email с обязательной заменой пароля. При включении нужны три доверенные frontend URL из `.env.example`; сами страницы ещё не созданы. Backend 5.5d локально проверен, приёмка 5.5e и production release gates остаются открытыми. Recovery-схема включена в исходную миграцию 000001; настоящие `.env` и рабочая БД не изменялись.
 
 ```sh
 task check

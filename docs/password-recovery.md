@@ -10,6 +10,8 @@
 
 После reset нужно войти заново. Он не подтверждает email и не создаёт сессию. Change-password тоже отзывает все сессии, включая текущую, и очищает cookie. Ошибка политики нового пароля теперь возвращает 400 `password_policy`, не 500.
 
+10 октября добавлен отдельный [защищённый recovery 5.5d](email-change.md#защищённое-восстановление--55d): POST `/api/v1/auth/email/change/recover` с новым purpose-bound токеном старого verified email после защитной блокировки. Он возвращает прежний login email и обязательно заменяет пароль; обычный forgot/reset по-прежнему не разблокирует account. ProtectedRecoveryService использует тот же RecoveryService hash/global limiter budget; административная блокировка не обходится. Это текущий password-only профиль, не общий MFA/non-password recovery.
+
 ## Хранение и атомарность
 
 Token — 32 случайных байта, canonical base64url; в challenge хранится SHA-256 digest. Одновременно действует один challenge на пользователя, повторная выдача имеет SQL cooldown 1 минуту. После cooldown новый challenge заменяет старый. Challenge привязан к текущей `auth_version`, активному аккаунту и сроку действия.

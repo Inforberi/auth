@@ -1,6 +1,8 @@
-# Схема Auth — этапы 4.1 и 5.1–5.5c
+# Схема Auth — этапы 4.1 и 5.1–5.5d
 
-Источник: `migrations/000001_init.up.sql` и `.down.sql`. Один экземпляр Auth обслуживает один проект; внутренний UUID пользователя не зависит от метода входа.
+Источник: `migrations/000001_init` (up/down). Один экземпляр Auth обслуживает один проект; внутренний UUID пользователя не зависит от метода входа.
+
+Схема recovery включена в исходную 000001: recovery digest/encrypted payload/TTL и nullable issued version/expiry в email_changes, owner index для lifecycle cleanup, recovery kind в outbox и recovered event в audit. Все recovery поля для старых intents остаются NULL, они не получают recovery authority. Срок начинается при защитном report; worker сохраняет intent до максимума protection/recovery expiry. Успешное восстановление меняет password credential и verified contacts, отзывает доступ и инвалидирует прежние intents/jobs одной транзакцией. Повторный административный block отменяет даже уже выданный recovery. Подробный контракт — [email change](email-change.md).
 
 ## Владельцы данных
 
@@ -31,7 +33,7 @@ PK/UNIQUE уже создают необходимые индексы. `(user_id
 
 ## Применение и границы
 
-До первого production release редактируется исходная миграция. Уже применённая версия `000001` **не обновится автоматически**: для существующей БД нужен отдельно согласованный перенос данных/новая миграция. Не выполнять down/reset рабочей БД ради этой схемы. В этом этапе рабочие данные не изменялись.
+До первого production release схема развивается в исходной миграции 000001, без промежуточных миграций. Уже применённая старая версия **не обновится автоматически**: для существующей БД нужен отдельно согласованный перенос. Не выполнять down/reset рабочей БД ради этой схемы. В этом этапе рабочие данные не изменялись.
 
 Verification, специализированные audit/outbox и verified-email gate смены пароля реализованы в 5.1. Регистрационная транзакция через composition callback включает challenge/outbox/audit; их failure откатывает регистрацию. Resend блокирует контакт/пользователя и заменяет challenge. Confirm проверяет expiry/status и меняет verified_at/consumes/audit одним commit. Подробности — [verification](email-verification.md). В 5.2 добавлены SQL session ledger и recovery: password reset/change повышают auth_version, отзывают все сессии и пишут audit одной транзакцией. Login issuance повторно проверяет status/version; stale refresh не воскрешает session. Подробности — [recovery](password-recovery.md). Общие account policies/audit, полная session security, роли и billing остаются впереди.
 

@@ -1,18 +1,19 @@
 # Смена login email — этап 5.5
 
-Backend request/confirm/report реализован. Восстановление после защитной блокировки (5.5d), frontend и внешняя почтовая/browser приёмка ещё не реализованы. По умолчанию `EMAIL_CHANGE_ENABLED=false`: приложение не подключает эти маршруты, остальные методы входа продолжают работать. Включение для production до закрытия зависимостей не согласовано.
+Backend request/confirm/report и восстановление password-профиля после защитной блокировки (5.5d) реализованы и локально проверены. Frontend и внешняя почтовая/browser приёмка ещё не реализованы. По умолчанию `EMAIL_CHANGE_ENABLED=false`: приложение не подключает эти маршруты, остальные методы входа продолжают работать. Включение для production до закрытия 5.5e и release gates не согласовано.
 
 ## Настройки и API
 
-При включении нужны `EMAIL_CHANGE_URL` и `EMAIL_CHANGE_REPORT_URL`: доверенные frontend-страницы без query/fragment/credentials, HTTPS в production. `EMAIL_CHANGE_TTL=30m` ограничивает подтверждение; `EMAIL_CHANGE_PROTECTION_TTL=24h` — защитное действие, считая от запроса, не завершения. Bounds: подтверждение 1m–1h, защита минимум два TTL подтверждения и максимум 48h. Secrets существующие: `EMAIL_OUTBOX_KEY` для AES-GCM и HMAC limiter keys, SMTP и Redis. Настоящие env/secrets не менялись.
+При включении нужны `EMAIL_CHANGE_URL`, `EMAIL_CHANGE_REPORT_URL` и `EMAIL_CHANGE_RECOVERY_URL`: доверенные frontend-страницы без query/fragment/credentials, HTTPS в production. `EMAIL_CHANGE_TTL=30m` ограничивает подтверждение; `EMAIL_CHANGE_PROTECTION_TTL=24h` — защитное действие, считая от запроса, не завершения. `EMAIL_CHANGE_RECOVERY_TTL=30m` начинается после защитной блокировки. Bounds: подтверждение и recovery 1m–1h, защита минимум два TTL подтверждения и максимум 48h. Secrets существующие: `EMAIL_OUTBOX_KEY` для AES-GCM и HMAC limiter keys, SMTP и Redis. Настоящие env/secrets не менялись.
 
 | POST | Тело | Успех |
 | --- | --- | --- |
 | `/api/v1/auth/email/change` | `email`, `password` | 202 `status: accepted` |
 | `/api/v1/auth/email/change/confirm` | `token` | 200 `status: ok`, очистка cookie |
 | `/api/v1/auth/email/change/report` | `token` | 200 `status: ok`, очистка cookie |
+| `/api/v1/auth/email/change/recover` | `token`, `newPassword`, `confirmPassword` | 200 `status: ok`, очистка cookie |
 
-Все три ручки требуют один точный `Origin` из `AUTH_ALLOWED_ORIGINS`; ответы `no-store`. Request дополнительно требует текущую сессию. Confirm/report не требуют cookie браузера, открывшего письмо: полномочие даёт соответствующий токен. Для confirm сервер повторно проверяет исходную сессию из запроса, её сроки/version/revocation. Для report скомпрометированная сессия не нужна.
+Все четыре ручки требуют один точный `Origin` из `AUTH_ALLOWED_ORIGINS`; ответы `no-store`. Request дополнительно требует текущую сессию. Confirm/report/recover не требуют cookie браузера, открывшего письмо: полномочие даёт соответствующий токен. Для confirm сервер повторно проверяет исходную сессию из запроса, её сроки/version/revocation. Для report/recover скомпрометированная сессия не нужна.
 
 Ссылки содержат `#token=...`: fragment не передаётся серверу при загрузке страницы. Будущий frontend извлекает токен, убирает его из URL, не передаёт analytics и отправляет JSON POST только после нажатия кнопки; странице нужны `Referrer-Policy: no-referrer` и `Cache-Control: no-store`. GET API ничего не меняет и не существует. Frontend не добавлялся; URL в примере — контракт подключения, не работающая страница.
 
@@ -35,7 +36,19 @@ Backend request/confirm/report реализован. Восстановлени�
 
 Confirm/report блокируют user в одном порядке и перечитывают intent. Если report первым, confirm отклонён; если confirm первым, report блокирует account. Ошибка audit откатывает всё; ошибка completion outbox откатывает confirm. Confirm token не годится для report и наоборот. Внутренний StatusService block/unblock отменяет pending/completed intents и confirm jobs; это не разрешение на административный HTTP bypass.
 
-Дополнительные смены, обычное изменение пароля/logout-all **не аннулируют защиту завершённой смены**: иначе атакующий мог бы отключить предупреждение. 5.5d должен определить отдельный проверенный recovery transition: доказательство владения account, замена скомпрометированных credentials, выбор безопасного адреса, инвалидирование прежних защитных полномочий и только затем unblock. Владение новым адресом атакующего не является доказательством владельца. Публичного recovery-unblock сейчас нет; полный этап 5.5 и release не закрыты.
+Дополнительные смены, обычное изменение пароля/logout-all **не аннулируют защиту завершённой смены**: иначе атакующий мог бы отключить предупреждение. Владение новым адресом атакующего не является доказательством владельца; обычный reset не разблокирует account.
+
+## Защищённое восстановление — 5.5d
+
+Поддержан только текущий password-профиль с доступом владельца к прежнему подтверждённому адресу. После report завершённой смены на этот адрес ставится отдельное зашифрованное письмо с независимым 256-bit recovery-токеном. Он заранее подготовлен вместе с intent, но не выдаётся в notice/completion и не действует до report: SQL привязывает его к версии блокировки и назначает срок. Токен не возвращается HTTP-клиенту report; только digest находится в challenge columns. Confirm/report токены не могут восстановить аккаунт.
+
+Владелец открывает страницу recovery и явно отправляет POST с новым паролем и его подтверждением. Пароль проходит существующую политику и должен отличаться от скомпрометированного. Service проверяет актуальный recovery до дорогого hash; SQL повторно проверяет authority и прочитанный hash под user lock. Redis failure закрывает операцию; 10/IP/min и общий reset budget 100/min, те же два hash slots на процесс, deadline 10s. Hash comparison failure не считается успешным доказательством смены пароля.
+
+Один commit заменяет пароль, возвращает credential на прежний owned verified contact, снимает verification с остальных контактов, увеличивает auth_version, отзывает все сессии/challenges, инвалидирует все прежние change/report/recovery intents и их jobs, записывает `recovered`, затем оставляет аккаунт active. Другие адреса не удаляются и не освобождаются для регистрации. Вход автоматически не выполняется. SQL/audit failure откатывает весь transition; recovery outbox failure откатывает report.
+
+Административный StatusService отменяет recovery authority, в том числе при повторном block уже заблокированного account. Его status/version no-op остаётся no-op, но отмена recovery записывается в email-change audit. Recovery не отменяет deleted/admin block и не возрождает прежнюю сессию. До завершения смены report оставляет прежний login email: для замены украденного пароля применяется обычный reset, не recovery-unblock.
+
+Неподдержанные случаи не получают bypass: потерянная/скомпрометированная старая почта, просроченный recovery, исчерпанная доставка и intents без recovery authority требуют отдельно согласованного восстановления; публичной повторной выдачи или общего unblock нет. Mailbox-only proof нельзя автоматически переносить на будущие MFA/OIDC/Telegram профили: их recovery policy и отзыв credentials нужно определить перед подключением. 5.5e включает внешнюю доставку, browser flow, полную lifecycle race matrix и операционные ограничения; весь этап 5.5 и production release не закрыты.
 
 ## Доставка и проверки
 
@@ -43,4 +56,6 @@ Confirm/report блокируют user в одном порядке и пере�
 
 Unit/HTTP tests: service-only validation, credential handoff, разные токены/encrypted payloads, delivery reuse, limiter fail-closed, errors/cookie cleanup, Origin/no-store/disabled routes и отсутствие GET mutations. SQL suite: up/down/up, confirm/report/replay, cancellation, occupied email после request, expiry/stale session/hash, block/unblock, concurrent confirm/report и duplicate confirm, audit/outbox rollback, delivery retry/stale lease/expiry/fairness. Это локальные проверки, не нагрузка, настоящий SMTP или browser E2E.
 
-000001 расширена как на предыдущих локальных этапах. Уже применённая миграция не обновит рабочую БД: перенос существующего deployment требует отдельного согласования. Рабочая БД не сбрасывалась.
+Recovery columns, constraints, owner index, outbox kind и audit event включены в исходную 000001. До первого release отдельные промежуточные миграции не создаём. Уже применённая старая 000001 не обновится автоматически: для существующей БД нужен согласованный перенос. Intents с NULL recovery fields не дают recovery authority. Рабочая БД не сбрасывалась и миграции на ней не запускались.
+
+Проверки 5.5d: formatter, `task check` (тесты и lint, 0 issues), Swagger generation/drift, SQL up/down/up 000001 на отдельном PostgreSQL 18.6. Дополнительно проверены purpose/unissued/replay, expiry/version/hash/deleted/contact guards, одноразовый concurrent consume, admin re-block, audit/outbox rollback, retention near protection expiry и legacy intent. Временный контейнер с тестовыми данными удалён; SMTP/browser E2E и нагрузка не выполнялись.

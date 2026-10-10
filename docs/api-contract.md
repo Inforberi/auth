@@ -15,6 +15,7 @@
 | POST `/api/v1/auth/email/change` | 202, `status: accepted`, optional profile | 400 input/invalid_email_change, 401 session/fresh_auth_required, 403 invalid_origin, 409 email_change_pending, 429 limits, 503 dependency |
 | POST `/api/v1/auth/email/change/confirm` | 200, `status: ok`, отзыв сессий и очистка cookie, optional profile | 400 input/invalid_email_change, 401 fresh_auth_required, 403 invalid_origin, 429 limits, 503 dependency |
 | POST `/api/v1/auth/email/change/report` | 200, `status: ok`, отмена или блокировка, очистка cookie, optional profile | 400 input/invalid_email_change, 403 invalid_origin, 429 limits, 503 dependency |
+| POST `/api/v1/auth/email/change/recover` | 200, `status: ok`, новый пароль/прежний email, отзыв сессий и очистка cookie, optional profile | 400 invalid_json/invalid_account_recovery/password_mismatch/password_policy/same_password, 403 invalid_origin, 429 limits, 503 dependency |
 | POST `/api/v1/auth/forgot-password` | 202, `status: accepted` | 400 input, 429 limits, 503 dependency |
 | POST `/api/v1/auth/reset-password` | 200, `status: ok`, очистка cookie, отзыв всех сессий | 400 input/invalid_reset/password_mismatch/password_policy, 429 limits, 503 dependency |
 | GET `/api/v1/auth/me` | 200, `userId`, `sessionId` | 401 unauthorized, 503 dependency |
@@ -32,7 +33,7 @@ Email нормализуется trim/lower, до 255 байт, без display n
 
 ## Cookie и безопасность
 
-Смена email — opt-in `EMAIL_CHANGE_ENABLED` (default false); disabled runtime не подключает три маршрута, Swagger описывает включённый профиль. Request требует session + текущий пароль + подтверждённый нынешний login email. Confirm/report требуют разных одноразовых токенов и точного Origin; GET не меняет state. Report после завершения блокирует account без email rollback/session/unblock. Безопасное восстановление остаётся 5.5d и блокирует release функции. TTL, retained old contact и приёмка — [email change](email-change.md).
+Смена email — opt-in `EMAIL_CHANGE_ENABLED` (default false); disabled runtime не подключает четыре маршрута, Swagger описывает включённый профиль. Request требует session + текущий пароль + подтверждённый нынешний login email. Confirm/report/recover требуют разных одноразовых токенов и точного Origin; GET не меняет state. Report после завершения блокирует account без email rollback/session/unblock и ставит recovery-письмо старому verified email. Recover текущего password-профиля требует новый пароль, возвращает прежний адрес входа и отменяет старые полномочия до снятия защитной блокировки; admin/deleted bypass отсутствует. Внешняя приёмка 5.5e остаётся release gate. TTL, retained contacts и ограничения — [email change](email-change.md).
 
 Session API 5.3 доступен и до подтверждения email. `me` возвращает только идентификаторы, не профиль. Список содержит до 50 активных сессий, `current`, даты, User-Agent/IP; сортировка по `(created_at,id)` DESC. `before=nextCursor` продолжает список без OFFSET. ID — самостоятельный lowercase UUID, не token/hash. Неверный/чужой cursor — 400; чужой/неизвестный/неактивный target для отзыва — одинаковый 404. Все ответы этих ручек, включая ошибки auth/Origin, имеют `Cache-Control: no-store`.
 
