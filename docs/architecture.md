@@ -207,7 +207,11 @@ Repository локален фиче; таблица не равна фиче. О�
 
 
 
-### Текущая карта кода — 9 октября 2026
+Предметные правила не проверяются повторно в HTTP и service: HTTP декодирует запрос, service один раз создаёт/проверяет domain value, локальный mapper формирует HTTP-ошибку. Проверки актуальности внутри транзакции — отдельная гарантия, не такое дублирование. В resend email валидируется в service до Redis, как раньше на HTTP-пути; ErrEmailRequired/ErrEmailInvalid дают прежний 400 invalid_email.
+
+Register/login используют service/credentials.go для однократного разбора email и обязательности password с сохранением приоритета публичных ошибок. Новую password policy применяет только регистрация, не login. Resource bound токена confirm/reset находится в service до limiter, canonical format — после него; HTTP не повторяет эти проверки. Forgot missing/whitespace email и login whitespace email корректно сопоставляются с documented 400, вместо ошибочного dependency/internal fallback.
+
+### Текущая карта кода — 10 октября 2026
 
 | Ответственность | Путь |
 | --- | --- |
@@ -230,11 +234,12 @@ Repository локален фиче; таблица не равна фиче. О�
 | Recovery Redis limits | `internal/auth/methods/password/repository/redis` |
 | Password JSON API | `internal/auth/methods/password/transport/http` |
 | Argon2 / complete reset HTML | `internal/auth/methods/password/hasher`, `templates` |
-| Session entity / errors / token ID | `internal/auth/session/domain` |
+| Session entity / errors | `internal/auth/session/domain` |
 | Session scenarios / ports / config / results | `internal/auth/session/service` |
 | Session SQL ledger / HTTP cookies/context/middleware | `internal/auth/session/repository/postgres`, `transport/http` |
 | Security event / recording contract | `internal/audit/domain`, `service` |
 | Router, health, common HTTP helpers | `internal/transport/http` |
+| Общий mapper / запись ошибки / безопасное логирование | `internal/transport/http/httpx/errors.go` |
 
 Tests находятся рядом с кодом; register/login/change-password/validate сгруппированы по операции без потери прежних сценариев. HTML письма снова цельный, исходные байты сохранены. Рукописный Go-код ориентирован на 150 строк без числового gate; tests не ограничены. Clock/token helpers остаются в узких существующих infra-пакетах: не переносить их лишь ради внешней симметрии дерева.
 
@@ -249,6 +254,8 @@ Tests находятся рядом с кодом; register/login/change-passwor
 `internal/auth/session/repository/redis` сохранён как прежняя, неподключённая реализация: imports из app/действующих фич отсутствуют. Он не проверяет актуальную SQL auth_version, а refresh использует безусловную запись; это не действующий authority, не безопасный fallback и не реализация optional cache-профиля 6.9. Redis клиента/limits не удаляли. Повторное использование адаптера требует отдельного проектирования по ADR 002.
 
 После 5.2r результат создания сессии находится в service/results.go, HTTP session middleware — в transport/http/auth.go, session domain errors — в domain/errors.go. Password repo constructor и transaction helper — в repository/postgres/repository.go; общий revoke helper используется change/reset в той же транзакции. MIME building — infra/mailer/message.go; отправка сохраняет прежнее поведение.
+
+После 5.2h account HTTP resend/confirm и password HTTP forgot/reset имеют отдельные файлы со своими DTO и Swagger; общие Handler/constructor/response — в handler.go. Change-password DTO/валидация находятся в change_password.go. Feature-local errors.go/recovery_errors.go содержат ordered правила и fallback; общий httpx/errors.go не импортирует domain фич. MapError сопоставляет sentinel через errors.Is и typed errors через локальный predicate с errors.As; WriteFailure пишет ответ, RespondError логирует безопасные публичные поля один раз через request logger. Request ID генерируется сервером; raw errors, входные данные и secrets не логируются. Health сохраняет отдельный контракт. Account service verification.go содержит подготовку challenge/digest, resend.go/confirm.go/registration.go — сценарии, delivery.go — worker и отдельный send; config validation остаётся одним файлом с именованными проверками. Это правила для дальнейшей разработки, закреплённые также в [AGENTS.md](../AGENTS.md).
 
 ### Историческая карта переноса 4.0 (до согласования 4.5)
 
@@ -314,6 +321,6 @@ UI также позволит вводить/заменять SMTP/provider sec
 
 Приняты [ADR 001](adr/001-deployment-and-reuse.md), [ADR 002](adr/002-sessions-and-transactions.md), [ADR 003](adr/003-access-and-optional-billing.md). [Модель угроз](threat-model.md) задаёт негативные acceptance tests.
 
-Этап 4 выполнен; 5.1/5.2 реализованы и локально проверены, внешний email/browser staging впереди. Текущие ограничения — [API-контракт](api-contract.md), [verification](email-verification.md) и [recovery](password-recovery.md). 5.2r выполнен: дерево папок сохранено, app/auth остаётся app.go/account.go/run.go; account assembly, регистрационная связь и worker lifecycle разделены в этих файлах. Forgot/reset, HTTP middleware и SMTP/MIME разделены по ответственности; мелкие session files объединены, устаревшие методы и mock forwarding убраны. Следующий шаг — 5.3. Далее 5/6, MFA 13.1 сразу после 6 до административных действий; 7–10, 11 и опционально 12, release 14. Полная session security, нагрузочная приёмка 6.8 и межфичевые security-транзакции завершаются в 5/6; 6.9 optional.
+Этап 4 выполнен; 5.1/5.2 реализованы и локально проверены, внешний email/browser staging впереди. Текущие ограничения — [API-контракт](api-contract.md), [verification](email-verification.md) и [recovery](password-recovery.md). 5.2r выполнен: дерево папок сохранено, app/auth остаётся app.go/account.go/run.go; account assembly, регистрационная связь и worker lifecycle разделены в этих файлах. Forgot/reset, HTTP middleware и SMTP/MIME разделены по ответственности; мелкие session files объединены, устаревшие методы и mock forwarding убраны. 5.2h выполнен 10 октября: независимые HTTP-сценарии разделены, общий механизм ошибок в httpx использует feature-local правила и безопасное логирование. Следующий шаг — 5.3. Далее 5/6, MFA 13.1 сразу после 6 до административных действий; 7–10, 11 и опционально 12, release 14. Полная session security, нагрузочная приёмка 6.8 и межфичевые security-транзакции завершаются в 5/6; 6.9 optional.
 
 До 12.1 пользователь выбирает merchant profile: страна/юридический статус продавца, валюты, товары, разовая/recurring оплата, refund/cancel требования. Затем выбирается и проверяется один hosted-checkout provider; конкретный поставщик сейчас не объявлен поддержанным. Native/SSO/organizations/Telegram commerce требуют отдельного подтверждения scope перед своими подэтапами.

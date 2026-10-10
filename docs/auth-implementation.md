@@ -4,11 +4,13 @@
 
 ## Как выполнять
 
+Во всех этапах соблюдать [постоянные правила читаемости](../AGENTS.md): сразу разделять самостоятельные обязанности и держать связанное рядом. Не экономить токены за счёт корректности и поддержки; не откладывать качество на отдельную уборку и не дробить код искусственно.
+
 На текущей ветке сохранять пользовательские изменения. Один подэтап — один reviewable diff: изменить код/tests/config/docs, выполнить проверки, записать результат в таблицу основного плана. Не публиковать новый flow до готовности его security prerequisites. Независимые задачи можно выполнять параллельно, зависимые — после завершения prerequisites.
 
 Обычная проверка изменений Go: `task check` (tests + lint). Дополнительные race/integration/security/container/API checks — только по затронутому риску и перед release; весь набор не повторять после каждой мелкой правки. Если обязательная для конкретного изменения проверка недоступна или падает, записать результат и не заявлять её прохождение. Задачи ниже не разрешают prod deploy/restore ради проверки.
 
-Текущий порядок: 0, 1.1–1.8, 4 и 5.1/5.2 завершены → 5.3 и остальное 5/6 → 7/8 → 9/10 → 11/12 → 14. Детализация разделов 2–3 и перенос 4.2–4.3 выполнены внутри первого этапа. Этап 0 до зависимых решений; 13.1 после 6 до любых production admin endpoints. Docs и security audit ведутся на каждом шаге.
+Текущий порядок: 0, 1.1–1.8, 4, 5.1/5.2, 5.2r и 5.2h завершены → 5.3 и остальное 5/6 → 7/8 → 9/10 → 11/12 → 14. Детализация разделов 2–3 и перенос 4.2–4.3 выполнены внутри первого этапа. Этап 0 до зависимых решений; 13.1 после 6 до любых production admin endpoints. Docs и security audit ведутся на каждом шаге.
 
 ## 1. Адаптация go-template и удаление reference — первый этап
 
@@ -96,7 +98,8 @@
 
 - [x] 5.1. Реализовано и локально проверено 9 октября: schema/service/repositories/HTTP verify/resend, unverified gate, generic replies, encrypted outbox/audit, bounded worker/SMTP/Redis limits. Expiry/replay/replacement/concurrent consume/audit rollback/lease/retry проверены на disposable PostgreSQL/Redis. Внешний SMTP и browser HTTPS staging smoke не выполнены — отдельная приёмка, не скрытая гарантия. Детали — [verification](email-verification.md).
 - [x] 5.2. Реализовано и локально проверено 9 октября: forgot/reset API, одноразовый version-bound SQL challenge, encrypted outbox/worker, атомарные password update + auth_version + revoke всех сессий + audit. SQL ledger введён как необходимая часть 6.2/6.3. Concurrent consume/replay/expiry/audit rollback/stale issuance/refresh проверены на disposable PostgreSQL; Redis/SMTP failure mapping — unit tests. Внешний SMTP/browser staging и полный Redis fault E2E не выполнены. Детали — [recovery](password-recovery.md).
-- [x] 5.2r. Выполнен 9 октября: рефакторинг читаемости ниже; дерево папок, API и архитектурные гарантии сохранены. Далее 5.3.
+- [x] 5.2r. Выполнен 9 октября: рефакторинг читаемости ниже; дерево папок, API и архитектурные гарантии сохранены.
+- [x] 5.2h. Выполнен 10 октября: HTTP-сценарии разделены, общий механизм ошибок подключён; результаты ниже. Далее 5.3.
 - [ ] 5.3. Session HTTP API: logout/logout-all/me/list/revoke-own и cookie cleanup. Проверить ownership/CSRF, current session и очистку индексов.
 - [ ] 5.4. Enforce blocked/deleted users/auth version в session validation и login. Проверить existing sessions и racing requests; поведение зависимостей fail-closed по ADR.
 - [ ] 5.5. Confirmed email change с fresh auth, уведомлением старого адреса и unique ownership; проверить чужой email/link race.
@@ -117,6 +120,41 @@
 - [x] 5.2rg. Обновить карту файлов, записать фактические checks и ограничения. Приёмка: структура папок сохранена, нет устаревших test paths, связанные операции легко найти, API/SQL/security guarantees сохранены. После этого 5.3; нагрузочная оптимизация отдельно по 6.8, optional cached session validation по 6.9.
 
 Результат 5.2r: старые version=0 create/UpdatePasswordHash/SessionID и mock forwarding удалены; реальные auth_version/session/expected hash проверяются. Неподключённый Redis adapter сохранён и описан как legacy, не fallback. Папки, API/status/Swagger, SQL semantics, env/dependencies и рабочие данные не менялись. Проверено: task go:fmt, task check (tests + lint, 0 issues), task check:api (все три артефакта совпадают), TestPostgresSchema на disposable PostgreSQL 18.6 (up/down/up, recovery/verification/repository/constraints/concurrent registration), git diff --check. Lifecycle tests проверяют остановку двух workers до cleanup при нормальном завершении и serve failure. Полный Docker/backup/Redis fault/browser/load drill не повторялся; оптимизация 6.8 впереди.
+
+### 5.2h. HTTP-сценарии и общий механизм ошибок — выполнен 10 октября
+
+Согласовано 9 октября. Продолжаем уборку существующей архитектуры, не меняем дерево папок. `app/auth` сохраняет `app.go`, `account.go`, `run.go`. Около 150 строк — ориентир при осмысленном разделении, не повод дробить каждый тип или helper; тесты не ограничиваем.
+
+- [x] 5.2ha. Разнести независимые HTTP-сценарии: account resend/confirm и password forgot/reset — каждый обработчик со своими request DTO и Swagger рядом. Общие Handler, constructor, интерфейс зависимости и общий response держать в `handler.go`, правила ошибок — в `errors.go`. Feature middleware оставить в своём transport. Удалить опустевшие смешанные файлы, не создавать файл на каждый маленький тип.
+- [x] 5.2hb. Проверить остальные рукописные файлы на смешение обязанностей и лишнюю дробность. В account service отделить подготовку verification, resend и confirm по сценариям; отправку письма держать рядом с существующей delivery-логикой, не смешивая отправку и цикл worker. В config оставить именованные проверки в существующих файлах, сохранив порядок ошибок. Change-password DTO/валидацию держать рядом со сценарием, HTTP mapping — в `errors.go`. Связанные repository-операции, cookie helpers и lifecycle не дробить только из-за числа функций.
+- [x] 5.2hc. Добавить небольшой общий механизм в `internal/transport/http/httpx`: сопоставление через `errors.Is`/`errors.As`, поддержка обёрнутых и типизированных ошибок, публичные status/code/message и заголовки. Явно задавать fallback для операции (500 или 503). Разделить чистое сопоставление и запись ответа. Без импорта фич/SQL/Redis, глобального реестра всех ошибок, reflection и сравнения текста ошибок; domain/service не знают HTTP-статусов.
+- [x] 5.2hd. Перевести account, password/recovery и session на этот механизм через короткий `respondError`; таблицы правил и наборы для конкретных операций оставить в feature-local `transport/http/errors.go`. Не переносить обязательную input-валидацию в магическое middleware. Сохранить текущие JSON, статусы, коды, сообщения, нейтральные recovery-ответы и `Retry-After` согласно конкретной политике лимитов. Health сохраняет свой контракт; не подгонять его под auth-ошибки.
+- [x] 5.2he. Согласовать единообразное однократное логирование: операция, request ID при наличии, публичный код и статус. Не писать raw error, request body, пароли, токены, содержимое писем, DSN и provider secrets; безопасные диагностические поля задавать явно. Чистый mapper не логирует; security audit остаётся отдельным механизмом.
+- [x] 5.2hf. Проверить direct/wrapped/typed/unknown errors, приоритет правил, operation-specific fallback, заголовки и отсутствие секретов в логах. Добавить HTTP contract-тесты на сохранение ответов; выполнить formatter, `task check` и Swagger drift check при переносе аннотаций. SQL/E2E запускать только если затронут соответствующий контракт. Обновить фактические результаты в документации; затем перейти к 5.3.
+
+Границы: без новых API, миграций, env, зависимостей и проверочных shell-скриптов. Redis, SQL-authoritative session validation, atomic recovery/change и гарантии отзыва сохраняются. Оптимизация/нагрузочная приёмка остаются в 6.8, optional cache profile — в 6.9. Подэтап выполнен 10 октября.
+
+Результат 5.2h: account HTTP `handler.go/resend.go/confirm.go/errors.go`, password HTTP `handler.go/forgot_password.go/reset_password.go/errors.go/recovery_errors.go`; прежние смешанные verification/recovery HTTP-файлы удалены. Change-password DTO/валидация рядом с ручкой, правила ошибок отдельно; лишний input-файл удалён. Account service: preparation/digest — `verification.go`, resend/confirm/registration — файлы сценариев, отправка — существующий `delivery.go`. Config validation — последовательность именованных проверок в одном файле; app/repositories/cookie helpers не раздроблены.
+
+`httpx/errors.go`: чистый MapError, отдельный WriteFailure, RespondError с однократным безопасным логированием. Sentinel errors сопоставляются через errors.Is; типизированные — через локальный predicate с errors.As; первый совпавший rule имеет приоритет. Fallback задаётся явно, headers не мутируют общий rule. Request logger сохраняет сгенерированный request ID; raw error/HTTP body/credentials/PII не логируются. Account/password/recovery/session и dev send-mail используют общий механизм; health и security audit не менялись.
+
+Проверено: `task go:fmt`, `task check` (tests + lint, 0 issues), `task check:api` (три артефакта идентичны), `git diff --check`. Новые mapper/logging/header tests, session gate/context/cookie-refresh tests и 20 router error-contract сценариев с wrapped errors подтверждают прежние ответы и fallback. SQL/container/external SMTP/browser/load checks не повторялись: SQL/Redis реализации и зависимости не менялись. Production readiness этим рефакторингом не заявляется; далее 5.3.
+
+Уточнение 5.2h от 10 октября: повторный NewEmail в resend HTTP удалён. В service валидация/нормализация выполняется один раз до Redis; mapper переводит обе ошибки email в прежний 400 invalid_email. Service и HTTP tests покрывают отсутствие вызова зависимостей для плохого email, отсутствие изменений precedence и wrapped email errors. Постоянное правило против дублирования предметных проверок закреплено в AGENTS.md; проверено task go:fmt, task check и git diff --check, Swagger-аннотации не менялись.
+
+### Дополнительный review после 5.2h — 10 октября
+
+Проверены пути register/login/forgot/reset/resend/confirm/change-password, session validation/refresh, регистрационные и password SQL-записи, decoder, configuration и email preparation/delivery. Это локальный review проверок и обязанностей, не полный security/performance аудит. Runtime-код в ходе review не менялся; постоянное правило «production без бесполезного усложнения» дополнено в AGENTS.md.
+
+Точечная уборка выполнена 10 октября:
+
+- [x] Register/login используют общий service parseCredentials: один NewEmail/нормализация, обязательность password, сохранение приоритета missing email → missing password → malformed email. HTTP только декодирует и сопоставляет предметные ошибки; guards удалены. Добавлен ErrPasswordRequired и mappings. Политика нового пароля проверяется при регистрации, не при входе. Для whitespace email при непустом пароле login исправляет прежний ошибочный 500 fallback на 400 email_required; остальные required-коды сохранены.
+- [x] Confirm/reset: resource bound >128 перенесён из HTTP в начало service, до Redis. Canonical base64url/32 байта и reset length=43 остаются после limiter. Это разные гарантии внутри одного владельца проверки; порядок 400 для oversized и 429/503 от limiter для меньших malformed tokens сохранён, большой token не декодируется. Универсальный validator framework не добавлен.
+- [x] Forgot: ErrEmailRequired теперь сопоставляется с 400 invalid_email, как ErrEmailInvalid. Пустой/пробельный email больше не выдаётся за недоступность зависимости после успешного limiter; ошибки Redis по-прежнему имеют прежний приоритет и fail-closed. Исправление явно отделено от структурной уборки.
+
+Оставляем: SQL unique constraints независимо от ExistsByEmail; ExistsByEmail позволяет не выполнять Argon2 для занятого email, но не гарантирует отсутствие гонки. Middleware и повторная SQL-проверка session/auth_version защищают разные моменты времени. SQL expiry/conditional refresh и service deadline/clamp также не удаляются автоматически. Confirmation при смене пароля проверяется только в HTTP и не передаётся service — это не повтор одной проверки. Короткие respondError у фич задают локальные правила/fallback поверх общего механизма, не копируют реализацию mapper. URL validation при старте и защита аргументов самостоятельного renderer имеют разные границы вызова; оптимизировать их лишь с явным контрактом конфигурации.
+
+Добавлены service-тесты required/error precedence и нормализации без обращения к DB/hash/session, HTTP-тесты register/login с реальным service, forgot empty/whitespace regression и confirm/reset bound/limiter precedence. Обновлены test doubles: предметную валидацию выполняет service, а не handler. Проверки: formatter, task check (tests + lint) и git diff --check. Swagger annotations/схемы/статусы не менялись; дефектные ответы выше исправлены в рамках существующих documented 400 codes. SQL/container/load проверки не повторялись; БД/env/dependencies/Redis/транзакции не менялись. Текущий функциональный этап остаётся 5.3.
 
 ## 6. Session и authentication security
 
@@ -219,7 +257,7 @@ Template не содержит identities/SSO/RBAC: эти задачи реал
 
 ## Учёт выполнения
 
-Текущий результат: этап 4 завершён; 5.1/5.2 реализованы и локально проверены, внешний staging smoke ещё не выполнен. 5.2r выполнен; следующий шаг — 5.3, session HTTP API. Согласованное дерево сохраняется, 150 строк — смысловой ориентир. SQL ledger/recovery/verification и Swagger generation проверены; этап 6 закрыт лишь частично. Рабочая БД и secrets не менялись; уже применённой 000001 нужен отдельно согласованный перенос. UI и сохраняемые настройки — только 14.4s–14.4u. Auth/security/billing release gates остаются впереди. Команды и границы проверок — в основном плане.
+Текущий результат: этап 4 завершён; 5.1/5.2 реализованы и локально проверены, внешний staging smoke ещё не выполнен. 5.2r и 5.2h выполнены; следующий шаг — 5.3, session HTTP API. Согласованное дерево сохраняется, 150 строк — смысловой ориентир. SQL ledger/recovery/verification и Swagger generation проверены; этап 6 закрыт лишь частично. Рабочая БД и secrets не менялись; уже применённой 000001 нужен отдельно согласованный перенос. UI и сохраняемые настройки — только 14.4s–14.4u. Auth/security/billing release gates остаются впереди. Команды и границы проверок — в основном плане.
 
 При завершении подэтапа добавить в основной план: номер, изменённые файлы/commit при наличии, команды и результаты checks, schema/API change, ограничения и следующий шаг. Статусы «материалы собраны», «адаптировано», «локально проверено» и «проверено в staging» различаются. Этап 1.1–1.7 адаптирован; cleanup 1.8 выполнен; dev smoke после CGO fix подтверждён 6 октября 2026.
 

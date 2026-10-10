@@ -16,6 +16,8 @@ Auth — переиспользуемый Go-шаблон, который мож
 
 **Качество:** каждый завершённый этап выполняется с production требованиями: безопасная конфигурация, корректная обработка ошибок, актуальные API docs и содержательные проверки. Production-готовность всего сервиса подтверждается совокупностью критериев релиза, а не завершением одного этапа. Не проверенные интеграции и ограничения явно фиксируются.
 
+**Постоянное правило разработки:** читаемый код с ясными обязанностями пишем сразу, во всех следующих этапах, а не откладываем качество на рефакторинг. Дополнительные время и токены допустимы, если нужны для корректного решения; искусственная дробность и лишние абстракции не нужны. Правила файлов, HTTP-сценариев и обработки ошибок закреплены в [AGENTS.md](../AGENTS.md).
+
 По запросу пользователя реализован инфраструктурный перенос этапа 1; reference уже удалён, dev smoke проверяется отдельно. Остальные задачи ниже — будущая реализация, их наличие в плане не означает готовность кода. После каждого подэтапа обновлять статус, фактические проверки и ограничения в этом файле.
 
 ### Результат, к которому идём
@@ -126,6 +128,7 @@ Auth — переиспользуемый Go-шаблон, который мож
 - 5.1. Реализовано и локально проверено 9 октября: email verification, ограничение sensitive routes, confirm/resend, encrypted outbox/audit/worker и fail-closed limits. Внешний SMTP и browser HTTPS staging smoke остаются приёмкой перед release; [детали](email-verification.md).
 - 5.2. Реализовано и локально проверено 9 октября: forgot/reset, encrypted outbox/worker, version-bound одноразовый SQL challenge, atomic password update/auth_version/revoke/audit. SQL ledger — необходимая часть 6.2/6.3, не закрытие всего этапа 6. Внешний SMTP/browser staging остаётся приёмкой; [детали](password-recovery.md).
 - 5.2r. Выполнен и проверен 9 октября: рефакторинг читаемости после 5.2, до новой функциональности 5.3. Дерево папок и app/auth из app.go/account.go/run.go сохранены; смешение обязанностей и лишняя дробность уменьшены. Детализация ниже и в [пошаговой реализации](auth-implementation.md#52r-рефакторинг-читаемости--выполнен-9-октября).
+- 5.2h. Выполнен и проверен 10 октября: независимые HTTP-сценарии разделены, общий механизм ошибок подключён с локальными правилами фич. Порядок и результаты — ниже и в [пошаговой реализации](auth-implementation.md#52h-http-сценарии-и-общий-механизм-ошибок--выполнен-10-октября).
 - 5.3. HTTP logout/logout-all/me, cookie cleanup, список/отзыв собственных сессий.
 - 5.4. Blocked/deleted users: запрет нового входа и прекращение существующего доступа.
 - 5.5. Смена email: подтверждение нового адреса и свежая аутентификация, уведомление старого адреса, отсутствие возможности перехватить чужой credential. Смена контакта и login identity — явно разные операции.
@@ -146,6 +149,20 @@ Auth — переиспользуемый Go-шаблон, который мож
 5. Исправить mocks: CreateSessionAtVersion проверяет auth_version; ChangePassword проверяет current session, expected hash и new hash, а не перенаправляется на старый UpdatePasswordHash. Использовать существующий httpx.IP вместо дубликатов peerIP/recoveryIP; policy не доверяет forwarded headers. Упростить receiver names и форматирование плотного SQL без изменения запросов/locks/expiry.
 6. Redis сохраняется, роли хранилищ по ADR 002 не меняются. Неподключённый старый Redis session adapter оценить отдельно по usages/назначению: не возвращать как fallback, не объявлять новой реализацией кеша и не удалять автоматически только потому, что основной путь SQL. Оставленное legacy явно отделить в документации от действующего пути.
 7. Проверить сохранение поведения: formatter + task check, целевые lifecycle/contract tests. Swagger generation/drift только при затрагивании annotations/DTO; disposable SQL fixture при изменении транзакционной реализации. Не менять API/status/JSON, schema, env, dependencies, security policy или рабочие данные. Если обнаружен behavioral defect, зафиксировать отдельной задачей, не маскировать fix под refactor. Обновить карту файлов и результаты; затем 5.3. Load/оптимизация — отдельный 6.8, cache-only extension — 6.9.
+
+### 5.2h. HTTP-сценарии и общий механизм ошибок — выполнен 10 октября
+
+Сохраняем архитектуру и дерево папок; продолжаем рефакторинг читаемости до новых endpoints 5.3.
+
+1. Разнести account resend/confirm и password forgot/reset: обработчик, request DTO и Swagger — рядом в файле сценария; общий Handler/constructor/response — в `handler.go`. Middleware остаётся feature-local. Проверить остальные рукописные файлы; разделять самостоятельные обязанности, объединять искусственно разнесённое, не создавать файл на каждую функцию.
+2. Убрать смешение в account service и change-password input/error mapping; сделать config validation понятной последовательностью именованных проверок в существующих файлах. `app/auth` остаётся из трёх файлов; связанные repository-операции и lifecycle не дробим без необходимости. 150 строк — смысловой ориентир, тесты без лимита.
+3. Общий mapper и запись ответа — в `internal/transport/http/httpx`; сопоставление через `errors.Is`/`errors.As`, поддержка wrapped/typed errors, status/code/message/headers, явный fallback операции. Правила — в `transport/http/errors.go` каждой фичи, с наборами для разных сценариев. Без глобального каталога domain errors, импорта фич в httpx, reflection, строкового matching и HTTP-знаний в business logic.
+4. Короткие вызовы обработки ошибок вместо повторяющихся switches. Сохранить текущие API-контракты, нейтральные recovery-ответы, 401/403/429/500/503 и остальные существующие статусы, коды/сообщения и `Retry-After`. Обязательная input-валидация остаётся явной; health имеет отдельный контракт. Единообразное однократное логирование безопасных полей: операция/request ID/публичный код/статус, без raw errors, тел запросов и секретов. Security audit отдельно.
+5. Приёмка: mapper table-tests (direct/wrapped/typed/unknown, приоритет правил, fallback и заголовки), redaction/logging и HTTP contract-тесты; formatter, `task check`, Swagger drift при переносе аннотаций. Не добавлять проверки ради проверок: SQL/E2E только при затрагивании соответствующих контрактов. Без изменений API, schema/env/dependencies, роли Redis и строгих session/recovery гарантий. После фактической приёмки — 5.3; производительность остаётся задачей 6.8.
+
+Подэтап согласован 9 октября, реализован и проверен 10 октября. Ручки resend/confirm и forgot/reset разнесены вместе с DTO/Swagger; общие handler-типы и response остались в handler.go. Change-password input-файл объединён со сценарием; правила ошибок вынесены в errors.go/recovery_errors.go. Account service разделён по сценариям, config проверяется именованными шагами; app/repositories/lifecycle не раздроблены.
+
+Общий httpx mapper поддерживает wrapped sentinel и typed predicates (errors.As), явные fallback, headers и приоритет правил; запись ответа и безопасное логирование отделены от сопоставления. Применён к account/password/recovery/session и dev send-mail. Health отдельно. Проверено: task go:fmt, task check (tests + lint, 0 issues), task check:api (все три артефакта совпадают), git diff --check. Добавлены mapper/logging/header tests, session gate/context/cookie-refresh и 20 router error-contract сценариев. API/SQL/env/dependencies, Redis и security гарантии сохранены. DB/container/external SMTP/browser/load проверки не повторялись; production readiness не заявляется. Следующий шаг — 5.3.
 
 ### Этап 6. Безопасность текущего входа и сессий
 
@@ -351,7 +368,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 ## 6. Текущий статус
 
-Этапы 0, 1 и 4 завершены. 5.1/5.2 реализованы и локально проверены: verification/recovery и необходимая часть SQL session security. 5.2r выполнен без изменения дерева папок и поведения; следующий шаг — 5.3. Provenance — [template-adoption](template-adoption.md); команды и границы проверок — в результатах ниже. Внешняя почта/browser staging ещё не проверены; baseline P0 и auth/RBAC/MFA/billing release gates остаются впереди, шаблон не готов к production release.
+Этапы 0, 1 и 4 завершены. 5.1/5.2 реализованы и локально проверены: verification/recovery и необходимая часть SQL session security. 5.2r и 5.2h выполнены без изменения дерева папок и API; следующий шаг — 5.3. Provenance — [template-adoption](template-adoption.md); команды и границы проверок — в результатах ниже. Внешняя почта/browser staging ещё не проверены; baseline P0 и auth/RBAC/MFA/billing release gates остаются впереди, шаблон не готов к production release.
 
 Проверка этого шага: `docker build -f deploy/Dockerfile.dev -t auth:devcheck .`; `AUTH_TEST_IMAGE=auth:devcheck AUTH_TEST_APP_ENV=dev AUTH_SMOKE_ONLY=true task check-integration` — exit 0. Проверены dev startup, migration up, runtime DB connection, PostgreSQL/Redis readiness, liveness, Swagger disabled (404), локальная SMTP отправка в Mailpit. Disposable project `auth-check-1791315226-3825` и его volumes удалены runner; существующая БД не затронута. Это не полный integration/backup drill или external SMTP delivery. На этапе 0 изменения были документационными; tests/lint/security scan и GitHub CI тогда повторно не запускались. Проверка local Markdown links и `git diff --check` прошла. Release checks этапа 14 сохраняются.
 
@@ -362,7 +379,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 2. Инфраструктура | Выполнено в 1.2 | Durable audit sink — отдельно по ADR; здесь только контракт |
 | 3. Toolchain/окружение/deps | Адаптировано в 1.3 | Dev startup/SMTP smoke после CGO fix подтверждён 06.10.2026 |
 | 4. Структура/схема/API | Завершён | Дерево, SQL schema и API contract checks; security enforcement впереди |
-| 5. Account lifecycle | 5.1/5.2 локально реализованы/проверены | 5.2r выполнен; далее 5.3, staging smoke и остальной lifecycle |
+| 5. Account lifecycle | 5.1/5.2 локально реализованы/проверены | 5.2r/5.2h выполнены; далее 5.3, staging smoke и остальной lifecycle |
 | 6. Безопасность сессий | Частично выполнен в 5.2 | SQL ledger/status/version, expiry, atomic reset/change; CSRF/fresh-auth/rotation и полная приёмка впереди |
 | 7. Identities / SSO boundary | Не начат | После 0, 4, 6; общий SSO optional |
 | 8. Telegram/OIDC/OTP | Не начат | После 5–7; Mini Apps optional |
@@ -373,7 +390,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 13. MFA/cabinet | Не начат | 13.1 после 6 и до публикации admin API; остальное по API готовности |
 | 14. Release/переносимость | Не начат | После обязательных модулей и checklist; документация ведётся по ходу |
 
-Текущий порядок: 0, 1.1–1.8, 4, 5.1/5.2 и 5.2r завершены → 5.3 и остальное 5/6 → 7/8 → 9/10 → 11/12 → 14. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется сразу после 6 до включения любых production admin действий. После 1.8 все следующие этапы используют только рабочий Auth и его документацию.
+Текущий порядок: 0, 1.1–1.8, 4, 5.1/5.2, 5.2r и 5.2h завершены → 5.3 и остальное 5/6 → 7/8 → 9/10 → 11/12 → 14. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется сразу после 6 до включения любых production admin действий. После 1.8 все следующие этапы используют только рабочий Auth и его документацию.
 
 ### Результат 5.2r — 9 октября 2026
 
