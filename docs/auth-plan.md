@@ -134,7 +134,7 @@ Auth — переиспользуемый Go-шаблон, который мож
 - 5.3. Реализовано и локально проверено 10 октября: HTTP me/logout/logout-all/list/revoke-own, независимый публичный UUID, cookie cleanup, bounded keyset pagination и атомарный caller/ownership/revoke/audit. Новые mutations защищены exact Origin allowlist; общая CSRF/CORS policy остаётся 6.5. Результат и ограничения ниже.
 - 5.4. Реализовано и локально проверено 10 октября: active/not-deleted enforcement, внутренний block/unblock с expected version, atomic status/version/revoke/challenge cleanup/audit, нейтральный login при stale issuance. Deleted account не разблокируется; admin HTTP ещё не публикуется. Подробности и границы ниже.
 - 5.5. Смена email: подтверждение нового адреса и свежая аутентификация, уведомление старого адреса, отсутствие возможности перехватить чужой credential. Смена контакта и login identity — явно разные операции.
-  - 5.5a–d локально реализованы: opt-in backend request/confirm/report/recover для password-профиля, SQL authority и mail outbox, отдельные HTTP scenarios/Swagger/тесты. Полный этап остаётся открытым: далее оставшаяся приёмка 5.5e; [контракт](email-change.md).
+  - 5.5a–d реализованы, 5.5e-local проверен: opt-in backend request/confirm/report/recover для password-профиля, SQL authority и mail outbox, отдельные HTTP scenarios/Swagger/тесты. Внешняя приёмка 5.5e-staging остаётся открытой; следующий backend-шаг 5.6; [контракт](email-change.md).
   - Перед 5.5d выполнен рефакторинг навигации 10 октября: input/result рядом со сценариями, явные verification/recovery filenames, `ValidationResult` и `PrepareVerification`, отдельные mail/worker и SQL forgot/reset ответственности. Дерево и публичное поведение сохранены; текущая карта — в [архитектуре](architecture.md). Проверены formatter, `task check` (тесты и линтер), `task check:api` и whitespace diff. Новая функциональность этим пунктом не закрывается.
   - До подтверждения нового адреса действующим остаётся старый. Запрос связан с user/session/auth_version; при завершении повторно проверить активность аккаунта, актуальность запроса и уникальность адреса внутри транзакции. Подтверждение не создаёт сессию; изменение login email отзывает прежние сессии и связанные recovery/verification challenges.
   - На прежний подтверждённый адрес отправить уведомление при запросе смены и при её завершении с действием «Это не я». Если прежний адрес не был подтверждён, не выдавать ему право блокировать аккаунт; поведение этого профиля определить до реализации, не приравнивать контакт к доказательству личности.
@@ -397,7 +397,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 ## 6. Текущий статус
 
-Этапы 0, 1 и 4 завершены. 5.1–5.4 и 5.5a–d реализованы и локально проверены: verification/recovery/session HTTP API/account status, opt-in email change/report/protected password recovery и необходимая часть SQL session security. Следующий шаг — оставшаяся приёмка 5.5e. Provenance — [template-adoption](template-adoption.md); проверки и границы — ниже. Внешняя почта/browser staging ещё не проверены; auth/RBAC/MFA/billing release gates впереди, шаблон не готов к production release.
+Этапы 0, 1 и 4 завершены. 5.1–5.4 и 5.5a–d реализованы и локально проверены: verification/recovery/session HTTP API/account status, opt-in email change/report/protected password recovery и необходимая часть SQL session security. 5.5e-local завершён; следующий backend-шаг — 5.6, deletion/retention. Provenance — [template-adoption](template-adoption.md); проверки и границы — ниже. Внешняя приёмка 5.5e-staging остаётся открытой: почта/browser и операционные процедуры ещё не проверены; auth/RBAC/MFA/billing release gates впереди, шаблон не готов к production release.
 
 Проверка этого шага: `docker build -f deploy/Dockerfile.dev -t auth:devcheck .`; `AUTH_TEST_IMAGE=auth:devcheck AUTH_TEST_APP_ENV=dev AUTH_SMOKE_ONLY=true task check-integration` — exit 0. Проверены dev startup, migration up, runtime DB connection, PostgreSQL/Redis readiness, liveness, Swagger disabled (404), локальная SMTP отправка в Mailpit. Disposable project `auth-check-1791315226-3825` и его volumes удалены runner; существующая БД не затронута. Это не полный integration/backup drill или external SMTP delivery. На этапе 0 изменения были документационными; tests/lint/security scan и GitHub CI тогда повторно не запускались. Проверка local Markdown links и `git diff --check` прошла. Release checks этапа 14 сохраняются.
 
@@ -408,7 +408,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 2. Инфраструктура | Выполнено в 1.2 | Durable audit sink — отдельно по ADR; здесь только контракт |
 | 3. Toolchain/окружение/deps | Адаптировано в 1.3 | Dev startup/SMTP smoke после CGO fix подтверждён 06.10.2026 |
 | 4. Структура/схема/API | Завершён | Дерево, SQL schema и API contract checks; security enforcement впереди |
-| 5. Account lifecycle | 5.1–5.4 и 5.5a–d локально реализованы/проверены | Далее оставшаяся приёмка 5.5e, staging и остальной lifecycle |
+| 5. Account lifecycle | 5.1–5.4, 5.5a–d и 5.5e-local реализованы/проверены | Далее 5.6; внешняя приёмка 5.5e-staging остаётся release gate |
 | 6. Безопасность сессий | Частично выполнен в 5.2/5.3 | SQL ledger/status/version, expiry, atomic reset/change/revoke; Origin для новых mutations; общий CSRF/CORS/fresh-auth/rotation и полная приёмка впереди |
 | 7. Identities / SSO boundary | Не начат | После 0, 4, 6; общий SSO optional |
 | 8. Telegram/OIDC/OTP | Не начат | После 5–7; Mini Apps optional |
@@ -419,7 +419,13 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 13. MFA/cabinet | Не начат | 13.1 после 6 и до публикации admin API; остальное по API готовности |
 | 14. Release/переносимость | Не начат | После обязательных модулей и checklist; документация ведётся по ходу |
 
-Текущий порядок: 0, 1.1–1.8, 4, 5.1–5.4, 5.2r/5.2h завершены; 5.5a–d локально реализованы → оставшаяся приёмка 5.5e и остальное 5/6 → 7/8 → 9/10 → 11/12 → 14. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется после 6 до production admin действий. После 1.8 используем только рабочий Auth и его документацию.
+Текущий порядок: 0, 1.1–1.8, 4, 5.1–5.4, 5.2r/5.2h завершены; 5.5a–d реализованы и 5.5e-local проверен → 5.6/5.7 и остальное 6 → 7/8 → 9/10 → 11/12 → 14. 5.5e-staging остаётся внешним release gate. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется после 6 до production admin действий. После 1.8 используем только рабочий Auth и его документацию.
+
+### Результат 5.5e-local — 10 октября 2026
+
+Добавлены `protected_recovery_races_integration_test.go` и `protected_recovery_delivery_integration_test.go` в существующий `TestPostgresSchema`. Проверены recovery против admin block/unblock в обоих порядках и одновременно, отклонение старых session/password/reset/confirm/report, защита предыдущей смены и одноразовый duplicate report. SQL worker с зашифрованным payload и управляемым mailer проверен на retry/backoff, lease takeover/stale acknowledgement, административную отмену, исчерпание пяти попыток и expiry. Новые runtime механизмы, зависимости, API и миграции не понадобились.
+
+Пройдены `task go:fmt`, `task check` (tests + lint, 0 issues), весь `TestPostgresSchema` на disposable PostgreSQL 18.6 с up/down/up исходной 000001 и `git diff --check`. Временная тестовая база удалена; рабочая БД и secrets не затронуты. Реальный SMTP, browser UI, нагрузка и операционный recovery drill не выполнялись: 5.5e-staging и весь release остаются открытыми. Далее backend 5.6, сначала правила deletion/retention без зависимости от ещё не реализованной оплаты.
 
 ### Результат 5.5d — 10 октября 2026
 
