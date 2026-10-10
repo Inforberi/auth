@@ -5,12 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 )
 
 func (l *PasswordService) Login(ctx context.Context, input LoginInput) (*LoginResult, error) {
-	email, err := accountdomain.NewEmail(input.Email)
+	email, err := parseCredentials(input.Email, input.Password)
 	if err != nil {
 		return nil, fmt.Errorf("service login: %w", err)
 	}

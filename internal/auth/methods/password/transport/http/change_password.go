@@ -7,6 +7,30 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
+type ChangePasswordRequest struct {
+	OldPassword     string `json:"oldPassword" binding:"required" example:"ExamplePass1"`
+	NewPassword     string `json:"newPassword" binding:"required" example:"ExamplePass2"`
+	ConfirmPassword string `json:"confirmPassword" binding:"required" example:"ExamplePass2"`
+} // @name password_http.ChangePasswordRequest
+
+type ChangePasswordResponse struct {
+	Status string `json:"Status" example:"ok"`
+} // @name password_http.ChangePasswordResponse
+
+func validateChangePasswordInput(input ChangePasswordRequest) error {
+	switch {
+	case input.OldPassword == "":
+		return ErrEmptyOldPassword
+	case input.NewPassword == "":
+		return ErrEmptyNewPassword
+	case input.ConfirmPassword == "":
+		return ErrEmptyConfirmPassword
+	case input.NewPassword != input.ConfirmPassword:
+		return ErrPasswordMismatch
+	}
+	return nil
+}
+
 // @Summary change password
 // @Description Requires a valid SQL-backed __Host-session and a verified login email. Atomically updates password, revokes all sessions and records audit; sign in again. Response retains legacy uppercase Status. CSRF/fresh-auth are not implemented yet.
 // @Tags Auth
@@ -57,11 +81,7 @@ func (p *PasswordHandler) ChangePassword(w http.ResponseWriter, r *http.Request)
 		input.NewPassword,
 	)
 	if err != nil {
-		if passwordPolicyError(err) {
-			httpx.Error(w, 400, "password_policy", "invalid password")
-		} else {
-			p.respondError(w, r, err, "change password", changePasswordErrors)
-		}
+		p.respondError(w, r, err, "change password", changePasswordErrors)
 		return
 	}
 

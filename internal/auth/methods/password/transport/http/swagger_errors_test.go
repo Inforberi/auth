@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Inforberi/financial-intelligence/docs"
+	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
 func TestSwaggerDocumentsClientErrors(t *testing.T) {
@@ -22,14 +23,14 @@ func TestSwaggerDocumentsClientErrors(t *testing.T) {
 	}
 	for _, tc := range []struct {
 		path   string
-		errors []clientError
+		errors []httpx.ErrorRule
 	}{
 		{"/api/v1/auth/register/email", registerClientErrors},
 		{"/api/v1/auth/login/email", loginClientErrors},
 		{"/api/v1/auth/change-password", changePasswordErrors},
 	} {
 		for _, ce := range tc.errors {
-			mapped := mapError(ce.err, tc.errors)
+			mapped := httpx.MapError(ce.Target, tc.errors, internalFailure)
 			description := doc.Paths[tc.path]["post"].Responses[strconv.Itoa(mapped.Status)].Description
 			if !strings.Contains(description, mapped.Code) {
 				t.Errorf("%s: undocumented %d %s", tc.path, mapped.Status, mapped.Code)

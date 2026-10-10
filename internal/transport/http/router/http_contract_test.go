@@ -8,6 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"go.uber.org/zap"
+
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 )
 
@@ -41,7 +45,11 @@ func TestHTTPResponsesMatchSwagger(t *testing.T) {
 				r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: tc.token})
 			}
 			w := httptest.NewRecorder()
-			New(contractHandlers("dev")).ServeHTTP(w, r)
+			handlers := contractHandlers("dev")
+			if tc.code == "email_required" {
+				handlers.PasswordHandler = passwordhttp.New(passwordFault{accountdomain.ErrEmailRequired}, zap.NewNop())
+			}
+			New(handlers).ServeHTTP(w, r)
 			if w.Code != tc.status || w.Header().Get("Content-Type") != "application/json" {
 				t.Fatalf("unexpected status/content type: %d %s", w.Code, w.Body.String())
 			}

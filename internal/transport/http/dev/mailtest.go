@@ -65,8 +65,8 @@ func (h *MailTestHandler) Send(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.mail.Send(input.To, input.Subject, input.Body); err != nil {
-		h.log.Error("send mail failed", zap.Error(err), zap.String("to", input.To))
-		httpx.Error(w, http.StatusInternalServerError, "send_failed", "send failed")
+		fallback := httpx.Failure{Status: http.StatusInternalServerError, Code: "send_failed", Message: "send failed"}
+		httpx.RespondError(w, r, h.log, "send test mail", err, nil, fallback)
 		return
 	}
 

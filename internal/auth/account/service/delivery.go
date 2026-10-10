@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"html"
 	"time"
 )
 
@@ -47,4 +49,17 @@ func (s *Service) RunDelivery(ctx context.Context, report func(error)) {
 			}
 		}
 	}
+}
+
+func (s *Service) send(ctx context.Context, payload []byte) error {
+	plain, err := s.cipher.Open(payload)
+	if err != nil {
+		return err
+	}
+	var message verificationMail
+	if err := json.Unmarshal(plain, &message); err != nil {
+		return err
+	}
+	body := `<p>Подтвердите email: <a href="` + html.EscapeString(message.Link) + `">подтвердить адрес</a>.</p>`
+	return s.mail.SendContext(ctx, message.To, "Подтверждение email", body)
 }

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
@@ -33,7 +34,7 @@ func TestLoginByEmail_ServiceErrors(t *testing.T) {
 		{
 			"internal err",
 			errors.New("internal error"),
-			http.StatusBadRequest,
+			http.StatusInternalServerError,
 			errInternalError.code,
 		},
 	}
@@ -87,6 +88,7 @@ func TestLoginByEmail_ServiceErrors(t *testing.T) {
 			assert.True(t, ok, "code should be string")
 
 			assert.Equal(t, tt.exceptedCode, code)
+			assert.Equal(t, tt.statusCode, rw.Code)
 		})
 	}
 }
@@ -184,6 +186,12 @@ func TestLoginByEmail_ValidationError(t *testing.T) {
 			logger := zap.NewNop()
 
 			handler := New(service, logger)
+			switch tt.exceptedCode {
+			case "email_required":
+				service.On("Login", mock.Anything, mock.Anything).Return(nil, accountdomain.ErrEmailRequired)
+			case "password_required":
+				service.On("Login", mock.Anything, mock.Anything).Return(nil, passworddomain.ErrPasswordRequired)
+			}
 
 			req := httptest.NewRequest(
 				http.MethodPost,

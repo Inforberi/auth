@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,6 +20,28 @@ type recoveryRepo struct {
 	err       error
 	job       *domain.ResetDelivery
 	sent      bool
+}
+
+func TestResetBoundsBeforeLimits(t *testing.T) {
+	cipher, err := secretbox.NewScoped("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "password-reset:v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, size := range []int{0, 43, 128, 129, 1024} {
+		repo := &recoveryRepo{}
+		limits := &recoveryLimit{allow: false}
+		s := NewRecovery(repo, cipher, limits, nil, recoveryHash{}, Config{})
+		want := domain.ErrRecoveryLimited
+		if size > 128 {
+			want = domain.ErrInvalidReset
+		}
+		if err := s.Reset(context.Background(), strings.Repeat("A", size), "ExamplePass2", "ExamplePass2", "ip"); !errors.Is(err, want) {
+			t.Fatal(size, err)
+		}
+		if repo.consumed != "" {
+			t.Fatal("rejected token reached SQL")
+		}
+	}
 }
 
 func (r *recoveryRepo) IssueReset(_ context.Context, _ string, c domain.ResetChallenge) error {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 )
 
@@ -15,9 +14,9 @@ func (r *PasswordService) Register(
 	userAgent,
 	ip string,
 ) (*RegisterResult, error) {
-	emailValue, err := accountdomain.NewEmail(email)
+	emailValue, err := parseCredentials(email, password)
 	if err != nil {
-		return nil, fmt.Errorf("invalid email in register email %w", err)
+		return nil, fmt.Errorf("register credentials: %w", err)
 	}
 
 	err = passworddomain.ValidatePassword(password)

@@ -5,6 +5,7 @@ import (
 )
 
 var (
+	ErrPasswordRequired       = errors.New("password required")
 	ErrNotFound               = errors.New("not found")
 	ErrUserNotFound           = errors.New("user not found")
 	ErrInvalidEmail           = errors.New("invalid email")

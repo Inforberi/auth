@@ -5,27 +5,10 @@ import (
 
 	"go.uber.org/zap"
 
-	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
-
-var errInvalidCredentials = errorBody{"invalid_credentials", "invalid email or password"}
-
-var loginClientErrors = []clientError{
-	{
-		passworddomain.ErrInvalidEmailOrPassword,
-		http.StatusBadRequest,
-		errInvalidCredentials,
-	},
-	{
-		accountdomain.ErrEmailInvalid,
-		http.StatusBadRequest,
-		errInvalidEmail,
-	},
-}
 
 type LoginByEmailRequest struct {
 	Email    string `json:"email" binding:"required" example:"user@example.com"`
@@ -54,26 +37,6 @@ func (h *PasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 			http.StatusBadRequest,
 			errInvalidJSON.code,
 			errInvalidJSON.message,
-		)
-		return
-	}
-
-	if input.Email == "" {
-		httpx.Error(
-			w,
-			http.StatusBadRequest,
-			errEmailRequired.code,
-			errEmailRequired.message,
-		)
-		return
-	}
-
-	if input.Password == "" {
-		httpx.Error(
-			w,
-			http.StatusBadRequest,
-			errPasswordRequired.code,
-			errPasswordRequired.message,
 		)
 		return
 	}

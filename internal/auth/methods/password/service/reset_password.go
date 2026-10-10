@@ -9,6 +9,9 @@ import (
 )
 
 func (r *RecoveryService) Reset(ctx context.Context, token, password, confirmation, ip string) error {
+	if len(token) > 128 {
+		return domain.ErrInvalidReset
+	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	if err := r.limit(ctx, "reset-ip:"+ip, 10, time.Minute); err != nil {

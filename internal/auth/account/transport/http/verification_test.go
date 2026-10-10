@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -37,7 +38,9 @@ func TestVerificationHTTP(t *testing.T) {
 		confirm bool
 	}{
 		{"resend accepted", `{"email":"user@example.com"}`, nil, 202, "accepted", false},
-		{"invalid email", `{"email":"bad"}`, nil, 400, "invalid_email", false},
+		{"invalid email", `{"email":"bad"}`, domain.ErrEmailInvalid, 400, "invalid_email", false},
+		{"missing email", `{}`, domain.ErrEmailRequired, 400, "invalid_email", false},
+		{"wrapped email error", `{"email":"bad"}`, fmt.Errorf("private: %w", domain.ErrEmailInvalid), 400, "invalid_email", false},
 		{"invalid JSON", `{"email":"user@example.com","unknown":true}`, nil, 400, "invalid_json", false},
 		{"limited", `{"email":"user@example.com"}`, domain.ErrVerificationLimited, 429, "rate_limited", false},
 		{"SQL unavailable", `{"email":"user@example.com"}`, errors.New("secret SQL details"), 503, "temporarily_unavailable", false},

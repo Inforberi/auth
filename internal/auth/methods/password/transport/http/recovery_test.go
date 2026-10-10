@@ -6,15 +6,43 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"go.uber.org/zap"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
 type recoveryService struct {
 	err error
 	ip  string
+}
+
+type recoveryLimiter struct{}
+
+func (recoveryLimiter) Allow(context.Context, string, int, time.Duration) (bool, error) {
+	return true, nil
+}
+
+func TestForgotEmptyEmail(t *testing.T) {
+	cipher, err := secretbox.NewScoped("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "password-reset:v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Real service validates input; nil dependencies must not be reached afterwards.
+	s := passwordservice.NewRecovery(nil, cipher, recoveryLimiter{}, nil, nil, passwordservice.Config{})
+	h := NewRecovery(s, zap.NewNop())
+	for _, body := range []string{`{}`, `{"email":""}`, `{"email":"   "}`} {
+		r := httptest.NewRequest("POST", "/", strings.NewReader(body))
+		r.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.Forgot(w, r)
+		if w.Code != 400 || w.Body.String() != "{\"code\":\"invalid_email\",\"message\":\"invalid email\"}\n" {
+			t.Fatal(w.Code, w.Body.String())
+		}
+	}
 }
 
 func (s *recoveryService) Forgot(_ context.Context, _, ip string) error      { s.ip = ip; return s.err }

@@ -19,6 +19,7 @@ import (
 
 func TestRegister_EmailRequired(t *testing.T) {
 	service := &mockPasswordService{}
+	service.On("Register", mock.Anything, "", "Password123", mock.Anything, mock.Anything).Return(nil, accountdomain.ErrEmailRequired)
 	handler := New(service, zap.NewNop())
 
 	req := httptest.NewRequest(
@@ -33,15 +34,7 @@ func TestRegister_EmailRequired(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 
-	service.AssertNotCalled(
-		t,
-		"Register",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	)
+	service.AssertExpectations(t)
 }
 
 func TestRegister_InvalidJSON(t *testing.T) {
@@ -73,6 +66,7 @@ func TestRegister_InvalidJSON(t *testing.T) {
 
 func TestRegister_PasswordRequired(t *testing.T) {
 	service := &mockPasswordService{}
+	service.On("Register", mock.Anything, "test@mail.ru", "", mock.Anything, mock.Anything).Return(nil, passworddomain.ErrPasswordRequired)
 	handler := New(service, zap.NewNop())
 
 	req := httptest.NewRequest(
@@ -87,15 +81,7 @@ func TestRegister_PasswordRequired(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 
-	service.AssertNotCalled(
-		t,
-		"Register",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	)
+	service.AssertExpectations(t)
 }
 
 func TestRegister_ServiceError(t *testing.T) {
@@ -187,4 +173,42 @@ func TestRegister_Success(t *testing.T) {
 	assert.NotEmpty(t, rr.Result().Cookies())
 
 	service.AssertExpectations(t)
+}
+
+func TestCredentialValidationHTTP(t *testing.T) {
+	h := New(passwordservice.New(nil, nil, nil), zap.NewNop())
+	for _, tc := range []struct {
+		email, password, code string
+	}{
+		{"", "", "email_required"},
+		{"", "Password123", "email_required"},
+		{"user@example.com", "", "password_required"},
+		{"bad", "", "password_required"},
+		{"   ", "", "password_required"},
+		{"bad", "Password123", "invalid_email"},
+		{"   ", "Password123", "email_required"},
+	} {
+		for _, endpoint := range []struct {
+			name   string
+			handle http.HandlerFunc
+		}{{"register", h.Register}, {"login", h.LoginByEmail}} {
+			t.Run(endpoint.name+"/"+tc.email+"/"+tc.code, func(t *testing.T) {
+				body, err := json.Marshal(RegisterRequest{Email: tc.email, Password: tc.password})
+				if err != nil {
+					t.Fatal(err)
+				}
+				r := httptest.NewRequest("POST", "/", strings.NewReader(string(body)))
+				r.Header.Set("Content-Type", "application/json")
+				w := httptest.NewRecorder()
+				endpoint.handle(w, r)
+				var response struct{ Code string }
+				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+					t.Fatal(err)
+				}
+				if w.Code != 400 || response.Code != tc.code || len(w.Result().Cookies()) != 0 {
+					t.Fatal(w.Code, response.Code)
+				}
+			})
+		}
+	}
 }

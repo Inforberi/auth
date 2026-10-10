@@ -2,12 +2,10 @@ package http
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"go.uber.org/zap"
 
-	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
@@ -31,11 +29,7 @@ func (m *Middleware) Auth(next http.Handler) http.Handler {
 
 		session, err := m.session.ValidateSession(r.Context(), token)
 		if err != nil {
-			if errors.Is(err, sessiondomain.ErrSessionNotFound) || errors.Is(err, sessiondomain.ErrSessionExpired) {
-				unauthorized(w)
-			} else {
-				httpx.Error(w, 503, "temporarily_unavailable", "temporarily unavailable")
-			}
+			m.respondError(w, r, err)
 			return
 		}
 

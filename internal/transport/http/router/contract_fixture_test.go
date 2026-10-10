@@ -108,7 +108,10 @@ type contractRecovery struct{}
 func (contractRecovery) Forgot(context.Context, string, string) error                { return nil }
 func (contractRecovery) Reset(context.Context, string, string, string, string) error { return nil }
 
-func (contractAccounts) AllowRegistration(context.Context, string) error             { return nil }
-func (contractAccounts) Resend(context.Context, string, string) error                { return nil }
+func (contractAccounts) AllowRegistration(context.Context, string) error { return nil }
+func (contractAccounts) Resend(_ context.Context, email, _ string) error {
+	_, err := accountdomain.NewEmail(email)
+	return err
+}
 func (contractAccounts) Confirm(context.Context, string, string) error               { return nil }
 func (contractAccounts) RequireVerified(context.Context, accountdomain.UserID) error { return nil }

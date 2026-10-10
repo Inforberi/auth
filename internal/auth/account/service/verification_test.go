@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -143,6 +144,29 @@ func TestVerificationLimitsAndTokens(t *testing.T) {
 	}
 }
 
+func TestResendValidatesBeforeDependencies(t *testing.T) {
+	for _, tc := range []struct {
+		input string
+		want  error
+	}{
+		{"", domain.ErrEmailRequired},
+		{"   ", domain.ErrEmailRequired},
+		{"bad", domain.ErrEmailInvalid},
+	} {
+		t.Run(tc.input, func(t *testing.T) {
+			s, repo, limiter, _, _ := fixture(t)
+			limiter.allowed = false
+			limiter.err = errors.New("Redis down")
+			if err := s.Resend(context.Background(), tc.input, "ip"); !errors.Is(err, tc.want) {
+				t.Fatal("email error precedence changed", err)
+			}
+			if len(limiter.keys) != 0 || repo.issued.Digest != "" {
+				t.Fatal("invalid email reached dependencies")
+			}
+		})
+	}
+}
+
 func TestVerificationConfig(t *testing.T) {
 	cfg := service.Config{URL: "https://example.com/verify", EncryptionKey: "bG9jYWwtb25seS1hdXRoLW91dGJveC1rZXktMzJieXQ=", TTL: 30 * time.Minute, ResendInterval: time.Minute}
 	if err := cfg.Validate(false); err != nil {
@@ -155,6 +179,23 @@ func TestVerificationConfig(t *testing.T) {
 		cfg.URL = u
 		if cfg.Validate(false) == nil {
 			t.Fatal("unsafe URL accepted")
+		}
+	}
+}
+
+func TestConfirmBoundsBeforeLimits(t *testing.T) {
+	for _, size := range []int{0, 43, 128, 129, 1024} {
+		s, repo, limiter, _, _ := fixture(t)
+		limiter.allowed = false
+		want := domain.ErrVerificationLimited
+		if size > 128 {
+			want = domain.ErrInvalidVerification
+		}
+		if err := s.Confirm(context.Background(), strings.Repeat("A", size), "ip"); !errors.Is(err, want) {
+			t.Fatal(size, err)
+		}
+		if (size > 128 && len(limiter.keys) != 0) || repo.confirmed != "" {
+			t.Fatal("oversized token reached dependencies or limited token reached SQL")
 		}
 	}
 }
