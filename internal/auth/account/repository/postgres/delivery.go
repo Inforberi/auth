@@ -10,13 +10,25 @@ import (
 )
 
 func (r *Repository) ClaimDelivery(ctx context.Context) (*domain.VerificationDelivery, error) {
-	changeFirst := r.emailChangeDelivery && r.deliveryTurn.Add(1)%2 == 1
-	if changeFirst {
-		job, err := r.claimChangeDelivery(ctx)
+	queues := []func(context.Context) (*domain.VerificationDelivery, error){r.claimVerificationDelivery}
+	if r.emailChangeDelivery {
+		queues = append(queues, r.claimChangeDelivery)
+	}
+	if r.invitationDelivery {
+		queues = append(queues, r.claimInvitationDelivery)
+	}
+	count := uint64(len(queues))
+	start := r.deliveryTurn.Add(1) % count
+	for offset := uint64(0); offset < count; offset++ {
+		job, err := queues[(start+offset)%count](ctx)
 		if err != nil || job != nil {
 			return job, err
 		}
 	}
+	return nil, nil
+}
+
+func (r *Repository) claimVerificationDelivery(ctx context.Context) (*domain.VerificationDelivery, error) {
 	var job domain.VerificationDelivery
 	err := r.db.QueryRow(ctx, `WITH due AS (
 		SELECT o.id FROM auth.email_verification_outbox o
@@ -30,15 +42,15 @@ func (r *Repository) ClaimDelivery(ctx context.Context) (*domain.VerificationDel
 		lease_until=clock_timestamp()+interval '30 seconds' FROM due WHERE o.id=due.id
 		RETURNING o.id,o.lease,o.payload,o.attempts`).Scan(&job.ID, &job.Lease, &job.Payload, &job.Attempts)
 	if errors.Is(err, pgx.ErrNoRows) {
-		if r.emailChangeDelivery && !changeFirst {
-			return r.claimChangeDelivery(ctx)
-		}
 		return nil, nil
 	}
 	return &job, err
 }
 
 func (r *Repository) FinishDelivery(ctx context.Context, job domain.VerificationDelivery, sent bool) error {
+	if job.Invitation {
+		return r.finishInvitationDelivery(ctx, job, sent)
+	}
 	if job.EmailChange {
 		return r.finishChangeDelivery(ctx, job, sent)
 	}

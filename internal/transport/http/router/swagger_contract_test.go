@@ -59,6 +59,7 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 		{"password_http.ForgotRequest", passwordhttp.ForgotRequest{}},
 		{"password_http.ResetRequest", passwordhttp.ResetRequest{}},
 		{"password_http.ProtectedRecoveryRequest", passwordhttp.ProtectedRecoveryRequest{}},
+		{"password_http.ActivationRequest", passwordhttp.ActivationRequest{}},
 		{"password_http.RecoveryResponse", passwordhttp.RecoveryResponse{}},
 		{"account_http.ResendRequest", accounthttp.ResendRequest{}},
 		{"account_http.ConfirmRequest", accounthttp.ConfirmRequest{}},
@@ -120,6 +121,7 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 func TestSwaggerRequestAndResponseReferences(t *testing.T) {
 	doc := readAPI(t)
 	requests := map[string]string{
+		"/api/v1/auth/invitations/activate": "password_http.ActivationRequest",
 		"/api/v1/auth/forgot-password":      "password_http.ForgotRequest",
 		"/api/v1/auth/reset-password":       "password_http.ResetRequest",
 		"/api/v1/auth/email/resend":         "account_http.ResendRequest",

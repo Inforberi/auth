@@ -10,6 +10,7 @@
 | SQL и миграции | [schema](../schema.md) | `migrations/000001_init.*.sql`, feature `repository/postgres` |
 | Email verification | [email-verification](../features/email-verification.md) | `internal/auth/account` — `verification_*`, delivery |
 | Обычный password recovery | [password-recovery](../features/password-recovery.md) | `internal/auth/methods/password` — forgot/reset/change |
+| Provisioning/приглашения | [invitations](../features/invitations.md) | Account `provision`/`invitation_*`, password `activate_invitation`, app и router |
 | Смена email и защитный recovery | [email-change](../features/email-change.md) | `internal/auth/account` — `email_change_*`; password `protected_recovery*` |
 | Account status/deletion/retention | [account-deletion](../features/account-deletion.md), [architecture](../architecture.md) | Account `status.go`/`deletion.go`/`retention*.go`, `internal/config`, app lifecycle; SQL/env tests |
 | Sessions | [ADR 002](../adr/002-sessions-and-transactions.md), [contract](../api/contract.md) | `internal/auth/session` |

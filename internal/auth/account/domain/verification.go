@@ -18,6 +18,7 @@ type Verification struct {
 }
 
 type VerificationDelivery struct {
+	Invitation  bool
 	EmailChange bool
 	ID          string
 	Lease       string

@@ -2,6 +2,16 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат 5.7a — 10 октября 2026
+
+По запросу пользователя реализован backend password provisioning/invitations: pending user/profile/optional contact, actor-scoped durable request identity/HMAC fingerprint, отдельный digest/encrypted outbox/audit. Provisioning независим от public registration, не назначает роли/grants/verification/пароль/session. Повтор команды возвращает тот же UUID без нового письма, изменённый payload и занятый email дают конфликт без auto-merge. Actor — attribution, не permissions; публичный admin endpoint не подключён.
+
+Optional POST activation с Origin/no-store и service policy/token validation, Redis IP/global budgets, indexed preflight перед shared Argon2. Account repository атомарно потребляет version/expiry-bound token, записывает credential/verification, active/version/marker/audit. Replay и stale authority дают invalid_invitation, cookie/session не создаются. Block/delete отменяют приглашение; durable activation marker исключает bypass через unblock даже после cleanup. Третья очередь account delivery использует текущий fair bounded worker/lease/backoff; expiry/exhausted GC и audit retention используют текущие indexed batches. Исходная 000001 up/down, без новой миграции или применения к рабочей БД; cfg disabled по умолчанию.
+
+Проверено: formatter, `go test ./...`, lint (0 issues после исправления complexity guard), targeted race account/password services и router, Swagger generation/drift, disposable PostgreSQL 18.6 up/down/up/full correctness. SQL: 16 concurrent activations дают один успех; 16 одинаковых команд создают один UUID. Idempotency/conflict/unique email/purpose isolation/expiry/replay/version/block/delete, activation/provision audit rollback, delivery retry/stale lease/expiry cleanup и no status bypass проверены. HTTP: origin/format/errors/429/503/no cookie/GET/disabled route/no admin route и Swagger DTO/routes проверены. Это не full load test, external SMTP/browser или production acceptance. 5.7b reissue invitation и future non-password/admin flows остаются открытыми; [контракт](../features/invitations.md).
+
+Временный PostgreSQL приглашений удалён с исключительно синтетическими данными после проверок. Рабочая БД/env/secrets не менялись; коммит не выполнялся. Уже применённую 000001 не сбрасывать: перенос схемы согласовывается отдельно.
+
 ### Оптимизация после аудита — 10 октября 2026
 
 По разрешению пользователя исправлены runtime узкие места 6.4a/6.8a. Общий bounded/context-aware hash wrapper для password login/register/change/reset/email-change/protected recovery, без очереди ожидания и без ослабления Argon2. Login лимиты IP/email/global перед SQL/hash, Redis failure — 503; лимиты register/reset configurable. HTTP admission/deadline/header bounds, canonical cookie check до SQL, trusted proxy CIDR policy и coalesced readiness. Password credential reads и регистрационная транзакция получили deadline.

@@ -11,6 +11,7 @@ type UserID string
 type Status string
 
 const (
+	StatusPending Status = "pending"
 	StatusActive  Status = "active"
 	StatusBlocked Status = "blocked"
 )

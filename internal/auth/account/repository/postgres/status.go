@@ -28,6 +28,11 @@ func (r *Repository) ChangeStatus(ctx context.Context, change domain.StatusChang
 		if version != change.ExpectedVersion {
 			return domain.ErrAccountConflict
 		}
+		if change.Status == domain.StatusActive && status != domain.StatusActive {
+			if err := requireAccountActivation(ctx, tx, change.UserID, status); err != nil {
+				return err
+			}
+		}
 		if err := cancelProtectedRecovery(ctx, tx, change.UserID); err != nil {
 			return err
 		}
@@ -41,6 +46,9 @@ func (r *Repository) ChangeStatus(ctx context.Context, change domain.StatusChang
 			return err
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.password_resets WHERE user_id=$1`, change.UserID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM auth.account_invitations WHERE user_id=$1`, change.UserID); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.email_verifications v USING auth.user_emails e WHERE v.email_id=e.id AND e.user_id=$1`, change.UserID); err != nil {
@@ -59,4 +67,18 @@ func (r *Repository) ChangeStatus(ctx context.Context, change domain.StatusChang
 		return 0, err
 	}
 	return version, nil
+}
+
+func requireAccountActivation(ctx context.Context, tx pgx.Tx, user domain.UserID, status domain.Status) error {
+	if status == domain.StatusPending {
+		return domain.ErrAccountConflict
+	}
+	var awaiting bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.account_provisions WHERE user_id=$1 AND activated_at IS NULL)`, user).Scan(&awaiting); err != nil {
+		return err
+	}
+	if awaiting {
+		return domain.ErrAccountConflict
+	}
+	return nil
 }

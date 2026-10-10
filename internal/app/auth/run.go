@@ -9,6 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
+	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
@@ -16,8 +17,9 @@ import (
 )
 
 type App struct {
-	serve     func(context.Context) error
-	resources *resources
+	Provisioning *accountservice.ProvisionService
+	serve        func(context.Context) error
+	resources    *resources
 }
 
 func (a *App) Run(ctx context.Context) error {

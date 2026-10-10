@@ -13,12 +13,17 @@ type Repository struct {
 	db                  *pgxpool.Pool
 	deliveryTurn        atomic.Uint64
 	emailChangeDelivery bool
+	invitationDelivery  bool
 }
 
 func New(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
 
 func NewWithEmailChanges(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db, emailChangeDelivery: true}
+}
+
+func NewWithDelivery(db *pgxpool.Pool, emailChanges, invitations bool) *Repository {
+	return &Repository{db: db, emailChangeDelivery: emailChanges, invitationDelivery: invitations}
 }
 
 func (r *Repository) transaction(ctx context.Context, fn func(pgx.Tx) error) error {

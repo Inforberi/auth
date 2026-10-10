@@ -333,6 +333,8 @@ UUID пользователя неизменен; email, username и provider di
 
 ## Независимые настройки
 
+5.7a: account ProvisionService создаёт pending UUID/contact и purpose-bound invitation/outbox/audit; durable actor-scoped command identity отделена от ephemeral token. Password ActivationService применяет policy/hash/Redis budgets и узкий порт account repository для атомарной owner/version/expiry activation. App собирает их, публичен только optional POST activation; internal App.Provisioning не заменяет authorization. Account worker обслуживает invitation queue вместе с verification/email-change, retention очищает expired jobs/challenges и audit. Роли/session/grants не выдаются; подробности/5.7b — [invitations](features/invitations.md).
+
 Это будущий контракт этапов 9–12, ещё не существующие env-переменные или endpoints:
 
 - `access`: permission/role catalog отдельно от назначений пользователям. Продукт расширяет каталог без hardcoded business enum. Системные permissions защищены от произвольного переопределения.

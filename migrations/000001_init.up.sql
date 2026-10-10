@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public;
 CREATE TABLE auth.users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   status TEXT NOT NULL DEFAULT 'active'
-    CONSTRAINT users_status_check CHECK (status IN ('active', 'blocked')),
+    CONSTRAINT users_status_check CHECK (status IN ('pending', 'active', 'blocked')),
   auth_version BIGINT NOT NULL DEFAULT 1 CHECK (auth_version > 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -166,7 +166,7 @@ CREATE TABLE auth.account_status_audit (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id),
   actor_id UUID NOT NULL REFERENCES auth.users(id),
-  previous_status TEXT NOT NULL CHECK (previous_status IN ('active','blocked')),
+  previous_status TEXT NOT NULL CHECK (previous_status IN ('pending','active','blocked')),
   new_status TEXT NOT NULL CHECK (new_status IN ('active','blocked')),
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -247,3 +247,50 @@ CREATE INDEX password_audit_retention ON auth.password_audit(created_at,id);
 CREATE INDEX account_status_audit_retention ON auth.account_status_audit(created_at,id);
 CREATE INDEX account_deletion_audit_retention ON auth.account_deletion_audit(created_at,id);
 CREATE INDEX email_change_audit_retention ON auth.email_change_audit(created_at,id);
+
+-- Durable actor-scoped command identity; replay never recreates an expired invitation.
+CREATE TABLE auth.account_provisions (
+  actor_id UUID NOT NULL REFERENCES auth.users(id),
+  request_key UUID NOT NULL,
+  fingerprint TEXT NOT NULL CHECK (fingerprint ~ '^[0-9a-f]{64}$'),
+  user_id UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE REFERENCES auth.users(id) DEFERRABLE INITIALLY DEFERRED,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  activated_at TIMESTAMPTZ CHECK (activated_at IS NULL OR activated_at>=created_at),
+  PRIMARY KEY(actor_id,request_key)
+);
+
+CREATE TABLE auth.account_invitations (
+  digest TEXT PRIMARY KEY CHECK (digest ~ '^[0-9a-f]{64}$'),
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  email_id UUID NOT NULL,
+  auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  expires_at TIMESTAMPTZ NOT NULL,
+  FOREIGN KEY(user_id,email_id) REFERENCES auth.user_emails(user_id,id) ON DELETE CASCADE
+);
+CREATE INDEX account_invitations_expiry ON auth.account_invitations(expires_at,digest);
+
+CREATE TABLE auth.invitation_outbox (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  digest TEXT NOT NULL UNIQUE REFERENCES auth.account_invitations(digest) ON DELETE CASCADE,
+  payload BYTEA NOT NULL CHECK (octet_length(payload) BETWEEN 1 AND 16384),
+  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+  available_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  lease UUID,
+  lease_until TIMESTAMPTZ,
+  CHECK ((lease IS NULL) = (lease_until IS NULL))
+);
+CREATE INDEX invitation_outbox_due ON auth.invitation_outbox(available_at);
+CREATE INDEX invitation_outbox_expiry ON auth.invitation_outbox(expires_at,id);
+CREATE INDEX invitation_outbox_exhausted ON auth.invitation_outbox(lease_until NULLS FIRST,id) WHERE attempts>=5;
+
+CREATE TABLE auth.invitation_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  actor_id UUID REFERENCES auth.users(id),
+  action TEXT NOT NULL CHECK (action IN ('provisioned','activated')),
+  auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK ((action='provisioned') = (actor_id IS NOT NULL))
+);
+CREATE INDEX invitation_audit_retention ON auth.invitation_audit(created_at,id);

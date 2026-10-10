@@ -45,7 +45,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	now := clock.UTCClock{}
 	tokenGen := tokengenerate.New()
 	mail := mailer.New(cfg.MailSender)
-	accountSvc, accountRepo, err := assembleAccount(pool, rdb, mail, cfg.Account, cfg.EmailChange.Enabled)
+	accountSvc, accountRepo, err := assembleAccount(pool, rdb, mail, cfg.Account, cfg.EmailChange.Enabled, cfg.Invitation.Enabled)
 	if err != nil {
 		return nil, fmt.Errorf("assemble account: %w", err)
 	}
@@ -66,6 +66,12 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	middleware := sessionhttp.New(sessionSvc, log)
 	var emailChange *accounthttp.EmailChangeHandler
 	var protectedRecovery *passwordhttp.ProtectedRecoveryHandler
+	var activation *passwordhttp.ActivationHandler
+	var provisioning *accountservice.ProvisionService
+	if cfg.Invitation.Enabled {
+		provisioning = accountservice.NewProvisioning(accountRepo, accountSvc, cfg.Invitation)
+		activation = passwordhttp.NewActivation(passwordservice.NewActivation(accountRepo, recoverySvc, cfg.Invitation), log)
+	}
 	if cfg.EmailChange.Enabled {
 		changeSvc := accountservice.NewEmailChange(accountRepo, argonHash, accountSvc, cfg.EmailChange)
 		emailChange = accounthttp.NewEmailChange(changeSvc, log)
@@ -82,6 +88,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		Account:           accounthttp.New(accountSvc, log),
 		EmailChange:       emailChange,
 		ProtectedRecovery: protectedRecovery,
+		Activation:        activation,
 		PasswordHandler:   passwordHandler,
 		Middleware:        middleware,
 		MailTest:          mailTest,
@@ -95,7 +102,8 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		},
 	})
 	return &App{
-		resources: resources,
+		Provisioning: provisioning,
+		resources:    resources,
 		serve: func(ctx context.Context) error {
 			stopRetention := startBackground(ctx, func(ctx context.Context) {
 				retentionSvc.RunRetention(ctx, func(error) { log.Warn("retention processing failed") })

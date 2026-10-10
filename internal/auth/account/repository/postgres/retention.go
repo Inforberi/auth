@@ -55,7 +55,7 @@ func (r *Repository) PurgeRetention(ctx context.Context, cfg service.RetentionCo
 		removed += result.RowsAffected()
 		for _, table := range []string{
 			"email_verification_audit", "password_audit", "account_status_audit",
-			"account_deletion_audit", "email_change_audit",
+			"account_deletion_audit", "email_change_audit", "invitation_audit",
 		} {
 			// Identifiers come only from this fixed list, never from configuration/input.
 			name := pgx.Identifier{"auth", table}.Sanitize()

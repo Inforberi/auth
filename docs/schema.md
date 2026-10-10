@@ -1,4 +1,4 @@
-# Схема Auth — этапы 4.1 и 5.1–5.6b
+# Схема Auth — этапы 4.1 и 5.1–5.7a
 
 Источник: `migrations/000001_init` (up/down). Один экземпляр Auth обслуживает один проект; внутренний UUID пользователя не зависит от метода входа.
 
@@ -12,7 +12,7 @@
 
 | Таблица | Назначение и ограничения |
 | --- | --- |
-| `auth.users` | UUID, status `active/blocked`, положительный `auth_version` (по умолчанию 1), timestamps. Soft deletion требует `blocked`. |
+| `auth.users` | UUID, status `pending/active/blocked`, положительный `auth_version` (по умолчанию 1), timestamps. Pending — ещё не активированный provisioned account; soft deletion требует blocked. |
 | `auth.user_emails` | Контакты отдельно от credentials: UUID, владелец, case-insensitive уникальный email, nullable `verified_at`. Новый контакт не подтверждён. |
 | `auth.password_credentials` | Один пароль на пользователя; ссылка на email того же пользователя защищена составным FK. Непустой hash до 1024 байт; формат/криптография контролируются hasher. |
 | `auth.user_profile` | Необязательные поля профиля, nullable телефон с проверкой формата, связь 1:1 с пользователем. |
@@ -23,8 +23,12 @@
 | `auth.password_resets` | Digest, один challenge на credential owner, auth_version, expiry; одноразовый consume. |
 | `auth.password_reset_outbox` | Encrypted payload, expiry, attempts, lease; каскадно удаляется с challenge. |
 | `auth.password_audit` | Reset issuance/reset/change/revoke events с user UUID, без token/password. |
-| `auth.account_status_audit` | Actor/target UUID, предыдущий и новый active/blocked status, новая auth_version и timestamp. Пишется в одной транзакции с изменением статуса/отзывом; FK сохраняют существование actor/target, индекс owner/date/id. |
+| `auth.account_status_audit` | Actor/target UUID, предыдущий pending/active/blocked и новый active/blocked status, новая auth_version и timestamp. Пишется в одной транзакции с изменением статуса/отзывом; FK сохраняют существование actor/target, индекс owner/date/id. |
 | `auth.account_deletion_audit` | Один event на target UUID, actor/version/timestamp; restrictive FK сохраняют tombstone и attribution. Без email/пароля/raw token. |
+| `auth.account_provisions` | Durable actor/request UUID key, HMAC fingerprint, UUID owner, nullable activation marker. Deferred owner FK позволяет атомарную регистрацию команды до создания user; replay не создаёт новый invite. |
+| `auth.account_invitations` | Distinct SHA-256 digest, один challenge на user, owner/contact FK, version и DB expiry. Consume только для pending account; каскадно удаляет job. |
+| `auth.invitation_outbox` | Encrypted payload, due/expiry/attempts/lease. Индексы для claim, expiry и exhausted cleanup. |
+| `auth.invitation_audit` | Provisioned/activated event, actor при creation, user/version/time; без email/token/password. Retention 180 дней по текущей policy. |
 
 Первые четыре таблицы имеют `created_at/updated_at`; BEFORE UPDATE trigger поддерживает `updated_at`. Основные дочерние записи имеют каскадные FK при явном hard delete. Status/deletion audit используют restrictive FK actor/target: hard delete не должен незаметно стирать историю, его retention/anonymization policy определяется в 5.6b. Сам SQL soft-delete не делает cleanup; внутренний DeletionService физически удаляет credentials/profile/challenges/change intents/outbox, отзывает сессии и очищает их metadata. Email reservations, UUID и audit сохраняются; [контракт](features/account-deletion.md).
 

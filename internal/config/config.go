@@ -22,6 +22,7 @@ type Config struct {
 	Proxy       requestmiddleware.ProxyConfig
 	Account     accountservice.Config
 	EmailChange accountservice.EmailChangeConfig
+	Invitation  accountservice.InvitationConfig
 	Retention   accountservice.RetentionConfig
 	Postgres    postgres.Config
 	Logger      logger.Config

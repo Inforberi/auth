@@ -24,6 +24,7 @@ type Handlers struct {
 	Account           *accounthttp.Handler
 	EmailChange       *accounthttp.EmailChangeHandler
 	ProtectedRecovery *passwordhttp.ProtectedRecoveryHandler
+	Activation        *passwordhttp.ActivationHandler
 	PasswordHandler   *passwordhttp.PasswordHandler
 	Middleware        *sessionhttp.Middleware
 	MailTest          *dev.MailTestHandler
@@ -72,6 +73,13 @@ func New(h Handlers) *chi.Mux {
 			if h.Recovery != nil {
 				r.Post("/forgot-password", h.Recovery.Forgot)
 				r.Post("/reset-password", h.Recovery.Reset)
+			}
+			if h.Activation != nil {
+				var origins requestmiddleware.OriginConfig
+				if h.Config != nil {
+					origins = h.Config.Browser
+				}
+				r.With(noStore, requestmiddleware.RequireOrigin(origins)).Post("/invitations/activate", h.Activation.Activate)
 			}
 			if h.Account != nil {
 				r.Post("/email/resend", h.Account.Resend)
