@@ -161,6 +161,14 @@ CREATE TABLE auth.account_status_audit (
 );
 CREATE INDEX account_status_audit_owner ON auth.account_status_audit(user_id,created_at DESC,id DESC);
 
+CREATE TABLE auth.account_deletion_audit (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id),
+  actor_id UUID NOT NULL REFERENCES auth.users(id),
+  auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE auth.email_changes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),

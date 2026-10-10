@@ -30,6 +30,7 @@ func TestPostgresSchema(t *testing.T) {
 	t.Run("protected recovery", func(t *testing.T) { checkProtectedRecovery(t, db, ctx) })
 	t.Run("protected recovery races", func(t *testing.T) { checkProtectedRecoveryRaces(t, db, ctx) })
 	t.Run("protected recovery delivery", func(t *testing.T) { checkProtectedRecoveryDelivery(t, db, ctx) })
+	t.Run("account deletion", func(t *testing.T) { checkAccountDeletion(t, db, ctx) })
 }
 
 func expectSQLState(t *testing.T, db *pgxpool.Pool, ctx context.Context, code, sql string, args ...any) {
