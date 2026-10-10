@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ilyakaznacheev/cleanenv"
+
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
@@ -12,10 +14,12 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
 	redisclient "github.com/Inforberi/financial-intelligence/internal/infra/redis"
 	"github.com/Inforberi/financial-intelligence/internal/server/http"
+	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
 func validConfig() Config {
 	return Config{
+		Browser:  requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}},
 		Account:  accountservice.Config{URL: "https://example.com/verify-email", EncryptionKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", TTL: 30 * time.Minute, ResendInterval: time.Minute},
 		Postgres: postgres.Config{URL: "postgres://app:secret@localhost/app", MaxConns: 10, MinConns: 2, MaxConnLifetime: time.Hour, MaxConnIdleTime: time.Minute},
 		Server:   httpserver.Config{Port: "8080"}, Logger: logger.Config{Env: "dev", Level: "info"},
@@ -32,6 +36,7 @@ func TestValidate(t *testing.T) {
 	}
 	for name, mutate := range map[string]func(*Config){
 		"port":       func(c *Config) { c.Server.Port = "0" },
+		"origins":    func(c *Config) { c.Browser.AllowedOrigins = nil },
 		"pool":       func(c *Config) { c.Postgres.MinConns = 11 },
 		"absolute":   func(c *Config) { c.Session.AbsoluteSessionTTL = time.Minute },
 		"threshold":  func(c *Config) { c.Session.SessionRefreshThreshold = c.Session.SessionTTL },
@@ -47,6 +52,20 @@ func TestValidate(t *testing.T) {
 				t.Fatal("invalid config accepted")
 			}
 		})
+	}
+}
+
+func TestBrowserOriginEnvironment(t *testing.T) {
+	t.Setenv("AUTH_ALLOWED_ORIGINS", "https://app.example.com,https://admin.example.com")
+	var cfg requestmiddleware.OriginConfig
+	if err := cleanenv.ReadEnv(&cfg); err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.AllowedOrigins) != 2 || cfg.AllowedOrigins[0] != "https://app.example.com" || cfg.AllowedOrigins[1] != "https://admin.example.com" {
+		t.Fatal("origin list parsed incorrectly")
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Fatal(err)
 	}
 }
 

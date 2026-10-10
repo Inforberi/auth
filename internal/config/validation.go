@@ -14,6 +14,7 @@ import (
 func (cfg Config) Validate() error {
 	checks := []func() error{
 		cfg.validateLogger,
+		cfg.Browser.Validate,
 		func() error { return cfg.Account.Validate(cfg.Logger.Env == "prod") },
 		cfg.validatePorts,
 		cfg.validateStorage,

@@ -13,9 +13,11 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
 	redisclient "github.com/Inforberi/financial-intelligence/internal/infra/redis"
 	"github.com/Inforberi/financial-intelligence/internal/server/http"
+	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
 type Config struct {
+	Browser    requestmiddleware.OriginConfig
 	Account    accountservice.Config
 	Postgres   postgres.Config
 	Logger     logger.Config
