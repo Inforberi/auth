@@ -16,6 +16,7 @@ func (cfg Config) Validate() error {
 		cfg.validateLogger,
 		cfg.Browser.Validate,
 		func() error { return cfg.Account.Validate(cfg.Logger.Env == "prod") },
+		func() error { return cfg.EmailChange.Validate(cfg.Logger.Env == "prod") },
 		cfg.validatePorts,
 		cfg.validateStorage,
 		cfg.validateSessions,

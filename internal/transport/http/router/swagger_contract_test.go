@@ -62,6 +62,9 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 		{"account_http.ResendRequest", accounthttp.ResendRequest{}},
 		{"account_http.ConfirmRequest", accounthttp.ConfirmRequest{}},
 		{"account_http.VerificationResponse", accounthttp.VerificationResponse{}},
+		{"account_http.EmailChangeRequest", accounthttp.EmailChangeRequest{}},
+		{"account_http.EmailChangeConfirmRequest", accounthttp.EmailChangeConfirmRequest{}},
+		{"account_http.EmailChangeReportRequest", accounthttp.EmailChangeReportRequest{}},
 		{"password_http.RegisterRequest", passwordhttp.RegisterRequest{}},
 		{"password_http.RegisterResponse", passwordhttp.RegisterResponse{}},
 		{"password_http.LoginByEmailRequest", passwordhttp.LoginByEmailRequest{}},
@@ -116,14 +119,17 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 func TestSwaggerRequestAndResponseReferences(t *testing.T) {
 	doc := readAPI(t)
 	requests := map[string]string{
-		"/api/v1/auth/forgot-password": "password_http.ForgotRequest",
-		"/api/v1/auth/reset-password":  "password_http.ResetRequest",
-		"/api/v1/auth/email/resend":    "account_http.ResendRequest",
-		"/api/v1/auth/email/verify":    "account_http.ConfirmRequest",
-		"/api/v1/auth/register/email":  "password_http.RegisterRequest",
-		"/api/v1/auth/login/email":     "password_http.LoginByEmailRequest",
-		"/api/v1/auth/change-password": "password_http.ChangePasswordRequest",
-		"/api/v1/dev/send-mail":        "dev.SendMailRequest",
+		"/api/v1/auth/forgot-password":      "password_http.ForgotRequest",
+		"/api/v1/auth/reset-password":       "password_http.ResetRequest",
+		"/api/v1/auth/email/resend":         "account_http.ResendRequest",
+		"/api/v1/auth/email/verify":         "account_http.ConfirmRequest",
+		"/api/v1/auth/email/change":         "account_http.EmailChangeRequest",
+		"/api/v1/auth/email/change/confirm": "account_http.EmailChangeConfirmRequest",
+		"/api/v1/auth/email/change/report":  "account_http.EmailChangeReportRequest",
+		"/api/v1/auth/register/email":       "password_http.RegisterRequest",
+		"/api/v1/auth/login/email":          "password_http.LoginByEmailRequest",
+		"/api/v1/auth/change-password":      "password_http.ChangePasswordRequest",
+		"/api/v1/dev/send-mail":             "dev.SendMailRequest",
 	}
 	for path, methods := range doc.Paths {
 		for method, operation := range methods {

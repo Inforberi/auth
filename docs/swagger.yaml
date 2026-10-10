@@ -7,6 +7,23 @@ definitions:
     required:
     - token
     type: object
+  account_http.EmailChangeConfirmRequest:
+    properties:
+      token:
+        type: string
+    type: object
+  account_http.EmailChangeReportRequest:
+    properties:
+      token:
+        type: string
+    type: object
+  account_http.EmailChangeRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
   account_http.ResendRequest:
     properties:
       email:
@@ -230,6 +247,142 @@ paths:
       summary: change password
       tags:
       - Auth
+  /api/v1/auth/email/change:
+    post:
+      consumes:
+      - application/json
+      description: Optional EMAIL_CHANGE_ENABLED profile. Requires a valid session,
+        allowed Origin, verified current login email and current password. Old email
+        remains active until confirmation. Sends separate confirmation and security
+        links; no tokens returned.
+      parameters:
+      - description: new email and current password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/account_http.EmailChangeRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/account_http.VerificationResponse'
+        "400":
+          description: 'codes: invalid_json, invalid_email, invalid_email_change'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: 'codes: unauthorized, fresh_auth_required'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: 'code: email_change_pending'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: 'code: rate_limited'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: 'code: temporarily_unavailable'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Request a login email change
+      tags:
+      - Account
+  /api/v1/auth/email/change/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Optional profile. Explicit POST with a purpose-bound one-time token.
+        Original session must still be valid. Claims new email, revokes all sessions
+        and sends old-address notice atomically. No session created; GET links never
+        mutate state.
+      parameters:
+      - description: confirmation token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/account_http.EmailChangeConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/account_http.VerificationResponse'
+        "400":
+          description: 'codes: invalid_json, invalid_email_change'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: 'code: fresh_auth_required'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: 'code: rate_limited'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: 'code: temporarily_unavailable'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Confirm a login email change
+      tags:
+      - Account
+  /api/v1/auth/email/change/report:
+    post:
+      consumes:
+      - application/json
+      description: Optional profile. Explicit POST with a distinct old-verified-address
+        one-time token; does not require the compromised session. Cancels pending
+        change and revokes sessions, or blocks the account after completion. Never
+        rolls back email, unblocks or signs in automatically. Protected recovery remains
+        a separate release gate.
+      parameters:
+      - description: security token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/account_http.EmailChangeReportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/account_http.VerificationResponse'
+        "400":
+          description: 'codes: invalid_json, invalid_email_change'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: 'code: rate_limited'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: 'code: temporarily_unavailable'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Report an unauthorized email change
+      tags:
+      - Account
   /api/v1/auth/email/resend:
     post:
       consumes:

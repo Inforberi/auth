@@ -82,6 +82,198 @@
                 }
             }
         },
+        "/api/v1/auth/email/change": {
+            "post": {
+                "description": "Optional EMAIL_CHANGE_ENABLED profile. Requires a valid session, allowed Origin, verified current login email and current password. Old email remains active until confirmation. Sends separate confirmation and security links; no tokens returned.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Request a login email change",
+                "parameters": [
+                    {
+                        "description": "new email and current password",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/account_http.EmailChangeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/account_http.VerificationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "codes: invalid_json, invalid_email, invalid_email_change",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "codes: unauthorized, fresh_auth_required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code: invalid_origin",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "code: email_change_pending",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "code: temporarily_unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/email/change/confirm": {
+            "post": {
+                "description": "Optional profile. Explicit POST with a purpose-bound one-time token. Original session must still be valid. Claims new email, revokes all sessions and sends old-address notice atomically. No session created; GET links never mutate state.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Confirm a login email change",
+                "parameters": [
+                    {
+                        "description": "confirmation token",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/account_http.EmailChangeConfirmRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/account_http.VerificationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "codes: invalid_json, invalid_email_change",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code: fresh_auth_required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code: invalid_origin",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "code: temporarily_unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/email/change/report": {
+            "post": {
+                "description": "Optional profile. Explicit POST with a distinct old-verified-address one-time token; does not require the compromised session. Cancels pending change and revokes sessions, or blocks the account after completion. Never rolls back email, unblocks or signs in automatically. Protected recovery remains a separate release gate.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Report an unauthorized email change",
+                "parameters": [
+                    {
+                        "description": "security token",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/account_http.EmailChangeReportRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/account_http.VerificationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "codes: invalid_json, invalid_email_change",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code: invalid_origin",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "code: temporarily_unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/email/resend": {
             "post": {
                 "description": "Always returns accepted for unknown, verified, blocked and cooldown addresses. Enqueues encrypted delivery for eligible addresses. Limits use socket peer IP; forwarded headers are not trusted.",
@@ -744,6 +936,33 @@
             ],
             "properties": {
                 "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "account_http.EmailChangeConfirmRequest": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "account_http.EmailChangeReportRequest": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "account_http.EmailChangeRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
                     "type": "string"
                 }
             }

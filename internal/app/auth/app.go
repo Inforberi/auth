@@ -45,7 +45,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	now := clock.UTCClock{}
 	tokenGen := tokengenerate.New()
 	mail := mailer.New(cfg.MailSender)
-	accountSvc, accountRepo, err := assembleAccount(pool, rdb, mail, cfg.Account)
+	accountSvc, accountRepo, err := assembleAccount(pool, rdb, mail, cfg.Account, cfg.EmailChange.Enabled)
 	if err != nil {
 		return nil, fmt.Errorf("assemble account: %w", err)
 	}
@@ -62,6 +62,11 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	passwordHandler := passwordhttp.New(passwordSvc,
 		log.With(zap.String("feature", "password_auth"), zap.String("layer", "transport")))
 	middleware := sessionhttp.New(sessionSvc, log)
+	var emailChange *accounthttp.EmailChangeHandler
+	if cfg.EmailChange.Enabled {
+		changeSvc := accountservice.NewEmailChange(accountRepo, argonHash, accountSvc, cfg.EmailChange)
+		emailChange = accounthttp.NewEmailChange(changeSvc, log)
+	}
 
 	var mailTest *dev.MailTestHandler
 	if cfg.Logger.Env == "dev" {
@@ -71,6 +76,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		Session:         sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
 		Recovery:        passwordhttp.NewRecovery(recoverySvc, log),
 		Account:         accounthttp.New(accountSvc, log),
+		EmailChange:     emailChange,
 		PasswordHandler: passwordHandler,
 		Middleware:      middleware,
 		MailTest:        mailTest,

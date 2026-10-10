@@ -17,16 +17,17 @@ import (
 )
 
 type Config struct {
-	Browser    requestmiddleware.OriginConfig
-	Account    accountservice.Config
-	Postgres   postgres.Config
-	Logger     logger.Config
-	Session    sessionservice.Config
-	Server     httpserver.Config
-	Redis      redisclient.Config
-	MailSender mailer.Config
-	Password   passwordservice.Config
-	Swagger    SwaggerConfig
+	Browser     requestmiddleware.OriginConfig
+	Account     accountservice.Config
+	EmailChange accountservice.EmailChangeConfig
+	Postgres    postgres.Config
+	Logger      logger.Config
+	Session     sessionservice.Config
+	Server      httpserver.Config
+	Redis       redisclient.Config
+	MailSender  mailer.Config
+	Password    passwordservice.Config
+	Swagger     SwaggerConfig
 }
 
 func New() (*Config, error) {

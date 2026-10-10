@@ -21,6 +21,7 @@ type Handlers struct {
 	Session         *sessionhttp.Handler
 	Recovery        *passwordhttp.RecoveryHandler
 	Account         *accounthttp.Handler
+	EmailChange     *accounthttp.EmailChangeHandler
 	PasswordHandler *passwordhttp.PasswordHandler
 	Middleware      *sessionhttp.Middleware
 	MailTest        *dev.MailTestHandler
@@ -63,6 +64,9 @@ func New(h Handlers) *chi.Mux {
 			if h.Account != nil {
 				r.Post("/email/resend", h.Account.Resend)
 				r.Post("/email/verify", h.Account.Confirm)
+			}
+			if h.EmailChange != nil {
+				emailChangeRoutes(r, h)
 			}
 			r.Route("/register", func(r chi.Router) {
 				if h.Account != nil {
@@ -116,4 +120,15 @@ func noStore(next http.Handler) http.Handler {
 		w.Header().Set("Cache-Control", "no-store")
 		next.ServeHTTP(w, r)
 	})
+}
+
+func emailChangeRoutes(r chi.Router, h Handlers) {
+	var cfg requestmiddleware.OriginConfig
+	if h.Config != nil {
+		cfg = h.Config.Browser
+	}
+	mutations := r.With(noStore, requestmiddleware.RequireOrigin(cfg))
+	mutations.With(h.Middleware.Auth).Post("/email/change", h.EmailChange.Request)
+	mutations.Post("/email/change/confirm", h.EmailChange.Confirm)
+	mutations.Post("/email/change/report", h.EmailChange.Report)
 }

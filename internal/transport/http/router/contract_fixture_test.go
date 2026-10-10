@@ -68,6 +68,7 @@ func contractHandlers(env string) Handlers {
 		Session:         sessionhttp.NewHandler(contractManagement{}, log),
 		Recovery:        passwordhttp.NewRecovery(contractRecovery{}, log),
 		Account:         accounthttp.New(contractAccounts{}, log),
+		EmailChange:     accounthttp.NewEmailChange(contractEmailChange{}, log),
 		Config:          &config.Config{Logger: logger.Config{Env: env}, Browser: requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}}},
 		PasswordHandler: passwordhttp.New(contractPasswords{}, log),
 		Middleware:      sessionhttp.New(contractSessions{}, log),
@@ -131,3 +132,11 @@ func (contractAccounts) Resend(_ context.Context, email, _ string) error {
 }
 func (contractAccounts) Confirm(context.Context, string, string) error               { return nil }
 func (contractAccounts) RequireVerified(context.Context, accountdomain.UserID) error { return nil }
+
+type contractEmailChange struct{}
+
+func (contractEmailChange) Request(context.Context, accountdomain.UserID, string, string, string, string) error {
+	return nil
+}
+func (contractEmailChange) Confirm(context.Context, string, string) error { return nil }
+func (contractEmailChange) Report(context.Context, string, string) error  { return nil }

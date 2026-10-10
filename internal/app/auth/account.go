@@ -11,12 +11,15 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
-func assembleAccount(pool *pgxpool.Pool, redis *redis.Client, mail *mailer.Mailer, cfg accountservice.Config) (*accountservice.Service, *accountpostgres.Repository, error) {
+func assembleAccount(pool *pgxpool.Pool, redis *redis.Client, mail *mailer.Mailer, cfg accountservice.Config, emailChangeEnabled bool) (*accountservice.Service, *accountpostgres.Repository, error) {
 	cipher, err := secretbox.New(cfg.EncryptionKey)
 	if err != nil {
 		return nil, nil, err
 	}
 	repo := accountpostgres.New(pool)
+	if emailChangeEnabled {
+		repo = accountpostgres.NewWithEmailChanges(pool)
+	}
 	service := accountservice.New(repo, accountredis.New(redis), cipher, mail, cfg)
 	return service, repo, nil
 }
