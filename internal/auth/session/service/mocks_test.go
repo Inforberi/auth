@@ -38,14 +38,14 @@ func (m *mockRepo) CreateSession(
 	return args.Error(0)
 }
 
-func (m *mockRepo) UpdateSession(
+func (m *mockRepo) RefreshSession(
 	ctx context.Context,
 	tokenHash string,
 	session *sessiondomain.Session,
-	ttl time.Duration,
-) error {
-	args := m.Called(ctx, tokenHash, session, ttl)
-	return args.Error(0)
+	expectedExpiry time.Time,
+) (bool, error) {
+	args := m.Called(ctx, tokenHash, session, expectedExpiry)
+	return args.Bool(0), args.Error(1)
 }
 
 type mockTokenHash struct{ mock.Mock }

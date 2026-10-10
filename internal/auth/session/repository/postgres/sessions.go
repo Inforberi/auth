@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -40,21 +41,39 @@ func (r *Repository) FindSession(ctx context.Context, token string) (*domain.Ses
 	return &session, nil
 }
 
-func (r *Repository) UpdateSession(ctx context.Context, token string, session *domain.Session, _ time.Duration) error {
-	return r.transaction(ctx, func(ctx context.Context, tx pgx.Tx) error {
+func (r *Repository) RefreshSession(ctx context.Context, token string, session *domain.Session, expectedExpiry time.Time) (bool, error) {
+	extended := false
+	err := r.transaction(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		var version int64
 		if err := tx.QueryRow(ctx, `SELECT auth_version FROM auth.users WHERE id=$1 AND status='active' AND deleted_at IS NULL FOR SHARE`, session.UserID).Scan(&version); err != nil {
 			return sessionError(err)
 		}
-		result, err := tx.Exec(ctx, `UPDATE auth.sessions SET expires_at=LEAST($2,absolute_expires_at)
+		var actual time.Time
+		err := tx.QueryRow(ctx, `UPDATE auth.sessions SET expires_at=LEAST($2,absolute_expires_at)
 			WHERE token_hash=$1 AND user_id=$3 AND auth_version=$4 AND revoked_at IS NULL
-			AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()`, token, session.ExpiresAt, session.UserID, version)
-		if err != nil {
+			AND expires_at=$5 AND expires_at<LEAST($2,absolute_expires_at)
+			AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()
+			RETURNING expires_at`, token, session.ExpiresAt, session.UserID, version, expectedExpiry).Scan(&actual)
+		if err == nil {
+			session.ExpiresAt = actual
+			extended = true
+			return nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}
-		if result.RowsAffected() != 1 {
-			return domain.ErrSessionNotFound
+		// Another request may already have extended it. Never shorten or resurrect it.
+		err = tx.QueryRow(ctx, `SELECT expires_at FROM auth.sessions
+			WHERE token_hash=$1 AND user_id=$2 AND auth_version=$3 AND revoked_at IS NULL
+			AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()`, token, session.UserID, version).Scan(&actual)
+		if err != nil {
+			return sessionError(err)
 		}
+		session.ExpiresAt = actual
 		return nil
 	})
+	if err != nil {
+		return false, err
+	}
+	return extended, nil
 }

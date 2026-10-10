@@ -13,7 +13,7 @@ type sessionRepo interface {
 		sessionParams CreateSessionParams,
 	) error
 	FindSession(ctx context.Context, tokenHash string) (*sessiondomain.Session, error)
-	UpdateSession(ctx context.Context, tokenHash string, session *sessiondomain.Session, ttl time.Duration) error
+	RefreshSession(ctx context.Context, tokenHash string, session *sessiondomain.Session, expectedExpiry time.Time) (bool, error)
 }
 
 type clock interface {

@@ -39,7 +39,7 @@ func TestSessionRefreshClamped(t *testing.T) {
 	absolute := now.Add(time.Hour)
 	session := &sessiondomain.Session{UserID: "user", CreatedAt: now, ExpiresAt: now.Add(time.Minute), AbsoluteExpiresAt: absolute}
 	repo.On("FindSession", mock.Anything, "hash").Return(session, nil)
-	repo.On("UpdateSession", mock.Anything, "hash", mock.MatchedBy(func(s *sessiondomain.Session) bool { return s.ExpiresAt.Equal(absolute) }), time.Hour).Return(nil)
+	repo.On("RefreshSession", mock.Anything, "hash", mock.MatchedBy(func(s *sessiondomain.Session) bool { return s.ExpiresAt.Equal(absolute) }), session.ExpiresAt).Return(true, nil)
 	token.On("Hash", "raw").Return("hash")
 	clock.On("NowUTC").Return(now)
 	result, err := New(clock, repo, token, cfg).ValidateSession(context.Background(), "raw")
@@ -47,4 +47,18 @@ func TestSessionRefreshClamped(t *testing.T) {
 		t.Fatal("refresh exceeded absolute deadline", err)
 	}
 	repo.AssertExpectations(t)
+}
+
+func TestAbsoluteExpiryDoesNotWrite(t *testing.T) {
+	repo, token, clock := &mockRepo{}, &mockTokenHash{}, &mockClock{}
+	absolute := now.Add(time.Hour)
+	session := &sessiondomain.Session{UserID: "user", CreatedAt: now.Add(-time.Hour), ExpiresAt: absolute, AbsoluteExpiresAt: absolute}
+	repo.On("FindSession", mock.Anything, "hash").Return(session, nil)
+	token.On("Hash", "raw").Return("hash")
+	clock.On("NowUTC").Return(now)
+	result, err := New(clock, repo, token, cfg).ValidateSession(t.Context(), "raw")
+	if err != nil || result.Extended || !result.ExpiresAt.Equal(absolute) {
+		t.Fatal(result, err)
+	}
+	repo.AssertNotCalled(t, "RefreshSession", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }

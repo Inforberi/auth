@@ -36,24 +36,21 @@ func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (
 	}
 
 	timeLeft := session.ExpiresAt.Sub(now)
+	extended := false
 
 	if timeLeft <= s.cfg.SessionRefreshThreshold {
-		session.ExpiresAt = now.Add(s.cfg.SessionTTL)
-		if session.ExpiresAt.After(absoluteTime) {
-			session.ExpiresAt = absoluteTime
+		candidate := now.Add(s.cfg.SessionTTL)
+		if candidate.After(absoluteTime) {
+			candidate = absoluteTime
 		}
-
-		if err := s.repo.UpdateSession(ctx, hashToken, session, session.ExpiresAt.Sub(now)); err != nil {
-			return nil, fmt.Errorf("UpdateSession: %w", err)
+		if candidate.After(session.ExpiresAt) {
+			expected := session.ExpiresAt
+			session.ExpiresAt = candidate
+			extended, err = s.repo.RefreshSession(ctx, hashToken, session, expected)
+			if err != nil {
+				return nil, fmt.Errorf("RefreshSession: %w", err)
+			}
 		}
-
-		return &ValidationResult{
-			SessionID: session.ID,
-			UserID:    session.UserID,
-			TokenHash: hashToken,
-			ExpiresAt: session.ExpiresAt,
-			Extended:  true,
-		}, nil
 	}
 
 	return &ValidationResult{
@@ -61,6 +58,6 @@ func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (
 		UserID:    session.UserID,
 		TokenHash: hashToken,
 		ExpiresAt: session.ExpiresAt,
-		Extended:  false,
+		Extended:  extended,
 	}, nil
 }

@@ -33,7 +33,7 @@ func TestValidateSession_ErrFindSession(t *testing.T) {
 
 	repo.AssertNotCalled(
 		t,
-		"UpdateSession",
+		"RefreshSession",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -97,7 +97,7 @@ func TestValidateSession_IsNotActiveSession(t *testing.T) {
 
 			repo.AssertNotCalled(
 				t,
-				"UpdateSession",
+				"RefreshSession",
 				mock.Anything,
 				mock.Anything,
 				mock.Anything,
@@ -126,7 +126,7 @@ func TestValidateSession_SuccessExtended(t *testing.T) {
 		ExpiresAt: now.Add(12 * time.Hour),
 	}
 	repo.On("FindSession", context.Background(), "HashedToken").Return(sessionResult, nil)
-	repo.On("UpdateSession", context.Background(), "HashedToken", sessionResult, cfg.SessionTTL).Return(nil)
+	repo.On("RefreshSession", context.Background(), "HashedToken", sessionResult, sessionResult.ExpiresAt).Return(true, nil)
 
 	clock.On("NowUTC").Return(now)
 
