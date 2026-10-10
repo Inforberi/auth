@@ -12,19 +12,33 @@ import (
 )
 
 func (cfg Config) Validate() error {
+	checks := []func() error{
+		cfg.validateLogger,
+		func() error { return cfg.Account.Validate(cfg.Logger.Env == "prod") },
+		cfg.validatePorts,
+		cfg.validateStorage,
+		cfg.validateSessions,
+		cfg.validateRecovery,
+		cfg.validateDelivery,
+		cfg.validateSwagger,
+		cfg.validateProduction,
+	}
+	for _, check := range checks {
+		if err := check(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (cfg Config) validateLogger() error {
 	if cfg.Logger.Env != "dev" && cfg.Logger.Env != "test" && cfg.Logger.Env != "prod" {
 		return fmt.Errorf("APP_ENV must be dev, test or prod")
 	}
 	if _, err := zapcore.ParseLevel(cfg.Logger.Level); err != nil {
 		return fmt.Errorf("invalid LOG_LEVEL")
 	}
-	if err := cfg.Account.Validate(cfg.Logger.Env == "prod"); err != nil {
-		return err
-	}
-	if err := cfg.validatePorts(); err != nil {
-		return err
-	}
-	return cfg.validateStorage()
+	return nil
 }
 
 func (cfg Config) validatePorts() error {
@@ -45,13 +59,17 @@ func (cfg Config) validateStorage() error {
 	if err != nil || (db.Scheme != "postgres" && db.Scheme != "postgresql") || db.Hostname() == "" {
 		return fmt.Errorf("invalid DATABASE_URL")
 	}
+	return nil
+}
+
+func (cfg Config) validateSessions() error {
 	if cfg.Session.SessionTTL <= 0 || cfg.Session.AbsoluteSessionTTL < cfg.Session.SessionTTL || cfg.Session.SessionRefreshThreshold <= 0 || cfg.Session.SessionRefreshThreshold >= cfg.Session.SessionTTL {
 		return fmt.Errorf("invalid session durations")
 	}
-	return cfg.validateIdentity()
+	return nil
 }
 
-func (cfg Config) validateIdentity() error {
+func (cfg Config) validateRecovery() error {
 	if cfg.Password.ResetTokenTTL < time.Minute || cfg.Password.ResetTokenTTL > time.Hour {
 		return fmt.Errorf("PASSWORD_RESET_TOKEN_TTL must be between 1m and 1h")
 	}
@@ -59,6 +77,10 @@ func (cfg Config) validateIdentity() error {
 	if err != nil || len(cfg.Password.ResetURL) > 2048 || reset.Hostname() == "" || reset.User != nil || reset.RawQuery != "" || reset.Fragment != "" || (reset.Scheme != "https" && reset.Scheme != "http") {
 		return fmt.Errorf("invalid PASSWORD_RESET_URL")
 	}
+	return nil
+}
+
+func (cfg Config) validateDelivery() error {
 	if strings.TrimSpace(cfg.Redis.Host) == "" || strings.TrimSpace(cfg.MailSender.SMTPHost) == "" {
 		return fmt.Errorf("redis and SMTP hosts are required")
 	}
@@ -68,18 +90,22 @@ func (cfg Config) validateIdentity() error {
 	if cfg.MailSender.SMTPDomain == "" || strings.ContainsAny(cfg.MailSender.SMTPDomain, "\r\n <>@") {
 		return fmt.Errorf("invalid SMTP_DOMAIN")
 	}
+	return nil
+}
+
+func (cfg Config) validateSwagger() error {
 	if cfg.Swagger.Enabled && (cfg.Swagger.Username == "" || cfg.Swagger.Password == "") {
 		return fmt.Errorf("swagger credentials required when enabled")
 	}
-	return cfg.validateProduction(reset)
+	return nil
 }
 
-func (cfg Config) validateProduction(reset *url.URL) error {
+func (cfg Config) validateProduction() error {
 	if cfg.Logger.Env == "prod" {
 		if !cfg.MailSender.RequireTLS {
 			return fmt.Errorf("production verification delivery requires SMTP_REQUIRE_TLS")
 		}
-		if reset.Scheme != "https" {
+		if !strings.HasPrefix(cfg.Password.ResetURL, "https:") {
 			return fmt.Errorf("production reset URL must use HTTPS")
 		}
 		if len(cfg.Redis.Password) < 16 || cfg.Redis.Password == "change-me" {
