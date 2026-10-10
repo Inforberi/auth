@@ -38,6 +38,12 @@ type Service struct {
 }
 
 func New(repo Repository, limiter Limiter, cipher Cipher, mail Mailer, cfg Config) *Service {
+	if cfg.RegistrationIPLimit == 0 {
+		cfg.RegistrationIPLimit = 5
+	}
+	if cfg.RegistrationGlobalLimit == 0 {
+		cfg.RegistrationGlobalLimit = 100
+	}
 	return &Service{repo: repo, limiter: limiter, cipher: cipher, mail: mail, cfg: cfg}
 }
 

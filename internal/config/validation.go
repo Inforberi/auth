@@ -17,6 +17,10 @@ func (cfg Config) Validate() error {
 		cfg.Browser.Validate,
 		func() error { return cfg.Account.Validate(cfg.Logger.Env == "prod") },
 		func() error { return cfg.EmailChange.Validate(cfg.Logger.Env == "prod") },
+		cfg.Retention.Validate,
+		cfg.Capacity.Validate,
+		cfg.HTTP.Validate,
+		cfg.Proxy.Validate,
 		cfg.validatePorts,
 		cfg.validateStorage,
 		cfg.validateSessions,
@@ -72,6 +76,9 @@ func (cfg Config) validateSessions() error {
 }
 
 func (cfg Config) validateRecovery() error {
+	if cfg.Password.ResetGlobalLimit < 1 {
+		return fmt.Errorf("PASSWORD_RESET_GLOBAL_LIMIT must be positive")
+	}
 	if cfg.Password.ResetTokenTTL < time.Minute || cfg.Password.ResetTokenTTL > time.Hour {
 		return fmt.Errorf("PASSWORD_RESET_TOKEN_TTL must be between 1m and 1h")
 	}

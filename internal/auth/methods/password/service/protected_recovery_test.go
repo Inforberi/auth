@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strings"
 	"testing"
-	"time"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
@@ -38,8 +37,12 @@ type protectedHash struct {
 	compareErr, hashErr error
 }
 
-func (h *protectedHash) Compare(_, _ string) error { h.compares++; return h.compareErr }
-func (h *protectedHash) GenerateHash(_ []byte) (string, error) {
+func (h *protectedHash) Compare(_ context.Context, _, _ string) error {
+	h.compares++
+	return h.compareErr
+}
+
+func (h *protectedHash) GenerateHash(_ context.Context, _ []byte) (string, error) {
 	h.hashes++
 	return "replacement-hash", h.hashErr
 }
@@ -78,26 +81,19 @@ func TestProtectedRecovery(t *testing.T) {
 			if repo.writes > 0 && (repo.digest != resetDigest(tc.token) || repo.expected != "compromised-hash" || repo.hash != "replacement-hash") {
 				t.Fatal("wrong transactional handoff", repo)
 			}
-			if len(recovery.hashSlots) != 0 {
-				t.Fatal("hash slot leaked")
-			}
 		})
 	}
 }
 
-func TestProtectedRecoverySharesHashBudget(t *testing.T) {
+func TestProtectedRecoveryHashOverload(t *testing.T) {
 	cipher, err := secretbox.NewScoped("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "password-reset:v1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	hash := &protectedHash{}
+	hash := &protectedHash{compareErr: domain.ErrHashBusy}
 	r := NewRecovery(nil, cipher, &recoveryLimit{allow: true}, nil, hash, Config{})
-	r.hashSlots <- struct{}{}
-	r.hashSlots <- struct{}{}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
-	defer cancel()
-	err = NewProtectedRecovery(&protectedRepo{}, r).Recover(ctx, strings.Repeat("A", 43), "ExamplePass2", "ExamplePass2", "ip")
-	if !errors.Is(err, context.DeadlineExceeded) || hash.compares != 0 || hash.hashes != 0 || len(r.hashSlots) != 2 {
-		t.Fatal("independent unbounded hash pool", err)
+	err = NewProtectedRecovery(&protectedRepo{}, r).Recover(context.Background(), strings.Repeat("A", 43), "ExamplePass2", "ExamplePass2", "ip")
+	if !errors.Is(err, domain.ErrHashBusy) || hash.compares != 1 || hash.hashes != 0 {
+		t.Fatal("hash overload was not propagated", err)
 	}
 }

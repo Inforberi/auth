@@ -40,7 +40,7 @@ func (r *PasswordService) Register(
 		return nil, passworddomain.ErrEmailAlreadyExists
 	}
 
-	hash, err := r.hash.GenerateHash([]byte(password))
+	hash, err := r.hash.GenerateHash(ctx, []byte(password))
 	if err != nil {
 		return nil, fmt.Errorf("err generate hash %w", err)
 	}

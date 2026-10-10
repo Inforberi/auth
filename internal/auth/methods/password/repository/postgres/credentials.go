@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	pgx "github.com/jackc/pgx/v5"
 
@@ -12,6 +13,8 @@ import (
 )
 
 func (r *PasswordRepo) ExistsByEmail(ctx context.Context, email string) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	sql := `
 	SELECT EXISTS(
 		SELECT 1
@@ -31,6 +34,8 @@ func (r *PasswordRepo) ExistsByEmail(ctx context.Context, email string) (bool, e
 }
 
 func (r *PasswordRepo) FindByEmail(ctx context.Context, email string) (*passworddomain.Credential, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	sql := `
 	SELECT pc.user_id, pc.password_hash, u.auth_version
 	FROM auth.password_credentials pc
@@ -60,6 +65,8 @@ func (r *PasswordRepo) FindByEmail(ctx context.Context, email string) (*password
 }
 
 func (r *PasswordRepo) FindUserByUserID(ctx context.Context, userID accountdomain.UserID) (*passworddomain.Credential, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	sql := `
 	SELECT p.password_hash
 	FROM auth.password_credentials p JOIN auth.users u ON u.id=p.user_id

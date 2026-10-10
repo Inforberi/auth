@@ -130,7 +130,7 @@ func checkProtectedRecovery(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 		if _, err := db.Exec(ctx, `UPDATE auth.email_changes SET created_at=clock_timestamp()-interval '2 hours',expires_at=clock_timestamp()-interval '1 hour',protect_until=clock_timestamp()-interval '1 minute' WHERE user_id=$1`, f.user); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := f.accounts.ClaimDelivery(ctx); err != nil {
+		if _, err := f.accounts.PurgeRetention(ctx, retentionPolicy()); err != nil {
 			t.Fatal(err)
 		}
 		if hash, err := f.accounts.ProtectedRecoveryHash(ctx, f.intent.RecoveryDigest); err != nil || hash != "old-hash" {

@@ -18,8 +18,11 @@ import (
 
 type Config struct {
 	Browser     requestmiddleware.OriginConfig
+	HTTP        requestmiddleware.CapacityConfig
+	Proxy       requestmiddleware.ProxyConfig
 	Account     accountservice.Config
 	EmailChange accountservice.EmailChangeConfig
+	Retention   accountservice.RetentionConfig
 	Postgres    postgres.Config
 	Logger      logger.Config
 	Session     sessionservice.Config
@@ -27,6 +30,7 @@ type Config struct {
 	Redis       redisclient.Config
 	MailSender  mailer.Config
 	Password    passwordservice.Config
+	Capacity    passwordservice.CapacityConfig
 	Swagger     SwaggerConfig
 }
 

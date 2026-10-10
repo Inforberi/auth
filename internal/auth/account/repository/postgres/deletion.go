@@ -28,7 +28,7 @@ func (r *Repository) DeleteAccount(ctx context.Context, deletion domain.AccountD
 		if deleted != nil {
 			return nil
 		}
-		if err := tx.QueryRow(ctx, `UPDATE auth.users SET status='blocked',deleted_at=clock_timestamp(),
+		if err := tx.QueryRow(ctx, `UPDATE auth.users SET email_reuse_blocked=(status='blocked'),status='blocked',deleted_at=clock_timestamp(),
 			auth_version=auth_version+1 WHERE id=$1 RETURNING auth_version`, deletion.UserID).Scan(&version); err != nil {
 			return err
 		}

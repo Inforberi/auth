@@ -192,13 +192,17 @@ func checkStatusAuditRollback(t *testing.T, db *pgxpool.Pool, ctx context.Contex
 
 type loginTestHasher struct{ afterCompare func() error }
 
-func (h loginTestHasher) Compare(string, string) error {
+type loginTestLimit struct{}
+
+func (loginTestLimit) Allow(context.Context, string, string) error { return nil }
+
+func (h loginTestHasher) Compare(context.Context, string, string) error {
 	if h.afterCompare != nil {
 		return h.afterCompare()
 	}
 	return nil
 }
 
-func (loginTestHasher) GenerateHash([]byte) (string, error) {
+func (loginTestHasher) GenerateHash(context.Context, []byte) (string, error) {
 	return "", errors.New("hash generation not expected")
 }

@@ -9,6 +9,8 @@ import (
 )
 
 func (r *PasswordRepo) CreateUser(ctx context.Context, email, passwordHash string) (accountdomain.UserID, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return "", fmt.Errorf("error to start transaction %w", err)

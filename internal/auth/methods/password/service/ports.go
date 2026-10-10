@@ -19,6 +19,6 @@ type passwordRepo interface {
 	ChangePassword(context.Context, accountdomain.UserID, string, string, string) error
 }
 type hasher interface {
-	GenerateHash([]byte) (string, error)
-	Compare(string, string) error
+	GenerateHash(context.Context, []byte) (string, error)
+	Compare(context.Context, string, string) error
 }

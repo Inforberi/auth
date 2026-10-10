@@ -30,11 +30,11 @@ func checkStatusRaces(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 			return err
 		}}
 		input := passwordservice.LoginInput{Email: f.email, Password: "Password12345"}
-		result, err := passwordservice.New(f.passwords, sessions, hasher).Login(ctx, input)
+		result, err := passwordservice.New(f.passwords, sessions, hasher, loginTestLimit{}).Login(ctx, input)
 		if result != nil || !errors.Is(err, passworddomain.ErrInvalidEmailOrPassword) {
 			t.Fatal("old snapshot authenticated after block-unblock", err)
 		}
-		result, err = passwordservice.New(f.passwords, sessions, loginTestHasher{}).Login(ctx, input)
+		result, err = passwordservice.New(f.passwords, sessions, loginTestHasher{}, loginTestLimit{}).Login(ctx, input)
 		if err != nil || result == nil || result.Token == "" {
 			t.Fatal("fresh login failed", err)
 		}
@@ -58,7 +58,7 @@ func checkStatusRaces(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 				if operation == "issuance" {
 					operationErr = f.sessions.CreateSession(ctx, params)
 				} else {
-					operationErr = f.sessions.UpdateSession(ctx, f.params.TokenHash, snapshot, time.Hour)
+					_, operationErr = f.sessions.RefreshSession(ctx, f.params.TokenHash, snapshot, snapshot.ExpiresAt)
 				}
 			})
 			wg.Go(func() { _, blockErr = f.change(ctx, accountdomain.StatusBlocked, 1) })

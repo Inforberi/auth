@@ -82,11 +82,17 @@ func startDelivery(ctx context.Context, service interface {
 	RunDelivery(context.Context, func(error))
 }, log *zap.Logger,
 ) func() {
+	return startBackground(ctx, func(ctx context.Context) {
+		service.RunDelivery(ctx, func(error) { log.Warn("email delivery processing failed") })
+	})
+}
+
+func startBackground(ctx context.Context, run func(context.Context)) func() {
 	workerCtx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		service.RunDelivery(workerCtx, func(error) { log.Warn("email delivery processing failed") })
+		run(workerCtx)
 	}()
 	return func() { cancel(); <-done }
 }

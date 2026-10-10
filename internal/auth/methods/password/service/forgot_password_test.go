@@ -82,8 +82,8 @@ func (m *recoveryMail) SendContext(_ context.Context, to, _, _ string) error { m
 
 type recoveryHash struct{}
 
-func (recoveryHash) GenerateHash([]byte) (string, error) { return "new-hash", nil }
-func (recoveryHash) Compare(string, string) error        { return nil }
+func (recoveryHash) GenerateHash(context.Context, []byte) (string, error) { return "new-hash", nil }
+func (recoveryHash) Compare(context.Context, string, string) error        { return nil }
 
 func TestRecovery(t *testing.T) {
 	cipher, err := secretbox.NewScoped("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "password-reset:v1")

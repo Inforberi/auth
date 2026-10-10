@@ -20,6 +20,8 @@ type sessionStub struct {
 	calls int
 }
 
+const validCookieToken = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
 func (s *sessionStub) ValidateSession(context.Context, string) (*service.ValidationResult, error) {
 	s.calls++
 	if s.err != nil {
@@ -47,7 +49,7 @@ func TestAuthContract(t *testing.T) {
 			m := New(svc, zap.NewNop())
 			r := httptest.NewRequest("POST", "/", nil)
 			if tc.cookie {
-				r.AddCookie(&http.Cookie{Name: SessionCookieName, Value: "token"})
+				r.AddCookie(&http.Cookie{Name: SessionCookieName, Value: validCookieToken})
 			}
 			called := false
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +70,7 @@ func TestAuthContract(t *testing.T) {
 			}
 			cookies := w.Result().Cookies()
 			if tc.status == 204 {
-				if len(cookies) != 1 || cookies[0].Value != "token" || !cookies[0].Secure || !cookies[0].HttpOnly {
+				if len(cookies) != 1 || cookies[0].Value != validCookieToken || !cookies[0].Secure || !cookies[0].HttpOnly {
 					t.Fatal("cookie refresh changed")
 				}
 			} else if len(cookies) != 0 {

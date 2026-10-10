@@ -28,6 +28,8 @@ type LoginByEmailResponse struct {
 // @Success 200 {object} LoginByEmailResponse
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, email_required, password_required, invalid_email, invalid_credentials"
 // @Failure 500 {object} httpx.ErrorResponse "code: internal_error"
+// @Failure 429 {object} httpx.ErrorResponse "code: rate_limited; Retry-After: 60"
+// @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
 // @Router /api/v1/auth/login/email [post]
 func (h *PasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 	var input LoginByEmailRequest

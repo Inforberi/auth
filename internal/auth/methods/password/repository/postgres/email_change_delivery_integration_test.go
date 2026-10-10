@@ -62,7 +62,7 @@ func checkChangeDelivery(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	if _, err := db.Exec(ctx, `UPDATE auth.email_changes SET created_at=clock_timestamp()-interval '3 days',expires_at=clock_timestamp()-interval '2 days',protect_until=clock_timestamp()-interval '1 day' WHERE user_id=$1`, f.user); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.accounts.ClaimDelivery(ctx); err != nil {
+	if _, err := f.accounts.PurgeRetention(ctx, retentionPolicy()); err != nil {
 		t.Fatal(err)
 	}
 	if err := f.accounts.ReportEmailChange(ctx, f.intent.ReportDigest); !errors.Is(err, accountdomain.ErrInvalidEmailChange) {

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -34,5 +35,12 @@ func GetSessionCookie(r *http.Request) (string, error) {
 		return "", fmt.Errorf("get session cookie %w", err)
 	}
 
+	if len(token.Value) != 43 {
+		return "", errors.New("invalid session cookie")
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(token.Value)
+	if err != nil || len(raw) != 32 || base64.RawURLEncoding.EncodeToString(raw) != token.Value {
+		return "", errors.New("invalid session cookie")
+	}
 	return token.Value, nil
 }

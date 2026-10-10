@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 )
 
 type emailChangeRepository interface {
@@ -15,7 +17,7 @@ type emailChangeRepository interface {
 }
 
 type passwordVerifier interface {
-	Compare(string, string) error
+	Compare(context.Context, string, string) error
 }
 
 type EmailChangeService struct {
@@ -49,7 +51,10 @@ func (s *EmailChangeService) Request(ctx context.Context, user domain.UserID, se
 	if err != nil {
 		return err
 	}
-	if err := s.hash.Compare(password, snapshot.PasswordHash); err != nil {
+	if err := s.hash.Compare(ctx, password, snapshot.PasswordHash); err != nil {
+		if errors.Is(err, passworddomain.ErrHashBusy) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return err
+		}
 		return domain.ErrFreshAuthRequired
 	}
 	if email.String() == snapshot.Email {

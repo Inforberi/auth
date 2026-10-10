@@ -168,7 +168,7 @@ func TestResendValidatesBeforeDependencies(t *testing.T) {
 }
 
 func TestVerificationConfig(t *testing.T) {
-	cfg := service.Config{URL: "https://example.com/verify", EncryptionKey: "bG9jYWwtb25seS1hdXRoLW91dGJveC1rZXktMzJieXQ=", TTL: 30 * time.Minute, ResendInterval: time.Minute}
+	cfg := service.Config{URL: "https://example.com/verify", EncryptionKey: "bG9jYWwtb25seS1hdXRoLW91dGJveC1rZXktMzJieXQ=", TTL: 30 * time.Minute, ResendInterval: time.Minute, RegistrationIPLimit: 5, RegistrationGlobalLimit: 100}
 	if err := cfg.Validate(false); err != nil {
 		t.Fatal(err)
 	}

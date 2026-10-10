@@ -19,14 +19,17 @@ import (
 
 func validConfig() Config {
 	return Config{
-		Browser:  requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}},
-		Account:  accountservice.Config{URL: "https://example.com/verify-email", EncryptionKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", TTL: 30 * time.Minute, ResendInterval: time.Minute},
-		Postgres: postgres.Config{URL: "postgres://app:secret@localhost/app", MaxConns: 10, MinConns: 2, MaxConnLifetime: time.Hour, MaxConnIdleTime: time.Minute},
-		Server:   httpserver.Config{Port: "8080"}, Logger: logger.Config{Env: "dev", Level: "info"},
+		HTTP:      requestmiddleware.CapacityConfig{MaxInFlight: 128, RequestTimeout: 10 * time.Second},
+		Browser:   requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}},
+		Account:   accountservice.Config{URL: "https://example.com/verify-email", EncryptionKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", TTL: 30 * time.Minute, ResendInterval: time.Minute, RegistrationIPLimit: 5, RegistrationGlobalLimit: 100},
+		Retention: accountservice.RetentionConfig{EmailReservationDays: 30, SessionDays: 30, SecurityAuditDays: 180, BatchSize: 100, Interval: time.Minute},
+		Postgres:  postgres.Config{URL: "postgres://app:secret@localhost/app", MaxConns: 10, MinConns: 2, MaxConnLifetime: time.Hour, MaxConnIdleTime: time.Minute},
+		Server:    httpserver.Config{Port: "8080"}, Logger: logger.Config{Env: "dev", Level: "info"},
 		Redis:      redisclient.Config{Host: "localhost", Port: "6379"},
 		MailSender: mailer.Config{SMTPHost: "localhost", SMTPPort: "1025", SMTPFrom: "auth@example.com", SMTPDomain: "example.com"},
 		Session:    sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, SessionRefreshThreshold: time.Minute},
-		Password:   passwordservice.Config{ResetTokenTTL: time.Hour, ResetURL: "https://example.com/reset"},
+		Password:   passwordservice.Config{ResetTokenTTL: time.Hour, ResetURL: "https://example.com/reset", ResetGlobalLimit: 100},
+		Capacity:   passwordservice.CapacityConfig{HashConcurrency: 2, LoginIPLimit: 30, LoginEmailLimit: 10, LoginGlobalLimit: 1000},
 	}
 }
 
@@ -37,6 +40,7 @@ func TestValidate(t *testing.T) {
 	for name, mutate := range map[string]func(*Config){
 		"port":       func(c *Config) { c.Server.Port = "0" },
 		"origins":    func(c *Config) { c.Browser.AllowedOrigins = nil },
+		"retention":  func(c *Config) { c.Retention.SecurityAuditDays = 0 },
 		"pool":       func(c *Config) { c.Postgres.MinConns = 11 },
 		"absolute":   func(c *Config) { c.Session.AbsoluteSessionTTL = time.Minute },
 		"threshold":  func(c *Config) { c.Session.SessionRefreshThreshold = c.Session.SessionTTL },

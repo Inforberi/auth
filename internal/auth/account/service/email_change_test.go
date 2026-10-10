@@ -49,7 +49,7 @@ type changeHasher struct {
 	err   error
 }
 
-func (h *changeHasher) Compare(password, expected string) error {
+func (h *changeHasher) Compare(_ context.Context, password, expected string) error {
 	h.calls++
 	if password != "current-password" || expected != "current-hash" {
 		return errors.New("wrong password")

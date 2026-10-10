@@ -10,17 +10,14 @@ import (
 )
 
 func (r *PasswordRepo) ClaimResetDelivery(ctx context.Context) (*domain.ResetDelivery, error) {
-	if _, err := r.db.Exec(ctx, `DELETE FROM auth.password_resets r USING auth.users u WHERE r.user_id=u.id AND
-		(r.expires_at<=clock_timestamp() OR r.auth_version<>u.auth_version OR u.status<>'active' OR u.deleted_at IS NOT NULL)`); err != nil {
-		return nil, err
-	}
-	if _, err := r.db.Exec(ctx, `DELETE FROM auth.password_reset_outbox WHERE attempts>=5 AND (lease_until IS NULL OR lease_until<=clock_timestamp())`); err != nil {
-		return nil, err
-	}
 	var job domain.ResetDelivery
-	err := r.db.QueryRow(ctx, `WITH due AS (SELECT id FROM auth.password_reset_outbox WHERE available_at<=clock_timestamp()
-		AND expires_at>clock_timestamp() AND attempts<5 AND (lease_until IS NULL OR lease_until<=clock_timestamp())
-		ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1)
+	err := r.db.QueryRow(ctx, `WITH due AS (
+		SELECT o.id FROM auth.password_reset_outbox o
+		JOIN auth.password_resets r ON r.digest=o.digest JOIN auth.users u ON u.id=r.user_id
+		WHERE o.available_at<=statement_timestamp()
+		AND o.expires_at>clock_timestamp() AND o.attempts<5 AND (o.lease_until IS NULL OR o.lease_until<=clock_timestamp())
+		AND r.expires_at>clock_timestamp() AND r.auth_version=u.auth_version AND u.status='active' AND u.deleted_at IS NULL
+		ORDER BY o.available_at FOR UPDATE OF o SKIP LOCKED LIMIT 1)
 		UPDATE auth.password_reset_outbox o SET attempts=attempts+1,lease=gen_random_uuid(),lease_until=clock_timestamp()+interval '30 seconds'
 		FROM due WHERE o.id=due.id RETURNING o.id,o.lease,o.payload,o.attempts`).Scan(&job.ID, &job.Lease, &job.Payload, &job.Attempts)
 	if errors.Is(err, pgx.ErrNoRows) {

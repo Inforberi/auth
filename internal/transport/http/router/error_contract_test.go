@@ -81,6 +81,9 @@ func TestRouterErrorContracts(t *testing.T) {
 		{"password", "register/email", passwordBody, "", private, 500, "internal_error", "internal error", ""},
 		{"password", "login/email", passwordBody, "", passworddomain.ErrInvalidEmailOrPassword, 400, "invalid_credentials", "invalid email or password", ""},
 		{"password", "login/email", passwordBody, "", private, 500, "internal_error", "internal error", ""},
+		{"password", "login/email", passwordBody, "", passworddomain.ErrLoginLimited, 429, "rate_limited", "rate limited", "60"},
+		{"password", "login/email", passwordBody, "", passworddomain.ErrLoginUnavailable, 503, "temporarily_unavailable", "temporarily unavailable", ""},
+		{"password", "login/email", passwordBody, "", passworddomain.ErrHashBusy, 503, "temporarily_unavailable", "temporarily unavailable", ""},
 		{"password", "change-password", changeBody, "valid", passworddomain.ErrPasswordTooShort, 400, "password_policy", "invalid password", ""},
 		{"password", "change-password", changeBody, "valid", passworddomain.ErrNotFound, 404, "not_found", "not found", ""},
 		{"password", "change-password", changeBody, "valid", private, 500, "internal_error", "internal error", ""},
@@ -104,7 +107,7 @@ func TestRouterErrorContracts(t *testing.T) {
 			r := httptest.NewRequest("POST", "/api/v1/auth/"+tc.path, strings.NewReader(tc.body))
 			r.Header.Set("Content-Type", "application/json")
 			if tc.token != "" {
-				r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: tc.token})
+				r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: contractCookie(tc.token)})
 			}
 			w := httptest.NewRecorder()
 			New(h).ServeHTTP(w, r)

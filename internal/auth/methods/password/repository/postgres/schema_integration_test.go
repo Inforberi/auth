@@ -25,12 +25,14 @@ func TestPostgresSchema(t *testing.T) {
 	t.Run("constraints", func(t *testing.T) { checkConstraints(t, db, ctx, repo) })
 	t.Run("concurrent registration", func(t *testing.T) { checkConcurrentRegistration(t, db, ctx, repo) })
 	t.Run("session management", func(t *testing.T) { checkSessionManagement(t, db, ctx) })
+	t.Run("concurrent refresh", func(t *testing.T) { checkConcurrentRefresh(t, db, ctx) })
 	t.Run("account status", func(t *testing.T) { checkAccountStatus(t, db, ctx) })
 	t.Run("email change", func(t *testing.T) { checkEmailChange(t, db, ctx) })
 	t.Run("protected recovery", func(t *testing.T) { checkProtectedRecovery(t, db, ctx) })
 	t.Run("protected recovery races", func(t *testing.T) { checkProtectedRecoveryRaces(t, db, ctx) })
 	t.Run("protected recovery delivery", func(t *testing.T) { checkProtectedRecoveryDelivery(t, db, ctx) })
 	t.Run("account deletion", func(t *testing.T) { checkAccountDeletion(t, db, ctx) })
+	t.Run("retention", func(t *testing.T) { checkRetention(t, db, ctx) })
 }
 
 func expectSQLState(t *testing.T, db *pgxpool.Pool, ctx context.Context, code, sql string, args ...any) {

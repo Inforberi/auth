@@ -12,7 +12,7 @@ import (
 )
 
 func newTestService(repo *mockPasswordRepo, session *mockSession, hash *mockHasher) *PasswordService {
-	return New(repo, session, hash)
+	return New(repo, session, hash, denyLogin{})
 }
 
 func (m *mockPasswordRepo) ChangePassword(ctx context.Context, id accountdomain.UserID, session, expectedHash, newHash string) error {
@@ -59,12 +59,13 @@ type mockHasher struct {
 	mock.Mock
 }
 
-func (m *mockHasher) GenerateHash(password []byte) (string, error) {
+func (m *mockHasher) GenerateHash(_ context.Context, password []byte) (string, error) {
 	args := m.Called(password)
 	return args.String(0), args.Error(1)
 }
 
 func (m *mockHasher) Compare(
+	_ context.Context,
 	password string,
 	encodedHash string,
 ) error {

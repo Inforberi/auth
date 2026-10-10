@@ -176,7 +176,7 @@ func TestRegister_Success(t *testing.T) {
 }
 
 func TestCredentialValidationHTTP(t *testing.T) {
-	h := New(passwordservice.New(nil, nil, nil), zap.NewNop())
+	h := New(passwordservice.New(nil, nil, nil, nil), zap.NewNop())
 	for _, tc := range []struct {
 		email, password, code string
 	}{

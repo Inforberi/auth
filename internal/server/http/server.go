@@ -16,6 +16,7 @@ func Run(ctx context.Context, log *zap.Logger, cfg Config, handler http.Handler)
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,
 		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    16 * 1024,
 	}
 	return run(ctx, log, &srv, srv.ListenAndServe)
 }

@@ -29,6 +29,18 @@ func (l *PasswordService) Login(ctx context.Context, input LoginInput) (*LoginRe
 	if err != nil {
 		return nil, fmt.Errorf("service login: %w", err)
 	}
+	if len(input.Password) > 1024 {
+		return nil, passworddomain.ErrInvalidEmailOrPassword
+	}
+	if l.loginLimit == nil {
+		return nil, passworddomain.ErrLoginUnavailable
+	}
+	if err := l.loginLimit.Allow(ctx, email.String(), input.IP); err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	authData, err := l.repo.FindByEmail(ctx, email.String())
 	if err != nil {
@@ -38,7 +50,10 @@ func (l *PasswordService) Login(ctx context.Context, input LoginInput) (*LoginRe
 		return nil, fmt.Errorf("FindByEmail: %w", err)
 	}
 
-	if err := l.hash.Compare(input.Password, authData.PasswordHash); err != nil {
+	if err := l.hash.Compare(ctx, input.Password, authData.PasswordHash); err != nil {
+		if errors.Is(err, passworddomain.ErrHashBusy) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return nil, err
+		}
 		return nil, passworddomain.ErrInvalidEmailOrPassword
 	}
 

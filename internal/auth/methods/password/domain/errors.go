@@ -5,6 +5,9 @@ import (
 )
 
 var (
+	ErrHashBusy               = errors.New("password hashing capacity exhausted")
+	ErrLoginLimited           = errors.New("login rate limited")
+	ErrLoginUnavailable       = errors.New("login limiter unavailable")
 	ErrPasswordRequired       = errors.New("password required")
 	ErrNotFound               = errors.New("not found")
 	ErrUserNotFound           = errors.New("user not found")

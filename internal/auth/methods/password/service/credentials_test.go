@@ -24,7 +24,7 @@ func TestCredentialInputBeforeDependencies(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// Nil dependencies ensure invalid input cannot reach DB, hashing or sessions.
-			s := New(nil, nil, nil)
+			s := New(nil, nil, nil, nil)
 			if _, err := s.Register(context.Background(), tc.email, tc.password, "", ""); !errors.Is(err, tc.want) {
 				t.Fatal("registration error precedence changed", err)
 			}

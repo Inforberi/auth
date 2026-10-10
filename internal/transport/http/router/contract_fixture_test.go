@@ -95,13 +95,22 @@ func (contractPasswords) ChangePassword(context.Context, accountdomain.UserID, s
 type contractSessions struct{}
 
 func (contractSessions) ValidateSession(_ context.Context, token string) (*sessionservice.ValidationResult, error) {
-	if token != "valid" {
+	if token != validCookieToken {
 		return nil, sessiondomain.ErrSessionNotFound
 	}
 	return &sessionservice.ValidationResult{UserID: "user-1", TokenHash: "hash", SessionID: currentSessionID}, nil
 }
 
 const currentSessionID = "11111111-1111-4111-8111-111111111111"
+
+const validCookieToken = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
+func contractCookie(token string) string {
+	if token == "valid" {
+		return validCookieToken
+	}
+	return token
+}
 
 type contractManagement struct{}
 

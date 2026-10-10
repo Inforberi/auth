@@ -16,6 +16,9 @@ func (p *PasswordService) ChangePassword(
 	oldPassword string,
 	newPassword string,
 ) error {
+	if len(oldPassword) > 1024 {
+		return passworddomain.ErrInvalidEmailOrPassword
+	}
 	result, err := p.repo.FindUserByUserID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, passworddomain.ErrNotFound) {
@@ -24,8 +27,11 @@ func (p *PasswordService) ChangePassword(
 		return fmt.Errorf("change password find user %w", err)
 	}
 
-	err = p.hash.Compare(oldPassword, result.PasswordHash)
+	err = p.hash.Compare(ctx, oldPassword, result.PasswordHash)
 	if err != nil {
+		if errors.Is(err, passworddomain.ErrHashBusy) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return err
+		}
 		return passworddomain.ErrInvalidEmailOrPassword
 	}
 
@@ -38,7 +44,7 @@ func (p *PasswordService) ChangePassword(
 		return fmt.Errorf("change password validate password %w", err)
 	}
 
-	passwordHash, err := p.hash.GenerateHash([]byte(newPassword))
+	passwordHash, err := p.hash.GenerateHash(ctx, []byte(newPassword))
 	if err != nil {
 		return fmt.Errorf("change password generateHash %w", err)
 	}

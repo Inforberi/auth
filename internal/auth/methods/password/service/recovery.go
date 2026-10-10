@@ -28,17 +28,19 @@ type (
 )
 
 type RecoveryService struct {
-	hashSlots chan struct{}
-	repo      RecoveryRepo
-	cipher    RecoveryCipher
-	limiter   RecoveryLimiter
-	mail      RecoveryMailer
-	hash      hasher
-	cfg       Config
+	repo    RecoveryRepo
+	cipher  RecoveryCipher
+	limiter RecoveryLimiter
+	mail    RecoveryMailer
+	hash    hasher
+	cfg     Config
 }
 
 func NewRecovery(repo RecoveryRepo, cipher RecoveryCipher, limiter RecoveryLimiter, mail RecoveryMailer, hash hasher, cfg Config) *RecoveryService {
-	return &RecoveryService{repo: repo, cipher: cipher, limiter: limiter, mail: mail, hash: hash, cfg: cfg, hashSlots: make(chan struct{}, 2)}
+	if cfg.ResetGlobalLimit == 0 {
+		cfg.ResetGlobalLimit = 100
+	}
+	return &RecoveryService{repo: repo, cipher: cipher, limiter: limiter, mail: mail, hash: hash, cfg: cfg}
 }
 
 func (r *RecoveryService) limit(ctx context.Context, key string, limit int, window time.Duration) error {

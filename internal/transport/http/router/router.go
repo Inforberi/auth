@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	"net/http"
+	"time"
 
 	chi "github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -40,6 +41,16 @@ func New(h Handlers) *chi.Mux {
 	}
 	r.Use(requestmiddleware.RequestLogger(log))
 	r.Use(middleware.Recoverer)
+	capacity := requestmiddleware.CapacityConfig{MaxInFlight: 128, RequestTimeout: 10 * time.Second}
+	var proxy requestmiddleware.ProxyConfig
+	if h.Config != nil {
+		if h.Config.HTTP.MaxInFlight != 0 {
+			capacity = h.Config.HTTP
+		}
+		proxy = h.Config.Proxy
+	}
+	r.Use(requestmiddleware.Admission(capacity))
+	r.Use(requestmiddleware.ClientIP(proxy))
 	r.Get("/health/live", live)
 	r.Get("/health/ready", readiness(h.ReadyCheck))
 

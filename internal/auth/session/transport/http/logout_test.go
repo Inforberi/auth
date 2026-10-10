@@ -22,7 +22,7 @@ func TestLogoutAuthCookiePolicy(t *testing.T) {
 		{errors.New("SQL unavailable"), 503, false},
 	} {
 		r := httptest.NewRequest(http.MethodPost, "/logout", nil)
-		r.AddCookie(&http.Cookie{Name: SessionCookieName, Value: "raw"})
+		r.AddCookie(&http.Cookie{Name: SessionCookieName, Value: validCookieToken})
 		w := httptest.NewRecorder()
 		next := http.HandlerFunc(func(http.ResponseWriter, *http.Request) { t.Fatal("rejected session reached logout") })
 		New(&sessionStub{err: tc.err}, zap.NewNop()).LogoutAuth(next).ServeHTTP(w, r)

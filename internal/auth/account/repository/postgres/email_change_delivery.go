@@ -10,21 +10,11 @@ import (
 )
 
 func (r *Repository) claimChangeDelivery(ctx context.Context) (*domain.VerificationDelivery, error) {
-	if _, err := r.db.Exec(ctx, `DELETE FROM auth.email_change_outbox WHERE id IN (
-		SELECT id FROM auth.email_change_outbox WHERE expires_at<=clock_timestamp()
-		OR (attempts>=5 AND (lease_until IS NULL OR lease_until<=clock_timestamp())) LIMIT 100)`); err != nil {
-		return nil, err
-	}
-	// Expired intents retain their audit, but encrypted completion payloads have a bounded lifetime.
-	if _, err := r.db.Exec(ctx, `DELETE FROM auth.email_changes WHERE id IN (
-		SELECT id FROM auth.email_changes WHERE GREATEST(protect_until,recovery_expires_at)<=clock_timestamp() ORDER BY protect_until LIMIT 100)`); err != nil {
-		return nil, err
-	}
 	var job domain.VerificationDelivery
 	job.EmailChange = true
 	err := r.db.QueryRow(ctx, `WITH due AS (
 		SELECT o.id FROM auth.email_change_outbox o JOIN auth.email_changes c ON c.id=o.change_id
-		WHERE o.available_at<=clock_timestamp() AND o.expires_at>clock_timestamp() AND o.attempts<5
+		WHERE o.available_at<=statement_timestamp() AND o.expires_at>clock_timestamp() AND o.attempts<5
 		AND (o.lease_until IS NULL OR o.lease_until<=clock_timestamp())
 		AND (o.kind<>'confirm' OR (c.state='pending' AND c.expires_at>clock_timestamp()))
 		AND (o.kind<>'recovery' OR (c.state='reported' AND c.recovery_expires_at>clock_timestamp()

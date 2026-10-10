@@ -96,7 +96,7 @@ func checkRecovery(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		t.Fatal("old-password issuance accepted", err)
 	}
 	stale := &sessiondomain.Session{UserID: user, ExpiresAt: time.Now().UTC().Add(time.Hour)}
-	if err := ledger.UpdateSession(ctx, params.TokenHash, stale, time.Hour); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
+	if _, err := ledger.RefreshSession(ctx, params.TokenHash, stale, stale.ExpiresAt); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
 		t.Fatal("revoked session resurrected", err)
 	}
 	credential, err := repo.FindByEmail(ctx, "reset@example.com")

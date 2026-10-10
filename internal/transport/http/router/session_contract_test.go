@@ -27,7 +27,7 @@ func TestSessionMetadataIsNotCredential(t *testing.T) {
 	for _, path := range []string{"/me", "/sessions"} {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/api/v1/auth"+path, nil)
-		r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: "valid"})
+		r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: validCookieToken})
 		New(contractHandlers("dev")).ServeHTTP(w, r)
 		if w.Code != 200 || strings.Contains(w.Body.String(), "hash") || strings.Contains(w.Body.String(), "valid") {
 			t.Fatal("metadata exposed credential", w.Body.String())
@@ -106,7 +106,7 @@ func TestSessionManagementRoutes(t *testing.T) {
 			h.Session = sessionhttp.NewHandler(stub, zap.NewNop())
 			r := httptest.NewRequest(tc.method, "/api/v1/auth"+tc.path, nil)
 			if tc.token != "" {
-				r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: tc.token})
+				r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: contractCookie(tc.token)})
 			}
 			if tc.origin != "" {
 				r.Header.Set("Origin", tc.origin)

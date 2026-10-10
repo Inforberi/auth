@@ -17,7 +17,7 @@ func (r *RecoveryService) Reset(ctx context.Context, token, password, confirmati
 	if err := r.limit(ctx, "reset-ip:"+ip, 10, time.Minute); err != nil {
 		return err
 	}
-	if err := r.limit(ctx, "reset-global", 100, time.Minute); err != nil {
+	if err := r.limit(ctx, "reset-global", r.cfg.ResetGlobalLimit, time.Minute); err != nil {
 		return err
 	}
 	if len(token) != 43 {
@@ -33,13 +33,7 @@ func (r *RecoveryService) Reset(ctx context.Context, token, password, confirmati
 	if err := domain.ValidatePassword(password); err != nil {
 		return err
 	}
-	select {
-	case r.hashSlots <- struct{}{}:
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-	hash, err := r.hash.GenerateHash([]byte(password))
-	<-r.hashSlots
+	hash, err := r.hash.GenerateHash(ctx, []byte(password))
 	if err != nil {
 		return err
 	}

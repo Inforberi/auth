@@ -43,8 +43,8 @@ func (s *ProtectedRecoveryService) Recover(ctx context.Context, token, password,
 	if err := s.recovery.limit(ctx, "protected-recovery-ip:"+ip, 10, time.Minute); err != nil {
 		return err
 	}
-	// Share the process hash budget and distributed reset budget, rather than create another pool.
-	if err := s.recovery.limit(ctx, "reset-global", 100, time.Minute); err != nil {
+	// Both recovery paths share the distributed reset budget.
+	if err := s.recovery.limit(ctx, "reset-global", s.recovery.cfg.ResetGlobalLimit, time.Minute); err != nil {
 		return err
 	}
 	digest := resetDigest(token)
@@ -52,20 +52,14 @@ func (s *ProtectedRecoveryService) Recover(ctx context.Context, token, password,
 	if err != nil {
 		return err
 	}
-	select {
-	case s.recovery.hashSlots <- struct{}{}:
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-	defer func() { <-s.recovery.hashSlots }()
-	err = s.recovery.hash.Compare(password, expectedHash)
+	err = s.recovery.hash.Compare(ctx, password, expectedHash)
 	if err == nil {
 		return domain.ErrSamePassword
 	}
 	if !errors.Is(err, domain.ErrPasswordHashMismatch) {
 		return err
 	}
-	hash, err := s.recovery.hash.GenerateHash([]byte(password))
+	hash, err := s.recovery.hash.GenerateHash(ctx, []byte(password))
 	if err != nil {
 		return err
 	}

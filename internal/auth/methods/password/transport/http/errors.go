@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -87,7 +88,19 @@ var changePasswordErrors = []httpx.ErrorRule{
 }
 
 func (h *PasswordHandler) respondError(w http.ResponseWriter, r *http.Request, err error, operation string, rules []httpx.ErrorRule) {
+	if failure := httpx.MapError(err, capacityErrors, httpx.Failure{}); failure.Status != 0 {
+		httpx.RespondError(w, r, h.log, operation, err, nil, failure)
+		return
+	}
 	httpx.RespondError(w, r, h.log, operation, err, rules, internalFailure)
+}
+
+var capacityErrors = []httpx.ErrorRule{
+	{Target: passworddomain.ErrHashBusy, Response: dependencyFailure},
+	{Target: passworddomain.ErrLoginUnavailable, Response: dependencyFailure},
+	{Target: context.DeadlineExceeded, Response: dependencyFailure},
+	{Target: context.Canceled, Response: dependencyFailure},
+	{Target: passworddomain.ErrLoginLimited, Response: httpx.Failure{Status: 429, Code: "rate_limited", Message: "rate limited", Headers: http.Header{"Retry-After": {"60"}}}},
 }
 
 func passwordPolicyError(err error) bool {

@@ -50,14 +50,16 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		return nil, fmt.Errorf("assemble account: %w", err)
 	}
 	passwordRepo := assembleRegistration(pool, accountSvc, accountRepo)
-	argonHash := hasher.NewArgon2idHash(1, 32, 64*1024, 32, 256)
+	retentionSvc := accountservice.NewRetention(accountRepo, cfg.Retention)
+	argonHash := hasher.NewBounded(hasher.NewArgon2idHash(1, 32, 64*1024, 32, 256), cfg.Capacity.HashConcurrency)
 	sessionRepo := sessionpostgres.New(pool)
 	sessionSvc := sessionservice.New(now, sessionRepo, tokenGen, cfg.Session)
-	passwordSvc := passwordservice.New(passwordRepo, sessionSvc, argonHash)
 	resetCipher, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "password-reset:v1")
 	if err != nil {
 		return nil, err
 	}
+	passwordSvc := passwordservice.New(passwordRepo, sessionSvc, argonHash,
+		passwordservice.NewLoginLimit(passwordredis.New(rdb), resetCipher, cfg.Capacity))
 	recoverySvc := passwordservice.NewRecovery(passwordRepo, resetCipher, passwordredis.New(rdb), mail, argonHash, cfg.Password)
 	passwordHandler := passwordhttp.New(passwordSvc,
 		log.With(zap.String("feature", "password_auth"), zap.String("layer", "transport")))
@@ -95,6 +97,10 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	return &App{
 		resources: resources,
 		serve: func(ctx context.Context) error {
+			stopRetention := startBackground(ctx, func(ctx context.Context) {
+				retentionSvc.RunRetention(ctx, func(error) { log.Warn("retention processing failed") })
+			})
+			defer stopRetention()
 			return runWithDelivery(ctx, log, func(ctx context.Context) error {
 				return httpserver.Run(ctx, log, cfg.Server, handler)
 			}, recoverySvc, accountSvc)

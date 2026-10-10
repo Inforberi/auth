@@ -63,6 +63,20 @@ type testDeliveryWorker struct {
 	stopped chan struct{}
 }
 
+func TestBackgroundCancellationJoinsWorker(t *testing.T) {
+	stopped := make(chan struct{})
+	stop := startBackground(t.Context(), func(ctx context.Context) {
+		<-ctx.Done()
+		close(stopped)
+	})
+	stop()
+	select {
+	case <-stopped:
+	default:
+		t.Fatal("background worker not joined")
+	}
+}
+
 func (w *testDeliveryWorker) RunDelivery(ctx context.Context, _ func(error)) {
 	close(w.started)
 	<-ctx.Done()

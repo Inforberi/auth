@@ -10,12 +10,18 @@ CREATE TABLE auth.users (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   deleted_at TIMESTAMPTZ,
+  email_reuse_blocked BOOLEAN NOT NULL DEFAULT false,
+  email_released_at TIMESTAMPTZ,
+  CHECK (NOT email_reuse_blocked OR deleted_at IS NOT NULL),
+  CHECK (email_released_at IS NULL OR (deleted_at IS NOT NULL AND NOT email_reuse_blocked AND email_released_at >= deleted_at)),
   CONSTRAINT users_deleted_status_check CHECK (deleted_at IS NULL OR status = 'blocked'),
   CHECK (updated_at >= created_at),
   CHECK (deleted_at IS NULL OR deleted_at >= created_at)
 );
+CREATE INDEX users_email_release_due ON auth.users(deleted_at,id)
+  WHERE deleted_at IS NOT NULL AND NOT email_reuse_blocked AND email_released_at IS NULL;
 
--- Email ownership survives soft deletion; releasing addresses needs explicit policy.
+-- Deleted owners retain contacts until retention release; blocked owners are not released.
 CREATE TABLE auth.user_emails (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -100,6 +106,9 @@ CREATE TABLE auth.email_verification_outbox (
   CHECK ((lease IS NULL) = (lease_until IS NULL))
 );
 CREATE INDEX email_verification_outbox_due ON auth.email_verification_outbox(available_at);
+CREATE INDEX email_verifications_expiry ON auth.email_verifications(expires_at,digest);
+CREATE INDEX email_verification_outbox_expiry ON auth.email_verification_outbox(expires_at,id);
+CREATE INDEX email_verification_outbox_exhausted ON auth.email_verification_outbox(lease_until NULLS FIRST,id) WHERE attempts>=5;
 
 CREATE TABLE auth.email_verification_audit (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -122,6 +131,7 @@ CREATE TABLE auth.sessions (
   CHECK (created_at<expires_at AND expires_at<=absolute_expires_at)
 );
 CREATE INDEX sessions_owner ON auth.sessions(user_id,created_at DESC,id DESC);
+CREATE INDEX sessions_retention_due ON auth.sessions(LEAST(revoked_at,expires_at,absolute_expires_at),id);
 
 CREATE TABLE auth.password_resets (
   digest TEXT PRIMARY KEY CHECK (digest ~ '^[a-f0-9]{64}$'),
@@ -142,6 +152,9 @@ CREATE TABLE auth.password_reset_outbox (
   CHECK ((lease IS NULL)=(lease_until IS NULL))
 );
 CREATE INDEX password_reset_outbox_due ON auth.password_reset_outbox(available_at);
+CREATE INDEX password_resets_expiry ON auth.password_resets(expires_at,digest);
+CREATE INDEX password_reset_outbox_expiry ON auth.password_reset_outbox(expires_at,id);
+CREATE INDEX password_reset_outbox_exhausted ON auth.password_reset_outbox(lease_until NULLS FIRST,id) WHERE attempts>=5;
 CREATE TABLE auth.password_audit (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -200,7 +213,7 @@ CREATE TABLE auth.email_changes (
   CHECK (octet_length(new_email::TEXT) BETWEEN 3 AND 255 AND new_email::TEXT=lower(btrim(new_email::TEXT)) AND position('@' IN new_email::TEXT)>1)
 );
 CREATE UNIQUE INDEX email_changes_pending ON auth.email_changes(user_id) WHERE state='pending';
-CREATE INDEX email_changes_expiry ON auth.email_changes(protect_until);
+CREATE INDEX email_changes_expiry ON auth.email_changes(GREATEST(protect_until,recovery_expires_at),id);
 CREATE INDEX email_changes_owner ON auth.email_changes(user_id);
 
 CREATE TABLE auth.email_change_outbox (
@@ -218,6 +231,7 @@ CREATE TABLE auth.email_change_outbox (
 );
 CREATE INDEX email_change_outbox_due ON auth.email_change_outbox(available_at);
 CREATE INDEX email_change_outbox_expiry ON auth.email_change_outbox(expires_at);
+CREATE INDEX email_change_outbox_exhausted ON auth.email_change_outbox(lease_until NULLS FIRST,id) WHERE attempts>=5;
 
 CREATE TABLE auth.email_change_audit (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -227,3 +241,9 @@ CREATE TABLE auth.email_change_audit (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX email_change_audit_owner ON auth.email_change_audit(user_id,created_at DESC,id DESC);
+
+CREATE INDEX email_verification_audit_retention ON auth.email_verification_audit(created_at,id);
+CREATE INDEX password_audit_retention ON auth.password_audit(created_at,id);
+CREATE INDEX account_status_audit_retention ON auth.account_status_audit(created_at,id);
+CREATE INDEX account_deletion_audit_retention ON auth.account_deletion_audit(created_at,id);
+CREATE INDEX email_change_audit_retention ON auth.email_change_audit(created_at,id);

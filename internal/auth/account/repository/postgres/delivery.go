@@ -10,31 +10,27 @@ import (
 )
 
 func (r *Repository) ClaimDelivery(ctx context.Context) (*domain.VerificationDelivery, error) {
-	// Alternate the first queue so verification traffic cannot starve security notifications.
-	if r.emailChangeDelivery && r.deliveryTurn.Add(1)%2 == 1 {
+	changeFirst := r.emailChangeDelivery && r.deliveryTurn.Add(1)%2 == 1
+	if changeFirst {
 		job, err := r.claimChangeDelivery(ctx)
 		if err != nil || job != nil {
 			return job, err
 		}
 	}
-	if _, err := r.db.Exec(ctx, `DELETE FROM auth.email_verifications v USING auth.user_emails e,auth.users u
-		WHERE v.email_id=e.id AND e.user_id=u.id AND
-		(v.expires_at<=clock_timestamp() OR e.verified_at IS NOT NULL OR u.status<>'active' OR u.deleted_at IS NOT NULL)`); err != nil {
-		return nil, err
-	}
-	if _, err := r.db.Exec(ctx, `DELETE FROM auth.email_verification_outbox WHERE attempts>=5 AND (lease_until IS NULL OR lease_until<=clock_timestamp())`); err != nil {
-		return nil, err
-	}
 	var job domain.VerificationDelivery
 	err := r.db.QueryRow(ctx, `WITH due AS (
-		SELECT id FROM auth.email_verification_outbox WHERE available_at<=clock_timestamp()
-		AND expires_at>clock_timestamp() AND attempts<5 AND (lease_until IS NULL OR lease_until<=clock_timestamp())
-		ORDER BY available_at FOR UPDATE SKIP LOCKED LIMIT 1
+		SELECT o.id FROM auth.email_verification_outbox o
+		JOIN auth.email_verifications v ON v.digest=o.digest
+		JOIN auth.user_emails e ON e.id=v.email_id JOIN auth.users u ON u.id=e.user_id
+		WHERE o.available_at<=statement_timestamp()
+		AND o.expires_at>clock_timestamp() AND o.attempts<5 AND (o.lease_until IS NULL OR o.lease_until<=clock_timestamp())
+		AND v.expires_at>clock_timestamp() AND e.verified_at IS NULL AND u.status='active' AND u.deleted_at IS NULL
+		ORDER BY o.available_at FOR UPDATE OF o SKIP LOCKED LIMIT 1
 	) UPDATE auth.email_verification_outbox o SET attempts=attempts+1,lease=gen_random_uuid(),
 		lease_until=clock_timestamp()+interval '30 seconds' FROM due WHERE o.id=due.id
 		RETURNING o.id,o.lease,o.payload,o.attempts`).Scan(&job.ID, &job.Lease, &job.Payload, &job.Attempts)
 	if errors.Is(err, pgx.ErrNoRows) {
-		if r.emailChangeDelivery {
+		if r.emailChangeDelivery && !changeFirst {
 			return r.claimChangeDelivery(ctx)
 		}
 		return nil, nil

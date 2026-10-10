@@ -13,7 +13,11 @@ import (
 
 func schemaFixture(t *testing.T) (*pgxpool.Pool, context.Context) {
 	t.Helper()
-	dsn := os.Getenv("AUTH_SCHEMA_TEST_DATABASE_URL")
+	return schemaFixtureDSN(t, os.Getenv("AUTH_SCHEMA_TEST_DATABASE_URL"), 30*time.Second)
+}
+
+func schemaFixtureDSN(t *testing.T, dsn string, timeout time.Duration) (*pgxpool.Pool, context.Context) {
+	t.Helper()
 	if dsn == "" {
 		t.Skip("explicit disposable schema database not configured")
 	}
@@ -21,9 +25,14 @@ func schemaFixture(t *testing.T) (*pgxpool.Pool, context.Context) {
 	if err != nil || u.Path != "/auth_schema_test" || (u.Hostname() != "127.0.0.1" && u.Hostname() != "localhost") || u.User == nil || u.User.Username() != "auth_schema_test" {
 		t.Fatal("schema check requires the dedicated localhost auth_schema_test fixture")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	t.Cleanup(cancel)
-	db, err := pgxpool.New(ctx, dsn)
+	config, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	config.MaxConns = 10
+	db, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -167,6 +167,9 @@ func checkVerificationExpiry(t *testing.T, db *pgxpool.Pool, ctx context.Context
 	if err := svc.DeliverOne(ctx); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := accountpostgres.New(db).PurgeRetention(ctx, retentionPolicy()); err != nil {
+		t.Fatal(err)
+	}
 	var count int
 	if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.email_verification_outbox WHERE digest=$1`, last.Digest).Scan(&count); err != nil || count != 0 {
 		t.Fatal("expired ciphertext retained", err)

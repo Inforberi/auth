@@ -42,7 +42,7 @@ func TestHTTPResponsesMatchSwagger(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader(tc.body))
 			r.Header.Set("Content-Type", "application/json")
 			if tc.token != "" {
-				r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: tc.token})
+				r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: contractCookie(tc.token)})
 			}
 			w := httptest.NewRecorder()
 			handlers := contractHandlers("dev")

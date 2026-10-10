@@ -30,7 +30,7 @@ func TestEmailChangeRoutes(t *testing.T) {
 				if tc.origin != "" {
 					r.Header.Set("Origin", tc.origin)
 				}
-				r.AddCookie(&http.Cookie{Name: "__Host-session", Value: tc.cookie})
+				r.AddCookie(&http.Cookie{Name: "__Host-session", Value: contractCookie(tc.cookie)})
 				w := httptest.NewRecorder()
 				New(contractHandlers("test")).ServeHTTP(w, r)
 				want := tc.want
