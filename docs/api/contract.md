@@ -9,6 +9,8 @@
 | GET `/health/ready` | 200, `status` | 503 без деталей зависимости |
 | POST `/api/v1/auth/register/email` | 201, `userID`, Set-Cookie, queued verification | 400 validation, 409 email conflict, 429 limits, 503 limits/deadline, 500 internal_error; ошибка не доказывает rollback аккаунта |
 | POST `/api/v1/auth/login/email` | 200, `status`, Set-Cookie | 400 validation/invalid_credentials, 500 internal_error |
+| POST `/api/v1/auth/email-otp/request` | 202, status accepted и browser-bound flow cookie, optional profile | 400 invalid_json/invalid_email, 403 Origin, 429 limits, 503 dependency; только существующий active verified password email |
+| POST `/api/v1/auth/email-otp/confirm` | 200, status ok и обычная session cookie | 400 invalid_email_login/invalid_json, 403 Origin, 429 limits, 503 dependency; восемь цифр, TTL, пять неверных попыток, single-use; не MFA/fresh password proof |
 | POST `/api/v1/auth/telegram/start` | 200, authorizationUrl и flow cookie, optional profile | 403 invalid_origin, 429 rate_limited, 503 temporarily_unavailable; disabled route отсутствует |
 | GET `/api/v1/auth/telegram/callback` | 200, status; login выставляет session cookie, link сохраняет исходную session | 400 invalid_login, 403 fresh_auth_required, 409 identity_conflict, 429 rate_limited, 503 temporarily_unavailable; single-use browser binding |
 | POST `/api/v1/auth/telegram/link` | 200, authorizationUrl и bound flow cookie | 401 session, 403 invalid_origin/fresh_auth_required, 429 limits, 503 dependency; verified permanent password profile |

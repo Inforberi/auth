@@ -54,6 +54,10 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	argonHash := hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), cfg.Capacity.HashConcurrency)
 	sessionRepo := sessionpostgres.New(pool)
 	sessionSvc := sessionservice.New(now, sessionRepo, tokenGen, cfg.Session)
+	emailOTP, emailOTPDelivery, err := assembleEmailOTP(pool, rdb, mail, sessionSvc, tokenGen, cfg, log)
+	if err != nil {
+		return nil, fmt.Errorf("assemble email OTP: %w", err)
+	}
 	resetCipher, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "password-reset:v1")
 	if err != nil {
 		return nil, err
@@ -108,6 +112,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		Activation:        activation,
 		TemporaryPassword: temporaryHandler,
 		Telegram:          telegram,
+		EmailOTP:          emailOTP,
 		PasswordHandler:   passwordHandler,
 		Middleware:        middleware,
 		MailTest:          mailTest,
@@ -129,9 +134,13 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 				retentionSvc.RunRetention(ctx, func(error) { log.Warn("retention processing failed") })
 			})
 			defer stopRetention()
-			return runWithDelivery(ctx, log, func(ctx context.Context) error {
+			serve := func(ctx context.Context) error {
 				return httpserver.Run(ctx, log, cfg.Server, handler)
-			}, recoverySvc, accountSvc)
+			}
+			if emailOTPDelivery != nil {
+				return runWithDelivery(ctx, log, serve, recoverySvc, accountSvc, emailOTPDelivery)
+			}
+			return runWithDelivery(ctx, log, serve, recoverySvc, accountSvc)
 		},
 	}, nil
 }

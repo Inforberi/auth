@@ -2,6 +2,16 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат A3.4a-local — 11 октября 2026
+
+Реализован optional email OTP: POST request/confirm с Origin/no-store, HttpOnly browser binding, восьмизначным crypto/rand кодом, TTL 5m и пятью неверными попытками. Поддержан существующий active verified current permanent-password email; неизвестные адреса получают generic acceptance без регистрации. Код не является verification/MFA/password fresh proof. Disabled профиль не подключает routes/worker. Новые понятные EMAIL_OTP_* budgets/TTL добавлены только в sample ENV.
+
+SQL хранит scoped keyed verifier и encrypted delivery, сериализует consume по user/challenge. Неверные попытки коммитятся перед публичной ошибкой; успешный consume удаляет challenge/outbox и пишет audit одной транзакцией, затем создаётся обычная SQL-сессия с повторной проверкой status/version. Сбой второго шага не восстанавливает код. Общий существующий polling loop вынесен в auth/delivery для трёх очередей без отдельного pool/SDK/unbounded worker. Claim/ack используют lease, SKIP LOCKED, deadlines и bounded retries; retention очищает OTP даже после выключения профиля. Request budget по умолчанию 100/min согласован с текущей скоростью cleanup брошенных кодов; это не измеренный RPS сервиса.
+
+Formatter, итоговый task check (tests + lint 0 issues), targeted race service/HTTP/shared delivery/router и Swagger generation/drift прошли. Полный disposable PostgreSQL 18.6 up/down/up/race — 7.965s после упрощения success consumption: 16 concurrent confirms/один winner, 16 неверных/ровно пять committed attempts, replacement/replay, current-contact/status/version/pending/expiry guards, общая SQL-сессия, lease/stale ack, audit rollback и bounded cleanup. Тестовый контейнер и его том с исключительно synthetic data удалены; рабочая БД/env/secrets не менялись. Расширена только source 000001; applied installation требует согласованного upgrade, не reset. Коммит не выполнялся.
+
+Обновлены feature/API/schema/guide/architecture и implementation. В guide также исправлено прежнее описание transport токена: verification/reset используют query, invitation/email-change — fragment; runtime этим уточнением не менялся. Live SMTP/browser, Redis fault нового flow, multi-instance mixed load и memory/GC приёмка остаются открыты. Passwordless registration/external-only onboarding не реализованы; следующий backend шаг A3.4b — выбранный дополнительный OIDC provider.
+
 ### Результат A3.3-local — 11 октября 2026
 
 Реализованы POST/DELETE `/api/v1/auth/telegram/link` и purpose-aware общий callback. Existing password reauthentication, SESSION_FRESH_AUTH_TTL и SQL session proof переиспользованы. Привязка требует verified permanent password account: это исключает закрепление внешнего метода на неподтверждённом чужом email. Link-start привязывает Redis flow к owner UUID/session hash; callback требует тот же session token и свежие SQL state/version/proof после provider verification. User/session не создаются, email не используется для auto-merge. Флаги/limiter/deadlines/cipher/provider client остаются существующими, новые SDK/env/workers не добавлены.

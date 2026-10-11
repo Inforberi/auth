@@ -16,6 +16,9 @@ A3.2/A3.3 добавляют `auth.identity_audit`: user UUID, identity_created/
 
 | Таблица | Назначение и ограничения |
 | --- | --- |
+| `auth.email_login_challenges` | Один browser-bound OTP на user, current email FK, auth_version, keyed verifier, TTL и до пяти неправильных попыток; успех удаляет запись атомарно с audit. |
+| `auth.email_login_outbox` | OTP-purpose AES-GCM payload, due/expiry/attempts/UUID lease, cascade при замене/consume; существующий SMTP и bounded retention. |
+| `auth.email_login_audit` | code_issued/code_consumed, UUID/version/time без email/code/binding; SECURITY_AUDIT_RETENTION_DAYS. |
 | `auth.users` | UUID, status `pending/active/blocked`, положительный `auth_version` (по умолчанию 1), timestamps. Pending — ещё не активированный provisioned account; soft deletion требует blocked. |
 | `auth.user_emails` | Контакты отдельно от credentials: UUID, владелец, case-insensitive уникальный email, nullable `verified_at`. Новый контакт не подтверждён. |
 | `auth.password_credentials` | Один пароль на пользователя; ссылка на email того же пользователя защищена составным FK. Непустой hash до 1024 байт; формат/криптография контролируются hasher. |

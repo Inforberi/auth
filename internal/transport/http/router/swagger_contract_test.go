@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
@@ -83,6 +84,9 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 		{"httpx.ErrorResponse", httpx.ErrorResponse{}},
 		{"router.HealthResponse", HealthResponse{}},
 		{"http.MeResponse", sessionhttp.MeResponse{}},
+		{"emailotp_http.RequestCodeRequest", otphttp.RequestCodeRequest{}},
+		{"emailotp_http.ConfirmCodeRequest", otphttp.ConfirmCodeRequest{}},
+		{"emailotp_http.StatusResponse", otphttp.StatusResponse{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			schema, ok := doc.Definitions[tc.name]
@@ -126,6 +130,8 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 func TestSwaggerRequestAndResponseReferences(t *testing.T) {
 	doc := readAPI(t)
 	requests := map[string]string{
+		"/api/v1/auth/email-otp/request":           "emailotp_http.RequestCodeRequest",
+		"/api/v1/auth/email-otp/confirm":           "emailotp_http.ConfirmCodeRequest",
 		"/api/v1/auth/temporary-password/login":    "password_http.TemporaryLoginRequest",
 		"/api/v1/auth/temporary-password/complete": "password_http.TemporaryCompleteRequest",
 		"/api/v1/auth/invitations/activate":        "password_http.ActivationRequest",

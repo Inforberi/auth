@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
@@ -30,6 +31,7 @@ type Handlers struct {
 	Activation        *passwordhttp.ActivationHandler
 	TemporaryPassword *passwordhttp.TemporaryPasswordHandler
 	Telegram          *telegramhttp.Handler
+	EmailOTP          *otphttp.Handler
 	PasswordHandler   *passwordhttp.PasswordHandler
 	Middleware        *sessionhttp.Middleware
 	MailTest          *dev.MailTestHandler
@@ -74,6 +76,7 @@ func New(h Handlers) *chi.Mux {
 	r.Route("/api/v1/", func(r chi.Router) {
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(browserProtection(h))
+			emailOTPRoutes(r, h)
 			if h.Telegram != nil && h.Config != nil && h.Config.Telegram.Enabled {
 				r.Post("/telegram/start", h.Telegram.Start)
 				r.Get("/telegram/callback", h.Telegram.Callback)
@@ -130,6 +133,13 @@ func New(h Handlers) *chi.Mux {
 	})
 
 	return r
+}
+
+func emailOTPRoutes(r chi.Router, h Handlers) {
+	if h.EmailOTP != nil && h.Config != nil && h.Config.EmailOTP.Enabled {
+		r.Post("/email-otp/request", h.EmailOTP.Request)
+		r.Post("/email-otp/confirm", h.EmailOTP.Confirm)
+	}
 }
 
 func sessionRoutes(r chi.Router, h Handlers) {

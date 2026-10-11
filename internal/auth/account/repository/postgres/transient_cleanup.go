@@ -11,6 +11,7 @@ func (r *Repository) purgeTransientAuthData(ctx context.Context, batch int) (int
 	for _, challenge := range []struct{ table, key, expiry string }{
 		{"email_verifications", "digest", "expires_at"},
 		{"password_resets", "digest", "expires_at"},
+		{"email_login_challenges", "digest", "expires_at"},
 		{"temporary_password_tokens", "digest", "expires_at"},
 		{"temporary_password_credentials", "user_id", "expires_at"},
 		{"account_invitations", "digest", "expires_at"},
@@ -33,7 +34,7 @@ func (r *Repository) purgeTransientAuthData(ctx context.Context, batch int) (int
 		}
 		removed += result.RowsAffected()
 	}
-	for _, table := range []string{"email_verification_outbox", "password_reset_outbox", "email_change_outbox", "invitation_outbox"} {
+	for _, table := range []string{"email_verification_outbox", "password_reset_outbox", "email_login_outbox", "email_change_outbox", "invitation_outbox"} {
 		if table == "invitation_outbox" && !r.invitationDelivery {
 			continue
 		}

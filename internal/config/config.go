@@ -6,6 +6,7 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
@@ -25,6 +26,7 @@ type Config struct {
 	EmailChange       accountservice.EmailChangeConfig
 	Invitation        accountservice.InvitationConfig
 	TemporaryPassword passwordservice.TemporaryPasswordConfig
+	EmailOTP          otpservice.Config
 	Telegram          telegramservice.Config
 	Retention         accountservice.RetentionConfig
 	Postgres          postgres.Config

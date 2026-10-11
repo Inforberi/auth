@@ -152,6 +152,43 @@ CREATE TABLE auth.sessions (
 CREATE INDEX sessions_owner ON auth.sessions(user_id,created_at DESC,id DESC);
 CREATE INDEX sessions_retention_due ON auth.sessions(LEAST(revoked_at,expires_at,absolute_expires_at),id);
 
+CREATE TABLE auth.email_login_challenges (
+  digest TEXT PRIMARY KEY CHECK (digest ~ '^[a-f0-9]{64}$'),
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  email_id UUID NOT NULL,
+  auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  verifier TEXT NOT NULL CHECK (verifier ~ '^[a-f0-9]{64}$'),
+  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL CHECK (expires_at>created_at),
+  FOREIGN KEY (user_id,email_id) REFERENCES auth.user_emails(user_id,id) ON DELETE CASCADE
+);
+CREATE INDEX email_login_challenges_expiry ON auth.email_login_challenges(expires_at,digest);
+
+CREATE TABLE auth.email_login_outbox (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  digest TEXT NOT NULL UNIQUE REFERENCES auth.email_login_challenges(digest) ON DELETE CASCADE,
+  payload BYTEA NOT NULL CHECK (octet_length(payload) BETWEEN 28 AND 131072),
+  expires_at TIMESTAMPTZ NOT NULL,
+  available_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+  lease UUID,
+  lease_until TIMESTAMPTZ,
+  CHECK ((lease IS NULL)=(lease_until IS NULL))
+);
+CREATE INDEX email_login_outbox_due ON auth.email_login_outbox(available_at,id);
+CREATE INDEX email_login_outbox_expiry ON auth.email_login_outbox(expires_at,id);
+CREATE INDEX email_login_outbox_exhausted ON auth.email_login_outbox(lease_until NULLS FIRST,id) WHERE attempts>=5;
+
+CREATE TABLE auth.email_login_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  event TEXT NOT NULL CHECK (event IN ('code_issued','code_consumed')),
+  auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX email_login_audit_retention ON auth.email_login_audit(created_at,id);
+
 CREATE TABLE auth.password_resets (
   digest TEXT PRIMARY KEY CHECK (digest ~ '^[a-f0-9]{64}$'),
   user_id UUID NOT NULL UNIQUE REFERENCES auth.password_credentials(user_id) ON DELETE CASCADE,

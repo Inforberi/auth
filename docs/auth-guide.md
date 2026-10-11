@@ -49,7 +49,8 @@ Swagger описывает также выключенные опциональ�
 | Блокировка/удаление аккаунта | Внутренний сервис | Административный HTTP/UI ещё не опубликован |
 | Пользовательские роли и permissions | Запланировано | Нет действующего публичного RBAC API |
 | MFA: authenticator, recovery codes, телефон | Запланировано | Сейчас нет второго фактора; телефонный канал требует отдельной политики и провайдера |
-| Google/другой OIDC, вход по email-коду | Запланировано | Не путать общую identity-модель с готовыми ручками провайдеров |
+| Вход по одноразовому email-коду | Опционально | Существующий active аккаунт с verified current password email; без регистрации и MFA |
+| Google/другой OIDC | Запланировано | Не путать общую identity-модель с готовыми ручками провайдеров |
 | Настройки и секреты через UI, первый super-admin | Запланировано | Сегодня конфигурация читается из ENV при запуске |
 | Оплата, платные статусы, entitlement | Вне текущего релиза | Не нужны для использования существующей авторизации |
 | SSO между независимыми сайтами/проектами | Не реализовано | Текущий host-only cookie не является универсальным межсайтовым SSO |
@@ -207,7 +208,7 @@ Email нормализуется: trim + lowercase, ограничение дл�
 
 ### 4.2. Для чего EMAIL_VERIFICATION_URL
 
-`https://localhost:8443/verify-email` — адрес **будущей frontend-страницы**, а не backend-ручка подтверждения. Сервис добавляет к ссылке токен; для текущих почтовых сценариев он передаётся в fragment `#token=...`.
+`https://localhost:8443/verify-email` — адрес **будущей frontend-страницы**, а не backend-ручка подтверждения. Текущие verification/reset ссылки передают токен в query `?token=...`; invitation/email-change используют fragment `#token=...`. Frontend должен разбирать формат своего сценария. Query token виден серверу страницы: исключите его из proxy/access logs и сторонних запросов.
 
 GET страницы сам ничего не подтверждает. Это защищает от почтовых scanners и автоматического предпросмотра ссылок. Frontend должен извлечь токен, убрать его из адресной строки, показать действие и отправить POST. Не подключайте аналитику/сторонние ресурсы на странице с секретом; используйте no-store и no-referrer.
 
@@ -256,6 +257,12 @@ Confirm/report/recover не требуют cookie того браузера, к�
 Report не делает автоматический «откат и вход», а recovery не является общим admin-unblock. Потеря старой почты, истёкший recovery или административная блокировка требуют отдельно согласованного восстановления; публичного bypass нет.
 
 Если report отменил ещё не завершённую смену, это не означает, что украденный пароль заменён. Для этого владелец использует обычный reset.
+
+### 4.7. Вход по email-коду
+
+Это отдельный optional способ входа, не verification и не MFA. При `EMAIL_OTP_ENABLED=true` request отправляет восьмизначный код, confirm проверяет код и HttpOnly cookie того же браузера и выдаёт обычную SQL-сессию. По умолчанию код действует пять минут, допускает пять неверных попыток и используется один раз.
+
+Текущий профиль работает только для существующего активного аккаунта с подтверждённым текущим email постоянных password credentials. Неизвестный адрес не регистрируется; ответ request остаётся `accepted`. External-only и pending/temporary-password аккаунты не получают этот способ входа автоматически. Контракт — [request](#post-api-v1-auth-email-otp-request), [confirm](#post-api-v1-auth-email-otp-confirm), [подробности](features/email-otp.md).
 
 <a id="telegram-flows"></a>
 ## 5. Telegram и управление методами входа
@@ -1363,12 +1370,62 @@ Setup token разрешает только установку пароля. О�
 | 403 | Код: invalid_origin |
 | 500 | Код: send_failed |
 
+<a id="post-api-v1-auth-email-otp-request"></a>
+### 8.30. Запросить одноразовый email-код
+
+**POST `/api/v1/auth/email-otp/request`**
+
+Optional профиль EMAIL_OTP_ENABLED=true. Сессия не нужна; разрешённый Origin обязателен.
+
+```json
+{"email":"user@example.test"}
+```
+
+Успех: 202 `{"status":"accepted"}`, cookie `__Host-email-otp` (Secure/HttpOnly/Lax/Path=/, без Domain) на время EMAIL_OTP_TTL. Сырой код не возвращается. Неизвестный/неподтверждённый/неактивный адрес получает тот же ответ, но без действующего login challenge/письма.
+
+Поддержан текущий verified login email существующего active password-аккаунта. Нет скрытой регистрации, auto-link, смены пароля, verification или session issuance. Код приходит отдельным письмом, не ссылкой подтверждения.
+
+Новая допустимая выдача заменяет прежний challenge пользователя и browser cookie. Повтор раньше resend-window получает 429 без замены действующей cookie. Браузер должен сохранить cookie; не вести несколько OTP flows одновременно.
+
+| HTTP | Код |
+| --- | --- |
+| 400 | invalid_json / invalid_email |
+| 403 | invalid_origin |
+| 429 | rate_limited |
+| 503 | temporarily_unavailable |
+
+<a id="post-api-v1-auth-email-otp-confirm"></a>
+### 8.31. Войти по email-коду
+
+**POST `/api/v1/auth/email-otp/confirm`**
+
+Нужны Origin и cookie того браузера, где сделан request. Code — строка ровно из восьми ASCII цифр; ведущие нули сохраняются.
+
+```json
+{"code":"01234567"}
+```
+
+Успех: 200 `{"status":"ok"}`, обычная session cookie; OTP cookie очищается. Не передавать email/userID — owner определяется challenge. При новом входе browser cookie заменяет прежнюю, но старая SQL-сессия автоматически не отзывается.
+
+Code действует 5 минут по умолчанию, максимум пять неправильных попыток на challenge. После успешного consume/замены/expiry повтор даёт invalid_email_login. Consume+audit атомарны, затем обычная выдача SQL-сессии с актуальным status/version guard. Если следующий commit/ответ потерян, получить новый код; старый не восстанавливается.
+
+Код не подтверждает неподтверждённый email, не создаёт нового user, не устанавливает password fresh marker, не является MFA и не выдаёт роли. Telegram-only/pending/temporary профиль этим способом сейчас не активируется.
+
+| HTTP | Код |
+| --- | --- |
+| 400 | invalid_json / invalid_email_login |
+| 403 | invalid_origin |
+| 429 | rate_limited |
+| 503 | temporarily_unavailable |
+
+Для browser flow и правил хранения — [email OTP](features/email-otp.md).
+
 <a id="settings"></a>
 ## 9. Настройки ENV
 
 Сейчас ENV читаются при startup. Изменения требуют согласованного перезапуска экземпляров, это ещё не runtime UI settings. Показанные значения — текущие defaults либо **локальные примеры** из .env.example, не рекомендуемые production secrets.
 
-Не нужно включать все профили. Минимальное приложение может использовать только пароль/verification/sessions; Telegram, invitation, temporary password и email change подключаются по необходимости.
+Не нужно включать все профили. Минимальное приложение может использовать только пароль/verification/sessions; Telegram, email OTP, invitation, temporary password и email change подключаются по необходимости.
 
 ### 9.1. Процесс, HTTPS, Origin и Swagger
 
@@ -1478,6 +1535,20 @@ Trusted URL задаётся сервером, не произвольным к�
 | TELEGRAM_LOGIN_GLOBAL_LIMIT | 1000 | Общие Telegram попытки проекта за минутное окно |
 
 Start/callback/link/unlink используют общий Telegram admission. Успешный login/link обычно включает минимум два обращения к этому бюджету. TTL flow 5 минут — константа реализации, отдельного ENV переключателя этого срока сейчас нет.
+
+### 9.7a. Вход по email-коду
+
+Для входа по email-коду:
+
+| ENV | Default | Для чего |
+| --- | --- | --- |
+| EMAIL_OTP_ENABLED | false | Две login-ручки и доставка OTP |
+| EMAIL_OTP_TTL | 5m | Срок кода; 1m–10m |
+| EMAIL_OTP_RESEND_INTERVAL | 1m | Одна выдача/email/window, минимум 1m, меньше TTL |
+| EMAIL_OTP_REQUEST_PROJECT_ATTEMPTS_PER_MINUTE | 100 | Общий request budget проекта; не максимальный RPS |
+| EMAIL_OTP_CONFIRM_PROJECT_ATTEMPTS_PER_MINUTE | 1000 | Общие confirm attempts проекта |
+
+Request дополнительно ограничен 10/IP/min и 3/email/15min, confirm — 10/IP/min и пятью неверными кодами на challenge. При увеличении request budget согласовать SMTP/retention capacity. OTP использует существующий EMAIL_OUTBOX_KEY с отдельным purpose. Подробности — [email OTP](features/email-otp.md).
 
 ### 9.8. Приглашения
 

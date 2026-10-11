@@ -20,6 +20,7 @@ func (cfg Config) Validate() error {
 		func() error { return cfg.Invitation.Validate(cfg.Logger.Env == "prod") },
 		cfg.TemporaryPassword.Validate,
 		cfg.Telegram.Validate,
+		cfg.EmailOTP.Validate,
 		cfg.Retention.Validate,
 		cfg.Capacity.Validate,
 		cfg.HTTP.Validate,

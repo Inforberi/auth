@@ -11,6 +11,8 @@ import (
 	"github.com/Inforberi/financial-intelligence/docs/api/generated"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
@@ -78,11 +80,17 @@ func contractHandlers(env string) Handlers {
 		Activation:        passwordhttp.NewActivation(&contractActivation{}, log),
 		TemporaryPassword: passwordhttp.NewTemporaryPassword(&contractTemporaryPassword{}, log),
 		Telegram:          telegramhttp.New(&contractTelegram{}, log),
-		Config:            &config.Config{Telegram: telegramservice.Config{Enabled: true}, Logger: logger.Config{Env: env}, Browser: requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}}},
-		PasswordHandler:   passwordhttp.New(contractPasswords{}, log),
-		Middleware:        sessionhttp.New(contractSessions{}, log),
-		MailTest:          dev.NewMailTest(contractMail{}, log),
-		ReadyCheck:        func(context.Context) error { return nil },
+		EmailOTP:          otphttp.New(&contractEmailOTP{}, log),
+		Config: &config.Config{
+			EmailOTP: otpservice.Config{Enabled: true},
+			Telegram: telegramservice.Config{Enabled: true},
+			Logger:   logger.Config{Env: env},
+			Browser:  requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}},
+		},
+		PasswordHandler: passwordhttp.New(contractPasswords{}, log),
+		Middleware:      sessionhttp.New(contractSessions{}, log),
+		MailTest:        dev.NewMailTest(contractMail{}, log),
+		ReadyCheck:      func(context.Context) error { return nil },
 	}
 }
 
