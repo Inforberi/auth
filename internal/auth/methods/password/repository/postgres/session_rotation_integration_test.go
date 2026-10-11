@@ -57,6 +57,14 @@ func checkSessionRotation(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	if _, err := ledger.FindSession(ctx, old); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
 		t.Fatal("old token accepted", err)
 	}
+	stale := *before
+	stale.ExpiresAt = before.ExpiresAt.Add(30 * time.Minute)
+	if extended, err := ledger.RefreshSession(ctx, old, &stale, before.ExpiresAt); extended || !errors.Is(err, sessiondomain.ErrSessionNotFound) {
+		t.Fatal("stale refresh accepted after rotation", extended, err)
+	}
+	if err := ledger.RevokeOwnSession(ctx, owner, old, before.ID); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
+		t.Fatal("old verifier authorized revocation after rotation", err)
+	}
 	after, err := ledger.FindSession(ctx, winner)
 	if err != nil || before.ID != after.ID || !before.CreatedAt.Equal(after.CreatedAt) || !before.AbsoluteExpiresAt.Equal(after.AbsoluteExpiresAt) || !before.ExpiresAt.Equal(after.ExpiresAt) {
 		t.Fatal("rotation changed session context/deadlines", err)
