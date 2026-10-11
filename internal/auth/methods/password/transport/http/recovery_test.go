@@ -45,7 +45,8 @@ func TestForgotEmptyEmail(t *testing.T) {
 	}
 }
 
-func (s *recoveryService) Forgot(_ context.Context, _, ip string) error      { s.ip = ip; return s.err }
+func (s *recoveryService) Forgot(_ context.Context, _, ip string) error { s.ip = ip; return s.err }
+
 func (s *recoveryService) Reset(_ context.Context, _, _, _, ip string) error { s.ip = ip; return s.err }
 
 func TestRecoveryErrors(t *testing.T) {

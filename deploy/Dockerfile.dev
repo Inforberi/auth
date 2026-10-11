@@ -1,4 +1,4 @@
-FROM golang:1.27.1-bookworm
+FROM golang:1.27.2-bookworm
 WORKDIR /workspace
 ENV GOTOOLCHAIN=local CGO_ENABLED=0 GOTMPDIR=/root/.cache/go-build
 # Air is a pinned development tool, not a runtime application dependency.

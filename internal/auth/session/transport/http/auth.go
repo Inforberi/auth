@@ -61,7 +61,8 @@ func (m *Middleware) authenticate(next http.Handler, clearInvalid, refreshCookie
 				SessionID: session.SessionID,
 				UserID:    session.UserID,
 				TokenHash: session.TokenHash,
-			})
+			},
+		)
 
 		if session.Extended && refreshCookie {
 			SetSessionCookie(w, token, session.ExpiresAt)

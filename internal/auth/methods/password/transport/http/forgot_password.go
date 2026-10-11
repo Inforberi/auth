@@ -9,6 +9,7 @@ import (
 type ForgotRequest struct {
 	Email string `json:"email" binding:"required" example:"user@example.com"`
 } // @name password_http.ForgotRequest
+
 // @Summary Request password recovery
 // @Description Generic accepted response for unknown, blocked and cooldown addresses. Enqueues an encrypted email after SQL commit; does not guarantee delivery. Socket IP limits; forwarded headers are not trusted.
 // @Tags Auth

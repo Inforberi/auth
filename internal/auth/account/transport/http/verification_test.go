@@ -24,7 +24,9 @@ func (s *verificationService) AllowRegistration(_ context.Context, ip string) er
 	s.ip = ip
 	return s.err
 }
-func (s *verificationService) Resend(_ context.Context, _, ip string) error         { s.ip = ip; return s.err }
+
+func (s *verificationService) Resend(_ context.Context, _, ip string) error { s.ip = ip; return s.err }
+
 func (s *verificationService) Confirm(_ context.Context, _, ip string) error        { s.ip = ip; return s.err }
 func (s *verificationService) RequireVerified(context.Context, domain.UserID) error { return s.err }
 

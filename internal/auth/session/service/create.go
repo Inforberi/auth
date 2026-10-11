@@ -47,7 +47,8 @@ func (s *SessionService) CreateSessionAtVersion(ctx context.Context, userID acco
 			TokenHash:         tokenHash,
 			UserAgent:         userAgent,
 			IPAddress:         ip,
-		})
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("service create session %w", err)
 	}

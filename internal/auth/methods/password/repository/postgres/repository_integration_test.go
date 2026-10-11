@@ -31,7 +31,8 @@ func checkRepository(t *testing.T, db *pgxpool.Pool, ctx context.Context, repo *
 	}
 	var user accountdomain.User
 	if err := db.QueryRow(ctx, `SELECT id,status,auth_version,created_at,updated_at,deleted_at FROM auth.users WHERE id=$1`, id).Scan(
-		&user.ID, &user.Status, &user.AuthVersion, &user.CreatedAt, &user.UpdatedAt, &user.DeletedAt); err != nil {
+		&user.ID, &user.Status, &user.AuthVersion, &user.CreatedAt, &user.UpdatedAt, &user.DeletedAt,
+	); err != nil {
 		t.Fatal(err)
 	}
 	if user.Status != accountdomain.StatusActive || user.AuthVersion != 1 || user.DeletedAt != nil {

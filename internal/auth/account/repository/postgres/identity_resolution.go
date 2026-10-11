@@ -19,7 +19,8 @@ func (r *Repository) ResolveIdentityAccount(ctx context.Context, key domain.Iden
 	err = r.transaction(ctx, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `INSERT INTO auth.users DEFAULT VALUES
 			RETURNING id,status,auth_version,created_at,updated_at,deleted_at`).Scan(
-			&user.ID, &user.Status, &user.AuthVersion, &user.CreatedAt, &user.UpdatedAt, &user.DeletedAt); err != nil {
+			&user.ID, &user.Status, &user.AuthVersion, &user.CreatedAt, &user.UpdatedAt, &user.DeletedAt,
+		); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO auth.linked_identities(issuer,subject,user_id)
@@ -49,7 +50,8 @@ func (r *Repository) findIdentityAccount(ctx context.Context, key domain.Identit
 	err := r.db.QueryRow(ctx, `SELECT u.id,u.status,u.auth_version,u.created_at,u.updated_at,u.deleted_at
 		FROM auth.linked_identities i JOIN auth.users u ON u.id=i.user_id
 		WHERE i.issuer=$1 AND i.subject=$2`, key.Issuer, key.Subject).Scan(
-		&user.ID, &user.Status, &user.AuthVersion, &user.CreatedAt, &user.UpdatedAt, &user.DeletedAt)
+		&user.ID, &user.Status, &user.AuthVersion, &user.CreatedAt, &user.UpdatedAt, &user.DeletedAt,
+	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrIdentityNotFound
 	}

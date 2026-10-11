@@ -85,7 +85,8 @@ func TestChangePassword_ServiceError(t *testing.T) {
 					"oldPassword":"oldPassword1",
 					"newPassword":"newPassword1",
 					"confirmPassword":"newPassword1"
-				}`))
+				}`),
+			)
 			req.Header.Set("Content-type", "application/json")
 			req = req.WithContext(sessionhttp.SetAuthContext(req.Context(), auth))
 

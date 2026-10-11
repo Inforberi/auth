@@ -71,13 +71,13 @@ tasks:
     go:lint:
         internal: true
         cmds:
-            - go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run
+            - go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 run
 
     go:fmt:
         desc: Отформатировать Go-код
         aliases: [fmt]
         cmds:
-            - go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 fmt ./cmd/... ./internal/...
+            - go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 fmt ./cmd/... ./internal/...
 
     go:build:
         desc: Собрать Auth локально в bin
