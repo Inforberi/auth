@@ -1,3 +1,6 @@
+DROP TABLE IF EXISTS auth.temporary_password_reissues;
+DROP TABLE IF EXISTS auth.temporary_password_tokens;
+DROP TABLE IF EXISTS auth.temporary_password_credentials;
 DROP TABLE IF EXISTS auth.invitation_audit;
 DROP TABLE IF EXISTS auth.invitation_outbox;
 DROP TABLE IF EXISTS auth.account_invitations;

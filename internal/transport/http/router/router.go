@@ -25,6 +25,7 @@ type Handlers struct {
 	EmailChange       *accounthttp.EmailChangeHandler
 	ProtectedRecovery *passwordhttp.ProtectedRecoveryHandler
 	Activation        *passwordhttp.ActivationHandler
+	TemporaryPassword *passwordhttp.TemporaryPasswordHandler
 	PasswordHandler   *passwordhttp.PasswordHandler
 	Middleware        *sessionhttp.Middleware
 	MailTest          *dev.MailTestHandler
@@ -84,6 +85,15 @@ func New(h Handlers) *chi.Mux {
 			if h.Account != nil {
 				r.Post("/email/resend", h.Account.Resend)
 				r.Post("/email/verify", h.Account.Confirm)
+			}
+			if h.TemporaryPassword != nil {
+				var origins requestmiddleware.OriginConfig
+				if h.Config != nil {
+					origins = h.Config.Browser
+				}
+				setup := r.With(noStore, requestmiddleware.RequireOrigin(origins))
+				setup.Post("/temporary-password/login", h.TemporaryPassword.Login)
+				setup.Post("/temporary-password/complete", h.TemporaryPassword.Complete)
 			}
 			if h.EmailChange != nil {
 				emailChangeRoutes(r, h)

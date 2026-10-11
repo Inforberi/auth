@@ -58,15 +58,23 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	if err != nil {
 		return nil, err
 	}
-	passwordSvc := passwordservice.New(passwordRepo, sessionSvc, argonHash,
-		passwordservice.NewLoginLimit(passwordredis.New(rdb), resetCipher, cfg.Capacity))
-	recoverySvc := passwordservice.NewRecovery(passwordRepo, resetCipher, passwordredis.New(rdb), mail, argonHash, cfg.Password)
+	passwordLimits := passwordredis.New(rdb)
+	loginLimit := passwordservice.NewLoginLimit(passwordLimits, resetCipher, cfg.Capacity)
+	passwordSvc := passwordservice.New(passwordRepo, sessionSvc, argonHash, loginLimit)
+	recoverySvc := passwordservice.NewRecovery(passwordRepo, resetCipher, passwordLimits, mail, argonHash, cfg.Password)
 	passwordHandler := passwordhttp.New(passwordSvc,
 		log.With(zap.String("feature", "password_auth"), zap.String("layer", "transport")))
 	middleware := sessionhttp.New(sessionSvc, log)
 	var emailChange *accounthttp.EmailChangeHandler
 	var protectedRecovery *passwordhttp.ProtectedRecoveryHandler
 	var activation *passwordhttp.ActivationHandler
+	var temporary *passwordservice.TemporaryPasswordService
+	var temporaryHandler *passwordhttp.TemporaryPasswordHandler
+	if cfg.TemporaryPassword.Enabled {
+		temporaryRepo := passwordpostgres.NewTemporaryPassword(pool, accountRepo.ProvisionInTransaction)
+		temporary = passwordservice.NewTemporaryPassword(temporaryRepo, argonHash, passwordLimits, resetCipher.Digest, loginLimit, cfg.TemporaryPassword)
+		temporaryHandler = passwordhttp.NewTemporaryPassword(temporary, log)
+	}
 	var provisioning *accountservice.ProvisionService
 	if cfg.Invitation.Enabled {
 		provisioning = accountservice.NewProvisioning(accountRepo, accountSvc, cfg.Invitation)
@@ -89,6 +97,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		EmailChange:       emailChange,
 		ProtectedRecovery: protectedRecovery,
 		Activation:        activation,
+		TemporaryPassword: temporaryHandler,
 		PasswordHandler:   passwordHandler,
 		Middleware:        middleware,
 		MailTest:          mailTest,
@@ -102,8 +111,9 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		},
 	})
 	return &App{
-		Provisioning: provisioning,
-		resources:    resources,
+		Provisioning:       provisioning,
+		TemporaryPasswords: temporary,
+		resources:          resources,
 		serve: func(ctx context.Context) error {
 			stopRetention := startBackground(ctx, func(ctx context.Context) {
 				retentionSvc.RunRetention(ctx, func(error) { log.Warn("retention processing failed") })

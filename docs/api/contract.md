@@ -53,6 +53,10 @@ Change-password защищён session middleware: отсутствующая и
 
 Ошибки политики нового пароля при change/reset-password возвращают 400 `password_policy`. Reset не подтверждает email и не создаёт сессию; после смены пароля требуется новый login. Контракт и ограничения — [password recovery](../features/password-recovery.md).
 
+## Временный пароль
+
+Optional temporary-password профиль добавляет POST `/api/v1/auth/temporary-password/login` и `/complete`: первый возвращает только setup token/expiresAt и status=password_change_required без cookie, второй атомарно устанавливает постоянный пароль и отзывает временные credentials без session/email verification. Обычный login следует после complete. RequireOrigin/no-store, canonical token, fail-closed Redis и общие bounded budgets; expired/replayed/blocked/unknown authority — 400 invalid_temporary_password. Internal creation/reissue не опубликованы как admin endpoints; безопасная operator выдача требует permissions/MFA/fresh-auth/CSRF. [Контракт](../features/temporary-passwords.md).
+
 ## Проверки
 
 `task check` включает contract tests: dev/prod routes против спецификации, DTO JSON names/types/required, body/schema refs/media types, статусы и JSON ответов через реальный router, cookie attributes и client error codes. Service/session/mail заменены тестовыми реализациями — это не PostgreSQL/Redis/provider E2E.

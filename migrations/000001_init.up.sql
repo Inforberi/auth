@@ -158,7 +158,10 @@ CREATE INDEX password_reset_outbox_exhausted ON auth.password_reset_outbox(lease
 CREATE TABLE auth.password_audit (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  event TEXT NOT NULL CHECK (event IN ('password_reset_issued','password_reset','password_changed','sessions_revoked')),
+  event TEXT NOT NULL CHECK (event IN ('password_reset_issued','password_reset','password_changed','sessions_revoked',
+    'temporary_password_issued','temporary_password_reissued','temporary_password_started','temporary_password_completed')),
+  actor_id UUID REFERENCES auth.users(id),
+  auth_version BIGINT CHECK (auth_version IS NULL OR auth_version>0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -258,6 +261,8 @@ CREATE TABLE auth.account_provisions (
   activated_at TIMESTAMPTZ CHECK (activated_at IS NULL OR activated_at>=created_at),
   last_invited_at TIMESTAMPTZ,
   invitation_email_id UUID REFERENCES auth.user_emails(id) ON DELETE SET NULL,
+  password_change_required BOOLEAN NOT NULL DEFAULT false,
+  temporary_password_issued_at TIMESTAMPTZ,
   PRIMARY KEY(actor_id,request_key)
 );
 
@@ -304,3 +309,30 @@ CREATE TABLE auth.invitation_audit (
   CHECK ((action IN ('provisioned','reissued')) = (actor_id IS NOT NULL))
 );
 CREATE INDEX invitation_audit_retention ON auth.invitation_audit(created_at,id);
+
+CREATE TABLE auth.temporary_password_credentials (
+  user_id UUID PRIMARY KEY REFERENCES auth.account_provisions(user_id),
+  email_id UUID NOT NULL,
+  password_hash TEXT NOT NULL CHECK (octet_length(password_hash) BETWEEN 1 AND 1024),
+  secret_digest TEXT NOT NULL CHECK (secret_digest ~ '^[0-9a-f]{64}$'),
+  auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  expires_at TIMESTAMPTZ NOT NULL,
+  FOREIGN KEY(user_id,email_id) REFERENCES auth.user_emails(user_id,id) ON DELETE CASCADE
+);
+CREATE INDEX temporary_password_credentials_expiry ON auth.temporary_password_credentials(expires_at,user_id);
+
+CREATE TABLE auth.temporary_password_tokens (
+  digest TEXT PRIMARY KEY CHECK (digest ~ '^[0-9a-f]{64}$'),
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.temporary_password_credentials(user_id) ON DELETE CASCADE,
+  auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  expires_at TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX temporary_password_tokens_expiry ON auth.temporary_password_tokens(expires_at,digest);
+
+CREATE TABLE auth.temporary_password_reissues (
+  actor_id UUID NOT NULL REFERENCES auth.users(id),
+  request_key UUID NOT NULL,
+  user_id UUID NOT NULL REFERENCES auth.account_provisions(user_id),
+  expires_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY(actor_id,request_key)
+);

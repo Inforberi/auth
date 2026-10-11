@@ -6,11 +6,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (r *Repository) purgeDelivery(ctx context.Context, batch int) (int64, error) {
+func (r *Repository) purgeTransientAuthData(ctx context.Context, batch int) (int64, error) {
 	var removed int64
 	for _, challenge := range []struct{ table, key, expiry string }{
 		{"email_verifications", "digest", "expires_at"},
 		{"password_resets", "digest", "expires_at"},
+		{"temporary_password_tokens", "digest", "expires_at"},
+		{"temporary_password_credentials", "user_id", "expires_at"},
 		{"account_invitations", "digest", "expires_at"},
 		{"email_changes", "id", "GREATEST(protect_until,recovery_expires_at)"},
 	} {

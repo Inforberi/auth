@@ -30,6 +30,11 @@
 | `auth.account_invitations` | Distinct SHA-256 digest, один challenge на user, owner/contact FK, version и DB expiry. Consume только для pending account; каскадно удаляет job. |
 | `auth.invitation_outbox` | Encrypted payload, due/expiry/attempts/lease. Индексы для claim, expiry и exhausted cleanup. |
 | `auth.invitation_audit` | Provisioned/reissued/activated event, actor при creation/reissue, user/version/time; без email/token/password. Retention 180 дней по текущей policy. |
+| `auth.temporary_password_credentials` | Отдельный Argon2 hash случайного секрета, SHA-256 fingerprint для запрета reuse, owner/contact/version/expiry. Не является обычным password credentials; indexed expiry cleanup. |
+| `auth.temporary_password_tokens` | Один setup digest на user, version и срок не больше TTL временного credentials; одноразовый consume, каскадный отзыв и indexed expiry cleanup. |
+| `auth.temporary_password_reissues` | Durable actor/key/target и original expiresAt без plaintext; replay не меняет TTL/secret. |
+
+5.7c добавляет в account_provisions durable password_change_required и temporary_password_issued_at. Pending user остаётся закрыт для ordinary login/session/reset до atomic complete; activated_at выставляется только при установке постоянного пароля. Password audit поддерживает temporary issued/reissued/started/completed с actor при operator issuance и auth_version. Existing retention policy 180 дней применяется к этим events; idempotency metadata не очищается как audit. [Контракт](features/temporary-passwords.md).
 
 Первые четыре таблицы имеют `created_at/updated_at`; BEFORE UPDATE trigger поддерживает `updated_at`. Основные дочерние записи имеют каскадные FK при явном hard delete. Status/deletion audit используют restrictive FK actor/target: hard delete не должен незаметно стирать историю, его retention/anonymization policy определяется в 5.6b. Сам SQL soft-delete не делает cleanup; внутренний DeletionService физически удаляет credentials/profile/challenges/change intents/outbox, отзывает сессии и очищает их metadata. Email reservations, UUID и audit сохраняются; [контракт](features/account-deletion.md).
 

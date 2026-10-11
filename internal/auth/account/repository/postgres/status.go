@@ -48,6 +48,9 @@ func (r *Repository) ChangeStatus(ctx context.Context, change domain.StatusChang
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.password_resets WHERE user_id=$1`, change.UserID); err != nil {
 			return err
 		}
+		if _, err := tx.Exec(ctx, `DELETE FROM auth.temporary_password_credentials WHERE user_id=$1`, change.UserID); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.account_invitations WHERE user_id=$1`, change.UserID); err != nil {
 			return err
 		}

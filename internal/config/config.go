@@ -17,22 +17,23 @@ import (
 )
 
 type Config struct {
-	Browser     requestmiddleware.OriginConfig
-	HTTP        requestmiddleware.CapacityConfig
-	Proxy       requestmiddleware.ProxyConfig
-	Account     accountservice.Config
-	EmailChange accountservice.EmailChangeConfig
-	Invitation  accountservice.InvitationConfig
-	Retention   accountservice.RetentionConfig
-	Postgres    postgres.Config
-	Logger      logger.Config
-	Session     sessionservice.Config
-	Server      httpserver.Config
-	Redis       redisclient.Config
-	MailSender  mailer.Config
-	Password    passwordservice.Config
-	Capacity    passwordservice.CapacityConfig
-	Swagger     SwaggerConfig
+	Browser           requestmiddleware.OriginConfig
+	HTTP              requestmiddleware.CapacityConfig
+	Proxy             requestmiddleware.ProxyConfig
+	Account           accountservice.Config
+	EmailChange       accountservice.EmailChangeConfig
+	Invitation        accountservice.InvitationConfig
+	TemporaryPassword passwordservice.TemporaryPasswordConfig
+	Retention         accountservice.RetentionConfig
+	Postgres          postgres.Config
+	Logger            logger.Config
+	Session           sessionservice.Config
+	Server            httpserver.Config
+	Redis             redisclient.Config
+	MailSender        mailer.Config
+	Password          passwordservice.Config
+	Capacity          passwordservice.CapacityConfig
+	Swagger           SwaggerConfig
 }
 
 func New() (*Config, error) {

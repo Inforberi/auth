@@ -71,6 +71,7 @@ func contractHandlers(env string) Handlers {
 		EmailChange:       accounthttp.NewEmailChange(contractEmailChange{}, log),
 		ProtectedRecovery: passwordhttp.NewProtectedRecovery(contractProtectedRecovery{}, log),
 		Activation:        passwordhttp.NewActivation(&contractActivation{}, log),
+		TemporaryPassword: passwordhttp.NewTemporaryPassword(&contractTemporaryPassword{}, log),
 		Config:            &config.Config{Logger: logger.Config{Env: env}, Browser: requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}}},
 		PasswordHandler:   passwordhttp.New(contractPasswords{}, log),
 		Middleware:        sessionhttp.New(contractSessions{}, log),

@@ -71,7 +71,7 @@ func replaceInvitation(ctx context.Context, tx pgx.Tx, c service.InvitationReiss
 		(p.last_invited_at IS NULL OR p.last_invited_at+$3::double precision*interval '1 second'<=clock_timestamp())
 		FROM auth.account_provisions p JOIN auth.users u ON u.id=p.user_id
 		JOIN auth.user_emails e ON e.user_id=u.id AND e.id=p.invitation_email_id
-		WHERE u.id=$1 AND u.status='pending' AND u.deleted_at IS NULL AND p.activated_at IS NULL
+		WHERE u.id=$1 AND u.status='pending' AND u.deleted_at IS NULL AND p.activated_at IS NULL AND NOT p.password_change_required
 		AND e.email=$2 AND e.verified_at IS NULL
 		AND NOT EXISTS(SELECT 1 FROM auth.password_credentials pc WHERE pc.user_id=u.id)
 		FOR UPDATE OF e`, c.Input.UserID, c.Email, c.Cooldown.Seconds()).Scan(&emailID, &version, &ready)

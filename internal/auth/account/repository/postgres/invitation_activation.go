@@ -16,7 +16,8 @@ func (r *Repository) CheckInvitation(ctx context.Context, digest string) error {
 	var valid bool
 	err := r.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.account_invitations i JOIN auth.users u ON u.id=i.user_id
 		WHERE i.digest=$1 AND i.expires_at>clock_timestamp() AND u.status='pending' AND u.deleted_at IS NULL
-		AND u.auth_version=i.auth_version AND NOT EXISTS(SELECT 1 FROM auth.password_credentials p WHERE p.user_id=u.id))`, digest).Scan(&valid)
+		AND u.auth_version=i.auth_version AND NOT EXISTS(SELECT 1 FROM auth.password_credentials p WHERE p.user_id=u.id)
+		AND NOT EXISTS(SELECT 1 FROM auth.account_provisions p WHERE p.user_id=u.id AND p.password_change_required))`, digest).Scan(&valid)
 	if err != nil {
 		return err
 	}
@@ -48,7 +49,9 @@ func (r *Repository) ActivateInvitation(ctx context.Context, digest, hash string
 		}
 		var emailID domain.AddressID
 		err := tx.QueryRow(ctx, `DELETE FROM auth.account_invitations WHERE digest=$1 AND user_id=$2 AND auth_version=$3
-			AND expires_at>clock_timestamp() RETURNING email_id`, digest, user, version).Scan(&emailID)
+			AND expires_at>clock_timestamp()
+			AND NOT EXISTS(SELECT 1 FROM auth.account_provisions p WHERE p.user_id=$2 AND p.password_change_required)
+			RETURNING email_id`, digest, user, version).Scan(&emailID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.ErrInvalidInvitation
 		}

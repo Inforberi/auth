@@ -75,6 +75,6 @@ func (r *Repository) PurgeRetention(ctx context.Context, cfg service.RetentionCo
 	if err != nil {
 		return 0, err
 	}
-	challenges, err := r.purgeDelivery(ctx, batch)
+	challenges, err := r.purgeTransientAuthData(ctx, batch)
 	return removed + challenges, err
 }

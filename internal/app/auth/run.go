@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
@@ -17,9 +18,10 @@ import (
 )
 
 type App struct {
-	Provisioning *accountservice.ProvisionService
-	serve        func(context.Context) error
-	resources    *resources
+	Provisioning       *accountservice.ProvisionService
+	TemporaryPasswords *passwordservice.TemporaryPasswordService
+	serve              func(context.Context) error
+	resources          *resources
 }
 
 func (a *App) Run(ctx context.Context) error {
