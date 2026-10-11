@@ -74,7 +74,9 @@ func TestInvitationHTTPContract(t *testing.T) {
 	h := contractHandlers("test")
 	h.Activation = nil
 	w := httptest.NewRecorder()
-	New(h).ServeHTTP(w, httptest.NewRequest("POST", path, strings.NewReader(`{}`)))
+	r := httptest.NewRequest("POST", path, strings.NewReader(`{}`))
+	r.Header.Set("Origin", "https://localhost:8443")
+	New(h).ServeHTTP(w, r)
 	if w.Code != 404 {
 		t.Fatal("disabled invitation published", w.Code)
 	}

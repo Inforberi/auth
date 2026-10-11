@@ -13,8 +13,10 @@ type ResendRequest struct {
 // @Summary Request email verification
 // @Description Always returns accepted for unknown, verified, blocked and cooldown addresses. Enqueues encrypted delivery for eligible addresses. Limits use socket peer IP; forwarded headers are not trusted.
 // @Tags Account
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Accept json
 // @Produce json
+// @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
 // @Param body body ResendRequest true "email"
 // @Success 202 {object} VerificationResponse
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, invalid_email"

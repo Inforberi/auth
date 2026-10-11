@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/api/v1/auth/change-password": {
             "post": {
-                "description": "Requires a valid SQL-backed __Host-session and a verified login email. Atomically updates password, revokes all sessions and records audit; sign in again. Response retains legacy uppercase Status. CSRF/fresh-auth are not implemented yet.",
+                "description": "Requires a valid SQL-backed __Host-session, verified login email, allowed Origin and current password. Atomically updates password, revokes all sessions and records audit; sign in again. Response retains legacy uppercase Status. MFA is not implemented.",
                 "consumes": [
                     "application/json"
                 ],
@@ -29,6 +29,13 @@ const docTemplate = `{
                 ],
                 "summary": "change password",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "change password payload",
                         "name": "body",
@@ -59,7 +66,7 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "code: email_not_verified",
+                        "description": "codes: invalid_origin, email_not_verified",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -99,6 +106,13 @@ const docTemplate = `{
                 ],
                 "summary": "Request a login email change",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "new email, optional current password when already reauthenticated",
                         "name": "body",
@@ -170,6 +184,13 @@ const docTemplate = `{
                 "summary": "Confirm a login email change",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "confirmation token",
                         "name": "body",
                         "in": "body",
@@ -234,6 +255,13 @@ const docTemplate = `{
                 "summary": "Recover an account after an unauthorized email change",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "recovery token and new password",
                         "name": "body",
                         "in": "body",
@@ -291,6 +319,13 @@ const docTemplate = `{
                 ],
                 "summary": "Report an unauthorized email change",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "security token",
                         "name": "body",
@@ -350,6 +385,13 @@ const docTemplate = `{
                 "summary": "Request email verification",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "email",
                         "name": "body",
                         "in": "body",
@@ -368,6 +410,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "codes: invalid_json, invalid_email",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code: invalid_origin",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -402,6 +450,13 @@ const docTemplate = `{
                 "summary": "Confirm email ownership",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "token",
                         "name": "body",
                         "in": "body",
@@ -420,6 +475,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "codes: invalid_json, invalid_verification",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code: invalid_origin",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -454,6 +515,13 @@ const docTemplate = `{
                 "summary": "Request password recovery",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "email",
                         "name": "body",
                         "in": "body",
@@ -472,6 +540,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "codes: invalid_json, invalid_email",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code: invalid_origin",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -505,6 +579,13 @@ const docTemplate = `{
                 ],
                 "summary": "Activate an invited password account",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "invitation token and password",
                         "name": "body",
@@ -551,7 +632,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/login/email": {
             "post": {
-                "description": "Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on success. Unverified users can sign in, but sensitive routes require a verified email. HTTPS is required for browser sessions. Invalid credentials return 400, not 401. SQL session issuance checks current account status and auth version. CSRF enforcement is not implemented yet.",
+                "description": "Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on success. Unverified users can sign in, but sensitive routes require a verified email. HTTPS and an allowed Origin are required. Invalid credentials return 400, not 401. SQL session issuance checks current account status and auth version.",
                 "consumes": [
                     "application/json"
                 ],
@@ -563,6 +644,13 @@ const docTemplate = `{
                 ],
                 "summary": "login by email",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "login payload",
                         "name": "body",
@@ -582,6 +670,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "codes: invalid_json, email_required, password_required, invalid_email, invalid_credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code: invalid_origin",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -800,7 +894,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/register/email": {
             "post": {
-                "description": "Creates an account, queues email verification atomically and sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie. Unverified accounts can sign in but cannot change their password. HTTPS is required for browser sessions. Email is normalized and limited to 255 bytes; password is 8-128 bytes with a letter, digit and uppercase letter. CSRF enforcement is not implemented yet.",
+                "description": "Creates an account, queues email verification atomically and sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie. Unverified accounts can sign in but cannot change their password. HTTPS and an allowed Origin are required. Email is normalized and limited to 255 bytes; password is 8-128 bytes with a letter, digit and uppercase letter.",
                 "consumes": [
                     "application/json"
                 ],
@@ -812,6 +906,13 @@ const docTemplate = `{
                 ],
                 "summary": "Register by email",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "Register payload",
                         "name": "body",
@@ -831,6 +932,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "codes: invalid_json, email_required, password_required, invalid_email, password_too_short, password_too_long, password_no_letter, password_no_digit, password_no_upper_letter",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code: invalid_origin",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -877,6 +984,13 @@ const docTemplate = `{
                 "summary": "Reset password",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "token and new password",
                         "name": "body",
                         "in": "body",
@@ -895,6 +1009,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "codes: invalid_json, invalid_reset, password_mismatch, password_policy",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code: invalid_origin",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -1076,6 +1196,13 @@ const docTemplate = `{
                 "summary": "Set a permanent password after temporary login",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "setup token and permanent password",
                         "name": "body",
                         "in": "body",
@@ -1133,6 +1260,13 @@ const docTemplate = `{
                 ],
                 "summary": "Begin mandatory password setup",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "email and temporary password",
                         "name": "body",
@@ -1192,6 +1326,13 @@ const docTemplate = `{
                 "summary": "Send test email",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "mail payload",
                         "name": "body",
                         "in": "body",
@@ -1210,6 +1351,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "codes: invalid_json, to_required, subject_required, body_required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code: invalid_origin",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -1664,7 +1811,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{"https", "http"},
 	Title:            "Auth API",
-	Description:      "Reusable authentication service. Cookie sessions require HTTPS. CSRF protection is a later release prerequisite.",
+	Description:      "Reusable authentication service. Cookie sessions require HTTPS. All auth mutations require an exact allowed Origin. CORS is opt-in; cookie profile is same-site.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

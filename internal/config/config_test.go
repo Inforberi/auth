@@ -40,6 +40,8 @@ func TestValidate(t *testing.T) {
 	for name, mutate := range map[string]func(*Config){
 		"port":            func(c *Config) { c.Server.Port = "0" },
 		"origins":         func(c *Config) { c.Browser.AllowedOrigins = nil },
+		"TLS cert only":   func(c *Config) { c.Server.TLSCertFile = "cert.pem" },
+		"TLS key only":    func(c *Config) { c.Server.TLSKeyFile = "key.pem" },
 		"retention":       func(c *Config) { c.Retention.SecurityAuditDays = 0 },
 		"pool":            func(c *Config) { c.Postgres.MinConns = 11 },
 		"absolute":        func(c *Config) { c.Session.AbsoluteSessionTTL = time.Minute },
@@ -63,11 +65,12 @@ func TestValidate(t *testing.T) {
 
 func TestBrowserOriginEnvironment(t *testing.T) {
 	t.Setenv("AUTH_ALLOWED_ORIGINS", "https://app.example.com,https://admin.example.com")
+	t.Setenv("AUTH_CORS_ENABLED", "true")
 	var cfg requestmiddleware.OriginConfig
 	if err := cleanenv.ReadEnv(&cfg); err != nil {
 		t.Fatal(err)
 	}
-	if len(cfg.AllowedOrigins) != 2 || cfg.AllowedOrigins[0] != "https://app.example.com" || cfg.AllowedOrigins[1] != "https://admin.example.com" {
+	if !cfg.CORSEnabled || len(cfg.AllowedOrigins) != 2 || cfg.AllowedOrigins[0] != "https://app.example.com" || cfg.AllowedOrigins[1] != "https://admin.example.com" {
 		t.Fatal("origin list parsed incorrectly")
 	}
 	if err := cfg.Validate(); err != nil {

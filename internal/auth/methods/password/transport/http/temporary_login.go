@@ -22,6 +22,7 @@ type TemporaryLoginResponse struct {
 // @Description Optional temporary password profile. Returns only a short-lived password-setup token, never a session cookie. Repeated successful login replaces the previous setup token. Does not verify email or grant product access. Shares ordinary login rate limits.
 // @Tags Auth
 // @Accept json
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Produce json
 // @Param body body TemporaryLoginRequest true "email and temporary password"
 // @Success 200 {object} TemporaryLoginResponse

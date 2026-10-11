@@ -20,10 +20,12 @@ type LoginByEmailResponse struct {
 } // @name password_http.LoginByEmailResponse
 
 // @Summary login by email
-// @Description Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on success. Unverified users can sign in, but sensitive routes require a verified email. HTTPS is required for browser sessions. Invalid credentials return 400, not 401. SQL session issuance checks current account status and auth version. CSRF enforcement is not implemented yet.
+// @Description Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on success. Unverified users can sign in, but sensitive routes require a verified email. HTTPS and an allowed Origin are required. Invalid credentials return 400, not 401. SQL session issuance checks current account status and auth version.
 // @Tags Auth
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Accept json
 // @Produce json
+// @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
 // @Param body body LoginByEmailRequest true "login payload"
 // @Success 200 {object} LoginByEmailResponse
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, email_required, password_required, invalid_email, invalid_credentials"

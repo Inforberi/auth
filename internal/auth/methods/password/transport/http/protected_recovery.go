@@ -43,6 +43,7 @@ var protectedRecoveryErrors = []httpx.ErrorRule{
 // @Description Optional password-only profile. Distinct single-use token delivered to the old verified address after protective blocking. Atomically replaces the compromised password, restores that address, revokes access and invalidates previous protection links before activating the account. Does not bypass administrative blocking, create a session or run on GET.
 // @Tags Auth
 // @Accept json
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Produce json
 // @Param body body ProtectedRecoveryRequest true "recovery token and new password"
 // @Success 200 {object} RecoveryResponse

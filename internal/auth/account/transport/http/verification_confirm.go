@@ -13,8 +13,10 @@ type ConfirmRequest struct {
 // @Summary Confirm email ownership
 // @Description Consumes a 256-bit token once. Expired, replaced, replayed, blocked or unknown tokens share one error. Does not create a session. POST only; opening an email link must not confirm automatically.
 // @Tags Account
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Accept json
 // @Produce json
+// @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
 // @Param body body ConfirmRequest true "token"
 // @Success 200 {object} VerificationResponse
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, invalid_verification"

@@ -44,7 +44,8 @@ func New(h Handlers) *chi.Mux {
 		log = zap.NewNop()
 	}
 	r.Use(requestmiddleware.RequestLogger(log))
-	r.Use(middleware.Recoverer)
+	r.Use(requestmiddleware.SecurityHeaders)
+	r.Use(requestmiddleware.Recoverer(log))
 	capacity := requestmiddleware.CapacityConfig{MaxInFlight: 128, RequestTimeout: 10 * time.Second}
 	var proxy requestmiddleware.ProxyConfig
 	if h.Config != nil {
@@ -70,6 +71,7 @@ func New(h Handlers) *chi.Mux {
 
 	r.Route("/api/v1/", func(r chi.Router) {
 		r.Route("/auth", func(r chi.Router) {
+			r.Use(browserProtection(h))
 			if h.Session != nil {
 				sessionRoutes(r, h)
 			}
@@ -78,24 +80,15 @@ func New(h Handlers) *chi.Mux {
 				r.Post("/reset-password", h.Recovery.Reset)
 			}
 			if h.Activation != nil {
-				var origins requestmiddleware.OriginConfig
-				if h.Config != nil {
-					origins = h.Config.Browser
-				}
-				r.With(noStore, requestmiddleware.RequireOrigin(origins)).Post("/invitations/activate", h.Activation.Activate)
+				r.Post("/invitations/activate", h.Activation.Activate)
 			}
 			if h.Account != nil {
 				r.Post("/email/resend", h.Account.Resend)
 				r.Post("/email/verify", h.Account.Confirm)
 			}
 			if h.TemporaryPassword != nil {
-				var origins requestmiddleware.OriginConfig
-				if h.Config != nil {
-					origins = h.Config.Browser
-				}
-				setup := r.With(noStore, requestmiddleware.RequireOrigin(origins))
-				setup.Post("/temporary-password/login", h.TemporaryPassword.Login)
-				setup.Post("/temporary-password/complete", h.TemporaryPassword.Complete)
+				r.Post("/temporary-password/login", h.TemporaryPassword.Login)
+				r.Post("/temporary-password/complete", h.TemporaryPassword.Complete)
 			}
 			if h.EmailChange != nil {
 				emailChangeRoutes(r, h)
@@ -122,6 +115,7 @@ func New(h Handlers) *chi.Mux {
 
 		if h.MailTest != nil && h.Config != nil && h.Config.Logger.Env == "dev" {
 			r.Route("/dev", func(r chi.Router) {
+				r.Use(browserProtection(h))
 				r.Post("/send-mail", h.MailTest.Send)
 			})
 		}
@@ -131,45 +125,36 @@ func New(h Handlers) *chi.Mux {
 }
 
 func sessionRoutes(r chi.Router, h Handlers) {
-	var cfg requestmiddleware.OriginConfig
-	if h.Config != nil {
-		cfg = h.Config.Browser
-	}
-	origin := requestmiddleware.RequireOrigin(cfg)
 	if h.Reauthentication != nil {
-		r.With(noStore, origin, h.Middleware.NoRefreshAuth).Post("/reauthenticate/password", h.Reauthentication.Confirm)
+		r.With(h.Middleware.NoRefreshAuth).Post("/reauthenticate/password", h.Reauthentication.Confirm)
 	}
 	if h.Rotation != nil {
-		r.With(noStore, origin, h.Middleware.NoRefreshAuth).Post("/session/rotate", h.Rotation.Rotate)
+		r.With(h.Middleware.NoRefreshAuth).Post("/session/rotate", h.Rotation.Rotate)
 	}
-	reads := r.With(noStore, h.Middleware.Auth)
+	reads := r.With(h.Middleware.Auth)
 	reads.Get("/me", h.Session.Me)
 	reads.Get("/sessions", h.Session.List)
-	mutations := r.With(noStore, origin, h.Middleware.Auth)
+	mutations := r.With(h.Middleware.Auth)
 	mutations.Post("/logout-all", h.Session.LogoutAll)
 	mutations.Delete("/sessions/{id}", func(w http.ResponseWriter, r *http.Request) {
 		h.Session.Revoke(w, r, chi.URLParam(r, "id"))
 	})
-	r.With(noStore, origin, h.Middleware.LogoutAuth).Post("/logout", h.Session.Logout)
+	r.With(h.Middleware.LogoutAuth).Post("/logout", h.Session.Logout)
 }
 
-func noStore(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "no-store")
-		next.ServeHTTP(w, r)
-	})
-}
-
-func emailChangeRoutes(r chi.Router, h Handlers) {
+func browserProtection(h Handlers) func(http.Handler) http.Handler {
 	var cfg requestmiddleware.OriginConfig
 	if h.Config != nil {
 		cfg = h.Config.Browser
 	}
-	mutations := r.With(noStore, requestmiddleware.RequireOrigin(cfg))
-	mutations.With(h.Middleware.Auth).Post("/email/change", h.EmailChange.Request)
-	mutations.Post("/email/change/confirm", h.EmailChange.Confirm)
-	mutations.Post("/email/change/report", h.EmailChange.Report)
+	return requestmiddleware.BrowserProtection(cfg)
+}
+
+func emailChangeRoutes(r chi.Router, h Handlers) {
+	r.With(h.Middleware.Auth).Post("/email/change", h.EmailChange.Request)
+	r.Post("/email/change/confirm", h.EmailChange.Confirm)
+	r.Post("/email/change/report", h.EmailChange.Report)
 	if h.ProtectedRecovery != nil {
-		mutations.Post("/email/change/recover", h.ProtectedRecovery.Recover)
+		r.Post("/email/change/recover", h.ProtectedRecovery.Recover)
 	}
 }

@@ -14,7 +14,7 @@ import (
 
 // @title Auth API
 // @version 1.0
-// @description Reusable authentication service. Cookie sessions require HTTPS. CSRF protection is a later release prerequisite.
+// @description Reusable authentication service. Cookie sessions require HTTPS. All auth mutations require an exact allowed Origin. CORS is opt-in; cookie profile is same-site.
 // @BasePath /
 // @schemes https http
 

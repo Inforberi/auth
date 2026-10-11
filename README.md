@@ -32,7 +32,7 @@ Checks используют `.env.example`/`.env.prod.example`, не читаю�
 
 ## Конфигурация
 
-Session API требует `AUTH_ALLOWED_ORIGINS`: точные HTTPS origins через запятую, например `https://localhost:8443`, без завершающего `/`. Для logout/logout-all/revoke браузер отправляет `Origin`; CLI должен передать его явно вместе с cookie. `.env.example`/`.env.prod.example` обновлены; настоящие env и БД не изменялись. Контракт и ограничения — [API](docs/api/contract.md).
+Все auth mutations требуют `AUTH_ALLOWED_ORIGINS`: точные HTTPS origins через запятую, например `https://localhost:8443`, без завершающего `/`. Браузер отправляет `Origin`, CLI передаёт его явно, включая login/register/reset. CORS выключен по умолчанию; прямой HTTPS включается парой `HTTP_TLS_CERT_FILE`/`HTTP_TLS_KEY_FILE`, иначе нужен TLS ingress. Настройки и ограничения — [browser security](docs/operations/browser-security.md), контракт — [API](docs/api/contract.md). Настоящие env и БД не изменялись.
 
 Текущая схема и правила её применения — [schema](docs/schema.md). Исходная миграция изменена до production release; уже применённая `000001` автоматически не обновляется. Не сбрасывайте существующую БД: перенос её данных требует отдельной миграции.
 

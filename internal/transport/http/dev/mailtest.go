@@ -37,8 +37,10 @@ type SendMailResponse struct {
 // @Summary Send test email
 // @Description Dev-only endpoint for manual SMTP testing. Available only when APP_ENV=dev.
 // @Tags Dev
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Accept json
 // @Produce json
+// @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
 // @Param body body SendMailRequest true "mail payload"
 // @Success 200 {object} SendMailResponse
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, to_required, subject_required, body_required"

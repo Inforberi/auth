@@ -12,8 +12,10 @@ type ForgotRequest struct {
 // @Summary Request password recovery
 // @Description Generic accepted response for unknown, blocked and cooldown addresses. Enqueues an encrypted email after SQL commit; does not guarantee delivery. Socket IP limits; forwarded headers are not trusted.
 // @Tags Auth
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Accept json
 // @Produce json
+// @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
 // @Param body body ForgotRequest true "email"
 // @Success 202 {object} RecoveryResponse
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, invalid_email"

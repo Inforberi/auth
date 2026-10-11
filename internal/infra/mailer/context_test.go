@@ -11,6 +11,13 @@ import (
 )
 
 func TestSendContextRequiresTLS(t *testing.T) {
+	for _, legacy := range []bool{false, true} {
+		t.Run(fmt.Sprint("legacy=", legacy), func(t *testing.T) { assertTLSRequired(t, legacy) })
+	}
+}
+
+func assertTLSRequired(t *testing.T, legacy bool) {
+	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -40,10 +47,23 @@ func TestSendContextRequiresTLS(t *testing.T) {
 		t.Fatal(err)
 	}
 	m := New(Config{SMTPHost: host, SMTPPort: port, SMTPFrom: "auth@example.com", SMTPDomain: "example.com", RequireTLS: true})
-	if err := m.SendContext(context.Background(), "user@example.com", "subject", "body"); err == nil || !strings.Contains(err.Error(), "STARTTLS") {
-		t.Fatal("plaintext SMTP accepted", err)
+	var sendErr error
+	if legacy {
+		sendErr = m.Send("user@example.com", "subject", "body")
+	} else {
+		sendErr = m.SendContext(context.Background(), "user@example.com", "subject", "body")
+	}
+	if sendErr == nil || !strings.Contains(sendErr.Error(), "STARTTLS") {
+		t.Fatal("plaintext SMTP accepted", sendErr)
 	}
 	<-done
+}
+
+func TestSubjectInjectionRejectedBeforeSMTP(t *testing.T) {
+	m := New(Config{SMTPHost: "127.0.0.1", SMTPPort: "1"})
+	if err := m.SendContext(t.Context(), "user@example.com", "subject\r\nBcc: victim@example.com", "body"); err == nil || err.Error() != "invalid email subject" {
+		t.Fatal("unsafe subject reached SMTP", err)
+	}
 }
 
 func TestSendContextCancellation(t *testing.T) {

@@ -81,7 +81,9 @@ func TestTemporaryPasswordHTTPContract(t *testing.T) {
 		h := contractHandlers("test")
 		h.TemporaryPassword = nil
 		w := httptest.NewRecorder()
-		New(h).ServeHTTP(w, httptest.NewRequest("POST", "/api/v1/auth/temporary-password/"+action, strings.NewReader(`{}`)))
+		r := httptest.NewRequest("POST", "/api/v1/auth/temporary-password/"+action, strings.NewReader(`{}`))
+		r.Header.Set("Origin", "https://localhost:8443")
+		New(h).ServeHTTP(w, r)
 		if w.Code != 404 {
 			t.Fatal("disabled profile published")
 		}

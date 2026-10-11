@@ -15,6 +15,7 @@ type EmailChangeConfirmRequest struct {
 // @Description Optional profile. Explicit POST with a purpose-bound one-time token. Original session must still be valid. Claims new email, revokes all sessions and sends old-address notice atomically. No session created; GET links never mutate state.
 // @Tags Account
 // @Accept json
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Produce json
 // @Param body body EmailChangeConfirmRequest true "confirmation token"
 // @Success 200 {object} VerificationResponse

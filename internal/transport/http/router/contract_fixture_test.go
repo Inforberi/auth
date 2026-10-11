@@ -34,6 +34,7 @@ type apiOperation struct {
 	Consumes    []string `json:"consumes"`
 	Produces    []string `json:"produces"`
 	Parameters  []struct {
+		Name     string    `json:"name"`
 		In       string    `json:"in"`
 		Required bool      `json:"required"`
 		Schema   apiSchema `json:"schema"`

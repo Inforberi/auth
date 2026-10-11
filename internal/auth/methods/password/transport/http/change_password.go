@@ -32,15 +32,16 @@ func validateChangePasswordInput(input ChangePasswordRequest) error {
 }
 
 // @Summary change password
-// @Description Requires a valid SQL-backed __Host-session and a verified login email. Atomically updates password, revokes all sessions and records audit; sign in again. Response retains legacy uppercase Status. CSRF/fresh-auth are not implemented yet.
+// @Description Requires a valid SQL-backed __Host-session, verified login email, allowed Origin and current password. Atomically updates password, revokes all sessions and records audit; sign in again. Response retains legacy uppercase Status. MFA is not implemented.
 // @Tags Auth
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Accept json
 // @Produce json
 // @Param body body ChangePasswordRequest true "change password payload"
 // @Success 200 {object} ChangePasswordResponse
 // @Failure 400 {object} httpx.ErrorResponse "codes: password_policy, invalid_json, password_mismatch, invalid_email_or_password, same_password, empty_new_password, empty_old_password, empty_confirm_password"
 // @Failure 401 {object} httpx.ErrorResponse "code: unauthorized"
-// @Failure 403 {object} httpx.ErrorResponse "code: email_not_verified"
+// @Failure 403 {object} httpx.ErrorResponse "codes: invalid_origin, email_not_verified"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
 // @Failure 404 {object} httpx.ErrorResponse "code: not_found"
 // @Failure 500 {object} httpx.ErrorResponse "code: internal_error"

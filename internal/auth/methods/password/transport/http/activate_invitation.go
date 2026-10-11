@@ -41,6 +41,7 @@ var activationErrors = []httpx.ErrorRule{
 // @Description Optional invitation profile. Consumes a distinct one-time token, sets a password and verifies the invited contact atomically. Expired, replayed, blocked and unknown tokens have one error. Does not create a session or assign roles. GET never activates an account.
 // @Tags Auth
 // @Accept json
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Produce json
 // @Param body body ActivationRequest true "invitation token and password"
 // @Success 200 {object} RecoveryResponse

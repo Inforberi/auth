@@ -145,10 +145,14 @@ func TestSwaggerRequestAndResponseReferences(t *testing.T) {
 	for path, methods := range doc.Paths {
 		for method, operation := range methods {
 			if name, ok := requests[path]; ok {
-				if method != "post" || len(operation.Parameters) != 1 {
+				if method != "post" || len(operation.Parameters) != 2 {
 					t.Fatalf("%s: unexpected request parameters", path)
 				}
-				body := operation.Parameters[0]
+				body := operation.Parameters[1]
+				origin := operation.Parameters[0]
+				if origin.In != "header" || origin.Name != "Origin" || !origin.Required {
+					t.Fatalf("%s: missing Origin contract", path)
+				}
 				if body.In != "body" || !body.Required || body.Schema.Ref != "#/definitions/"+name {
 					t.Fatalf("%s: incorrect body contract", path)
 				}

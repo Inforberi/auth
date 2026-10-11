@@ -22,6 +22,7 @@ func (cfg Config) Validate() error {
 		cfg.Retention.Validate,
 		cfg.Capacity.Validate,
 		cfg.HTTP.Validate,
+		cfg.Server.Validate,
 		cfg.Proxy.Validate,
 		cfg.validatePorts,
 		cfg.validateStorage,

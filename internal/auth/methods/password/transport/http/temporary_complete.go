@@ -16,6 +16,7 @@ type TemporaryCompleteRequest struct {
 // @Description Optional temporary password profile. Consumes a one-time setup token and revokes temporary credentials atomically. Does not create a session, verify email, bypass MFA or grant roles. Use ordinary login afterwards. GET never changes credentials.
 // @Tags Auth
 // @Accept json
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Produce json
 // @Param body body TemporaryCompleteRequest true "setup token and permanent password"
 // @Success 200 {object} RecoveryResponse

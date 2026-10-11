@@ -20,10 +20,12 @@ type RegisterResponse struct {
 } // @name password_http.RegisterResponse
 
 // @Summary Register by email
-// @Description Creates an account, queues email verification atomically and sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie. Unverified accounts can sign in but cannot change their password. HTTPS is required for browser sessions. Email is normalized and limited to 255 bytes; password is 8-128 bytes with a letter, digit and uppercase letter. CSRF enforcement is not implemented yet.
+// @Description Creates an account, queues email verification atomically and sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie. Unverified accounts can sign in but cannot change their password. HTTPS and an allowed Origin are required. Email is normalized and limited to 255 bytes; password is 8-128 bytes with a letter, digit and uppercase letter.
 // @Tags Auth
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Accept json
 // @Produce json
+// @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
 // @Param body body RegisterRequest true "Register payload"
 // @Success 201 {object} RegisterResponse
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"

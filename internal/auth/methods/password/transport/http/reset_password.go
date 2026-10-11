@@ -16,8 +16,10 @@ type ResetRequest struct {
 // @Summary Reset password
 // @Description Single-use 256-bit token. SQL commit atomically updates the password, consumes the token, revokes all sessions and records audit. Does not verify email or create a session; sign in again. New password: 8-128 bytes, letter, digit and uppercase. POST only, never automatic GET confirmation.
 // @Tags Auth
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Accept json
 // @Produce json
+// @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
 // @Param body body ResetRequest true "token and new password"
 // @Success 200 {object} RecoveryResponse
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, invalid_reset, password_mismatch, password_policy"

@@ -15,6 +15,7 @@ type EmailChangeReportRequest struct {
 // @Description Optional profile. Explicit POST with a distinct old-verified-address one-time token; does not require the compromised session. Cancels pending change and revokes sessions, or blocks the account after completion. Never rolls back email, unblocks or signs in automatically. Protected recovery remains a separate release gate.
 // @Tags Account
 // @Accept json
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Produce json
 // @Param body body EmailChangeReportRequest true "security token"
 // @Success 200 {object} VerificationResponse

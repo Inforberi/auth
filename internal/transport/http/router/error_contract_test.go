@@ -110,6 +110,7 @@ func TestRouterErrorContracts(t *testing.T) {
 			}
 			r := httptest.NewRequest("POST", "/api/v1/auth/"+tc.path, strings.NewReader(tc.body))
 			r.Header.Set("Content-Type", "application/json")
+			r.Header.Set("Origin", "https://localhost:8443")
 			if tc.token != "" {
 				r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: contractCookie(tc.token)})
 			}

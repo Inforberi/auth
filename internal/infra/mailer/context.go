@@ -6,10 +6,14 @@ import (
 	"fmt"
 	"net"
 	"net/smtp"
+	"strings"
 	"time"
 )
 
 func (m *Mailer) SendContext(ctx context.Context, to, subject, body string) error {
+	if strings.ContainsAny(subject, "\r\n") {
+		return fmt.Errorf("invalid email subject")
+	}
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	dialer := net.Dialer{Timeout: 5 * time.Second}

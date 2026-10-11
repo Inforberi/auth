@@ -41,6 +41,7 @@ func TestHTTPResponsesMatchSwagger(t *testing.T) {
 		t.Run(tc.path+"/"+tc.token+"/"+tc.code, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader(tc.body))
 			r.Header.Set("Content-Type", "application/json")
+			r.Header.Set("Origin", "https://localhost:8443")
 			if tc.token != "" {
 				r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: contractCookie(tc.token)})
 			}
@@ -89,7 +90,7 @@ func TestHTTPResponsesMatchSwagger(t *testing.T) {
 		})
 	}
 	operation := doc.Paths["/api/v1/auth/change-password"]["post"]
-	if !strings.Contains(operation.Description, sessionhttp.SessionCookieName) || !strings.Contains(operation.Description, "not implemented") {
+	if !strings.Contains(operation.Description, sessionhttp.SessionCookieName) || !strings.Contains(operation.Description, "allowed Origin") {
 		t.Fatal("missing cookie/security limitations")
 	}
 }

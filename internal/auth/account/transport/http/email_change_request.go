@@ -16,6 +16,7 @@ type EmailChangeRequest struct {
 // @Description Optional EMAIL_CHANGE_ENABLED profile. Requires a valid session, allowed Origin, verified current login email and either current password or recent session-bound password reauthentication. Omit password after successful reauthentication; a supplied wrong password is always rejected. Old email remains active until confirmation. Sends separate confirmation and security links; no tokens returned.
 // @Tags Account
 // @Accept json
+// @Param Origin header string true "Exact allowed HTTPS origin"
 // @Produce json
 // @Param body body EmailChangeRequest true "new email, optional current password when already reauthenticated"
 // @Success 202 {object} VerificationResponse

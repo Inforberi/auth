@@ -245,8 +245,9 @@ definitions:
     type: object
 info:
   contact: {}
-  description: Reusable authentication service. Cookie sessions require HTTPS. CSRF
-    protection is a later release prerequisite.
+  description: Reusable authentication service. Cookie sessions require HTTPS. All
+    auth mutations require an exact allowed Origin. CORS is opt-in; cookie profile
+    is same-site.
   title: Auth API
   version: "1.0"
 paths:
@@ -254,11 +255,16 @@ paths:
     post:
       consumes:
       - application/json
-      description: Requires a valid SQL-backed __Host-session and a verified login
-        email. Atomically updates password, revokes all sessions and records audit;
-        sign in again. Response retains legacy uppercase Status. CSRF/fresh-auth are
-        not implemented yet.
+      description: Requires a valid SQL-backed __Host-session, verified login email,
+        allowed Origin and current password. Atomically updates password, revokes
+        all sessions and records audit; sign in again. Response retains legacy uppercase
+        Status. MFA is not implemented.
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: change password payload
         in: body
         name: body
@@ -282,7 +288,7 @@ paths:
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "403":
-          description: 'code: email_not_verified'
+          description: 'codes: invalid_origin, email_not_verified'
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "404":
@@ -311,6 +317,11 @@ paths:
         remains active until confirmation. Sends separate confirmation and security
         links; no tokens returned.
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: new email, optional current password when already reauthenticated
         in: body
         name: body
@@ -360,6 +371,11 @@ paths:
         and sends old-address notice atomically. No session created; GET links never
         mutate state.
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: confirmation token
         in: body
         name: body
@@ -406,6 +422,11 @@ paths:
         previous protection links before activating the account. Does not bypass administrative
         blocking, create a session or run on GET.
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: recovery token and new password
         in: body
         name: body
@@ -449,6 +470,11 @@ paths:
         rolls back email, unblocks or signs in automatically. Protected recovery remains
         a separate release gate.
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: security token
         in: body
         name: body
@@ -489,6 +515,11 @@ paths:
         addresses. Enqueues encrypted delivery for eligible addresses. Limits use
         socket peer IP; forwarded headers are not trusted.
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: email
         in: body
         name: body
@@ -504,6 +535,10 @@ paths:
             $ref: '#/definitions/account_http.VerificationResponse'
         "400":
           description: 'codes: invalid_json, invalid_email'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "429":
@@ -525,6 +560,11 @@ paths:
         or unknown tokens share one error. Does not create a session. POST only; opening
         an email link must not confirm automatically.
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: token
         in: body
         name: body
@@ -540,6 +580,10 @@ paths:
             $ref: '#/definitions/account_http.VerificationResponse'
         "400":
           description: 'codes: invalid_json, invalid_verification'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "429":
@@ -561,6 +605,11 @@ paths:
         Enqueues an encrypted email after SQL commit; does not guarantee delivery.
         Socket IP limits; forwarded headers are not trusted.
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: email
         in: body
         name: body
@@ -576,6 +625,10 @@ paths:
             $ref: '#/definitions/password_http.RecoveryResponse'
         "400":
           description: 'codes: invalid_json, invalid_email'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "429":
@@ -598,6 +651,11 @@ paths:
         blocked and unknown tokens have one error. Does not create a session or assign
         roles. GET never activates an account.
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: invitation token and password
         in: body
         name: body
@@ -637,10 +695,15 @@ paths:
       - application/json
       description: Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on
         success. Unverified users can sign in, but sensitive routes require a verified
-        email. HTTPS is required for browser sessions. Invalid credentials return
+        email. HTTPS and an allowed Origin are required. Invalid credentials return
         400, not 401. SQL session issuance checks current account status and auth
-        version. CSRF enforcement is not implemented yet.
+        version.
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: login payload
         in: body
         name: body
@@ -657,6 +720,10 @@ paths:
         "400":
           description: 'codes: invalid_json, email_required, password_required, invalid_email,
             invalid_credentials'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "429":
@@ -813,11 +880,15 @@ paths:
       - application/json
       description: Creates an account, queues email verification atomically and sets
         the Secure, HttpOnly, SameSite=Lax __Host-session cookie. Unverified accounts
-        can sign in but cannot change their password. HTTPS is required for browser
-        sessions. Email is normalized and limited to 255 bytes; password is 8-128
-        bytes with a letter, digit and uppercase letter. CSRF enforcement is not implemented
-        yet.
+        can sign in but cannot change their password. HTTPS and an allowed Origin
+        are required. Email is normalized and limited to 255 bytes; password is 8-128
+        bytes with a letter, digit and uppercase letter.
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: Register payload
         in: body
         name: body
@@ -835,6 +906,10 @@ paths:
           description: 'codes: invalid_json, email_required, password_required, invalid_email,
             password_too_short, password_too_long, password_no_letter, password_no_digit,
             password_no_upper_letter'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "409":
@@ -865,6 +940,11 @@ paths:
         email or create a session; sign in again. New password: 8-128 bytes, letter,
         digit and uppercase. POST only, never automatic GET confirmation.'
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: token and new password
         in: body
         name: body
@@ -880,6 +960,10 @@ paths:
             $ref: '#/definitions/password_http.RecoveryResponse'
         "400":
           description: 'codes: invalid_json, invalid_reset, password_mismatch, password_policy'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "429":
@@ -1004,6 +1088,11 @@ paths:
         verify email, bypass MFA or grant roles. Use ordinary login afterwards. GET
         never changes credentials.
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: setup token and permanent password
         in: body
         name: body
@@ -1046,6 +1135,11 @@ paths:
         the previous setup token. Does not verify email or grant product access. Shares
         ordinary login rate limits.
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: email and temporary password
         in: body
         name: body
@@ -1086,6 +1180,11 @@ paths:
       description: Dev-only endpoint for manual SMTP testing. Available only when
         APP_ENV=dev.
       parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
       - description: mail payload
         in: body
         name: body
@@ -1101,6 +1200,10 @@ paths:
             $ref: '#/definitions/dev.SendMailResponse'
         "400":
           description: 'codes: invalid_json, to_required, subject_required, body_required'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "500":
