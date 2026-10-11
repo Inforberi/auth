@@ -21,6 +21,29 @@ CREATE TABLE auth.users (
 CREATE INDEX users_email_release_due ON auth.users(deleted_at,id)
   WHERE deleted_at IS NOT NULL AND NOT email_reuse_blocked AND email_released_at IS NULL;
 
+CREATE TABLE auth.roles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT COLLATE "C" NOT NULL UNIQUE CHECK (octet_length(key) BETWEEN 1 AND 96 AND key ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$'),
+  name TEXT NOT NULL CHECK (octet_length(name) BETWEEN 1 AND 200 AND btrim(name) <> ''),
+  description TEXT NOT NULL DEFAULT '' CHECK (octet_length(description) <= 2000),
+  system BOOLEAN NOT NULL DEFAULT false,
+  version BIGINT NOT NULL DEFAULT 1 CHECK (version > 0),
+  CHECK (system = (key = 'super_admin'))
+);
+
+CREATE TABLE auth.role_permissions (
+  role_id UUID NOT NULL REFERENCES auth.roles(id) ON DELETE CASCADE,
+  permission_key TEXT COLLATE "C" NOT NULL CHECK (octet_length(permission_key) BETWEEN 1 AND 96 AND permission_key ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$'),
+  PRIMARY KEY (role_id, permission_key)
+);
+
+CREATE TABLE auth.user_roles (
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role_id UUID NOT NULL REFERENCES auth.roles(id),
+  PRIMARY KEY (user_id, role_id)
+);
+CREATE INDEX user_roles_by_role ON auth.user_roles(role_id,user_id);
+
 CREATE TABLE auth.linked_identities (
   issuer TEXT COLLATE "C" NOT NULL CHECK (octet_length(issuer) BETWEEN 1 AND 512 AND btrim(issuer) <> ''),
   subject TEXT COLLATE "C" NOT NULL CHECK (octet_length(subject) BETWEEN 1 AND 255 AND btrim(subject) <> ''),
