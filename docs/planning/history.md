@@ -2,6 +2,14 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат A2-local — 11 октября 2026
+
+Проверены существующие account/session service, SQL authority/locks и HTTP cookie/error contracts. Реализацию lifecycle не переписывали: регистрация, email verification, password recovery/change, email change/protected recovery, block/delete/retention, session management/rotation/fresh-auth уже имеют локальные сценарии и транзакционные проверки. Отсутствие admin block/delete/provisioning APIs сейчас намеренно: публикация требует ролей/MFA A4/A5. Verification settings и UI — A6/A7, не пробел, который следует закрывать вторым механизмом сейчас.
+
+В существующий session rotation SQL test добавлены две проверки устаревшего verifier: refresh после завершённой rotation не продлевает сроки и не воскрешает старый token; revoke с прежним caller proof не отзывает сессию победителя. После обоих отказов проверяется сохранение session ID/context/deadlines и доступность нового verifier. Это упорядоченные interleavings, не симуляция сетевой потери ответа; прежняя гонка 16 rotations остаётся в том же тесте.
+
+Полный disposable PostgreSQL 18.6 suite up/down/up с race прошёл за 6.161s, включая registration, recovery/verification, refresh/rotation/management, block/delete, email change/protected recovery, retention и provisioning. Обычный task check также прошёл: tests и lint без замечаний. Новых runtime файлов, SQL/env/dependencies/routes/workers нет; API и Swagger не менялись. Рабочая БД и secrets не затронуты. Внешние SMTP/browser/multi-tab/fault/restore и mixed load не проверены этим запуском и остаются A8; данные стенда синтетические. План 6.2/6.3 разделён на выполненное local и открытое release, устаревшая сводка исправлена. Следующий этап — A3; коммит только по запросу.
+
 ### Результат A1 / 6.7-cleanup — 11 октября 2026
 
 По пересогласованному scope удалены пакет password/policy с loader/list/tests, PASSWORD_BLOCKLIST_FILE из env examples и конфигурации, startup загрузка и policy injection трёх сервисов. Register/change/reset/activation/protected recovery/temporary complete снова применяют существующую domain.ValidatePassword один раз в service. Удалены ErrPasswordBlocked/HTTP mapping/Swagger code; tests конструкторов адаптированы. Проверка обычной политики охватывает все шесть сценариев, registration success использует Password1 из прежнего списка, подтверждая отсутствие blocklist. Это осознанное снижение защиты от распространённых паролей; проверка утечек отложена, современная NIST policy не заявляется.
