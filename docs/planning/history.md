@@ -2,6 +2,18 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат A3.4b-local — 11 октября 2026
+
+Дополнительный provider — Google OIDC: отдельные enabled/registration и понятные per-minute budgets, fixed HTTPS endpoints, Authorization Code/PKCE S256/nonce, minimal openid. Coreos go-oidc v3.21.0/oauth2 v0.36.0 уже были в dependencies; Context7 и [Google OIDC/discovery](https://developers.google.com/identity/openid-connect/openid-connect) использованы для verifier/claims/endpoints. Google legacy issuer принимается библиотекой только в Google profile и передаётся resolver как canonical https://accounts.google.com + subject; email/UserInfo не запрашиваются и не используются для auto-merge.
+
+Общие domain/service/Redis/HTTP сценарии Telegram перенесены в methods/oidc, bounded token/JWKS client — в integrations/oidc. У providers остаются собственные config, fixed settings и тонкие Swagger routes; нет plugin framework или второй копии сценария. Telegram routes/JSON/cookie/Redis prefix/cipher purpose сохранены; proof другого issuer отклоняется до account resolution. Google prefix/cookie/purpose независимы, root key/SQL sessions/identity ownership/audit переиспользованы. Swagger получил shared DTO names после переноса, без изменения JSON fields; generated definitions не являются новыми HTTP полями.
+
+Google start/callback/link/unlink подключаются только при enabled profile. Link сохраняет UUID/session, требует verified permanent password и неизменённый свежий SQL session proof. Unlink удаляет только Google identity, повышает version и отзывает все sessions. Другая identity row не считается usable-method proof: current unlink сохраняет verified permanent password, external-only management остаётся отдельным provider/MFA step-up сценарием. Новых schema/dependencies/workers нет; реальные ENV/secrets/БД не менялись.
+
+Formatter, итоговый task check (tests + lint 0 issues), Swagger generation/drift и targeted race shared service/HTTP/provider/router прошли. Disposable Redis 8.2 flow/race — 1.339s: encrypted payload/TTL/binding/replay, один winner из 16 consumers, independent provider state/budgets. Полный PostgreSQL 18.6 up/down/up/race — 7.148s: Google/Telegram same subject отдельно, ownership/provider uniqueness, Google unlink/current version/session revoke/remaining Telegram identity, last-method guard и общая SQL session без invented email/credentials. Crypto suite проверяет обоих providers, signature/algorithm/issuer/audience/azp/expiry/iat/nonce/missing subject и legacy Google issuer; exact HTTPS endpoint allowlist отклоняет чужие URLs/query/port/fragment.
+
+Тестовые контейнеры Redis/PostgreSQL и их тома с исключительно synthetic data удалены. Live Google consent/registered callback/PKCE/nonce, provider faults/JWKS rotation, браузер и mixed load перед UI/A8 ещё не проверены. Документы/план обновлены; следующий backend шаг A4 — роли и permissions. Коммит не выполнялся.
+
 ### Результат A3.4a-local — 11 октября 2026
 
 Реализован optional email OTP: POST request/confirm с Origin/no-store, HttpOnly browser binding, восьмизначным crypto/rand кодом, TTL 5m и пятью неверными попытками. Поддержан существующий active verified current permanent-password email; неизвестные адреса получают generic acceptance без регистрации. Код не является verification/MFA/password fresh proof. Disabled профиль не подключает routes/worker. Новые понятные EMAIL_OTP_* budgets/TTL добавлены только в sample ENV.

@@ -8,8 +8,8 @@ import (
 
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	telegramredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/repository/redis"
-	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
+	oidcredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/repository/redis"
+	oidcservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
@@ -27,7 +27,7 @@ func assembleTelegram(ctx context.Context, cfg *config.Config, accounts *account
 		return nil, nil, err
 	}
 	client := telegramclient.New(ctx, cfg.Telegram)
-	service := telegramservice.New(cfg.Telegram, telegramredis.New(rdb, cipher), client,
+	service := oidcservice.New(cfg.Telegram.FlowConfig(), oidcredis.New(rdb, cipher, "auth:telegram"), client,
 		accountservice.NewIdentityResolution(accounts), sessions, tokengenerate.New(),
 		accountservice.NewIdentityManagement(accounts, cfg.Session.FreshAuthTTL))
 	return telegramhttp.New(service, log), client.Close, nil

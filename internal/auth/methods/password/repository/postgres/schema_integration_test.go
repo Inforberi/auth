@@ -22,6 +22,7 @@ func TestPostgresSchema(t *testing.T) {
 	t.Run("email OTP", func(t *testing.T) { checkEmailOTP(t, db, ctx) })
 	t.Run("external identities", func(t *testing.T) { checkIdentityResolution(t, db, ctx) })
 	t.Run("identity management", func(t *testing.T) { checkIdentityManagement(t, db, ctx) })
+	t.Run("Google identity", func(t *testing.T) { checkGoogleIdentity(t, db, ctx) })
 	t.Run("password rehash", func(t *testing.T) { checkPasswordRehash(t, db, ctx) })
 	t.Run("password recovery", func(t *testing.T) { checkRecovery(t, db, ctx) })
 	t.Run("email verification", func(t *testing.T) { checkVerification(t, db, ctx) })

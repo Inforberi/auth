@@ -75,11 +75,6 @@ definitions:
       status:
         type: string
     type: object
-  http.CallbackResponse:
-    properties:
-      status:
-        type: string
-    type: object
   http.MeResponse:
     properties:
       sessionId:
@@ -113,16 +108,36 @@ definitions:
           $ref: '#/definitions/http.SessionResponse'
         type: array
     type: object
-  http.StartResponse:
-    properties:
-      authorizationUrl:
-        type: string
-    type: object
   httpx.ErrorResponse:
     properties:
       code:
         type: string
       message:
+        type: string
+    type: object
+  internal_auth_methods_google_transport_http.CallbackResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  internal_auth_methods_google_transport_http.StartResponse:
+    properties:
+      authorizationUrl:
+        type: string
+    type: object
+  internal_auth_methods_telegram_transport_http.StartResponse:
+    properties:
+      authorizationUrl:
+        type: string
+    type: object
+  oidchttp.CallbackResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  oidchttp.StartResponse:
+    properties:
+      authorizationUrl:
         type: string
     type: object
   password_http.ActivationRequest:
@@ -758,6 +773,167 @@ paths:
       summary: Request password recovery
       tags:
       - Auth
+  /api/v1/auth/google/callback:
+    get:
+      description: Provider redirect bound to single-use state, PKCE, nonce and flow
+        cookie. Login sets __Host-session; linking requires the unchanged fresh session
+        and never creates or replaces it. No email auto-merge. Restart after a failed
+        or lost callback.
+      parameters:
+      - description: Authorization code
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: Single-use state
+        in: query
+        name: state
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_auth_methods_google_transport_http.CallbackResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: fresh_auth_required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: identity_conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Complete Google OIDC login
+      tags:
+      - Auth
+  /api/v1/auth/google/link:
+    delete:
+      description: Requires Origin and fresh password proof. A verified permanent
+        password login must remain. Successful unlink increments auth_version and
+        revokes all sessions, including the caller. Unknown ownership is not revealed.
+      parameters:
+      - description: Allowed browser origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Unlink Google from the current account
+      tags:
+      - Account
+    post:
+      description: Requires current session, exact Origin, verified email with permanent
+        password and recent password reauthentication. Flow binds UUID and session
+        hash; callback does not create a session or user. One identity per provider
+        per account.
+      parameters:
+      - description: Allowed browser origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_auth_methods_google_transport_http.StartResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Start linking Google to the current account
+      tags:
+      - Account
+  /api/v1/auth/google/start:
+    post:
+      description: Requires allowed Origin. Sets a browser-bound HttpOnly flow cookie;
+        navigate to authorizationUrl. Disabled by default.
+      parameters:
+      - description: Allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_auth_methods_google_transport_http.StartResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Start Google OIDC login
+      tags:
+      - Auth
   /api/v1/auth/invitations/activate:
     post:
       consumes:
@@ -1221,7 +1397,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/http.CallbackResponse'
+            $ref: '#/definitions/oidchttp.CallbackResponse'
         "400":
           description: Bad Request
           schema:
@@ -1303,7 +1479,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/http.StartResponse'
+            $ref: '#/definitions/internal_auth_methods_telegram_transport_http.StartResponse'
         "401":
           description: Unauthorized
           schema:
@@ -1339,7 +1515,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/http.StartResponse'
+            $ref: '#/definitions/oidchttp.StartResponse'
         "403":
           description: Forbidden
           schema:

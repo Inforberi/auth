@@ -1,4 +1,4 @@
-package telegram
+package oidcclient
 
 import (
 	"crypto/tls"
@@ -12,10 +12,11 @@ import (
 type boundedTransport struct {
 	transport *http.Transport
 	client    *http.Client
+	endpoints []string
 }
 
-func newHTTPClient() (*boundedTransport, *http.Client) {
-	t := &boundedTransport{transport: &http.Transport{
+func newHTTPClient(endpoints ...string) (*boundedTransport, *http.Client) {
+	t := &boundedTransport{endpoints: endpoints, transport: &http.Transport{
 		DialContext:         (&net.Dialer{Timeout: 3 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
 		TLSClientConfig:     &tls.Config{MinVersion: tls.VersionTLS12},
 		TLSHandshakeTimeout: 3 * time.Second, ResponseHeaderTimeout: 5 * time.Second,
@@ -30,9 +31,15 @@ func newHTTPClient() (*boundedTransport, *http.Client) {
 }
 
 func (t *boundedTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	if r.URL.Scheme != "https" || r.URL.Host != "oauth.telegram.org" || r.URL.User != nil ||
-		(r.URL.Path != "/token" && r.URL.Path != "/.well-known/jwks.json") {
-		return nil, errors.New("untrusted Telegram endpoint")
+	trusted := false
+	for _, endpoint := range t.endpoints {
+		if r.URL.String() == endpoint {
+			trusted = true
+			break
+		}
+	}
+	if !trusted || r.URL.Scheme != "https" || r.URL.User != nil || r.URL.RawQuery != "" || r.URL.Fragment != "" {
+		return nil, errors.New("untrusted OIDC endpoint")
 	}
 	response, err := t.transport.RoundTrip(r)
 	if err != nil {

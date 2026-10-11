@@ -8,7 +8,7 @@ import (
 	"time"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 )

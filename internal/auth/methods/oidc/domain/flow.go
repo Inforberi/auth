@@ -6,8 +6,6 @@ import (
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 )
 
-const Issuer = "https://oauth.telegram.org"
-
 type Purpose string
 
 const (
@@ -16,9 +14,9 @@ const (
 )
 
 var (
-	ErrDisabled    = errors.New("telegram login disabled")
-	ErrInvalidFlow = errors.New("invalid telegram login")
-	ErrLimited     = errors.New("telegram login rate limited")
+	ErrDisabled    = errors.New("OIDC login disabled")
+	ErrInvalidFlow = errors.New("invalid OIDC login")
+	ErrLimited     = errors.New("OIDC login rate limited")
 )
 
 type Flow struct {

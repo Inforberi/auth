@@ -1,5 +1,7 @@
 # Вход через Telegram
 
+После A3.4b общие domain/service/Redis/HTTP сценарии находятся в `methods/oidc`, bounded token/JWKS client — в `integrations/oidc`. Telegram сохраняет свои config, fixed endpoints, публичные routes, cookies, Redis prefix и cipher purpose. [Google](google-login.md) использует ту же реализацию с отдельным профилем; другой issuer не разрешает account resolution Telegram flow.
+
 ## Реализовано в A3.2-local
 
 Используется Authorization Code Flow с PKCE S256 и nonce, не legacy widget/HMAC и не Mini Apps initData. Только scope `openid`, default RS256. Протокол и фиксированные endpoints — [официальный Telegram Login](https://core.telegram.org/bots/telegram-login). Нет запроса UserInfo, email/phone/profile не запрашиваются и не используются для auto-merge.

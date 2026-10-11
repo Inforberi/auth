@@ -1,4 +1,4 @@
-package http
+package oidchttp
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	"go.uber.org/zap"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 )
@@ -47,10 +47,16 @@ func (f *handlerFixture) Callback(_ context.Context, input service.CallbackInput
 }
 
 func TestLinkCookieAndErrorContract(t *testing.T) {
+	for _, cookie := range []string{"__Host-telegram-flow", "__Host-google-flow"} {
+		t.Run(cookie, func(t *testing.T) { testLinkCookieAndErrorContract(t, cookie) })
+	}
+}
+
+func testLinkCookieAndErrorContract(t *testing.T, cookie string) {
 	f := &handlerFixture{linked: true}
-	h := New(f, zap.NewNop())
+	h := New(f, zap.NewNop(), cookie, "telegram_auth")
 	r := httptest.NewRequest(http.MethodGet, "/callback?code=c&state=s", nil)
-	r.AddCookie(&http.Cookie{Name: flowCookie, Value: "binding"})
+	r.AddCookie(&http.Cookie{Name: cookie, Value: "binding"})
 	token := strings.Repeat("A", 43)
 	r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: token})
 	w := httptest.NewRecorder()
@@ -59,7 +65,7 @@ func TestLinkCookieAndErrorContract(t *testing.T) {
 		t.Fatal(w.Code, f.sessionToken)
 	}
 	cookies := w.Result().Cookies()
-	if len(cookies) != 1 || cookies[0].Name != flowCookie || cookies[0].MaxAge != -1 {
+	if len(cookies) != 1 || cookies[0].Name != cookie || cookies[0].MaxAge != -1 {
 		t.Fatal("link replaced auth session", cookies)
 	}
 	r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: token})
@@ -93,12 +99,18 @@ func TestLinkCookieAndErrorContract(t *testing.T) {
 }
 
 func TestHandlerCookiesAndErrors(t *testing.T) {
+	for _, cookie := range []string{"__Host-telegram-flow", "__Host-google-flow"} {
+		t.Run(cookie, func(t *testing.T) { testHandlerCookiesAndErrors(t, cookie) })
+	}
+}
+
+func testHandlerCookiesAndErrors(t *testing.T, cookie string) {
 	f := &handlerFixture{}
-	h := New(f, zap.NewNop())
+	h := New(f, zap.NewNop(), cookie, "telegram_auth")
 	w := httptest.NewRecorder()
 	h.Start(w, httptest.NewRequest(http.MethodPost, "/start", nil))
 	cookies := w.Result().Cookies()
-	if len(cookies) != 1 || cookies[0].Name != flowCookie || !cookies[0].HttpOnly || !cookies[0].Secure || cookies[0].Path != "/" || cookies[0].Domain != "" || cookies[0].SameSite != http.SameSiteLaxMode {
+	if len(cookies) != 1 || cookies[0].Name != cookie || !cookies[0].HttpOnly || !cookies[0].Secure || cookies[0].Path != "/" || cookies[0].Domain != "" || cookies[0].SameSite != http.SameSiteLaxMode {
 		t.Fatal("unsafe flow cookie", cookies)
 	}
 	for _, tc := range []struct {
@@ -120,11 +132,11 @@ func TestHandlerCookiesAndErrors(t *testing.T) {
 		}
 		if tc.err == nil {
 			var session, cleared bool
-			for _, cookie := range w.Result().Cookies() {
-				if cookie.Name == sessionhttp.SessionCookieName && cookie.Secure && cookie.HttpOnly {
+			for _, responseCookie := range w.Result().Cookies() {
+				if responseCookie.Name == sessionhttp.SessionCookieName && responseCookie.Secure && responseCookie.HttpOnly {
 					session = true
 				}
-				if cookie.Name == flowCookie && cookie.MaxAge == -1 {
+				if responseCookie.Name == cookie && responseCookie.MaxAge == -1 {
 					cleared = true
 				}
 			}

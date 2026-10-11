@@ -50,7 +50,8 @@ Swagger описывает также выключенные опциональ�
 | Пользовательские роли и permissions | Запланировано | Нет действующего публичного RBAC API |
 | MFA: authenticator, recovery codes, телефон | Запланировано | Сейчас нет второго фактора; телефонный канал требует отдельной политики и провайдера |
 | Вход по одноразовому email-коду | Опционально | Существующий active аккаунт с verified current password email; без регистрации и MFA |
-| Google/другой OIDC | Запланировано | Не путать общую identity-модель с готовыми ручками провайдеров |
+| Google OIDC login/link/unlink | Опционально | Отдельный enabled/registration профиль, без auto-merge по email; live acceptance ещё открыта |
+| Другие OAuth/OIDC providers | Не реализовано | Новый provider требует проверяемого adapter/контракта, не произвольного URL из ENV |
 | Настройки и секреты через UI, первый super-admin | Запланировано | Сегодня конфигурация читается из ENV при запуске |
 | Оплата, платные статусы, entitlement | Вне текущего релиза | Не нужны для использования существующей авторизации |
 | SSO между независимыми сайтами/проектами | Не реализовано | Текущий host-only cookie не является универсальным межсайтовым SSO |
@@ -68,7 +69,7 @@ Swagger описывает также выключенные опциональ�
 | Внешняя identity | Привязка `issuer + subject` к внутреннему UUID |
 | Issuer | Кто выдал проверенное доказательство личности; Telegram: `https://oauth.telegram.org` |
 | Subject | Устойчивый идентификатор пользователя у этого провайдера; не nickname и не email |
-| Метод входа | Например, постоянный пароль или Telegram; метод доказывает личность |
+| Метод входа | Например, постоянный пароль, Google, Telegram или email OTP; метод доказывает личность |
 | Сессия | Собственная серверная запись доступа после успешного входа |
 | Session token | Случайный секрет в cookie, необходимый для предъявления сессии |
 | Session ID | Публичный UUID сессии для списка/отзыва; не секрет и не замена cookie |
@@ -368,6 +369,18 @@ Flow привязан к browser cookie, purpose (login/link), а link ещё и
 В одном браузере используется один flow cookie. Второй start/link заменяет binding, поэтому первый параллельный flow в другой вкладке может перестать проходить. Запускайте один Telegram flow за раз.
 
 Отсутствующий/повторный state, неверная cookie, потерянный code, неправильное OIDC-доказательство → общий invalid_login. Для link потеря/смена исходной session cookie → fresh_auth_required. При ошибке после одноразового consumption безопаснее начать flow заново, а не повторять callback.
+
+### 5.9. Вход и управление Google-привязкой
+
+Google использует отдельный optional GOOGLE_LOGIN_ENABLED профиль; новые UUID разрешаются только GOOGLE_REGISTRATION_ENABLED. Настроить Web OAuth client/consent screen в Google Cloud Console и точный GOOGLE_OIDC_REDIRECT_URI. Это независимые от Telegram credentials/budgets, не новый тип сессии.
+
+POST /api/v1/auth/google/start → authorizationUrl и HttpOnly __Host-google-flow → переход на Google → GET /api/v1/auth/google/callback?code=…&state=… → status=ok и обычная __Host-session. State/browser binding/PKCE/nonce single-use; tokens Google не возвращаются. Callback пока JSON, UI redirect будет позже.
+
+Google аккаунт определяется canonical https://accounts.google.com + subject. Scope только openid, email/UserInfo не используются; неизвестная identity при разрешённой регистрации получает отдельный UUID без email/password credentials. Похожий email не объединяет пользователей.
+
+Для привязки к существующему password-аккаунту: verified email, свежая reauthenticate/password, затем POST /google/link. Callback требует неизменённую исходную session. Link не выдаёт session/UUID. DELETE /google/link требует тот же свежий proof и оставшийся рабочий пароль; отзывает все sessions. Telegram identity при этом не удаляется.
+
+Google-only/Telegram-only аккаунт пока не управляет методами без verified permanent password; две identity rows не заменяют usable-method/step-up checks. Реальный Google browser flow и faults ещё не проверены. Полный контракт, ошибки и ENV — [Google login](features/google-login.md).
 
 <a id="sessions"></a>
 ## 6. Сессии и повторное подтверждение пароля
@@ -1420,12 +1433,46 @@ Code действует 5 минут по умолчанию, максимум �
 
 Для browser flow и правил хранения — [email OTP](features/email-otp.md).
 
+### 8.32. Начать Google-вход
+
+**POST `/api/v1/auth/google/start`**
+
+Optional GOOGLE_LOGIN_ENABLED=true, разрешённый Origin, session не требуется. JSON body не нужен. Успех 200: `{"authorizationUrl":"https://accounts.google.com/o/oauth2/v2/auth?…"}` и Secure/HttpOnly Google flow cookie на 5 минут. Перейти по URL в том же браузере. Это ещё не session issuance.
+
+Ошибки: 403 invalid_origin, 429 rate_limited, 503 temporarily_unavailable; disabled route отсутствует. Registration flag контролирует создание аккаунта в callback, не start.
+
+### 8.33. Завершить Google-вход или привязку
+
+**GET `/api/v1/auth/google/callback?code=<code>&state=<state>`**
+
+Provider redirect. Нужны ровно один code/state и одна __Host-google-flow того же браузера. Body нет. Если flow был link — также неизменённая исходная __Host-session и действующий password fresh proof. Telegram cookie не заменяет Google cookie.
+
+Успех 200 `{"status":"ok"}`: Google flow cookie очищена; login выдаёт обычную session, link сохраняет прежнюю и только добавляет identity. Provider tokens/UUID не возвращаются. Google issuer нормализуется к https://accounts.google.com, subject — opaque ID, не email.
+
+Ошибки: 400 invalid_login, 403 fresh_auth_required, 409 identity_conflict, 429 rate_limited, 503 temporarily_unavailable. Повтор после consumption/потери ответа требует нового start/link; flow не восстанавливается. UI redirect ещё не реализован.
+
+### 8.34. Привязать Google к своему аккаунту
+
+**POST `/api/v1/auth/google/link`**
+
+Нужны Origin, session, verified email с постоянным паролем и свежая reauthenticate/password. Body/target user ID нет. Успех 200 authorizationUrl и Google flow cookie. Это только начало; привязка коммитится после callback/proof/current SQL checks. GOOGLE_REGISTRATION_ENABLED для linking не нужен.
+
+Ошибки: 401 session, 403 invalid_origin/fresh_auth_required, 429 rate_limited, 503 temporarily_unavailable. Google-only/Telegram-only account без password proof этот API не использует.
+
+### 8.35. Отвязать Google
+
+**DELETE `/api/v1/auth/google/link`**
+
+Те же session/Origin/fresh требования; остаётся verified permanent password login. Body нет. Успех 204: удаляется только Google identity, auth_version увеличивается, все sessions отзываются, caller session cookie очищается. Telegram identity не удаляется; потребуется новый вход.
+
+Ошибки: 400 invalid_login, 401 session, 403 invalid_origin/fresh_auth_required, 409 last_login_method, 429 rate_limited, 503 temporarily_unavailable. Число других identity rows не является usable-method proof. Полные гарантии/ENV — [Google login](features/google-login.md).
+
 <a id="settings"></a>
 ## 9. Настройки ENV
 
 Сейчас ENV читаются при startup. Изменения требуют согласованного перезапуска экземпляров, это ещё не runtime UI settings. Показанные значения — текущие defaults либо **локальные примеры** из .env.example, не рекомендуемые production secrets.
 
-Не нужно включать все профили. Минимальное приложение может использовать только пароль/verification/sessions; Telegram, email OTP, invitation, temporary password и email change подключаются по необходимости.
+Не нужно включать все профили. Минимальное приложение может использовать только пароль/verification/sessions; Telegram, Google, email OTP, invitation, temporary password и email change подключаются по необходимости.
 
 ### 9.1. Процесс, HTTPS, Origin и Swagger
 
@@ -1536,7 +1583,21 @@ Trusted URL задаётся сервером, не произвольным к�
 
 Start/callback/link/unlink используют общий Telegram admission. Успешный login/link обычно включает минимум два обращения к этому бюджету. TTL flow 5 минут — константа реализации, отдельного ENV переключателя этого срока сейчас нет.
 
-### 9.7a. Вход по email-коду
+### 9.7a. Google OIDC
+
+| ENV | Default / пример | Для чего |
+| --- | --- | --- |
+| GOOGLE_LOGIN_ENABLED | false | Start/callback/link/unlink |
+| GOOGLE_REGISTRATION_ENABLED | false | Создание новых UUID по проверенной Google identity |
+| GOOGLE_OIDC_CLIENT_ID | пусто | Web OAuth client ID в Google Cloud Console |
+| GOOGLE_OIDC_CLIENT_SECRET | пусто | Серверный client secret |
+| GOOGLE_OIDC_REDIRECT_URI | https://localhost:8443/api/v1/auth/google/callback | Точный зарегистрированный HTTPS callback |
+| GOOGLE_LOGIN_IP_ATTEMPTS_PER_MINUTE | 30 | Общие Google attempts одного IP за минутное окно |
+| GOOGLE_LOGIN_PROJECT_ATTEMPTS_PER_MINUTE | 1000 | Общие attempts Google по всем API-экземплярам проекта |
+
+Start + callback расходуют минимум две попытки. Общий flow TTL 5 минут — константа, не новый ENV; credentials и budgets независимы от Telegram. Google login не является MFA/fresh password proof. Настройки и ограничения — [Google login](features/google-login.md).
+
+### 9.7b. Вход по email-коду
 
 Для входа по email-коду:
 

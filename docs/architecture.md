@@ -63,6 +63,10 @@ internal/
 │   │   │   ├── service/
 │   │   │   ├── repository/redis/
 │   │   │   └── transport/http/
+│   │   ├── google/
+│   │   │   ├── domain/
+│   │   │   ├── service/
+│   │   │   └── transport/http/
 │   │   └── telegram/
 │   │       ├── domain/
 │   │       ├── service/

@@ -1,4 +1,4 @@
-package telegram
+package oidcclient
 
 import (
 	"context"
@@ -17,9 +17,9 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"golang.org/x/oauth2"
 
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 )
 
 func signToken(t *testing.T, key *rsa.PrivateKey, claims map[string]any, alg string) string {
@@ -38,7 +38,21 @@ func signToken(t *testing.T, key *rsa.PrivateKey, claims map[string]any, alg str
 	return content + "." + base64.RawURLEncoding.EncodeToString(signature)
 }
 
-func TestTelegramProof(t *testing.T) {
+func TestProviderProof(t *testing.T) {
+	for _, profile := range []struct {
+		name, issuer, authorization, token, keys string
+		style                                    oauth2.AuthStyle
+	}{
+		{"telegram", "https://oauth.telegram.org", "https://oauth.telegram.org/auth", "https://oauth.telegram.org/token", "https://oauth.telegram.org/.well-known/jwks.json", oauth2.AuthStyleInHeader},
+		{"google", "https://accounts.google.com", "https://accounts.google.com/o/oauth2/v2/auth", "https://oauth2.googleapis.com/token", "https://www.googleapis.com/oauth2/v3/certs", oauth2.AuthStyleInParams},
+	} {
+		t.Run(profile.name, func(t *testing.T) {
+			testProviderProof(t, profile.issuer, profile.authorization, profile.token, profile.keys, profile.style)
+		})
+	}
+}
+
+func testProviderProof(t *testing.T, issuer, authorization, tokenURL, keys string, style oauth2.AuthStyle) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +77,11 @@ func TestTelegramProof(t *testing.T) {
 			t.Error(err)
 		}
 		id, secret, basic := r.BasicAuth()
-		if !basic || id != "123" || secret != "fixture-secret" || r.Form.Get("client_id") != "123" || r.Form.Get("code_verifier") != flow.Verifier ||
+		authOK := basic && id == "123" && secret == "fixture-secret"
+		if style == oauth2.AuthStyleInParams {
+			authOK = !basic && r.Form.Get("client_secret") == "fixture-secret"
+		}
+		if !authOK || r.Form.Get("client_id") != "123" || r.Form.Get("code_verifier") != flow.Verifier ||
 			r.Form.Get("grant_type") != "authorization_code" || r.Form.Get("redirect_uri") != "https://auth.example/api/v1/auth/telegram/callback" {
 			t.Error("incorrect code exchange")
 		}
@@ -72,14 +90,14 @@ func TestTelegramProof(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{"access_token": "unused", "token_type": "Bearer", "id_token": raw})
 	}))
 	defer server.Close()
-	client := New(t.Context(), service.Config{ClientID: "123", ClientSecret: "fixture-secret", RedirectURI: "https://auth.example/api/v1/auth/telegram/callback"})
+	client := New(t.Context(), Config{Issuer: issuer, AuthorizationURL: authorization, TokenURL: tokenURL, KeysURL: keys, AuthStyle: style, ClientID: "123", ClientSecret: "fixture-secret", RedirectURI: "https://auth.example/api/v1/auth/telegram/callback"})
 	defer client.Close()
 	client.oauth.Endpoint.TokenURL = server.URL + "/token"
 	client.http.client = server.Client()
-	client.verifier = oidc.NewVerifier(Issuer, oidc.NewRemoteKeySet(oidc.ClientContext(context.Background(), server.Client()), server.URL+"/keys"),
+	client.verifier = oidc.NewVerifier(issuer, oidc.NewRemoteKeySet(oidc.ClientContext(context.Background(), server.Client()), server.URL+"/keys"),
 		&oidc.Config{ClientID: "123", SupportedSigningAlgs: []string{oidc.RS256}})
 	auth, err := url.Parse(client.AuthorizationURL("state", flow))
-	if err != nil || auth.Host != "oauth.telegram.org" || auth.Query().Get("scope") != "openid" ||
+	if err != nil || auth.Scheme+"://"+auth.Host+auth.Path != authorization || auth.Query().Get("scope") != "openid" ||
 		auth.Query().Get("nonce") != flow.Nonce || auth.Query().Get("state") != "state" || auth.Query().Get("code_challenge_method") != "S256" {
 		t.Fatal("invalid authorization URL", auth, err)
 	}
@@ -91,6 +109,9 @@ func TestTelegramProof(t *testing.T) {
 		alg     string
 	}{
 		{name: "valid"},
+		{name: "missing nonce", invalid: true, mutate: func(c map[string]any) { delete(c, "nonce") }},
+		{name: "empty subject", invalid: true, mutate: func(c map[string]any) { c["sub"] = "" }},
+		{name: "legacy google issuer", invalid: issuer != "https://accounts.google.com", mutate: func(c map[string]any) { c["iss"] = "accounts.google.com" }},
 		{name: "issuer", invalid: true, mutate: func(c map[string]any) { c["iss"] = "https://evil.example" }},
 		{name: "audience", invalid: true, mutate: func(c map[string]any) { c["aud"] = "456" }},
 		{name: "nonce", invalid: true, mutate: func(c map[string]any) { c["nonce"] = "other-browser" }},
@@ -102,7 +123,7 @@ func TestTelegramProof(t *testing.T) {
 		{name: "algorithm", invalid: true, alg: "HS256"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			claims := map[string]any{"iss": Issuer, "sub": "opaque-subject", "aud": "123", "nonce": flow.Nonce, "iat": time.Now().Unix(), "exp": time.Now().Add(time.Minute).Unix()}
+			claims := map[string]any{"iss": issuer, "sub": "opaque-subject", "aud": "123", "nonce": flow.Nonce, "iat": time.Now().Unix(), "exp": time.Now().Add(time.Minute).Unix()}
 			if tc.mutate != nil {
 				tc.mutate(claims)
 			}
@@ -120,7 +141,7 @@ func TestTelegramProof(t *testing.T) {
 				if !errors.Is(err, domain.ErrInvalidFlow) {
 					t.Fatal("invalid proof accepted", identity, err)
 				}
-			} else if err != nil || identity.Issuer != Issuer || identity.Subject != "opaque-subject" {
+			} else if err != nil || identity.Issuer != issuer || identity.Subject != "opaque-subject" {
 				t.Fatal(identity, err)
 			}
 		})
@@ -132,9 +153,9 @@ func TestTelegramProof(t *testing.T) {
 }
 
 func TestUntrustedEndpoint(t *testing.T) {
-	transport, _ := newHTTPClient()
+	transport, _ := newHTTPClient("https://oauth.telegram.org/token", "https://oauth.telegram.org/.well-known/jwks.json", "https://oauth2.googleapis.com/token", "https://www.googleapis.com/oauth2/v3/certs")
 	defer transport.transport.CloseIdleConnections()
-	for _, endpoint := range []string{"http://oauth.telegram.org/token", "https://evil.example/token", "https://oauth.telegram.org/other", "https://oauth.telegram.org:444/token"} {
+	for _, endpoint := range []string{"http://oauth.telegram.org/token", "https://evil.example/token", "https://oauth.telegram.org/other", "https://oauth.telegram.org:444/token", "https://oauth2.googleapis.com/token?override=1", "https://www.googleapis.com/oauth2/v3/certs#fragment", "https://accounts.google.com/token"} {
 		r, err := http.NewRequestWithContext(t.Context(), http.MethodPost, endpoint, nil)
 		if err != nil {
 			t.Fatal(err)

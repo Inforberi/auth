@@ -13,6 +13,8 @@ import (
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
+	googleservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/service"
+	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
@@ -80,10 +82,12 @@ func contractHandlers(env string) Handlers {
 		Activation:        passwordhttp.NewActivation(&contractActivation{}, log),
 		TemporaryPassword: passwordhttp.NewTemporaryPassword(&contractTemporaryPassword{}, log),
 		Telegram:          telegramhttp.New(&contractTelegram{}, log),
+		Google:            googlehttp.New(&contractTelegram{}, log),
 		EmailOTP:          otphttp.New(&contractEmailOTP{}, log),
 		Config: &config.Config{
 			EmailOTP: otpservice.Config{Enabled: true},
 			Telegram: telegramservice.Config{Enabled: true},
+			Google:   googleservice.Config{Enabled: true},
 			Logger:   logger.Config{Env: env},
 			Browser:  requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}},
 		},

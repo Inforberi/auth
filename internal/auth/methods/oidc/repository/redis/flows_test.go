@@ -13,7 +13,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
@@ -35,7 +35,12 @@ func TestRedisFlow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	repo := New(db, cipher)
+	repo := New(db, cipher, "auth:telegram")
+	googleCipher, err := secretbox.NewScoped(base64.StdEncoding.EncodeToString(make([]byte, 32)), "google-login:v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	google := New(db, googleCipher, "auth:google")
 	flow := domain.Flow{Verifier: "fixture-verifier", Nonce: "fixture-nonce", Purpose: domain.Link, UserID: "12345678-1234-1234-1234-123456789abc", SessionHash: strings.Repeat("a", 64)}
 	if err := repo.Save(t.Context(), "state", "binding", flow); err != nil {
 		t.Fatal(err)
@@ -51,6 +56,18 @@ func TestRedisFlow(t *testing.T) {
 	}
 	if _, err := repo.Consume(t.Context(), "state", "wrong-browser"); !errors.Is(err, domain.ErrInvalidFlow) {
 		t.Fatal(err)
+	}
+	if _, err := google.Consume(t.Context(), "state", "binding"); !errors.Is(err, domain.ErrInvalidFlow) {
+		t.Fatal("cross-provider consume", err)
+	}
+	if err := google.Save(t.Context(), "state", "binding", flow); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := google.Consume(t.Context(), "state", "binding"); err != nil {
+		t.Fatal("Google isolated state", err)
+	}
+	if ok, err := google.Allow(t.Context(), "ip", 1, 1); err != nil || !ok {
+		t.Fatal("Google budget", err)
 	}
 	var successes atomic.Int64
 	var wg sync.WaitGroup
@@ -98,6 +115,9 @@ func TestRedisFlow(t *testing.T) {
 	}
 	if ok, err := repo.Allow(t.Context(), "other-ip", 10, 10); err != nil || ok {
 		t.Fatal("global budget bypassed", ok, err)
+	}
+	if ok, err := google.Allow(t.Context(), "other-ip", 10, 1); err != nil || ok {
+		t.Fatal("Google project budget", ok, err)
 	}
 	if err := db.HSet(t.Context(), repo.key("tampered"), "binding", cipher.Digest("binding"), "payload", "invalid").Err(); err != nil {
 		t.Fatal(err)

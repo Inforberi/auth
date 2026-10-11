@@ -7,6 +7,7 @@ import (
 
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	googleservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
@@ -28,6 +29,7 @@ type Config struct {
 	TemporaryPassword passwordservice.TemporaryPasswordConfig
 	EmailOTP          otpservice.Config
 	Telegram          telegramservice.Config
+	Google            googleservice.Config
 	Retention         accountservice.RetentionConfig
 	Postgres          postgres.Config
 	Logger            logger.Config

@@ -2,10 +2,6 @@ package http
 
 import (
 	"net/http"
-
-	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
-	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
 // @Summary Start linking Telegram to the current account
@@ -19,17 +15,4 @@ import (
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
 // @Router /api/v1/auth/telegram/link [post]
-func (h *Handler) StartLink(w http.ResponseWriter, r *http.Request) {
-	auth, ok := sessionhttp.GetAuthContext(r.Context())
-	if !ok {
-		h.respondError(w, r, accountdomain.ErrFreshAuthRequired)
-		return
-	}
-	started, err := h.service.StartLink(r.Context(), auth.UserID, auth.TokenHash, httpx.IP(r))
-	if err != nil {
-		h.respondError(w, r, err)
-		return
-	}
-	setFlowCookie(w, started.Binding)
-	httpx.JSON(w, 200, StartResponse{AuthorizationURL: started.URL})
-}
+func (h *Handler) StartLink(w http.ResponseWriter, r *http.Request) { h.Handler.StartLink(w, r) }

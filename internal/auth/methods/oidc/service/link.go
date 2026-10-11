@@ -4,7 +4,7 @@ import (
 	"context"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 )
 
 func (s *Service) StartLink(ctx context.Context, user accountdomain.UserID, sessionHash, ip string) (*StartedFlow, error) {
@@ -25,5 +25,5 @@ func (s *Service) Unlink(ctx context.Context, user accountdomain.UserID, session
 	if err := s.admit(ctx, ip); err != nil {
 		return err
 	}
-	return s.management.Unlink(ctx, user, sessionHash, domain.Issuer)
+	return s.management.Unlink(ctx, user, sessionHash, s.cfg.Issuer)
 }

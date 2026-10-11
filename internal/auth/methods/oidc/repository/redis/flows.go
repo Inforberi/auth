@@ -8,18 +8,19 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
 type Repository struct {
 	db     *redis.Client
 	cipher *secretbox.Cipher
+	prefix string
 }
 
-func New(db *redis.Client, cipher *secretbox.Cipher) *Repository {
-	return &Repository{db: db, cipher: cipher}
+func New(db *redis.Client, cipher *secretbox.Cipher, prefix string) *Repository {
+	return &Repository{db: db, cipher: cipher, prefix: prefix}
 }
 
 func (r *Repository) Save(ctx context.Context, state, binding string, flow domain.Flow) error {
@@ -73,7 +74,7 @@ func (r *Repository) Consume(ctx context.Context, state, binding string) (*domai
 }
 
 func (r *Repository) key(state string) string {
-	return "auth:telegram:flow:" + r.cipher.Digest(state)
+	return r.prefix + ":flow:" + r.cipher.Digest(state)
 }
 
 func (r *Repository) Allow(ctx context.Context, ip string, ipLimit, globalLimit int) (bool, error) {
@@ -84,7 +85,7 @@ func (r *Repository) Allow(ctx context.Context, ip string, ipLimit, globalLimit 
 		if n>tonumber(ARGV[1]) then return 0 end
 		local g=redis.call('INCR',KEYS[2]); if g==1 then redis.call('PEXPIRE',KEYS[2],ARGV[3]) end
 		if g>tonumber(ARGV[2]) then return 0 end; return 1`,
-		[]string{"auth:telegram:limit:" + r.cipher.Digest(ip), "auth:telegram:limit:global"},
+		[]string{r.prefix + ":limit:" + r.cipher.Digest(ip), r.prefix + ":limit:global"},
 		ipLimit, globalLimit, time.Minute.Milliseconds()).Int()
 	return allowed == 1, err
 }

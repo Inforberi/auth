@@ -17,7 +17,8 @@
 | Account status/deletion/retention | [account-deletion](../features/account-deletion.md), [architecture](../architecture.md) | Account `status.go`/`deletion.go`/`retention*.go`, `internal/config`, app lifecycle; SQL/env tests |
 | Sessions | [ADR 002](../adr/002-sessions-and-transactions.md), [contract](../api/contract.md) | `internal/auth/session` |
 | Внешние identities | [external-identities](../features/external-identities.md) | Account domain `linked_identity`, service/repository `identity_resolution` |
-| Telegram login | [telegram-login](../features/telegram-login.md) | `methods/telegram`, `integrations/telegram`, app/auth `telegram.go` |
+| Telegram login | [telegram-login](../features/telegram-login.md) | `methods/telegram` + shared `methods/oidc`, `integrations/telegram`, app/auth `telegram.go` |
+| Google login | [google-login](../features/google-login.md) | `methods/google` + shared `methods/oidc`, fixed `integrations/google` + bounded `integrations/oidc`, app/auth `google.go` |
 | Email OTP login | [email-otp](../features/email-otp.md) | `methods/emailotp`, app/auth `email_otp.go`, shared Auth delivery runner |
 | Нагрузка и бюджеты | [performance](../operations/performance.md) | Password hasher/login limits, HTTP admission/proxy/readiness, retention/delivery queries |
 | Security boundaries | [threat-model](../threat-model.md), нужный ADR | Проверки по затронутому сценарию |

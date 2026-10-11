@@ -15,6 +15,10 @@
 | GET `/api/v1/auth/telegram/callback` | 200, status; login выставляет session cookie, link сохраняет исходную session | 400 invalid_login, 403 fresh_auth_required, 409 identity_conflict, 429 rate_limited, 503 temporarily_unavailable; single-use browser binding |
 | POST `/api/v1/auth/telegram/link` | 200, authorizationUrl и bound flow cookie | 401 session, 403 invalid_origin/fresh_auth_required, 429 limits, 503 dependency; verified permanent password profile |
 | DELETE `/api/v1/auth/telegram/link` | 204, отзыв всех sessions, очистка cookie | 400 invalid_login, 401 session, 403 invalid_origin/fresh_auth_required, 409 last_login_method, 429 limits, 503 dependency |
+| POST `/api/v1/auth/google/start` | 200, authorizationUrl и Google flow cookie, optional | 403 Origin, 429 limits, 503 dependency |
+| GET `/api/v1/auth/google/callback` | 200, status; login выставляет общую session, link сохраняет исходную | 400 invalid_login, 403 fresh_auth_required, 409 identity_conflict, 429 limits, 503 dependency |
+| POST `/api/v1/auth/google/link` | 200, authorizationUrl и Google bound flow cookie | 401 session, 403 Origin/fresh_auth_required, 429 limits, 503 dependency |
+| DELETE `/api/v1/auth/google/link` | 204, отзыв всех sessions и очистка cookie; Telegram identity остаётся | 400 invalid_login, 401 session, 403 Origin/fresh_auth_required, 409 last_login_method, 429 limits, 503 dependency |
 | POST `/api/v1/auth/change-password` | 200, **`Status`**, очистка cookie, отзыв всех сессий | 401 session, 403 email_not_verified, 503 SQL gate, 400 input/credential/password_policy errors, 404 not_found, 500 internal_error |
 | POST `/api/v1/auth/email/resend` | 202, `status: accepted` | 400 input, 429 limits, 503 dependency |
 | POST `/api/v1/auth/email/verify` | 200, `status: ok` | 400 input/invalid_verification, 429 limits, 503 dependency |
@@ -98,3 +102,7 @@ Optional temporary-password профиль добавляет POST `/api/v1/auth
 ## Telegram login
 
 Optional POST `/api/v1/auth/telegram/start` требует allowed Origin, возвращает authorizationUrl и HttpOnly browser binding cookie. GET `/api/v1/auth/telegram/callback` — исключение только для provider redirect: single-use state/cookie/PKCE/nonce заменяют Origin-проверку этого flow. Login создаёт обычную session и выставляет `__Host-session`, без JWT/token в JSON. POST `/telegram/link` требует verified permanent password account и fresh password proof; link-callback сохраняет исходную session и UUID. DELETE `/telegram/link` требует оставшийся рабочий парольный метод, отзывает все sessions и очищает cookie. Ошибки не очищают текущую session; при disabled profile routes отсутствуют. Live acceptance login/link/unlink отложена перед подключением UI. [Конфигурация, ошибки и ограничения](../features/telegram-login.md).
+
+## Google login
+
+Optional Google использует тот же OIDC flow и SQL-сессии, но отдельные routes/cookie/Redis prefix/purpose и budgets: POST `/api/v1/auth/google/start`, GET `/api/v1/auth/google/callback`, POST/DELETE `/api/v1/auth/google/link`. Owner — canonical Google issuer + subject, без auto-merge по email. Link/unlink требуют verified permanent password и fresh proof; presence другой identity не расширяет last-method policy. [Контракт и ENV](../features/google-login.md).

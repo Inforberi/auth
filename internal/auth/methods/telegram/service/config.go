@@ -5,10 +5,10 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
-)
 
-const FlowTTL = 5 * time.Minute
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/domain"
+)
 
 type Config struct {
 	Enabled             bool   `env:"TELEGRAM_LOGIN_ENABLED" env-default:"false"`
@@ -37,4 +37,8 @@ func (c Config) Validate() error {
 		return fmt.Errorf("telegram login limits must be positive per-minute budgets")
 	}
 	return nil
+}
+
+func (c Config) FlowConfig() service.Config {
+	return service.Config{Enabled: c.Enabled, RegistrationEnabled: c.RegistrationEnabled, IPLimit: c.IPLimit, GlobalLimit: c.GlobalLimit, Issuer: domain.Issuer}
 }

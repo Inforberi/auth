@@ -12,6 +12,7 @@ import (
 
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
+	oidchttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
@@ -87,6 +88,8 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 		{"emailotp_http.RequestCodeRequest", otphttp.RequestCodeRequest{}},
 		{"emailotp_http.ConfirmCodeRequest", otphttp.ConfirmCodeRequest{}},
 		{"emailotp_http.StatusResponse", otphttp.StatusResponse{}},
+		{"oidchttp.StartResponse", oidchttp.StartResponse{}},
+		{"oidchttp.CallbackResponse", oidchttp.CallbackResponse{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			schema, ok := doc.Definitions[tc.name]

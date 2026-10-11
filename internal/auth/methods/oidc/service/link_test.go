@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
@@ -38,11 +38,17 @@ func (f *managementFixture) Unlink(_ context.Context, user accountdomain.UserID,
 }
 
 func TestLinkFlow(t *testing.T) {
+	for _, issuer := range []string{"https://oauth.telegram.org", "https://accounts.google.com"} {
+		t.Run(issuer, func(t *testing.T) { testLinkFlow(t, issuer) })
+	}
+}
+
+func testLinkFlow(t *testing.T, issuer string) {
 	for _, failure := range []string{"", "missing session", "other session", "expired proof", "occupied identity", "provider"} {
 		t.Run(failure, func(t *testing.T) {
-			login, management := &loginFixture{}, &managementFixture{}
+			login, management := &loginFixture{issuer: issuer}, &managementFixture{}
 			tokens := tokengenerate.New()
-			s := New(Config{Enabled: true, IPLimit: 30, GlobalLimit: 1000}, login, login, login, login, tokens, management)
+			s := New(Config{Issuer: issuer, Enabled: true, IPLimit: 30, GlobalLimit: 1000}, login, login, login, login, tokens, management)
 			user := accountdomain.UserID("12345678-1234-1234-1234-123456789abc")
 			session, err := tokens.GenerateToken()
 			if err != nil {
@@ -68,7 +74,7 @@ func TestLinkFlow(t *testing.T) {
 			}
 			result, err := s.Callback(t.Context(), input)
 			if failure == "" {
-				if err != nil || !result.Linked || result.Session != nil || management.links != 1 || management.user != user || management.hash != hash || management.key.Issuer != domain.Issuer {
+				if err != nil || !result.Linked || result.Session != nil || management.links != 1 || management.user != user || management.hash != hash || management.key.Issuer != issuer {
 					t.Fatal(result, err, management)
 				}
 			} else if err == nil || result != nil {
@@ -90,13 +96,19 @@ func TestLinkFlow(t *testing.T) {
 }
 
 func TestLinkStartAndUnlinkGates(t *testing.T) {
-	login, management := &loginFixture{}, &managementFixture{failure: accountdomain.ErrFreshAuthRequired}
-	s := New(Config{Enabled: true, IPLimit: 30, GlobalLimit: 1000}, login, login, login, login, tokengenerate.New(), management)
+	for _, issuer := range []string{"https://oauth.telegram.org", "https://accounts.google.com"} {
+		t.Run(issuer, func(t *testing.T) { testLinkStartAndUnlinkGates(t, issuer) })
+	}
+}
+
+func testLinkStartAndUnlinkGates(t *testing.T, issuer string) {
+	login, management := &loginFixture{issuer: issuer}, &managementFixture{failure: accountdomain.ErrFreshAuthRequired}
+	s := New(Config{Issuer: issuer, Enabled: true, IPLimit: 30, GlobalLimit: 1000}, login, login, login, login, tokengenerate.New(), management)
 	if started, err := s.StartLink(t.Context(), "user", "hash", "ip"); !errors.Is(err, accountdomain.ErrFreshAuthRequired) || started != nil || login.state != "" {
 		t.Fatal("flow saved without fresh proof", started, err)
 	}
 	management.failure = nil
-	if err := s.Unlink(t.Context(), "user", "hash", "ip"); err != nil || management.unlinks != 1 || management.issuer != domain.Issuer {
+	if err := s.Unlink(t.Context(), "user", "hash", "ip"); err != nil || management.unlinks != 1 || management.issuer != issuer {
 		t.Fatal(err, management)
 	}
 	login.failure = "limit"

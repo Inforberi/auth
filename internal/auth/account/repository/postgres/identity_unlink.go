@@ -26,7 +26,7 @@ func (r *Repository) UnlinkIdentity(ctx context.Context, user domain.UserID, tok
 		if err != nil {
 			return err
 		}
-		// Telegram is the only external method currently enabled; email alone is not a login method.
+		// Current linking/step-up requires a verified permanent password; another identity row is not proof of a usable method.
 		if !password {
 			return domain.ErrLastLoginMethod
 		}

@@ -76,6 +76,13 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	if closeTelegram != nil {
 		resources.add(closeTelegram)
 	}
+	google, closeGoogle, err := assembleGoogle(ctx, cfg, accountRepo, rdb, sessionSvc, log)
+	if err != nil {
+		return nil, fmt.Errorf("assemble Google: %w", err)
+	}
+	if closeGoogle != nil {
+		resources.add(closeGoogle)
+	}
 	var emailChange *accounthttp.EmailChangeHandler
 	var protectedRecovery *passwordhttp.ProtectedRecoveryHandler
 	var activation *passwordhttp.ActivationHandler
@@ -112,6 +119,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		Activation:        activation,
 		TemporaryPassword: temporaryHandler,
 		Telegram:          telegram,
+		Google:            google,
 		EmailOTP:          emailOTP,
 		PasswordHandler:   passwordHandler,
 		Middleware:        middleware,

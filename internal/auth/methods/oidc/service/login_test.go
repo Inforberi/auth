@@ -9,13 +9,14 @@ import (
 	"time"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
 type loginFixture struct {
 	mu                            sync.Mutex
+	issuer                        string
 	state, binding                string
 	flow                          domain.Flow
 	consumed                      bool
@@ -58,7 +59,11 @@ func (f *loginFixture) Verify(context.Context, string, domain.Flow) (accountdoma
 	if f.failure == "proof" {
 		return accountdomain.IdentityKey{}, domain.ErrInvalidFlow
 	}
-	return accountdomain.IdentityKey{Issuer: "https://oauth.telegram.org", Subject: "subject"}, nil
+	issuer := f.issuer
+	if issuer == "" {
+		issuer = "https://oauth.telegram.org"
+	}
+	return accountdomain.IdentityKey{Issuer: issuer, Subject: "subject"}, nil
 }
 
 func (f *loginFixture) Resolve(_ context.Context, key accountdomain.IdentityKey, allow bool) (*accountdomain.User, error) {
@@ -82,10 +87,16 @@ func (f *loginFixture) CreateSessionAtVersion(_ context.Context, user accountdom
 }
 
 func TestLoginLifecycle(t *testing.T) {
+	for _, issuer := range []string{"https://oauth.telegram.org", "https://accounts.google.com"} {
+		t.Run(issuer, func(t *testing.T) { testLoginLifecycle(t, issuer) })
+	}
+}
+
+func testLoginLifecycle(t *testing.T, issuer string) {
 	for _, failure := range []string{"", "limit", "redis", "proof", "account", "session"} {
 		t.Run("failure="+failure, func(t *testing.T) {
-			f := &loginFixture{}
-			s := New(Config{Enabled: true, RegistrationEnabled: true, IPLimit: 30, GlobalLimit: 1000}, f, f, f, f, tokengenerate.New(), nil)
+			f := &loginFixture{issuer: issuer}
+			s := New(Config{Issuer: issuer, Enabled: true, RegistrationEnabled: true, IPLimit: 30, GlobalLimit: 1000}, f, f, f, f, tokengenerate.New(), nil)
 			started, err := s.Start(t.Context(), "127.0.0.1")
 			if err != nil || started.Binding != f.binding || f.flow.Nonce == f.flow.Verifier {
 				t.Fatal(started, err)
@@ -117,7 +128,7 @@ func TestLoginLifecycle(t *testing.T) {
 
 func TestConcurrentCallbacks(t *testing.T) {
 	f := &loginFixture{}
-	s := New(Config{Enabled: true, IPLimit: 30, GlobalLimit: 1000}, f, f, f, f, tokengenerate.New(), nil)
+	s := New(Config{Issuer: "https://oauth.telegram.org", Enabled: true, IPLimit: 30, GlobalLimit: 1000}, f, f, f, f, tokengenerate.New(), nil)
 	if _, err := s.Start(t.Context(), "127.0.0.1"); err != nil {
 		t.Fatal(err)
 	}

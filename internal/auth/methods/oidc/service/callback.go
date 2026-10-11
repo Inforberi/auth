@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 )
 
@@ -49,6 +49,9 @@ func (s *Service) Callback(ctx context.Context, input CallbackInput) (*CallbackR
 	key, err := s.provider.Verify(ctx, input.Code, *flow)
 	if err != nil {
 		return nil, err
+	}
+	if key.Issuer != s.cfg.Issuer {
+		return nil, domain.ErrInvalidFlow
 	}
 	if flow.Purpose == domain.Link {
 		if err := s.management.Link(ctx, flow.UserID, flow.SessionHash, key); err != nil {

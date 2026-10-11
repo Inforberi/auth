@@ -695,6 +695,235 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/auth/google/callback": {
+            "get": {
+                "description": "Provider redirect bound to single-use state, PKCE, nonce and flow cookie. Login sets __Host-session; linking requires the unchanged fresh session and never creates or replaces it. No email auto-merge. Restart after a failed or lost callback.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Complete Google OIDC login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization code",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Single-use state",
+                        "name": "state",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_auth_methods_google_transport_http.CallbackResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "fresh_auth_required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "identity_conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/google/link": {
+            "post": {
+                "description": "Requires current session, exact Origin, verified email with permanent password and recent password reauthentication. Flow binds UUID and session hash; callback does not create a session or user. One identity per provider per account.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Start linking Google to the current account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Allowed browser origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_auth_methods_google_transport_http.StartResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Requires Origin and fresh password proof. A verified permanent password login must remain. Successful unlink increments auth_version and revokes all sessions, including the caller. Unknown ownership is not revealed.",
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Unlink Google from the current account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Allowed browser origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/google/start": {
+            "post": {
+                "description": "Requires allowed Origin. Sets a browser-bound HttpOnly flow cookie; navigate to authorizationUrl. Disabled by default.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Start Google OIDC login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_auth_methods_google_transport_http.StartResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/invitations/activate": {
             "post": {
                 "description": "Optional invitation profile. Consumes a distinct one-time token, sets a password and verifies the invited contact atomically. Expired, replayed, blocked and unknown tokens have one error. Does not create a session or assign roles. GET never activates an account.",
@@ -1341,7 +1570,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/http.CallbackResponse"
+                            "$ref": "#/definitions/oidchttp.CallbackResponse"
                         }
                     },
                     "400": {
@@ -1400,7 +1629,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/http.StartResponse"
+                            "$ref": "#/definitions/internal_auth_methods_telegram_transport_http.StartResponse"
                         }
                     },
                     "401": {
@@ -1510,7 +1739,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/http.StartResponse"
+                            "$ref": "#/definitions/oidchttp.StartResponse"
                         }
                     },
                     "403": {
@@ -1908,14 +2137,6 @@ const docTemplate = `{
                 }
             }
         },
-        "http.CallbackResponse": {
-            "type": "object",
-            "properties": {
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
         "http.MeResponse": {
             "type": "object",
             "properties": {
@@ -1967,14 +2188,6 @@ const docTemplate = `{
                 }
             }
         },
-        "http.StartResponse": {
-            "type": "object",
-            "properties": {
-                "authorizationUrl": {
-                    "type": "string"
-                }
-            }
-        },
         "httpx.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -1982,6 +2195,46 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_auth_methods_google_transport_http.CallbackResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_auth_methods_google_transport_http.StartResponse": {
+            "type": "object",
+            "properties": {
+                "authorizationUrl": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_auth_methods_telegram_transport_http.StartResponse": {
+            "type": "object",
+            "properties": {
+                "authorizationUrl": {
+                    "type": "string"
+                }
+            }
+        },
+        "oidchttp.CallbackResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "oidchttp.StartResponse": {
+            "type": "object",
+            "properties": {
+                "authorizationUrl": {
                     "type": "string"
                 }
             }

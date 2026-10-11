@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 )
 
 type StartedFlow struct {
