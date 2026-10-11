@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"time"
+
+	"github.com/Inforberi/financial-intelligence/internal/auth/delivery"
 )
 
 func (r *RecoveryService) DeliverOne(ctx context.Context) (bool, error) {
@@ -37,22 +39,5 @@ func (r *RecoveryService) deliver(ctx context.Context, payload []byte) error {
 }
 
 func (r *RecoveryService) RunDelivery(ctx context.Context, report func(error)) {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			for range 10 {
-				processed, err := r.DeliverOne(ctx)
-				if err != nil && ctx.Err() == nil {
-					report(err)
-				}
-				if !processed || ctx.Err() != nil {
-					break
-				}
-			}
-		}
-	}
+	delivery.Run(ctx, r.DeliverOne, report)
 }

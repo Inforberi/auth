@@ -34,6 +34,7 @@ internal/
 │       ├── server.go
 │       └── shutdown.go
 ├── auth/
+│   ├── delivery/                # общий paced цикл почтовых очередей Auth
 │   ├── account/
 │   │   ├── domain/
 │   │   ├── service/

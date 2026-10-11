@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"time"
+
+	"github.com/Inforberi/financial-intelligence/internal/auth/delivery"
 )
 
 func (s *Service) DeliverOne(ctx context.Context) error {
@@ -29,22 +31,5 @@ func (s *Service) deliverOne(ctx context.Context) (bool, error) {
 }
 
 func (s *Service) RunDelivery(ctx context.Context, report func(error)) {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			for range 10 {
-				processed, err := s.deliverOne(ctx)
-				if err != nil && ctx.Err() == nil {
-					report(err)
-				}
-				if !processed || ctx.Err() != nil {
-					break
-				}
-			}
-		}
-	}
+	delivery.Run(ctx, s.deliverOne, report)
 }
