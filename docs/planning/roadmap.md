@@ -4,7 +4,49 @@
 
 ## 1. Назначение и правила
 
-Auth — переиспользуемый Go-шаблон, который можно скопировать или форкнуть, настроить и доработать под другой продукт. Общие механизмы идентификации, сессий, прав и подписок отделены от конкретного продукта. Обязательны email/password, passwordless email, Telegram, роли/permissions, тарифы и подключаемая оплата. Дополнительные OAuth/OIDC-провайдеры подключаются через адаптеры.
+Auth — переиспользуемый Go-шаблон, который можно скопировать или форкнуть, настроить и доработать под другой продукт. Текущий выпуск: аккаунты, email/password, email-код, Telegram, выбранный OAuth/OIDC-провайдер, сессии, роли/permissions, MFA администратора и UI. Оплата, тарифы и entitlements — отдельное будущее расширение, не обязательная часть этого выпуска.
+
+### Согласованный scope — 11 октября 2026
+
+Сначала завершить Auth и UI без оплаты: упростить доработку 6.7 → закончить lifecycle/security → методы входа и linking → роли → защищённые admin API/MFA → сохраняемые Auth settings → UI → финальная приёмка/перенос. Номера существующих задач сохраняются для истории; актуальный порядок — [implementation](implementation.md#текущий-выпуск-auth-роли-и-ui).
+
+Этапы 11/12 и billing-зависимые части остальных этапов не выполняются сейчас. Не создавать для будущей оплаты schema/routes/workers/config или пустые adapters. Общий SSO, multi-app/организации, Mini Apps/Stars и passkeys также отложены. UI текущего выпуска не ждёт ни одного из этих расширений. Уже сделанный код не удаляется автоматически при изменении плана.
+
+Полноценность означает завершённые согласованные сценарии, а не максимальное число механизмов. Для дополнительной настройки, зависимости или подсистемы нужна конкретная текущая польза. Сохранить hash/resource bounds, SQL constraints, немедленный отзыв, проверки полномочий и транзакционные гарантии.
+
+### Настраиваемые способы входа
+
+- Независимо включать password, email OTP, Telegram и каждый реализованный OAuth/OIDC provider. Public registration — отдельный переключатель. Реализовать до UI через operational config, сохраняемые settings и UI — в конце.
+- Для password registration отдельно выбрать email verification: disabled / optional / required. При disabled письмо автоматически не отправлять; при required до подтверждения не выдавать доступ к защищённым функциям, оставив только ограниченные verification/recovery/logout сценарии. Не подделывать verified_at и не превращать Telegram/OIDC login в обязательный password+email flow.
+- Backend проверяет разрешённый метод при start/login/verify/callback/link, а не только скрывает кнопку. При отключении провайдера незавершённый callback не обходит запрет; уже сохранённая identity не удаляется.
+- Выключенный метод не требует своих provider secrets/подключений. Не разрешать конфигурацию без рабочего административного способа входа/восстановления. Смена настроек — protected permissions/MFA/fresh-auth/audit; не разрешать публичному запросу выбирать менее строгую политику.
+- Роли определяют доступ независимо от способа входа. Админка требует разрешений и MFA; сам выбор OAuth, Telegram или password не даёт admin. Сайт и админка — комбинации настроек одного сервиса, не отдельные архитектуры, multi-app или общий SSO.
+- До реализации settings явно определить применение новой verification policy к existing users/sessions. Отключение метода само по себе не отзывает все существующие сессии: отзыв — отдельная явная операция; block/status/version enforcement сохраняется.
+
+Примеры целевых конфигураций:
+
+| Использование | Методы входа | Подтверждение email | Доступ |
+| --- | --- | --- | --- |
+| Сайт | password + выбранный OAuth/OIDC | отдельно для password: optional или disabled | пользовательские роли |
+| Сайт с подтверждением почты | password | required | защищённые функции после подтверждения |
+| Сайт без паролей | Telegram и/или email OTP | email OTP сам доказывает владение адресом; Telegram не требует email | пользовательские роли |
+| Админка | выбранные разрешённые методы | по согласованной политике | admin permissions + MFA |
+
+Таблица описывает будущие настройки, не уже работающие runtime-профили. UI только показывает применяемую сервером политику.
+
+### Второй фактор
+
+Первый шаг — разрешённый метод входа, второй — дополнительное доказательство. Password+TOTP или password+SMS — два фактора; SMS вместо пароля — самостоятельный способ входа, не двухфакторка. Под телефоном пока подразумевается SMS-код; phone-only login не включать автоматически в текущий scope.
+
+- Основной второй фактор: TOTP, совместимый с Google Authenticator и другими TOTP-приложениями. UI показывает QR/manual key, подключение завершается только после проверенного кода. Google Authenticator не Gmail; для проверки TOTP не нужны Gmail API, Google OAuth или SMS provider.
+- MFA policy: отключено / пользователь подключает добровольно / обязательно для заданных ролей; админские операции текущего выпуска требуют MFA, переключатель не должен обходить эту защиту. Allowed factors настраиваются отдельно от primary login methods.
+- SMS как дополнительный optional factor: включать только после выбора SMS provider и проверки delivery. До этого нет provider-зависимостей, dummy adapters, phone-login routes или обязательных secrets. Для административного MFA текущего выпуска не использовать SMS как замену TOTP/recovery codes.
+- Подключение/смена номера или TOTP и отключение фактора требуют подтверждения владения и текущего доступа; не допускать замены фактора одним украденным cookie. Нужны limits/expiry, привязка challenge к login/user и защита replay/concurrent consume.
+- Если MFA требуется, первый шаг выдаёт только короткое ограниченное challenge-состояние, а не полноценную session/admin access. Финальный шаг повторно проверяет актуальность account и policy; смена метода входа не обходит локально требуемый MFA.
+- Одноразовые recovery codes для потери устройства, отдельный protected recovery при их отсутствии. Password reset/email verification не отключают MFA. Не считать код по почте или обычный login через Google доказательством второго фактора.
+- В A7 UI: подключить/отключить фактор, ввод второго кода при login, recovery codes и настройки MFA policy. Не добавлять push confirmation/passkeys/универсальный MFA framework сейчас.
+
+Основания: [Google Authenticator](https://support.google.com/accounts/answer/1066447?hl=ru) и [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html). SMS имеет риски SIM swap/переноса номера и не приравнивается к TOTP по нашей admin policy. TOTP тоже не является phishing-resistant; соответствие уровню NIST не заявляется.
 
 Основной сценарий — отдельный экземпляр Auth для каждого проекта, с собственной БД, secrets и пользователями. Общий аккаунт и SSO между независимыми проектами — отдельный профиль, который требует решения об IdP и прототипа; копирование шаблона само по себе не означает общий вход. Первый релиз работает с одним приложением; границы app scope проектируются так, чтобы позднее добавить несколько приложений без потери user UUID. Не вводить полноценную multi-tenancy, организации и свой OAuth server ради абстрактной универсальности.
 
@@ -42,7 +84,7 @@ Auth — переиспользуемый Go-шаблон, который мож
 - Версионированный API, SQL-схема, проверяемые dev/prod окружения, наблюдаемость, backup/restore и воспроизводимый CI.
 - Инструкция переноса в другой проект, пример адаптации и отдельный процесс безопасного обновления зависимостей.
 
-Базовый auth-профиль не требует оплаты. Расширенный billing-профиль подключается отдельно. Полный набор шаблона включает email/password + verification/reset, email OTP, Telegram web login, account linking, member/admin с permissions, MFA администратора, Free/платные тарифы, разовую оплату и подписки через один выбранный web-провайдер. Telegram Mini Apps/Stars обязательны только для профиля запуска внутри Telegram; второй web-провайдер, общий SSO, passkeys и организации выпускаются отдельно. Каждый дополнительный профиль имеет свой набор проверок; выключенная или непроверенная интеграция не считается поддерживаемой.
+Текущий набор шаблона: email/password + optional/required verification/reset, email OTP, Telegram web login, выбранный OAuth/OIDC provider, account linking, custom roles/permissions, MFA администратора и UI. Методы независимо включаются настройками. Billing/entitlements и другие расширения описаны ниже только для будущего, не создаются сейчас и не блокируют выпуск Auth. Выключенная или непроверенная интеграция не считается поддерживаемой.
 
 ## 2. Что уже есть и что отсутствует
 
@@ -204,6 +246,7 @@ Auth — переиспользуемый Go-шаблон, который мож
 - 6.5. CSRF/origin, fresh authentication, secure cookies/dev HTTPS, SMTP timeouts/TLS, secret redaction.
 - 6.6. Registration UNIQUE race и user-created/session-store-failed scenario; стабильные domain errors и повторный вход.
 - 6.7. Парольная политика и rehash: разрешить password managers/paste, достаточную длину, проверку скомпрометированных паролей, отсутствие произвольной периодической смены. Изменение Argon2-параметров поддерживает старые hashes и безопасное обновление после успешного входа.
+  - 6.7-local и последующий A1 cleanup: сохранены domain-политика новых паролей, строгий parser и CAS rehash после login; файловый blocklist/env/24-value baseline удалены. Проверка утечек отложена и не заявляется текущей гарантией. [Профиль и ограничения](../operations/password-security.md); длина password-only/MFA, UI paste и mixed load проверяются отдельно, соответствие NIST не заявляется.
 - 6.8. Приёмка производительности базового профиля: согласовать active sessions/RPS/login-reset rates/P95-P99/resource budget; измерить несколько API instances, SQL session validation/refresh, Argon2 и Redis limits. По результатам настроить bounded pools/concurrency/deadlines, refresh frequency, кеш некритичных чтений и защиту от cache stampede. Проверить overload, SQL/Redis timeout и восстановление без возврата revoked доступа; не заявлять поддержку произвольной нагрузки.
   - 6.4a/6.8a реализованы 10 октября: shared hash/login/HTTP budgets, trusted proxy/cookie/header/deadline bounds, monotonic CAS refresh/no-op, indexed range cutoffs, отдельный paced GC, readiness coalescing и production log sampling. Локальная correctness/race/Redis/100000-row SQL приёмка — [performance](../operations/performance.md). 6.8b mixed/multi-instance load и release metrics/alerts остаются открытыми.
 - 6.9. Опциональное расширение, не release gate базового профиля: только если 6.8 подтверждает необходимость, предложить новый ADR для cached session validation. До реализации согласовать максимальную задержку revocation, неподлежащее продлению время SQL proof, race/failover/restore и bounded fallback/invalidation retry. Чувствительные записи сохраняют SQL enforcement. По умолчанию выключено; 5 секунд и любые новые env/settings не добавлять без согласования.
