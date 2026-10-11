@@ -7,7 +7,7 @@
 | GET `/ping` | 200, текст `pong` | Legacy endpoint, не readiness |
 | GET `/health/live` | 200, `status` | Проверка процесса |
 | GET `/health/ready` | 200, `status` | 503 без деталей зависимости |
-| POST `/api/v1/auth/register/email` | 201, `userID`, Set-Cookie, queued verification | 400 validation, 409 email conflict, 429 limits, 503 limiter failure, 500 internal_error |
+| POST `/api/v1/auth/register/email` | 201, `userID`, Set-Cookie, queued verification | 400 validation, 409 email conflict, 429 limits, 503 limits/deadline, 500 internal_error; ошибка не доказывает rollback аккаунта |
 | POST `/api/v1/auth/login/email` | 200, `status`, Set-Cookie | 400 validation/invalid_credentials, 500 internal_error |
 | POST `/api/v1/auth/change-password` | 200, **`Status`**, очистка cookie, отзыв всех сессий | 401 session, 403 email_not_verified, 503 SQL gate, 400 input/credential/password_policy errors, 404 not_found, 500 internal_error |
 | POST `/api/v1/auth/email/resend` | 202, `status: accepted` | 400 input, 429 limits, 503 dependency |
@@ -32,6 +32,16 @@
 JSON endpoints с телом требуют `Content-Type: application/json`, не более 1 MiB, один JSON value и отсутствие неизвестных полей. Ошибки декодирования возвращают 400 `invalid_json`. Required-поля описаны в DTO metadata; предметные проверки выполняет service, metadata не заменяет runtime validation. Новые session endpoints не принимают JSON body.
 
 Email нормализуется trim/lower, до 255 байт, без display name и обёртки. Новый пароль — 8–128 байт, содержит букву, цифру и uppercase-букву. Это текущая политика, не рекомендация для всех продуктов. В Swagger длины не выражены через minLength/maxLength: байты UTF-8 не равны числу символов. При login новый-password policy повторно не применяется.
+
+## Регистрация и повтор после сбоя
+
+Аккаунт, login email, credentials, профиль, verification challenge/outbox и audit создаются одной SQL-транзакцией. Ошибка внутри неё откатывает все записи; повтор после подтверждённого rollback может создать аккаунт. Предварительный ExistsByEmail экономит hashing для занятого адреса, но не заменяет UNIQUE: гонку выигрывает одна транзакция, остальные возвращают 409 `email_already_exists` без сессии/Set-Cookie и без повторного письма.
+
+Сессия создаётся отдельным шагом после account commit. Сбой session/token generation не удаляет созданный аккаунт и не отменяет поставленное verification-письмо. При потерянном ответе возможна уже созданная сессия, raw token которой клиент не получил; её сроки/retention остаются обычными. Не пытаемся удалять пользователя или делать автоматический login по конфликту email.
+
+Timeout, 500/503 или потеря HTTP/COMMIT-ответа не позволяют клиенту определить, был ли account commit. Можно повторить registration, но запрос не идемпотентен в смысле воспроизведения прежнего 201/cookie: если аккаунт уже создан, получим 409. Дальше — отдельный login с паролем; 409 не доказывает владение адресом и не разрешает выдачу session. Если пароль неизвестен — стандартное восстановление. UI должен различать «аккаунт создан» и «вход выполнен», не повторять регистрацию бесконечно и не обещать откат при dependency error.
+
+Локальная приёмка 6.6: 16 service-запросов одного нормализованного email принудительно проходят preflight до CreateUser; один success, 15 domain conflicts и одна verification/session. Проверены rollback после queue, account commit с моделируемой потерей ответа, session failure до commit и session commit с моделируемой потерей ответа, последующий retry/login и отсутствие cookie в ошибочном HTTP-ответе. SQL commit настоящий; ошибка reply инжектируется тестовым adapter после него, не реальным сетевым proxy. Test hash/limiter заменяют Argon2/Redis; это не нагрузка или network failover acceptance.
 
 ## Cookie и безопасность
 

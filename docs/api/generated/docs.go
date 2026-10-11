@@ -894,7 +894,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/register/email": {
             "post": {
-                "description": "Creates an account, queues email verification atomically and sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie. Unverified accounts can sign in but cannot change their password. HTTPS and an allowed Origin are required. Email is normalized and limited to 255 bytes; password is 8-128 bytes with a letter, digit and uppercase letter.",
+                "description": "Creates an account and queues email verification atomically, then creates a session and sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie. A timeout or session error does not prove account rollback. Retrying an already committed registration returns 409 without a cookie; use normal login or password recovery, never automatic login on conflict. Unverified accounts can sign in but cannot change their password. HTTPS and an allowed Origin are required. Email is normalized and limited to 255 bytes; password is 8-128 bytes with a letter, digit and uppercase letter.",
                 "consumes": [
                     "application/json"
                 ],

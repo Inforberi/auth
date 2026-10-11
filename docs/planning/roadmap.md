@@ -428,7 +428,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 3. Toolchain/окружение/deps | Адаптировано в 1.3 | Dev startup/SMTP smoke после CGO fix подтверждён 06.10.2026 |
 | 4. Структура/схема/API | Завершён | Дерево, SQL schema и API contract checks; security enforcement впереди |
 | 5. Account lifecycle | 5.1–5.4, 5.5a–d, 5.5e-local, 5.6a/worker, 5.7a–b и 5.7c-local реализованы/проверены локально | Далее оставшиеся задачи 6; 5.6b-operations/5.5e-staging, protected admin/operator flow и non-password proof открыты |
-| 6. Безопасность сессий | Частично выполнен, включая 6.1a/6.1b-local/6.4a/6.5-local/6.8a | SQL authority/atomic revoke, rotation/password fresh-auth, Origin/CORS/headers/optional TLS, shared budgets/limits, indexed GC и CAS refresh локально проверены; MFA context, внешние SMTP/browser и mixed/multi-instance release приёмка впереди |
+| 6. Безопасность сессий | Частично выполнен, включая 6.1a/6.1b-local/6.4a/6.5-local/6.6/6.8a | SQL authority/atomic revoke, rotation/password fresh-auth, Origin/CORS/headers/optional TLS, registration race/retry contract, shared budgets/limits, indexed GC и CAS refresh локально проверены; MFA context, внешние SMTP/browser и mixed/multi-instance release приёмка впереди |
 | 7. Identities / SSO boundary | Не начат | После 0, 4, 6; общий SSO optional |
 | 8. Telegram/OIDC/OTP | Не начат | После 5–7; Mini Apps optional |
 | 9. Policy/linking | Не начат | После 7–8; admin API зависит от 10 и 13.1 |

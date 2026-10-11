@@ -24,6 +24,8 @@ func TestPostgresSchema(t *testing.T) {
 	t.Run("repository", func(t *testing.T) { checkRepository(t, db, ctx, repo) })
 	t.Run("constraints", func(t *testing.T) { checkConstraints(t, db, ctx, repo) })
 	t.Run("concurrent registration", func(t *testing.T) { checkConcurrentRegistration(t, db, ctx, repo) })
+	t.Run("registration service race", func(t *testing.T) { checkRegistrationServiceRace(t, db, ctx) })
+	t.Run("registration failures", func(t *testing.T) { checkRegistrationFailures(t, db, ctx) })
 	t.Run("session management", func(t *testing.T) { checkSessionManagement(t, db, ctx) })
 	t.Run("session rotation", func(t *testing.T) { checkSessionRotation(t, db, ctx) })
 	t.Run("fresh authentication", func(t *testing.T) { checkFreshAuthentication(t, db, ctx) })

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -39,7 +40,9 @@ func TestRecovererDoesNotLogSecrets(t *testing.T) {
 
 func TestRecovererPreservesAbortWithoutWrapper(t *testing.T) {
 	defer func() {
-		if value := recover(); value != http.ErrAbortHandler {
+		value := recover()
+		err, ok := value.(error)
+		if !ok || !errors.Is(err, http.ErrAbortHandler) || err.Error() != http.ErrAbortHandler.Error() {
 			t.Fatal("abort changed", value)
 		}
 	}()
