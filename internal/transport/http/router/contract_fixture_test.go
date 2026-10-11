@@ -66,6 +66,7 @@ func contractHandlers(env string) Handlers {
 	log := zap.NewNop()
 	return Handlers{
 		Session:           sessionhttp.NewHandler(contractManagement{}, log),
+		Rotation:          sessionhttp.NewRotation(contractRotation{}, log),
 		Recovery:          passwordhttp.NewRecovery(contractRecovery{}, log),
 		Account:           accounthttp.New(contractAccounts{}, log),
 		EmailChange:       accounthttp.NewEmailChange(contractEmailChange{}, log),
@@ -95,6 +96,16 @@ func (contractPasswords) ChangePassword(context.Context, accountdomain.UserID, s
 }
 
 type contractSessions struct{}
+
+func (s contractSessions) ValidateSessionWithoutRefresh(ctx context.Context, token string) (*sessionservice.ValidationResult, error) {
+	return s.ValidateSession(ctx, token)
+}
+
+type contractRotation struct{}
+
+func (contractRotation) Rotate(context.Context, accountdomain.UserID, string) (*sessionservice.CreatedSession, error) {
+	return &sessionservice.CreatedSession{RawToken: validCookieToken, ExpiresAt: time.Now().Add(time.Hour)}, nil
+}
 
 func (contractSessions) ValidateSession(_ context.Context, token string) (*sessionservice.ValidationResult, error) {
 	if token != validCookieToken {

@@ -1,6 +1,6 @@
 # Текущий API-контракт
 
-Состояние на 10 октября 2026. Источник маршрутов — `internal/transport/http/router`; DTO и error mapping — transport каждой фичи. Спецификация — Swagger 2.0, не OpenAPI 3.
+Состояние на 11 октября 2026. Источник маршрутов — `internal/transport/http/router`; DTO и error mapping — transport каждой фичи. Спецификация — Swagger 2.0, не OpenAPI 3.
 
 | Метод и путь | Успех | Ошибки |
 | --- | --- | --- |
@@ -20,6 +20,7 @@
 | POST `/api/v1/auth/reset-password` | 200, `status: ok`, очистка cookie, отзыв всех сессий | 400 input/invalid_reset/password_mismatch/password_policy, 429 limits, 503 dependency |
 | GET `/api/v1/auth/me` | 200, `userId`, `sessionId` | 401 unauthorized, 503 dependency |
 | GET `/api/v1/auth/sessions` | 200, `sessions`, optional `nextCursor` | 400 invalid_session_id, 401 unauthorized, 503 dependency |
+| POST `/api/v1/auth/session/rotate` | 204, новый токен только в cookie; прежний недействителен | 401 unauthorized, 403 invalid_origin, 503 dependency |
 | POST `/api/v1/auth/logout` | 204, отзыв текущей сессии, очистка cookie | 401 unauthorized с очисткой stale cookie, 403 invalid_origin, 404 session_not_found при гонке expiry, 503 dependency |
 | POST `/api/v1/auth/logout-all` | 204, отзыв всех собственных сессий, очистка cookie | 401 unauthorized, 403 invalid_origin, 503 dependency |
 | DELETE `/api/v1/auth/sessions/{id}` | 204, отзыв собственной сессии; cookie очищается при отзыве текущей | 400 invalid_session_id, 401 unauthorized, 403 invalid_origin, 404 session_not_found, 503 dependency |
@@ -42,6 +43,8 @@ Session API 5.3 доступен и до подтверждения email. `me` 
 Для POST logout/logout-all и DELETE session обязателен один точный HTTPS `Origin` из `AUTH_ALLOWED_ORIGINS` (через запятую, без пробелов и путей). Отсутствующий, `null`, чужой или повторный Origin — 403 до session lookup; Host/X-Forwarded-Host не задают доверие. Это защита от browser CSRF для новых mutations; не аутентификация для небраузерного клиента. CORS и другие state-changing auth endpoints пока не переведены на эту политику — общий этап 6.5 остаётся открытым. Cross-origin frontend потребует отдельного CORS/cookie профиля; базовый профиль — same-origin cookie/BFF.
 
 Управление сессиями повторно проверяет caller/status/version/expiry под user row lock в SQL-транзакции. Logout-all повышает `auth_version`, блокируя stale issuance; ошибка audit откатывает отзыв. 503 не очищает cookie как будто logout завершён. Logout при отсутствующем/просроченном/отозванном cookie возвращает 401 и очищает cookie; неизвестная зависимостная ошибка остаётся 503. SameSite не заменяет проверку Origin.
+
+Ротация — явный POST с текущим cookie и разрешённым Origin, без body и без токена в JSON; ответы no-store. Атомарно заменяет verifier в существующей SQL session: UUID, owner/version, created_at и idle/absolute deadlines сохраняются. Middleware ротации и logout проверяет доступ без sliding refresh, не выполняя лишнюю запись перед заменой/отзывом. Только одна параллельная замена старого verifier успешна; старый cookie не принимается после commit, grace period нет. Ротация не является fresh-auth и не подтверждает пароль/MFA. Ошибка не меняет cookie, чтобы проигравший запрос не очистил cookie победителя. Browser-клиент должен сериализовать ротации и согласовать их с защищёнными запросами/refresh между вкладками: поздний ответ с прежним Set-Cookie может затереть новый cookie, хотя старый токен не возвращает серверный доступ. Потеря успешного ответа требует нового login; автоматические retry со старым cookie не восстанавливают токен. Настоящая browser-приёмка остаётся открытой.
 
 5.4 не добавляет HTTP endpoints. Blocked/deleted не участвует в credential lookup и session validation. Если аккаунт блокируется или его version меняется между чтением credentials и выдачей сессии, login возвращает существующий 400 `invalid_credentials` без cookie, а не 500; зависимости не маскируются под неверные credentials. Change-password также отклоняет inactive credential lookup/transaction без изменения пароля. Block/unblock реализован внутренним account service с atomic revoke/audit; `ActorID` не даёт права администратора. Admin HTTP transport будет включён только после permissions/MFA/fresh-auth/CSRF, deletion/retention — отдельно в 5.6.
 

@@ -20,14 +20,18 @@ func unauthorized(w http.ResponseWriter) {
 }
 
 func (m *Middleware) Auth(next http.Handler) http.Handler {
-	return m.authenticate(next, false)
+	return m.authenticate(next, false, true)
 }
 
 func (m *Middleware) LogoutAuth(next http.Handler) http.Handler {
-	return m.authenticate(next, true)
+	return m.authenticate(next, true, false)
 }
 
-func (m *Middleware) authenticate(next http.Handler, clearInvalid bool) http.Handler {
+func (m *Middleware) RotationAuth(next http.Handler) http.Handler {
+	return m.authenticate(next, false, false)
+}
+
+func (m *Middleware) authenticate(next http.Handler, clearInvalid, refreshCookie bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, err := GetSessionCookie(r)
 		if err != nil {
@@ -38,7 +42,11 @@ func (m *Middleware) authenticate(next http.Handler, clearInvalid bool) http.Han
 			return
 		}
 
-		session, err := m.session.ValidateSession(r.Context(), token)
+		validate := m.session.ValidateSession
+		if !refreshCookie {
+			validate = m.session.ValidateSessionWithoutRefresh
+		}
+		session, err := validate(r.Context(), token)
 		if err != nil {
 			if clearInvalid && httpx.MapError(err, sessionErrors, httpx.Failure{Status: 503}).Status == 401 {
 				ClearSessionCookie(w)
@@ -55,7 +63,7 @@ func (m *Middleware) authenticate(next http.Handler, clearInvalid bool) http.Han
 				TokenHash: session.TokenHash,
 			})
 
-		if session.Extended && !clearInvalid {
+		if session.Extended && refreshCookie {
 			SetSessionCookie(w, token, session.ExpiresAt)
 		}
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -64,6 +72,7 @@ func (m *Middleware) authenticate(next http.Handler, clearInvalid bool) http.Han
 
 type SessionService interface {
 	ValidateSession(ctx context.Context, rawToken string) (*sessionservice.ValidationResult, error)
+	ValidateSessionWithoutRefresh(ctx context.Context, rawToken string) (*sessionservice.ValidationResult, error)
 }
 
 type Middleware struct {

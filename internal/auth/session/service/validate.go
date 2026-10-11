@@ -18,6 +18,14 @@ type ValidationResult struct {
 }
 
 func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (*ValidationResult, error) {
+	return s.validateSession(ctx, rawToken, true)
+}
+
+func (s *SessionService) ValidateSessionWithoutRefresh(ctx context.Context, rawToken string) (*ValidationResult, error) {
+	return s.validateSession(ctx, rawToken, false)
+}
+
+func (s *SessionService) validateSession(ctx context.Context, rawToken string, refresh bool) (*ValidationResult, error) {
 	hashToken := s.token.Hash(rawToken)
 
 	session, err := s.repo.FindSession(ctx, hashToken)
@@ -38,7 +46,7 @@ func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (
 	timeLeft := session.ExpiresAt.Sub(now)
 	extended := false
 
-	if timeLeft <= s.cfg.SessionRefreshThreshold {
+	if refresh && timeLeft <= s.cfg.SessionRefreshThreshold {
 		candidate := now.Add(s.cfg.SessionTTL)
 		if candidate.After(absoluteTime) {
 			candidate = absoluteTime

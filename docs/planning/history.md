@@ -2,6 +2,12 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат 6.1a — 11 октября 2026
+
+Добавлен явный POST /api/v1/auth/session/rotate с allowed Origin/current session cookie/no-store. Feature-local service/repository/HTTP сохраняют существующее дерево: 111 строк в трёх новых runtime-файлах, без schema/env/worker. SQL transaction сначала блокирует active owner FOR SHARE, затем условно заменяет verifier с актуальными version/revoked/expiry guards. Session UUID, created_at и idle/absolute deadlines не меняются; fresh-auth не обновляется. Из 16 concurrent replacements один успех, старый verifier не принимается после commit. Middleware logout/rotation валидирует без sliding refresh; ошибочный/проигравший rotate не меняет cookie. Изменение API/Swagger намеренное, контракт cookie-only 204.
+
+Formatter, task check (tests + lint, 0 issues), race session service/HTTP/router и Swagger generation/drift прошли. Целевой disposable PostgreSQL up/down/up session_rotation — 0.578s: concurrent one-winner/old-token replay, сохранение контекста/сроков, foreign caller, version revoke, idle/absolute expiry, revoked/blocked/deleted guards. SQL fixture для deleted использует существующий blocked+deleted_at контракт. Тестовый контейнер auth-session-rotation-check-20261011 удалён с synthetic data; рабочая БД/env/secrets не менялись. Browser координация параллельных ответов, lost response, fresh-auth и fault/load приёмка не закрыты; следующий 6.1b, профиль памяти/Go GC остаётся 6.8c. Коммит не выполнялся.
+
 ### Результат 5.7c-readability — 11 октября 2026
 
 После согласования упрощена организация temporary-password service: выдача и перевыпуск с input/result/helpers в temporary_issuance.go, результат первого входа рядом с Login. Убрана зависимость от RecoveryService: необходимые hash/limiter/digest передаются напрямую, механизм проверки лимита общий с recovery. App переиспользует один Redis limiter adapter. Callback аккаунта сохранён для атомарного provisioning без SQL-дублирования; SQL preflight и transaction guards защищают разные гарантии и оставлены. Delivery cleanup переименован в transient cleanup по фактическому назначению. В AGENTS и implementation закреплено правило продумывать простейшее достаточное решение до реализации, без искусственных файлов/слоёв.

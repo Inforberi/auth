@@ -22,6 +22,10 @@ type sessionStub struct {
 
 const validCookieToken = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
+func (s *sessionStub) ValidateSessionWithoutRefresh(ctx context.Context, token string) (*service.ValidationResult, error) {
+	return s.ValidateSession(ctx, token)
+}
+
 func (s *sessionStub) ValidateSession(context.Context, string) (*service.ValidationResult, error) {
 	s.calls++
 	if s.err != nil {

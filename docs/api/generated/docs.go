@@ -843,6 +843,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/auth/session/rotate": {
+            "post": {
+                "description": "Requires an allowed Origin and the current session cookie. Replaces the token once without extending deadlines or refreshing authentication. Concurrent rotations have one winner; serialize browser requests around rotation. A lost successful response requires a new login. No old-token grace period.",
+                "tags": [
+                    "Session"
+                ],
+                "summary": "Rotate the current session token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact HTTPS origin from AUTH_ALLOWED_ORIGINS",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/sessions": {
             "get": {
                 "description": "Up to 50 items ordered by creation time and public UUID descending; pass nextCursor as before. No session secrets are returned.",

@@ -62,3 +62,17 @@ func TestAbsoluteExpiryDoesNotWrite(t *testing.T) {
 	}
 	repo.AssertNotCalled(t, "RefreshSession", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
+
+func TestValidationWithoutRefreshDoesNotWrite(t *testing.T) {
+	repo, token, clock := &mockRepo{}, &mockTokenHash{}, &mockClock{}
+	expiry := now.Add(time.Minute)
+	session := &sessiondomain.Session{UserID: "user", CreatedAt: now, ExpiresAt: expiry, AbsoluteExpiresAt: now.Add(time.Hour)}
+	repo.On("FindSession", mock.Anything, "hash").Return(session, nil)
+	token.On("Hash", "raw").Return("hash")
+	clock.On("NowUTC").Return(now)
+	result, err := New(clock, repo, token, cfg).ValidateSessionWithoutRefresh(t.Context(), "raw")
+	if err != nil || result.Extended || !result.ExpiresAt.Equal(expiry) {
+		t.Fatal(result, err)
+	}
+	repo.AssertNotCalled(t, "RefreshSession", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}

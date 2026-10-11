@@ -92,6 +92,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	}
 	handler := router.New(router.Handlers{
 		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
+		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessionRepo, tokenGen), log),
 		Recovery:          passwordhttp.NewRecovery(recoverySvc, log),
 		Account:           accounthttp.New(accountSvc, log),
 		EmailChange:       emailChange,
