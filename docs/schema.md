@@ -8,7 +8,9 @@
 
 ## Владельцы данных
 
-A3.1 добавляет `auth.linked_identities`: exact issuer (до 512 байт) + subject (до 255 байт), COLLATE C/составной PK, user_id FK и индекс владельца. Создание external-only user/identity/profile атомарно, email/password необязательны. При soft deletion ownership остаётся у tombstone; automatic identity release не реализован. Proof verification и linking transport — следующие задачи. [Контракт](features/external-identities.md).
+A3.1 добавляет `auth.linked_identities`: exact issuer (до 512 байт) + subject (до 255 байт), COLLATE C/составной PK, user_id FK и индекс владельца. Создание external-only user/identity/profile атомарно, email/password необязательны. При soft deletion ownership остаётся у tombstone; automatic identity release не реализован. A3.2 добавляет proof verification для Telegram; linking transport остаётся отдельной задачей. [Контракт](features/external-identities.md).
+
+A3.2 добавляет `auth.identity_audit`: user UUID, identity_created event, auth_version/time, без issuer/subject/token. Запись атомарна с creation и UNIQUE race rollback, FK сохраняет audit при soft deletion. Индекс created_at/id и existing bounded retention применяют SECURITY_AUDIT_RETENTION_DAYS (по умолчанию 180). Telegram flows в SQL не хранятся: single-use state/binding/verifier/nonce живут в Redis 5 минут. [Контракт](features/telegram-login.md).
 
 5.5 добавляет `auth.email_changes` (user/contact/session/version binding, отдельные confirm/report digests, state/expiry/protection window, encrypted completion payload), `auth.email_change_outbox` (mail intents/lease/retries) и `auth.email_change_audit` (user/change UUID/event без email/raw token). Один pending intent на пользователя; старый подтверждённый контакт сохраняется при переводе password credential на новый. Audit переживает expiry cleanup intent; restrict user/contact FK не разрешает незаметную потерю security history. Удаление/retention согласуется в 5.6; [подробности](features/email-change.md).
 

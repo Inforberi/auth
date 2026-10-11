@@ -9,6 +9,8 @@
 | GET `/health/ready` | 200, `status` | 503 без деталей зависимости |
 | POST `/api/v1/auth/register/email` | 201, `userID`, Set-Cookie, queued verification | 400 validation, 409 email conflict, 429 limits, 503 limits/deadline, 500 internal_error; ошибка не доказывает rollback аккаунта |
 | POST `/api/v1/auth/login/email` | 200, `status`, Set-Cookie | 400 validation/invalid_credentials, 500 internal_error |
+| POST `/api/v1/auth/telegram/start` | 200, authorizationUrl и flow cookie, optional profile | 403 invalid_origin, 429 rate_limited, 503 temporarily_unavailable; disabled route отсутствует |
+| GET `/api/v1/auth/telegram/callback` | 200, status и прежний session cookie | 400 invalid_login, 429 rate_limited, 503 temporarily_unavailable; single-use browser binding |
 | POST `/api/v1/auth/change-password` | 200, **`Status`**, очистка cookie, отзыв всех сессий | 401 session, 403 email_not_verified, 503 SQL gate, 400 input/credential/password_policy errors, 404 not_found, 500 internal_error |
 | POST `/api/v1/auth/email/resend` | 202, `status: accepted` | 400 input, 429 limits, 503 dependency |
 | POST `/api/v1/auth/email/verify` | 200, `status: ok` | 400 input/invalid_verification, 429 limits, 503 dependency |
@@ -87,4 +89,8 @@ Optional temporary-password профиль добавляет POST `/api/v1/auth
 
 `task swagger` обновляет артефакты. `task check:api` генерирует JSON/YAML/Go во временный каталог, сравнивает все три файла с сохранёнными и удаляет только временные файлы. Включён в CI; новый shell-скрипт не добавлен. Это generation drift и целевые структурные contract checks, не полный внешний Swagger-validator, security audit или browser test.
 
-Проверка SQL up/down/up выполнена на отдельном PostgreSQL в 4.1 и повторена после добавления verification/recovery в 5.1/5.2; рабочая БД не менялась. Future logout/Telegram/MFA/payment endpoints не публикуются в Swagger как уже работающие.
+Проверка SQL up/down/up выполнена на отдельном PostgreSQL и повторена для identity audit в A3.2; рабочая БД не менялась. Telegram — local-tested optional flow, live staging впереди. Future MFA/payment endpoints не публикуются в Swagger как уже работающие.
+
+## Telegram login
+
+Optional POST `/api/v1/auth/telegram/start` требует allowed Origin, возвращает authorizationUrl и HttpOnly browser binding cookie. GET `/api/v1/auth/telegram/callback` — исключение только для provider redirect: single-use state/cookie/PKCE/nonce заменяют Origin-проверку этого flow. Success выставляет прежний `__Host-session`, без JWT/token в JSON; ошибки не очищают текущую сессию. Disabled routes отсутствуют. [Конфигурация, ошибки и ограничения](../features/telegram-login.md).

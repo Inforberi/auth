@@ -8,7 +8,7 @@
 
 Resolver возвращает существующий active account и текущий auth_version. При неизвестной identity и запрещённой регистрации — ErrIdentityNotFound. При разрешённой регистрации user, identity и пустой profile создаются одной транзакцией, без выдуманного email/пароля и без переноса чужих прав. Конкурентный UNIQUE conflict откатывает весь проигравший candidate user, затем читает committed owner. Другие SQL ошибки не маскируются под duplicate и не повторяются автоматически.
 
-В service один deadline 5 секунд для всего resolution. Штатный existing-user путь — один индексированный SELECT с JOIN users; создание — lookup и три INSERT в одной транзакции. Нет Redis cache, обновления last-login на каждом входе, advisory locks, очереди или background worker. Сроки и суммарная concurrency ограничиваются существующими HTTP/DB budgets при подключении adapter; этот модуль сам по себе не измеряет RPS.
+В service один deadline 5 секунд для всего resolution. Штатный existing-user путь — один индексированный SELECT с JOIN users; создание — lookup и четыре INSERT (user/identity/profile/audit) в одной транзакции после A3.2. Нет Redis cache, обновления last-login на каждом входе, advisory locks, очереди или background worker. Сроки и суммарная concurrency ограничиваются существующими HTTP/DB budgets; этот модуль сам по себе не измеряет RPS.
 
 ## Совместимость и границы
 
@@ -16,7 +16,7 @@ Password/contact/session tables и их публичные APIs не меняю�
 
 Pending/blocked/deleted account не получает успешный resolution. Блокировка/разблокировка сохраняет ownership; soft deletion сохраняет identity как reservation у tombstone, чтобы следующий callback не создал новый доступ в обход отзыва. Это не полное удаление персональных данных. Автоматический release identities сейчас отсутствует; отдельную политику release/PII erasure и защиты от takeover нужно согласовать до self-service deletion UI.
 
-В этом подэтапе resolver не подключён к публичному login: нет provider SDK/secrets, callback, linking/unlinking, MFA orchestration или identity audit API. Перед публикацией следующего flow нужны trusted provider verification, enabled/registration policy и транзакционный audit создания/привязки. Link/unlink потребует fresh auth и owner/session guards; автоматическое назначение identity существующему аккаунту не реализовано.
+A3.2 подключает resolver к optional Telegram login с trusted OIDC verification, enabled/registration policy и transactional creation audit. Доступ к audit API, linking/unlinking и MFA orchestration ещё не реализован. Link/unlink потребует fresh auth и owner/session guards; автоматическое назначение identity существующему аккаунту отсутствует. [Telegram contract](telegram-login.md).
 
 Схема добавлена в исходную 000001 согласно текущему pre-release правилу. Уже применённая БД не обновится повторным migrate up; нужен согласованный upgrade, не reset рабочей БД.
 

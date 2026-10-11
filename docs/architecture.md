@@ -164,7 +164,9 @@ README.md
 
 Метод проверяет своё доказательство, account разрешает пользователя и его состояние, MFA выполняет второй фактор при необходимости, session выдаётся только после нужных проверок. Общую координацию выделять позже лишь при реальном дублировании сценариев.
 
-A3.1 реализует account identity resolution в существующих domain/service/repository/postgres. IdentityKey — точные issuer/subject, не email; user и identity создаются атомарно. Публичного provider flow/linking пока нет: проверка proof и session/MFA orchestration реализуются вместе с методом входа. [Текущий контракт](features/external-identities.md).
+A3.1 реализует account identity resolution в существующих domain/service/repository/postgres. IdentityKey — точные issuer/subject, не email; user и identity создаются атомарно. A3.2 подключает проверку provider proof и создание сессии для Telegram; linking и MFA остаются отдельными задачами. [Текущий контракт](features/external-identities.md).
+
+A3.2 подключает optional Telegram OIDC: методы/service/repository/transport находятся в `auth/methods/telegram`, протокольный клиент — `integrations/telegram`, сборка — `app/auth/telegram.go`. Общего provider framework и пустого oidc-пакета нет: выделение общего кода допускается при втором adapter. Session переиспользуется; linking/MFA ещё впереди. [Текущий flow](features/telegram-login.md).
 
 `settings` принадлежит access/entitlement/billing, не глобальному модулю: продуктовые каталоги/политики отдельно от secret provisioning и runtime подключения. `integrations` — протокольные клиенты, не linking, роли или payment state machine. `infra/postgres`/`infra/redis` — подключения; feature repository — операции хранения. Название Redis обозначает технологию, не ограничивает назначение адаптера кешем или временными данными. Источник истины определяется гарантиями конкретного сценария и ADR.
 
