@@ -2,6 +2,14 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат A3.1 / 7.1-local — 11 октября 2026
+
+Внутри account добавлены IdentityKey/domain validation, IdentityResolution service и PostgreSQL resolution. Exact case-sensitive issuer/subject ownership хранится в linked_identities: составной PK и owner FK/index. Existing-user path — один indexed SELECT/JOIN; unknown identity при разрешённой регистрации — atomic user/identity/profile без email/password. Проигравший UNIQUE transaction полностью откатывается, затем читает committed owner; только conflict нужного constraint распознаётся как параллельная регистрация. Service применяет один deadline 5s и отказывает pending/blocked/deleted account. Soft deletion сохраняет ownership reservation: callback не создаёт новый доступ. Это не полное PII erasure; политика release identities требует отдельного решения до deletion UI.
+
+Основа не подключена к публичному login, потому что trusted provider proof, disabled policy, audit и session orchestration относятся к следующему A3.2. Не появились callback/link/unlink routes, env, SDK, workers или cache. Password/session flow не изменён. Исходная 000001 расширена по pre-release правилу; рабочая БД не менялась и существующей установке потребуется согласованный upgrade. Контракт — [external identities](../features/external-identities.md).
+
+Formatter/task check (tests + lint 0 issues), race account domain/service и полный disposable PostgreSQL 18.6 up/down/up с race (6.226s) пройдены. Первый SQL прогон выявил устаревшее предположение трёх registration tests «все users имеют password credentials»: оно неверно для external-only users. Проверки заменены на дельту count до/после операции, сохранив обнаружение orphan users; повторный полный suite прошёл. SQL проверяет 16 concurrent resolutions/одного владельца, no email/password/profile consistency, exact key isolation, disabled registration, constraint rollback, block/unblock/version/deletion. Проверочный контейнер и временные synthetic data удалены. Внешний provider/browser/fault/load не проверены; RPS не установлен. A3 целиком не закрыт; коммит не выполнялся.
+
 ### Результат A2-local — 11 октября 2026
 
 Проверены существующие account/session service, SQL authority/locks и HTTP cookie/error contracts. Реализацию lifecycle не переписывали: регистрация, email verification, password recovery/change, email change/protected recovery, block/delete/retention, session management/rotation/fresh-auth уже имеют локальные сценарии и транзакционные проверки. Отсутствие admin block/delete/provisioning APIs сейчас намеренно: публикация требует ролей/MFA A4/A5. Verification settings и UI — A6/A7, не пробел, который следует закрывать вторым механизмом сейчас.

@@ -1,4 +1,4 @@
-# Схема Auth — этапы 4.1 и 5.1–5.7a
+# Схема Auth
 
 Источник: `migrations/000001_init` (up/down). Один экземпляр Auth обслуживает один проект; внутренний UUID пользователя не зависит от метода входа.
 
@@ -7,6 +7,8 @@
 Схема recovery включена в исходную 000001: recovery digest/encrypted payload/TTL и nullable issued version/expiry в email_changes, owner index для lifecycle cleanup, recovery kind в outbox и recovered event в audit. Все recovery поля для старых intents остаются NULL, они не получают recovery authority. Срок начинается при защитном report; worker сохраняет intent до максимума protection/recovery expiry. Успешное восстановление меняет password credential и verified contacts, отзывает доступ и инвалидирует прежние intents/jobs одной транзакцией. Повторный административный block отменяет даже уже выданный recovery. Подробный контракт — [email change](features/email-change.md).
 
 ## Владельцы данных
+
+A3.1 добавляет `auth.linked_identities`: exact issuer (до 512 байт) + subject (до 255 байт), COLLATE C/составной PK, user_id FK и индекс владельца. Создание external-only user/identity/profile атомарно, email/password необязательны. При soft deletion ownership остаётся у tombstone; automatic identity release не реализован. Proof verification и linking transport — следующие задачи. [Контракт](features/external-identities.md).
 
 5.5 добавляет `auth.email_changes` (user/contact/session/version binding, отдельные confirm/report digests, state/expiry/protection window, encrypted completion payload), `auth.email_change_outbox` (mail intents/lease/retries) и `auth.email_change_audit` (user/change UUID/event без email/raw token). Один pending intent на пользователя; старый подтверждённый контакт сохраняется при переводе password credential на новый. Audit переживает expiry cleanup intent; restrict user/contact FK не разрешает незаметную потерю security history. Удаление/retention согласуется в 5.6; [подробности](features/email-change.md).
 
