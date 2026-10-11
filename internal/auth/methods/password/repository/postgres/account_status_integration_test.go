@@ -192,6 +192,8 @@ func checkStatusAuditRollback(t *testing.T, db *pgxpool.Pool, ctx context.Contex
 
 type loginTestHasher struct{ afterCompare func() error }
 
+func (loginTestHasher) NeedsRehash(string) bool { return false }
+
 type loginTestLimit struct{}
 
 func (loginTestLimit) Allow(context.Context, string, string) error { return nil }

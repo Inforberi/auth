@@ -57,6 +57,9 @@ func (l *PasswordService) Login(ctx context.Context, input LoginInput) (*LoginRe
 		return nil, passworddomain.ErrInvalidEmailOrPassword
 	}
 
+	if err := l.rehash(ctx, authData, input.Password); err != nil {
+		return nil, err
+	}
 	session, err := l.session.CreateSessionAtVersion(ctx, authData.UserID, input.UserAgent, input.IP, authData.AuthVersion)
 	if err != nil {
 		if errors.Is(err, sessiondomain.ErrSessionNotFound) || errors.Is(err, sessiondomain.ErrSessionExpired) {

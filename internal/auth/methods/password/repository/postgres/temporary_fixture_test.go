@@ -18,6 +18,8 @@ import (
 
 type temporaryFixtureHash struct{}
 
+func (temporaryFixtureHash) NeedsRehash(string) bool { return false }
+
 func (temporaryFixtureHash) GenerateHash(_ context.Context, raw []byte) (string, error) {
 	digest := sha256.Sum256(raw)
 	return "test-only:" + hex.EncodeToString(digest[:]), nil

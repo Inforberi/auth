@@ -7,8 +7,13 @@ import (
 )
 
 type passwordHasher interface {
+	NeedsRehash(string) bool
 	GenerateHash([]byte) (string, error)
 	Compare(string, string) error
+}
+
+func (h *Bounded) NeedsRehash(encoded string) bool {
+	return h.hash.NeedsRehash(encoded)
 }
 
 type Bounded struct {

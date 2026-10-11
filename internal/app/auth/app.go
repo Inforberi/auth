@@ -51,7 +51,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	}
 	passwordRepo := assembleRegistration(pool, accountSvc, accountRepo)
 	retentionSvc := accountservice.NewRetention(accountRepo, cfg.Retention)
-	argonHash := hasher.NewBounded(hasher.NewArgon2idHash(1, 32, 64*1024, 32, 256), cfg.Capacity.HashConcurrency)
+	argonHash := hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), cfg.Capacity.HashConcurrency)
 	sessionRepo := sessionpostgres.New(pool)
 	sessionSvc := sessionservice.New(now, sessionRepo, tokenGen, cfg.Session)
 	resetCipher, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "password-reset:v1")

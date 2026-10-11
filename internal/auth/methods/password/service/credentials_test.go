@@ -15,12 +15,12 @@ func TestCredentialInputBeforeDependencies(t *testing.T) {
 		want                  error
 	}{
 		{"both missing", "", "", accountdomain.ErrEmailRequired},
-		{"email missing", "", "Password123", accountdomain.ErrEmailRequired},
+		{"email missing", "", "River-Willow-73", accountdomain.ErrEmailRequired},
 		{"password missing", "user@example.com", "", domain.ErrPasswordRequired},
 		{"password before malformed email", "bad", "", domain.ErrPasswordRequired},
 		{"password before whitespace email", "   ", "", domain.ErrPasswordRequired},
-		{"whitespace email", "   ", "Password123", accountdomain.ErrEmailRequired},
-		{"malformed email", "bad", "Password123", accountdomain.ErrEmailInvalid},
+		{"whitespace email", "   ", "River-Willow-73", accountdomain.ErrEmailRequired},
+		{"malformed email", "bad", "River-Willow-73", accountdomain.ErrEmailInvalid},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// Nil dependencies ensure invalid input cannot reach DB, hashing or sessions.

@@ -9,10 +9,10 @@ type loginLimiter interface {
 type PasswordService struct {
 	repo       passwordRepo
 	session    session
-	hash       hasher
+	hash       loginHasher
 	loginLimit loginLimiter
 }
 
-func New(repo passwordRepo, session session, hash hasher, limit loginLimiter) *PasswordService {
+func New(repo passwordRepo, session session, hash loginHasher, limit loginLimiter) *PasswordService {
 	return &PasswordService{repo: repo, session: session, hash: hash, loginLimit: limit}
 }

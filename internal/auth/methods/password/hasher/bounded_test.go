@@ -10,6 +10,8 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 )
 
+func (*blockingHash) NeedsRehash(string) bool { return false }
+
 type blockingHash struct {
 	started chan struct{}
 	release chan struct{}

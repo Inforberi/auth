@@ -59,6 +59,12 @@ type mockHasher struct {
 	mock.Mock
 }
 
+func (m *mockHasher) NeedsRehash(string) bool { return false }
+
+func (m *mockPasswordRepo) RehashPassword(ctx context.Context, id accountdomain.UserID, version int64, expectedHash, newHash string) error {
+	return m.Called(ctx, id, version, expectedHash, newHash).Error(0)
+}
+
 func (m *mockHasher) GenerateHash(_ context.Context, password []byte) (string, error) {
 	args := m.Called(password)
 	return args.String(0), args.Error(1)
