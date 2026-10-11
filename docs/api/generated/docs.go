@@ -1181,6 +1181,113 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/auth/telegram/callback": {
+            "get": {
+                "description": "Provider browser redirect, bound to single-use state, PKCE, nonce and flow cookie. Sets only the existing __Host-session cookie. No UserInfo/email auto-merge. Restart login after a failed or lost callback.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Complete Telegram OIDC login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization code",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Single-use state",
+                        "name": "state",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.CallbackResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/telegram/start": {
+            "post": {
+                "description": "Requires allowed Origin. Sets a browser-bound HttpOnly flow cookie; navigate to authorizationUrl. Disabled by default.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Start Telegram OIDC login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.StartResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/temporary-password/complete": {
             "post": {
                 "description": "Optional temporary password profile. Consumes a one-time setup token and revokes temporary credentials atomically. Does not create a session, verify email, bypass MFA or grant roles. Use ordinary login afterwards. GET never changes credentials.",
@@ -1525,6 +1632,14 @@ const docTemplate = `{
                 }
             }
         },
+        "http.CallbackResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "http.MeResponse": {
             "type": "object",
             "properties": {
@@ -1573,6 +1688,14 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/http.SessionResponse"
                     }
+                }
+            }
+        },
+        "http.StartResponse": {
+            "type": "object",
+            "properties": {
+                "authorizationUrl": {
+                    "type": "string"
                 }
             }
         },

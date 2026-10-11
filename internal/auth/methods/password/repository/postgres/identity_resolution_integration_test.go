@@ -62,6 +62,10 @@ func checkIdentityResolution(t *testing.T, db *pgxpool.Pool, ctx context.Context
 	if user, err := resolver.Resolve(ctx, key, false); err != nil || user.ID != owner || user.AuthVersion != 1 {
 		t.Fatal("existing identity requires registration", user, err)
 	}
+	var audits int
+	if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.identity_audit WHERE user_id=$1 AND event='identity_created' AND auth_version=1`, owner).Scan(&audits); err != nil || audits != 1 {
+		t.Fatal("concurrent resolution duplicated or omitted audit", audits, err)
+	}
 	for _, other := range []accountdomain.IdentityKey{
 		{Issuer: key.Issuer, Subject: "external-subject"},
 		{Issuer: "https://other-identity.example", Subject: key.Subject},
@@ -100,4 +104,23 @@ func checkIdentityResolution(t *testing.T, db *pgxpool.Pool, ctx context.Context
 	if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.linked_identities WHERE issuer=$1 AND subject=$2 AND user_id=$3`, key.Issuer, key.Subject, owner).Scan(&total); err != nil || total != 1 {
 		t.Fatal("deletion released identity ownership", total, err)
 	}
+	t.Run("audit rollback", func(t *testing.T) {
+		if _, err := db.Exec(ctx, `ALTER TABLE auth.identity_audit ADD CONSTRAINT fixture_reject_identity CHECK (false) NOT VALID`); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			if _, err := db.Exec(ctx, `ALTER TABLE auth.identity_audit DROP CONSTRAINT fixture_reject_identity`); err != nil {
+				t.Error(err)
+			}
+		})
+		if _, err := resolver.Resolve(ctx, accountdomain.IdentityKey{Issuer: key.Issuer, Subject: "audit-failure"}, true); err == nil {
+			t.Fatal("audit failure committed identity")
+		}
+		if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.users`).Scan(&total); err != nil || total != baseline+4 {
+			t.Fatal("audit failure left account", total, err)
+		}
+		if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.linked_identities WHERE subject='audit-failure'`).Scan(&total); err != nil || total != 0 {
+			t.Fatal("audit failure left identity", total, err)
+		}
+	})
 }

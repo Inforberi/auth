@@ -7,6 +7,7 @@ import (
 
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
@@ -24,6 +25,7 @@ type Config struct {
 	EmailChange       accountservice.EmailChangeConfig
 	Invitation        accountservice.InvitationConfig
 	TemporaryPassword passwordservice.TemporaryPasswordConfig
+	Telegram          telegramservice.Config
 	Retention         accountservice.RetentionConfig
 	Postgres          postgres.Config
 	Logger            logger.Config

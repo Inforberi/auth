@@ -26,7 +26,10 @@ func (r *Repository) ResolveIdentityAccount(ctx context.Context, key domain.Iden
 			VALUES ($1,$2,$3)`, key.Issuer, key.Subject, user.ID); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `INSERT INTO auth.user_profile(user_id) VALUES ($1)`, user.ID)
+		if _, err := tx.Exec(ctx, `INSERT INTO auth.user_profile(user_id) VALUES ($1)`, user.ID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `INSERT INTO auth.identity_audit(user_id,event,auth_version) VALUES ($1,'identity_created',$2)`, user.ID, user.AuthVersion)
 		return err
 	})
 	var conflict *pgconn.PgError

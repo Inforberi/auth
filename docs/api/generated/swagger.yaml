@@ -60,6 +60,11 @@ definitions:
         example: ok
         type: string
     type: object
+  http.CallbackResponse:
+    properties:
+      status:
+        type: string
+    type: object
   http.MeResponse:
     properties:
       sessionId:
@@ -92,6 +97,11 @@ definitions:
         items:
           $ref: '#/definitions/http.SessionResponse'
         type: array
+    type: object
+  http.StartResponse:
+    properties:
+      authorizationUrl:
+        type: string
     type: object
   httpx.ErrorResponse:
     properties:
@@ -1082,6 +1092,80 @@ paths:
       summary: Revoke one own active session
       tags:
       - Session
+  /api/v1/auth/telegram/callback:
+    get:
+      description: Provider browser redirect, bound to single-use state, PKCE, nonce
+        and flow cookie. Sets only the existing __Host-session cookie. No UserInfo/email
+        auto-merge. Restart login after a failed or lost callback.
+      parameters:
+      - description: Authorization code
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: Single-use state
+        in: query
+        name: state
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.CallbackResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Complete Telegram OIDC login
+      tags:
+      - Auth
+  /api/v1/auth/telegram/start:
+    post:
+      description: Requires allowed Origin. Sets a browser-bound HttpOnly flow cookie;
+        navigate to authorizationUrl. Disabled by default.
+      parameters:
+      - description: Allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.StartResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Start Telegram OIDC login
+      tags:
+      - Auth
   /api/v1/auth/temporary-password/complete:
     post:
       consumes:

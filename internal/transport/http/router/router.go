@@ -12,6 +12,7 @@ import (
 
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
@@ -28,6 +29,7 @@ type Handlers struct {
 	ProtectedRecovery *passwordhttp.ProtectedRecoveryHandler
 	Activation        *passwordhttp.ActivationHandler
 	TemporaryPassword *passwordhttp.TemporaryPasswordHandler
+	Telegram          *telegramhttp.Handler
 	PasswordHandler   *passwordhttp.PasswordHandler
 	Middleware        *sessionhttp.Middleware
 	MailTest          *dev.MailTestHandler
@@ -72,6 +74,10 @@ func New(h Handlers) *chi.Mux {
 	r.Route("/api/v1/", func(r chi.Router) {
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(browserProtection(h))
+			if h.Telegram != nil && h.Config != nil && h.Config.Telegram.Enabled {
+				r.Post("/telegram/start", h.Telegram.Start)
+				r.Get("/telegram/callback", h.Telegram.Callback)
+			}
 			if h.Session != nil {
 				sessionRoutes(r, h)
 			}

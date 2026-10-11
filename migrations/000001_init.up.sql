@@ -30,6 +30,15 @@ CREATE TABLE auth.linked_identities (
 );
 CREATE INDEX linked_identities_owner ON auth.linked_identities(user_id);
 
+CREATE TABLE auth.identity_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  event TEXT NOT NULL CHECK (event = 'identity_created'),
+  auth_version BIGINT NOT NULL CHECK (auth_version > 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX identity_audit_retention ON auth.identity_audit(created_at,id);
+
 -- Deleted owners retain contacts until retention release; blocked owners are not released.
 CREATE TABLE auth.user_emails (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

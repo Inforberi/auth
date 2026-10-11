@@ -65,6 +65,13 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	passwordHandler := passwordhttp.New(passwordSvc,
 		log.With(zap.String("feature", "password_auth"), zap.String("layer", "transport")))
 	middleware := sessionhttp.New(sessionSvc, log)
+	telegram, closeTelegram, err := assembleTelegram(ctx, cfg, accountRepo, rdb, sessionSvc, log)
+	if err != nil {
+		return nil, fmt.Errorf("assemble telegram: %w", err)
+	}
+	if closeTelegram != nil {
+		resources.add(closeTelegram)
+	}
 	var emailChange *accounthttp.EmailChangeHandler
 	var protectedRecovery *passwordhttp.ProtectedRecoveryHandler
 	var activation *passwordhttp.ActivationHandler
@@ -100,6 +107,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		ProtectedRecovery: protectedRecovery,
 		Activation:        activation,
 		TemporaryPassword: temporaryHandler,
+		Telegram:          telegram,
 		PasswordHandler:   passwordHandler,
 		Middleware:        middleware,
 		MailTest:          mailTest,

@@ -13,6 +13,8 @@ import (
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
+	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
@@ -75,7 +77,8 @@ func contractHandlers(env string) Handlers {
 		ProtectedRecovery: passwordhttp.NewProtectedRecovery(contractProtectedRecovery{}, log),
 		Activation:        passwordhttp.NewActivation(&contractActivation{}, log),
 		TemporaryPassword: passwordhttp.NewTemporaryPassword(&contractTemporaryPassword{}, log),
-		Config:            &config.Config{Logger: logger.Config{Env: env}, Browser: requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}}},
+		Telegram:          telegramhttp.New(&contractTelegram{}, log),
+		Config:            &config.Config{Telegram: telegramservice.Config{Enabled: true}, Logger: logger.Config{Env: env}, Browser: requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}}},
 		PasswordHandler:   passwordhttp.New(contractPasswords{}, log),
 		Middleware:        sessionhttp.New(contractSessions{}, log),
 		MailTest:          dev.NewMailTest(contractMail{}, log),
