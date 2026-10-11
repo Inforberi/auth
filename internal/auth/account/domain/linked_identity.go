@@ -10,6 +10,8 @@ var (
 	ErrInvalidIdentity     = errors.New("invalid external identity")
 	ErrIdentityNotFound    = errors.New("external identity not found")
 	ErrIdentityUnavailable = errors.New("external identity account unavailable")
+	ErrIdentityConflict    = errors.New("external identity already linked")
+	ErrLastLoginMethod     = errors.New("cannot remove last usable login method")
 )
 
 // IdentityKey is supplied only after the method adapter verifies the provider proof.

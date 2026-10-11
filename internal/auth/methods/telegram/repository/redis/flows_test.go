@@ -36,14 +36,14 @@ func TestRedisFlow(t *testing.T) {
 		t.Fatal(err)
 	}
 	repo := New(db, cipher)
-	flow := domain.Flow{Verifier: "fixture-verifier", Nonce: "fixture-nonce"}
+	flow := domain.Flow{Verifier: "fixture-verifier", Nonce: "fixture-nonce", Purpose: domain.Link, UserID: "12345678-1234-1234-1234-123456789abc", SessionHash: strings.Repeat("a", 64)}
 	if err := repo.Save(t.Context(), "state", "binding", flow); err != nil {
 		t.Fatal(err)
 	}
 	if ttl, err := db.PTTL(t.Context(), repo.key("state")).Result(); err != nil || ttl > 5*time.Minute || ttl < 4*time.Minute {
 		t.Fatal("flow not bounded", ttl, err)
 	}
-	if payload, err := db.HGet(t.Context(), repo.key("state"), "payload").Result(); err != nil || strings.Contains(payload, flow.Verifier) {
+	if payload, err := db.HGet(t.Context(), repo.key("state"), "payload").Result(); err != nil || strings.Contains(payload, flow.Verifier) || strings.Contains(payload, string(flow.UserID)) || strings.Contains(payload, flow.SessionHash) {
 		t.Fatal("verifier stored as plaintext", err)
 	}
 	if err := repo.Save(t.Context(), "state", "other-binding", flow); err == nil {

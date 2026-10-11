@@ -15,13 +15,15 @@ type CallbackResponse struct {
 }
 
 // @Summary Complete Telegram OIDC login
-// @Description Provider browser redirect, bound to single-use state, PKCE, nonce and flow cookie. Sets only the existing __Host-session cookie. No UserInfo/email auto-merge. Restart login after a failed or lost callback.
+// @Description Provider redirect bound to single-use state, PKCE, nonce and flow cookie. Login sets __Host-session; linking requires the unchanged fresh session and never creates or replaces it. No email auto-merge. Restart after a failed or lost callback.
 // @Tags Auth
 // @Param code query string true "Authorization code"
 // @Param state query string true "Single-use state"
 // @Produce json
 // @Success 200 {object} CallbackResponse
 // @Failure 400 {object} httpx.ErrorResponse
+// @Failure 403 {object} httpx.ErrorResponse "fresh_auth_required"
+// @Failure 409 {object} httpx.ErrorResponse "identity_conflict"
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
 // @Router /api/v1/auth/telegram/callback [get]
@@ -36,15 +38,25 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		h.respondError(w, r, domain.ErrInvalidFlow)
 		return
 	}
-	session, err := h.service.Callback(r.Context(), service.CallbackInput{
+	// Missing or ambiguous session cookies cannot authorize linking; ordinary login does not require one.
+	var sessionToken string
+	if len(r.CookiesNamed(sessionhttp.SessionCookieName)) == 1 {
+		if token, err := sessionhttp.GetSessionCookie(r); err == nil {
+			sessionToken = token
+		}
+	}
+	result, err := h.service.Callback(r.Context(), service.CallbackInput{
 		Code: values.Get("code"), State: values.Get("state"), Binding: cookies[0].Value,
 		UserAgent: httpx.UserAgent(r), IP: httpx.IP(r),
+		SessionToken: sessionToken,
 	})
 	if err != nil {
 		h.respondError(w, r, err)
 		return
 	}
 	setFlowCookie(w, "")
-	sessionhttp.SetSessionCookie(w, session.RawToken, session.ExpiresAt)
+	if !result.Linked {
+		sessionhttp.SetSessionCookie(w, result.Session.RawToken, result.Session.ExpiresAt)
+	}
 	httpx.JSON(w, 200, CallbackResponse{Status: "ok"})
 }

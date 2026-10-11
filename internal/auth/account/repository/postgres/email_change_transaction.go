@@ -20,19 +20,6 @@ func lockChangeAccount(ctx context.Context, tx pgx.Tx, user domain.UserID) (doma
 	return version, err
 }
 
-func requireChangeSession(ctx context.Context, tx pgx.Tx, user domain.UserID, token string, version domain.AuthVersion, freshFor time.Duration) error {
-	var id string
-	err := tx.QueryRow(ctx, `SELECT id FROM auth.sessions WHERE user_id=$1 AND token_hash=$2 AND auth_version=$3
-		AND revoked_at IS NULL AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()
-		AND ($4::double precision=0 OR (password_verified_at<=clock_timestamp()
-		AND password_verified_at>clock_timestamp()-$4::double precision*interval '1 second'))
-		FOR UPDATE`, user, token, version, freshFor.Seconds()).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return domain.ErrFreshAuthRequired
-	}
-	return err
-}
-
 func invalidateChangeAccess(ctx context.Context, tx pgx.Tx, user domain.UserID) error {
 	for _, query := range []string{
 		`UPDATE auth.users SET auth_version=auth_version+1 WHERE id=$1`,

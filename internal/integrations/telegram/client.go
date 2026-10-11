@@ -14,7 +14,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
 )
 
-const Issuer = "https://oauth.telegram.org"
+const Issuer = domain.Issuer
 
 type Client struct {
 	oauth    oauth2.Config

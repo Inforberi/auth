@@ -28,7 +28,16 @@ type sessions interface {
 	CreateSessionAtVersion(context.Context, accountdomain.UserID, string, string, int64) (*sessionservice.CreatedSession, error)
 }
 
-type tokens interface{ GenerateToken(...int) (string, error) }
+type tokens interface {
+	GenerateToken(...int) (string, error)
+	Hash(string) string
+}
+
+type identityManagement interface {
+	RequireFresh(context.Context, accountdomain.UserID, string) error
+	Link(context.Context, accountdomain.UserID, string, accountdomain.IdentityKey) error
+	Unlink(context.Context, accountdomain.UserID, string, string) error
+}
 
 type Service struct {
 	cfg        Config
@@ -37,10 +46,11 @@ type Service struct {
 	identities identities
 	sessions   sessions
 	tokens     tokens
+	management identityManagement
 }
 
-func New(cfg Config, flows flowRepository, provider provider, identities identities, sessions sessions, tokens tokens) *Service {
-	return &Service{cfg: cfg, flows: flows, provider: provider, identities: identities, sessions: sessions, tokens: tokens}
+func New(cfg Config, flows flowRepository, provider provider, identities identities, sessions sessions, tokens tokens, management identityManagement) *Service {
+	return &Service{cfg: cfg, flows: flows, provider: provider, identities: identities, sessions: sessions, tokens: tokens, management: management}
 }
 
 func (s *Service) admit(ctx context.Context, ip string) error {

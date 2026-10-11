@@ -37,7 +37,7 @@ func (r *Repository) RequestEmailChange(ctx context.Context, snapshot domain.Ema
 		} else if freshFor <= 0 {
 			return domain.ErrFreshAuthRequired
 		}
-		if err := requireChangeSession(ctx, tx, snapshot.UserID, session, version, freshFor); err != nil {
+		if err := requireSessionProof(ctx, tx, snapshot.UserID, session, version, freshFor); err != nil {
 			return err
 		}
 		var valid bool

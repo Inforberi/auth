@@ -77,6 +77,8 @@ func New(h Handlers) *chi.Mux {
 			if h.Telegram != nil && h.Config != nil && h.Config.Telegram.Enabled {
 				r.Post("/telegram/start", h.Telegram.Start)
 				r.Get("/telegram/callback", h.Telegram.Callback)
+				r.With(h.Middleware.NoRefreshAuth).Post("/telegram/link", h.Telegram.StartLink)
+				r.With(h.Middleware.NoRefreshAuth).Delete("/telegram/link", h.Telegram.Unlink)
 			}
 			if h.Session != nil {
 				sessionRoutes(r, h)

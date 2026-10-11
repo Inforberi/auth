@@ -1183,7 +1183,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/telegram/callback": {
             "get": {
-                "description": "Provider browser redirect, bound to single-use state, PKCE, nonce and flow cookie. Sets only the existing __Host-session cookie. No UserInfo/email auto-merge. Restart login after a failed or lost callback.",
+                "description": "Provider redirect bound to single-use state, PKCE, nonce and flow cookie. Login sets __Host-session; linking requires the unchanged fresh session and never creates or replaces it. No email auto-merge. Restart after a failed or lost callback.",
                 "produces": [
                     "application/json"
                 ],
@@ -1216,6 +1216,128 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "fresh_auth_required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "identity_conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/telegram/link": {
+            "post": {
+                "description": "Requires current session, exact Origin, verified email with permanent password and recent password reauthentication. Flow binds UUID and session hash; callback does not create a session or user. One identity per provider per account.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Start linking Telegram to the current account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Allowed browser origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.StartResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Requires Origin and fresh password proof. A verified permanent password login must remain. Successful unlink increments auth_version and revokes all sessions, including the caller. Unknown ownership is not revealed.",
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Unlink Telegram from the current account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Allowed browser origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }

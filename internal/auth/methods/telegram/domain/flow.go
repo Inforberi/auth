@@ -1,6 +1,19 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+)
+
+const Issuer = "https://oauth.telegram.org"
+
+type Purpose string
+
+const (
+	Login Purpose = "login"
+	Link  Purpose = "link"
+)
 
 var (
 	ErrDisabled    = errors.New("telegram login disabled")
@@ -9,6 +22,9 @@ var (
 )
 
 type Flow struct {
-	Verifier string `json:"verifier"`
-	Nonce    string `json:"nonce"`
+	Verifier    string               `json:"verifier"`
+	Nonce       string               `json:"nonce"`
+	Purpose     Purpose              `json:"purpose"`
+	UserID      accountdomain.UserID `json:"userId,omitempty"`
+	SessionHash string               `json:"sessionHash,omitempty"`
 }

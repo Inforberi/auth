@@ -17,6 +17,10 @@ func (s *Service) Start(ctx context.Context, ip string) (*StartedFlow, error) {
 	if err := s.admit(ctx, ip); err != nil {
 		return nil, err
 	}
+	return s.startFlow(ctx, domain.Flow{Purpose: domain.Login})
+}
+
+func (s *Service) startFlow(ctx context.Context, flow domain.Flow) (*StartedFlow, error) {
 	parts := make([]string, 4)
 	for i := range parts {
 		var err error
@@ -26,7 +30,7 @@ func (s *Service) Start(ctx context.Context, ip string) (*StartedFlow, error) {
 		}
 	}
 	state, binding := parts[0], parts[1]
-	flow := domain.Flow{Verifier: parts[2], Nonce: parts[3]}
+	flow.Verifier, flow.Nonce = parts[2], parts[3]
 	if err := s.flows.Save(ctx, state, binding, flow); err != nil {
 		return nil, err
 	}

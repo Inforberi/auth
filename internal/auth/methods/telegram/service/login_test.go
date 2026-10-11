@@ -85,7 +85,7 @@ func TestLoginLifecycle(t *testing.T) {
 	for _, failure := range []string{"", "limit", "redis", "proof", "account", "session"} {
 		t.Run("failure="+failure, func(t *testing.T) {
 			f := &loginFixture{}
-			s := New(Config{Enabled: true, RegistrationEnabled: true, IPLimit: 30, GlobalLimit: 1000}, f, f, f, f, tokengenerate.New())
+			s := New(Config{Enabled: true, RegistrationEnabled: true, IPLimit: 30, GlobalLimit: 1000}, f, f, f, f, tokengenerate.New(), nil)
 			started, err := s.Start(t.Context(), "127.0.0.1")
 			if err != nil || started.Binding != f.binding || f.flow.Nonce == f.flow.Verifier {
 				t.Fatal(started, err)
@@ -99,7 +99,7 @@ func TestLoginLifecycle(t *testing.T) {
 			}
 			result, err := s.Callback(t.Context(), input)
 			if failure == "" {
-				if err != nil || result.RawToken != "session" || !f.registration {
+				if err != nil || result.Session.RawToken != "session" || result.Linked || !f.registration {
 					t.Fatal(result, err)
 				}
 				if _, err := s.Callback(t.Context(), input); !errors.Is(err, domain.ErrInvalidFlow) {
@@ -117,7 +117,7 @@ func TestLoginLifecycle(t *testing.T) {
 
 func TestConcurrentCallbacks(t *testing.T) {
 	f := &loginFixture{}
-	s := New(Config{Enabled: true, IPLimit: 30, GlobalLimit: 1000}, f, f, f, f, tokengenerate.New())
+	s := New(Config{Enabled: true, IPLimit: 30, GlobalLimit: 1000}, f, f, f, f, tokengenerate.New(), nil)
 	if _, err := s.Start(t.Context(), "127.0.0.1"); err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func TestConcurrentCallbacks(t *testing.T) {
 }
 
 func TestDisabledLogin(t *testing.T) {
-	s := New(Config{}, nil, nil, nil, nil, nil)
+	s := New(Config{}, nil, nil, nil, nil, nil, nil)
 	if _, err := s.Start(t.Context(), "ip"); !errors.Is(err, domain.ErrDisabled) {
 		t.Fatal(err)
 	}

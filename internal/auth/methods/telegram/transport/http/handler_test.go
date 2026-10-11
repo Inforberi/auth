@@ -11,6 +11,7 @@ import (
 
 	"go.uber.org/zap"
 
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
@@ -18,17 +19,77 @@ import (
 )
 
 type handlerFixture struct {
-	calls   int
-	failure error
+	calls        int
+	failure      error
+	linked       bool
+	sessionToken string
 }
 
 func (f *handlerFixture) Start(context.Context, string) (*service.StartedFlow, error) {
 	return &service.StartedFlow{URL: "https://oauth.telegram.org/auth?state=fixture", Binding: "binding"}, f.failure
 }
 
-func (f *handlerFixture) Callback(context.Context, service.CallbackInput) (*sessionservice.CreatedSession, error) {
+func (f *handlerFixture) StartLink(context.Context, accountdomain.UserID, string, string) (*service.StartedFlow, error) {
+	return &service.StartedFlow{URL: "https://oauth.telegram.org/auth", Binding: "binding"}, f.failure
+}
+
+func (f *handlerFixture) Unlink(context.Context, accountdomain.UserID, string, string) error {
+	return f.failure
+}
+
+func (f *handlerFixture) Callback(_ context.Context, input service.CallbackInput) (*service.CallbackResult, error) {
 	f.calls++
-	return &sessionservice.CreatedSession{RawToken: "private-session", ExpiresAt: time.Now().Add(time.Hour)}, f.failure
+	f.sessionToken = input.SessionToken
+	if f.linked {
+		return &service.CallbackResult{Linked: true}, f.failure
+	}
+	return &service.CallbackResult{Session: &sessionservice.CreatedSession{RawToken: "private-session", ExpiresAt: time.Now().Add(time.Hour)}}, f.failure
+}
+
+func TestLinkCookieAndErrorContract(t *testing.T) {
+	f := &handlerFixture{linked: true}
+	h := New(f, zap.NewNop())
+	r := httptest.NewRequest(http.MethodGet, "/callback?code=c&state=s", nil)
+	r.AddCookie(&http.Cookie{Name: flowCookie, Value: "binding"})
+	token := strings.Repeat("A", 43)
+	r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: token})
+	w := httptest.NewRecorder()
+	h.Callback(w, r)
+	if w.Code != 200 || f.sessionToken != token {
+		t.Fatal(w.Code, f.sessionToken)
+	}
+	cookies := w.Result().Cookies()
+	if len(cookies) != 1 || cookies[0].Name != flowCookie || cookies[0].MaxAge != -1 {
+		t.Fatal("link replaced auth session", cookies)
+	}
+	r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: token})
+	h.Callback(httptest.NewRecorder(), r)
+	if f.sessionToken != "" {
+		t.Fatal("ambiguous session authorized link")
+	}
+	for _, tc := range []struct {
+		err    error
+		status int
+	}{
+		{nil, 204}, {accountdomain.ErrFreshAuthRequired, 403}, {accountdomain.ErrIdentityConflict, 409}, {accountdomain.ErrLastLoginMethod, 409},
+	} {
+		f.failure = tc.err
+		r := httptest.NewRequest(http.MethodDelete, "/link", nil)
+		r = r.WithContext(sessionhttp.SetAuthContext(r.Context(), sessionhttp.Auth{UserID: "user", TokenHash: "hash"}))
+		w := httptest.NewRecorder()
+		h.Unlink(w, r)
+		if w.Code != tc.status {
+			t.Fatal(tc, w.Code, w.Body.String())
+		}
+		cookies := w.Result().Cookies()
+		if tc.err == nil {
+			if len(cookies) != 1 || cookies[0].Name != sessionhttp.SessionCookieName || cookies[0].MaxAge != -1 {
+				t.Fatal("unlink did not clear session", cookies)
+			}
+		} else if len(cookies) != 0 {
+			t.Fatal("failed unlink changed session cookie")
+		}
+	}
 }
 
 func TestHandlerCookiesAndErrors(t *testing.T) {

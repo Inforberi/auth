@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/base64"
 
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 )
@@ -11,9 +13,15 @@ import (
 type CallbackInput struct {
 	Code, State, Binding string
 	UserAgent, IP        string
+	SessionToken         string `json:"-"`
 }
 
-func (s *Service) Callback(ctx context.Context, input CallbackInput) (*sessionservice.CreatedSession, error) {
+type CallbackResult struct {
+	Session *sessionservice.CreatedSession
+	Linked  bool
+}
+
+func (s *Service) Callback(ctx context.Context, input CallbackInput) (*CallbackResult, error) {
 	ctx, cancel := flowContext(ctx)
 	defer cancel()
 	if !s.cfg.Enabled {
@@ -29,15 +37,34 @@ func (s *Service) Callback(ctx context.Context, input CallbackInput) (*sessionse
 	if err != nil {
 		return nil, err
 	}
+	if flow.Purpose != domain.Login && flow.Purpose != domain.Link {
+		return nil, domain.ErrInvalidFlow
+	}
+	if flow.Purpose == domain.Link {
+		if input.SessionToken == "" || len(input.SessionToken) > 128 ||
+			subtle.ConstantTimeCompare([]byte(flow.SessionHash), []byte(s.tokens.Hash(input.SessionToken))) != 1 {
+			return nil, accountdomain.ErrFreshAuthRequired
+		}
+	}
 	key, err := s.provider.Verify(ctx, input.Code, *flow)
 	if err != nil {
 		return nil, err
+	}
+	if flow.Purpose == domain.Link {
+		if err := s.management.Link(ctx, flow.UserID, flow.SessionHash, key); err != nil {
+			return nil, err
+		}
+		return &CallbackResult{Linked: true}, nil
 	}
 	user, err := s.identities.Resolve(ctx, key, s.cfg.RegistrationEnabled)
 	if err != nil {
 		return nil, err
 	}
-	return s.sessions.CreateSessionAtVersion(ctx, user.ID, input.UserAgent, input.IP, int64(user.AuthVersion))
+	session, err := s.sessions.CreateSessionAtVersion(ctx, user.ID, input.UserAgent, input.IP, int64(user.AuthVersion))
+	if err != nil {
+		return nil, err
+	}
+	return &CallbackResult{Session: session}, nil
 }
 
 func validToken(value string) bool {

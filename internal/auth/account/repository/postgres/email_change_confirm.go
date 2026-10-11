@@ -42,7 +42,7 @@ func (r *Repository) ConfirmEmailChange(ctx context.Context, digest string) erro
 		if version != expected {
 			return domain.ErrInvalidEmailChange
 		}
-		if err := requireChangeSession(ctx, tx, user, session, version, 0); err != nil {
+		if err := requireSessionProof(ctx, tx, user, session, version, 0); err != nil {
 			return err
 		}
 		var newID domain.AddressID

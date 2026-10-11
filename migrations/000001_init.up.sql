@@ -26,14 +26,14 @@ CREATE TABLE auth.linked_identities (
   subject TEXT COLLATE "C" NOT NULL CHECK (octet_length(subject) BETWEEN 1 AND 255 AND btrim(subject) <> ''),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT linked_identities_key PRIMARY KEY (issuer, subject)
+  CONSTRAINT linked_identities_key PRIMARY KEY (issuer, subject),
+  CONSTRAINT linked_identities_provider_owner_key UNIQUE (user_id, issuer)
 );
-CREATE INDEX linked_identities_owner ON auth.linked_identities(user_id);
 
 CREATE TABLE auth.identity_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
-  event TEXT NOT NULL CHECK (event = 'identity_created'),
+  event TEXT NOT NULL CHECK (event IN ('identity_created','identity_linked','identity_unlinked')),
   auth_version BIGINT NOT NULL CHECK (auth_version > 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

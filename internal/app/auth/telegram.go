@@ -28,6 +28,7 @@ func assembleTelegram(ctx context.Context, cfg *config.Config, accounts *account
 	}
 	client := telegramclient.New(ctx, cfg.Telegram)
 	service := telegramservice.New(cfg.Telegram, telegramredis.New(rdb, cipher), client,
-		accountservice.NewIdentityResolution(accounts), sessions, tokengenerate.New())
+		accountservice.NewIdentityResolution(accounts), sessions, tokengenerate.New(),
+		accountservice.NewIdentityManagement(accounts, cfg.Session.FreshAuthTTL))
 	return telegramhttp.New(service, log), client.Close, nil
 }
