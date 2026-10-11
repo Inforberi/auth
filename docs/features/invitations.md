@@ -31,10 +31,26 @@ IP limit — 10/min, HTTP admission и hash concurrency — существующ
 
 Invitation delivery — третья очередь существующего account worker, без нового poller/pool. Очереди обходятся справедливо, каждая не более одного раза за попытку claim. Сохраняются eligibility, UUID leases, SKIP LOCKED, до пяти paced attempts. Успешная отправка удаляет job, но не challenge. Expiry/exhausted cleanup выполняет существующий bounded retention worker по индексам при включённом invitation profile; invitation audit следует SECURITY_AUDIT_RETENTION_DAYS. Expiry не удаляет account/contact автоматически: операторский lifecycle и reservation остаются отдельными сценариями.
 
-## Открытые границы
+## Перевыпуск приглашения — 5.7b
+
+`App.Provisioning.ReissueInvitation` принимает actor UUID, существующий user UUID и отдельный UUID idempotency key. Создания нового пользователя, смены адреса, назначения прав и активации здесь нет. Actor — attribution; будущий admin transport обязан отдельно проверить permissions/MFA/fresh-auth/CSRF.
+
+Новая команда допустима только для provisioned pending account без credentials, verification и activation marker, с исходным сохранённым контактом. SQL блокирует пользователя до контакта и повторно проверяет актуальность. В одной транзакции записываются command identity, замена challenge, encrypted outbox, время отправки и `reissued` audit. Старый token/job удаляется; новый token привязан к текущей auth_version и имеет новый TTL. Ошибка любого шага откатывает всё.
+
+Успешный повтор того же actor/key/user возвращает `Reused=true` без повторной отправки. Другая цель с тем же ключом — конфликт. Повторы проходят Redis budgets; при его отказе операция закрыта. Команда не возвращает raw token. Сохранённый `last_invited_at` обеспечивает cooldown и после удаления истёкшего challenge; исходное создание с Invite тоже учитывается. Прошедшее cooldown приглашение можно перевыпустить после expiry или исчерпания доставки, сохранив UUID.
+
+| Env | Default | Назначение |
+| --- | --- | --- |
+| `INVITATION_REISSUE_COOLDOWN` | 1m | Минимальный интервал между выдачами для одного пользователя; 1s–24h |
+| `INVITATION_REISSUE_ACTOR_ATTEMPTS_PER_MINUTE` | 30 | Попытки команды за минутное окно для одного инициатора |
+| `INVITATION_REISSUE_PROJECT_ATTEMPTS_PER_MINUTE` | 100 | Попытки команды за минутное окно всех API проекта с общим Redis/scoped key |
+
+Квоты не означают RPS сервиса. Уже отправленное или находящееся в SMTP письмо отозвать нельзя: даже если старое письмо придёт после перевыпуска, его token недействителен. Delivery/GC остаются прежними, новых workers и HTTP-ручек нет. Durable command metadata хранится как существующие provisioning records; автоматическая очистка ключей не добавлена, чтобы не превращать поздний retry в новое письмо. После retention-удаления исходного контакта replay не восстанавливает его.
+
+## Открытые границы профиля
 
 Согласован дополнительный будущий профиль 5.7c: сервис генерирует временный пароль с TTL, первый вход разрешает только установку постоянного пароля, backend не допускает обычный доступ до смены. После смены временный пароль/полномочие отзываются атомарно; verification/MFA остаются обязательными по выбранной политике. Временный пароль не подтверждает email. Приглашение остаётся основным способом; подробности безопасной выдачи и tests — [план](../planning/implementation.md#57c-опциональный-временный-пароль--согласовано-11-октября-не-реализовано). Сейчас профиль не реализован.
 
-Это backend password-профиль, не административный UI и не production acceptance. Перевыпуск истёкшего/исчерпанного приглашения с сохранением UUID и инвалидированием старого token — отдельный 5.7b до публикации admin flow; повтор исходной команды не является resend. Активация bare account/другими методами — после реализации соответствующих proof flows 7/8. Не восстанавливать доступ ручными SQL UPDATE или повторным public registration.
+Это backend password-профиль, не административный UI и не production acceptance. Перевыпуск 5.7b реализован отдельно; повтор исходной provisioning-команды не является resend. Активация bare account без контакта/другими методами — после реализации соответствующих proof flows 7/8. Не восстанавливать доступ ручными SQL UPDATE или повторным public registration.
 
 Внешние SMTP/browser HTTPS, полный mixed/multi-instance нагрузочный профиль и restore reconciliation остаются release gates. Локально проверяются idempotency, unique email, purpose isolation, expiry/version/block/delete, replay, concurrent provisioning/activation, audit rollback, delivery retry/stale lease/GC и HTTP/Swagger contracts. Проверки и фактические результаты — [history](../planning/history.md).

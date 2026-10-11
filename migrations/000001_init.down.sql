@@ -1,6 +1,7 @@
 DROP TABLE IF EXISTS auth.invitation_audit;
 DROP TABLE IF EXISTS auth.invitation_outbox;
 DROP TABLE IF EXISTS auth.account_invitations;
+DROP TABLE IF EXISTS auth.invitation_reissues;
 DROP TABLE IF EXISTS auth.account_provisions;
 DROP TABLE IF EXISTS auth.email_change_audit;
 DROP TABLE IF EXISTS auth.email_change_outbox;

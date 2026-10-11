@@ -50,8 +50,14 @@ func (r *Repository) ProvisionAccount(ctx context.Context, command service.Provi
 			if err := tx.QueryRow(ctx, `INSERT INTO auth.user_emails(user_id,email) VALUES($1,$2) RETURNING id`, result.UserID, input.Email).Scan(&emailID); err != nil {
 				return err
 			}
+			if _, err := tx.Exec(ctx, `UPDATE auth.account_provisions SET invitation_email_id=$2 WHERE user_id=$1`, result.UserID, emailID); err != nil {
+				return err
+			}
 		}
 		if input.Invite {
+			if _, err := tx.Exec(ctx, `UPDATE auth.account_provisions SET last_invited_at=clock_timestamp() WHERE user_id=$1`, result.UserID); err != nil {
+				return err
+			}
 			if _, err := tx.Exec(ctx, `INSERT INTO auth.account_invitations(digest,user_id,email_id,auth_version,expires_at)
 				VALUES($1,$2,$3,1,clock_timestamp()+$4::double precision*interval '1 second')`, command.Invitation.Digest, result.UserID, emailID, command.TTL.Seconds()); err != nil {
 				return err

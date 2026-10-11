@@ -15,6 +15,17 @@ import (
 type provisionRepo struct {
 	command service.ProvisionCommand
 	calls   int
+	reissue service.InvitationReissueCommand
+}
+
+func (*provisionRepo) InvitationAddress(context.Context, domain.UserID) (string, error) {
+	return "user@example.com", nil
+}
+
+func (r *provisionRepo) ReissueInvitation(_ context.Context, c service.InvitationReissueCommand) (*service.ProvisionResult, error) {
+	r.reissue = c
+	r.calls++
+	return &service.ProvisionResult{UserID: c.Input.UserID}, nil
 }
 
 func (r *provisionRepo) ProvisionAccount(_ context.Context, c service.ProvisionCommand) (*service.ProvisionResult, error) {

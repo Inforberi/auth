@@ -29,6 +29,8 @@ type ProvisionCommand struct {
 
 type provisionRepository interface {
 	ProvisionAccount(context.Context, ProvisionCommand) (*ProvisionResult, error)
+	InvitationAddress(context.Context, domain.UserID) (string, error)
+	ReissueInvitation(context.Context, InvitationReissueCommand) (*ProvisionResult, error)
 }
 
 type ProvisionService struct {
@@ -38,6 +40,15 @@ type ProvisionService struct {
 }
 
 func NewProvisioning(repo provisionRepository, account *Service, cfg InvitationConfig) *ProvisionService {
+	if cfg.ReissueCooldown == 0 {
+		cfg.ReissueCooldown = time.Minute
+	}
+	if cfg.ReissueActorAttemptsPerMinute == 0 {
+		cfg.ReissueActorAttemptsPerMinute = 30
+	}
+	if cfg.ReissueProjectAttemptsPerMinute == 0 {
+		cfg.ReissueProjectAttemptsPerMinute = 100
+	}
 	return &ProvisionService{repo: repo, account: account, cfg: cfg}
 }
 

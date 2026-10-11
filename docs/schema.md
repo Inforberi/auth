@@ -25,10 +25,11 @@
 | `auth.password_audit` | Reset issuance/reset/change/revoke events с user UUID, без token/password. |
 | `auth.account_status_audit` | Actor/target UUID, предыдущий pending/active/blocked и новый active/blocked status, новая auth_version и timestamp. Пишется в одной транзакции с изменением статуса/отзывом; FK сохраняют существование actor/target, индекс owner/date/id. |
 | `auth.account_deletion_audit` | Один event на target UUID, actor/version/timestamp; restrictive FK сохраняют tombstone и attribution. Без email/пароля/raw token. |
-| `auth.account_provisions` | Durable actor/request UUID key, HMAC fingerprint, UUID owner, nullable activation marker. Deferred owner FK позволяет атомарную регистрацию команды до создания user; replay не создаёт новый invite. |
+| `auth.account_provisions` | Durable actor/request UUID key, HMAC fingerprint, UUID owner, nullable activation marker, исходный invitation contact ID и last_invited_at для cooldown независимо от cleanup challenge. Contact FK обнуляется при retention-удалении контакта. Deferred owner FK позволяет атомарную регистрацию команды до создания user; replay не создаёт новый invite. |
+| `auth.invitation_reissues` | Отдельный durable actor/request UUID key, provisioned target UUID/time; повтор не отправляет письмо, смена target с тем же ключом запрещена. |
 | `auth.account_invitations` | Distinct SHA-256 digest, один challenge на user, owner/contact FK, version и DB expiry. Consume только для pending account; каскадно удаляет job. |
 | `auth.invitation_outbox` | Encrypted payload, due/expiry/attempts/lease. Индексы для claim, expiry и exhausted cleanup. |
-| `auth.invitation_audit` | Provisioned/activated event, actor при creation, user/version/time; без email/token/password. Retention 180 дней по текущей policy. |
+| `auth.invitation_audit` | Provisioned/reissued/activated event, actor при creation/reissue, user/version/time; без email/token/password. Retention 180 дней по текущей policy. |
 
 Первые четыре таблицы имеют `created_at/updated_at`; BEFORE UPDATE trigger поддерживает `updated_at`. Основные дочерние записи имеют каскадные FK при явном hard delete. Status/deletion audit используют restrictive FK actor/target: hard delete не должен незаметно стирать историю, его retention/anonymization policy определяется в 5.6b. Сам SQL soft-delete не делает cleanup; внутренний DeletionService физически удаляет credentials/profile/challenges/change intents/outbox, отзывает сессии и очищает их metadata. Email reservations, UUID и audit сохраняются; [контракт](features/account-deletion.md).
 

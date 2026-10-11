@@ -7,6 +7,7 @@ var (
 	ErrProvisionConflict    = errors.New("provisioning request conflict")
 	ErrProvisionEmailExists = errors.New("provisioning email already exists")
 	ErrProvisionDisabled    = errors.New("provisioning disabled")
+	ErrInvitationCooldown   = errors.New("invitation reissue cooldown")
 )
 
 type Invitation struct {

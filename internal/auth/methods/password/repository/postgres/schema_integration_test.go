@@ -34,6 +34,7 @@ func TestPostgresSchema(t *testing.T) {
 	t.Run("account deletion", func(t *testing.T) { checkAccountDeletion(t, db, ctx) })
 	t.Run("retention", func(t *testing.T) { checkRetention(t, db, ctx) })
 	t.Run("invitations", func(t *testing.T) { checkInvitations(t, db, ctx) })
+	t.Run("invitation reissue", func(t *testing.T) { checkInvitationReissue(t, db, ctx) })
 	t.Run("invitation delivery", func(t *testing.T) { checkInvitationDelivery(t, db, ctx) })
 	t.Run("provision rollback", func(t *testing.T) { checkProvisionRollback(t, db, ctx) })
 }

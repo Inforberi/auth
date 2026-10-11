@@ -2,6 +2,16 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат 5.7b — 11 октября 2026
+
+Реализован внутренний ProvisionService.ReissueInvitation для существующего provisioned pending UUID. Actor/key/target команды сохранены отдельно от provisioning; повтор возвращает Reused без отправки, другой target с тем же ключом конфликтует. Пользователь блокируется до контакта; pending/deleted/activation marker/credential/contact guards проверяются внутри транзакции. Замена challenge и encrypted job, durable last_invited_at, command identity и reissued audit атомарны. Первичное Invite тоже учитывает cooldown; cleanup challenge не сбрасывает историю отправки. Истечение/исчерпание доставки не требует нового UUID.
+
+Env явно задают reissue cooldown и actor/project attempts-per-minute; Redis fail-closed, HMAC keys, deadline 5s, существующие workers/GC. Новых routes/Swagger/admin permissions/UI нет; actor attribution не означает authorization. Только исходная 000001 up/down изменена, рабочая БД/env/secrets не тронуты. Durable command metadata не очищается как audit: поздний replay не становится новым письмом. Старое уже отправленное письмо не отзывается, но его token после replacement недействителен.
+
+Проверено: task go:fmt, go test ./..., lint (0 issues после удаления лишнего параметра тестового helper), race account service/config, полный TestPostgresSchema на disposable PostgreSQL 18.6 up/down/up (3.938s). 16 одинаковых команд дают один replacement, 16 разных — один допуск; old token invalidation, cooldown/conflict, pending guards, activation/reissue race, audit rollback с сохранением старого token и выдача после cleanup. Это не нагрузочная приёмка, SMTP/browser E2E или Redis fault E2E нового flow. Нагрузочный mixed/multi-instance прогон 6.8b оставлен на конец перед release; оптимизацию каждой фичи не откладываем.
+
+Временный контейнер PostgreSQL `auth-reissue-check-20261011` и его тестовые данные удалены после проверок. Рабочая БД не затронута; коммит не выполнялся.
+
 ### Результат 5.7a — 10 октября 2026
 
 По запросу пользователя реализован backend password provisioning/invitations: pending user/profile/optional contact, actor-scoped durable request identity/HMAC fingerprint, отдельный digest/encrypted outbox/audit. Provisioning независим от public registration, не назначает роли/grants/verification/пароль/session. Повтор команды возвращает тот же UUID без нового письма, изменённый payload и занятый email дают конфликт без auto-merge. Actor — attribution, не permissions; публичный admin endpoint не подключён.

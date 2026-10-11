@@ -256,6 +256,16 @@ CREATE TABLE auth.account_provisions (
   user_id UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE REFERENCES auth.users(id) DEFERRABLE INITIALLY DEFERRED,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   activated_at TIMESTAMPTZ CHECK (activated_at IS NULL OR activated_at>=created_at),
+  last_invited_at TIMESTAMPTZ,
+  invitation_email_id UUID REFERENCES auth.user_emails(id) ON DELETE SET NULL,
+  PRIMARY KEY(actor_id,request_key)
+);
+
+CREATE TABLE auth.invitation_reissues (
+  actor_id UUID NOT NULL REFERENCES auth.users(id),
+  request_key UUID NOT NULL,
+  user_id UUID NOT NULL REFERENCES auth.account_provisions(user_id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY(actor_id,request_key)
 );
 
@@ -288,9 +298,9 @@ CREATE TABLE auth.invitation_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
   actor_id UUID REFERENCES auth.users(id),
-  action TEXT NOT NULL CHECK (action IN ('provisioned','activated')),
+  action TEXT NOT NULL CHECK (action IN ('provisioned','reissued','activated')),
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CHECK ((action='provisioned') = (actor_id IS NOT NULL))
+  CHECK ((action IN ('provisioned','reissued')) = (actor_id IS NOT NULL))
 );
 CREATE INDEX invitation_audit_retention ON auth.invitation_audit(created_at,id);
