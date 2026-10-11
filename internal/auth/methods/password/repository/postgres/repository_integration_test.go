@@ -65,11 +65,15 @@ func checkRepository(t *testing.T, db *pgxpool.Pool, ctx context.Context, repo *
 	if _, err := repo.FindUserByUserID(ctx, "00000000-0000-0000-0000-000000000000"); !errors.Is(err, passworddomain.ErrNotFound) {
 		t.Fatal("credential not-found contract changed")
 	}
+	var baseline int
+	if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.users`).Scan(&baseline); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := repo.CreateUser(ctx, "rollback@example.com", ""); err == nil {
 		t.Fatal("empty hash accepted")
 	}
-	var orphans int
-	if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.users u LEFT JOIN auth.password_credentials p ON p.user_id=u.id WHERE p.user_id IS NULL`).Scan(&orphans); err != nil || orphans != 0 {
+	var users int
+	if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.users`).Scan(&users); err != nil || users != baseline {
 		t.Fatal("failed registration left orphan user")
 	}
 }

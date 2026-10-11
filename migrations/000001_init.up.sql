@@ -21,6 +21,15 @@ CREATE TABLE auth.users (
 CREATE INDEX users_email_release_due ON auth.users(deleted_at,id)
   WHERE deleted_at IS NOT NULL AND NOT email_reuse_blocked AND email_released_at IS NULL;
 
+CREATE TABLE auth.linked_identities (
+  issuer TEXT COLLATE "C" NOT NULL CHECK (octet_length(issuer) BETWEEN 1 AND 512 AND btrim(issuer) <> ''),
+  subject TEXT COLLATE "C" NOT NULL CHECK (octet_length(subject) BETWEEN 1 AND 255 AND btrim(subject) <> ''),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT linked_identities_key PRIMARY KEY (issuer, subject)
+);
+CREATE INDEX linked_identities_owner ON auth.linked_identities(user_id);
+
 -- Deleted owners retain contacts until retention release; blocked owners are not released.
 CREATE TABLE auth.user_emails (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

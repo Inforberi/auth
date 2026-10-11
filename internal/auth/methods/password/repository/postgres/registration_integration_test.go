@@ -14,6 +14,10 @@ import (
 
 func checkConcurrentRegistration(t *testing.T, db *pgxpool.Pool, ctx context.Context, repo *PasswordRepo) {
 	t.Helper()
+	var baseline int
+	if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.users`).Scan(&baseline); err != nil {
+		t.Fatal(err)
+	}
 	start := make(chan struct{})
 	results := make(chan error, 2)
 	for range 2 {
@@ -39,8 +43,8 @@ func checkConcurrentRegistration(t *testing.T, db *pgxpool.Pool, ctx context.Con
 	if success != 1 || duplicate != 1 {
 		t.Fatal("registration is not uniquely owned")
 	}
-	var orphans int
-	if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.users u LEFT JOIN auth.password_credentials p ON p.user_id=u.id WHERE p.user_id IS NULL`).Scan(&orphans); err != nil || orphans != 0 {
+	var users int
+	if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.users`).Scan(&users); err != nil || users != baseline+1 {
 		t.Fatal("duplicate registration left orphan user")
 	}
 }
@@ -48,6 +52,10 @@ func checkConcurrentRegistration(t *testing.T, db *pgxpool.Pool, ctx context.Con
 func checkRegistrationServiceRace(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	t.Helper()
 	f := newRegistrationFixture(t, db, ctx)
+	var baseline int
+	if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.users`).Scan(&baseline); err != nil {
+		t.Fatal(err)
+	}
 	const attempts = 16
 	var ready sync.WaitGroup
 	ready.Add(attempts)
@@ -83,8 +91,8 @@ func checkRegistrationServiceRace(t *testing.T, db *pgxpool.Pool, ctx context.Co
 		t.Fatal(success, duplicate)
 	}
 	assertRegistrationRows(t, db, ctx, "registration-race@example.com", 1)
-	var orphans int
-	if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.users u LEFT JOIN auth.password_credentials p ON p.user_id=u.id WHERE p.user_id IS NULL`).Scan(&orphans); err != nil || orphans != 0 {
+	var users int
+	if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.users`).Scan(&users); err != nil || users != baseline+1 {
 		t.Fatal("race left orphan users", err)
 	}
 }
