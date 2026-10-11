@@ -16,7 +16,7 @@ Password/contact/session tables и их публичные APIs не меняю�
 
 Pending/blocked/deleted account не получает успешный resolution. Блокировка/разблокировка сохраняет ownership; soft deletion сохраняет identity как reservation у tombstone, чтобы следующий callback не создал новый доступ в обход отзыва. Это не полное удаление персональных данных. Автоматический release identities сейчас отсутствует; отдельную политику release/PII erasure и защиты от takeover нужно согласовать до self-service deletion UI.
 
-A3.2 подключает resolver к optional Telegram login с trusted OIDC verification, enabled/registration policy и transactional creation audit. Доступ к audit API, linking/unlinking и MFA orchestration ещё не реализован. Link/unlink потребует fresh auth и owner/session guards; автоматическое назначение identity существующему аккаунту отсутствует. [Telegram contract](telegram-login.md).
+A3.2 подключает resolver к optional Telegram login с trusted OIDC verification, enabled/registration policy и transactional creation audit. A3.3 добавляет явные Telegram link/unlink для account с постоянным паролем/verified email и свежим password proof: owner/session/version guards и last-method protection. Одна identity на provider/account обеспечена UNIQUE `(user_id,issuer)`; этот индекс заменяет отдельный owner index. Link не выдаёт сессию, unlink отзывает все sessions и повышает auth_version; audit атомарен. Автоматическое объединение по email отсутствует. External-only step-up, audit API и MFA orchestration остаются следующими задачами. [Telegram contract](telegram-login.md).
 
 Схема добавлена в исходную 000001 согласно текущему pre-release правилу. Уже применённая БД не обновится повторным migrate up; нужен согласованный upgrade, не reset рабочей БД.
 
@@ -24,4 +24,4 @@ A3.2 подключает resolver к optional Telegram login с trusted OIDC ve
 
 Unit tests: bounds 512/255 байт, пустые/некорректные ключи, сохранение opaque key, policy/deadline, inactive account и dependency failure. Disposable SQL: 16 concurrent resolutions дают один UUID без orphan users, disabled registration допускает только existing identity, issuer/subject case isolation, отсутствие email/password, rollback по SQL constraint, block/unblock/current version и deletion без повторного создания.
 
-Внешний provider login и browser/fault/load acceptance здесь не выполняются. Linking, MFA, роли и UI остаются следующими подэтапами плана.
+Для A3.3 локально проверены fresh/session/status/version guards, owner conflict, ограничение одного provider, последний парольный метод, concurrent link/unlink и rollback audit. Внешний provider/browser acceptance отложен перед UI; provider/MFA step-up для external-only accounts, роли и UI остаются следующими задачами.

@@ -1,5 +1,6 @@
 # Документация Auth
 
+- [Подробное руководство по Auth](auth-guide.md) — подключение, все текущие HTTP-методы с примерами, сценарии входа и восстановления, ENV, ограничения и отдельно будущие возможности.
 - [Архитектура](architecture.md), [схема](schema.md) и [модель угроз](threat-model.md) — решения и границы проекта.
 - [API-контракт](api/contract.md) — текущее поведение ручек. `api/generated/` содержит только generated Swagger; источник — DTO/аннотации в коде. Генерация: `task swagger`, проверка drift: `task check:api`.
 - [Фичи](features/) — verification, recovery, смена email и удаление аккаунта.

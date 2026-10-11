@@ -2,6 +2,26 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат A3.3-local — 11 октября 2026
+
+Реализованы POST/DELETE `/api/v1/auth/telegram/link` и purpose-aware общий callback. Existing password reauthentication, SESSION_FRESH_AUTH_TTL и SQL session proof переиспользованы. Привязка требует verified permanent password account: это исключает закрепление внешнего метода на неподтверждённом чужом email. Link-start привязывает Redis flow к owner UUID/session hash; callback требует тот же session token и свежие SQL state/version/proof после provider verification. User/session не создаются, email не используется для auto-merge. Флаги/limiter/deadlines/cipher/provider client остаются существующими, новые SDK/env/workers не добавлены.
+
+Account IdentityManagement хранит owner policy и SQL transaction. Source 000001: UNIQUE `(user_id,issuer)` ограничивает связь одной identity на provider/account и заменяет прежний owner index; audit допускает linked/unlinked events. Чужой owner не перезаписывается, same-owner/key retry — no-op без лишнего audit. Unlink требует оставшийся verified permanent password method, атомарно удаляет связь/повышает auth_version/отзывает все sessions/пишет audit. Ошибка audit откатывает всю операцию. Raw session token находится только в transient service input, flow содержит лишь hash и шифруется; нет новых секретов в логах/API.
+
+Formatter, Swagger generation, task check (tests + lint 0 issues), race Telegram service/HTTP/router прошли. Полный PostgreSQL 18.6 up/down/up/race — 6.917s: stale/null/future/expired proof, rotated/revoked/expired session, version/status/deletion/foreign owner, one-provider cap, unverified/missing password, 2 competing owners/один winner, 16 unlink/один winner и audit rollback. Redis 8.2 flow/race — 1.276s: ciphertext owner/session binding, TTL/replay/binding/concurrency и shared budgets. Тестовый expiry fixture сначала нарушал sessions constraint; исправлены данные, не ослаблена схема. Временные контейнеры и synthetic data удалены; рабочие БД/env/secrets не менялись. Коммит не выполнялся, изменения A3.2-security сохранены.
+
+Live Telegram login/link/unlink/nonce echo по запросу пользователя отложен перед подключением UI и не блокирует дальнейшие backend этапы. External-only accounts пока не управляют методами без password proof; provider/MFA step-up требует отдельно проверяемой freshness, не выдаётся за обычный login/session age. Дополнительный provider/email OTP и финальная A8 acceptance остаются открыты. Уже применённой БД нужен согласованный schema upgrade, не reset.
+
+### Результат A3.2-security — 11 октября 2026
+
+Go 1.27.2 выбран по [официальной истории релизов](https://go.dev/doc/devel/release): patch содержит security fixes стандартной библиотеки. Минимальная версия обновлена в go.mod и трёх Dockerfile (dev, production и legacy entry point); CI уже читает go-version-file. Локальная команда go автоматически выбирает проверяемый toolchain 1.27.2; глобальная установка Go не заменялась.
+
+Повторный task check:security прошёл: 0 достижимых и 0 imported-package findings. Единственное module-only предупреждение — [GO-2026-5932](https://pkg.go.dev/vuln/GO-2026-5932) в неимпортируемом x/crypto/openpgp, fixed version отсутствует. x/crypto сохраняется для Argon2; предупреждение не скрыто. Все обычные тесты на новом Go и production Docker build прошли; SQL/integration suite не повторялся, схема/БД не менялись.
+
+Прежний golangci-lint v2.12.2 не прочитал export data нового Go. В Taskfile закреплён v2.14.0 с поддержкой Go 1.27 ([release notes](https://github.com/golangci/golangci-lint/releases)); настройки lint не ослаблены. Formatter изменил только оформление восьми файлов, не логику/API. Итоговый task check прошёл: тесты и lint (0 issues). Осталось предупреждение formatter о deprecated extra-rules, которое не блокирует проверку.
+
+A3.2-release остаётся открытым: Telegram-настройки в локальном .env отсутствуют, operator secrets/зарегистрированный HTTPS callback и реальный browser login/nonce echo не проверены. Рабочие env/secrets не менялись, сервис и миграции не запускались; A3.3 не начат. Общая security/fault/load приёмка A8 не заменяется текущим scanner result.
+
 ### Результат A3.2-local — 11 октября 2026
 
 Первый provider — Telegram, по официальному Authorization Code/OIDC/PKCE протоколу. Adapter использует coreos/go-oidc v3.21.0 + oauth2 v0.36.0 (go-jose v4.1.4 indirect); Context7 и official Telegram Login использованы для API/верификации. Fixed issuer/auth/token/JWKS, Basic auth и явный client_id, minimal openid/RS256; signature/issuer/audience/azp/expiry/iat/nonce проверяются без insecure skips или UserInfo. Сетевой клиент ограничивает endpoints/TLS/redirects/header/body/time/connections и освобождается приложением. Callback tokens не попадают в JSON/log.

@@ -2,7 +2,9 @@
 
 Документация — [карта разделов](docs/README.md). Для точечной работы над проектом — [указатель контекста](docs/ai/index.md) и [текущий шаг](docs/ai/current-task.md). Swagger — в `docs/api/generated`, документы фич — в `docs/features`, планы и история — в `docs/planning`.
 
-Рабочая основа Go Auth, **ещё не готовый production auth продукт**. Register/login/change, [email verification](docs/features/email-verification.md) и [password recovery](docs/features/password-recovery.md) реализованы; полноценная session security, Telegram, RBAC, MFA и payments — по [плану](docs/planning/roadmap.md) и [шагам](docs/planning/implementation.md). Результат переноса инфраструктуры: [template-adoption](docs/template-adoption.md).
+Для знакомства и подключения — [подробное руководство по Auth](docs/auth-guide.md): сценарии, карточки методов, примеры запросов, ENV и ограничения. Реализованное отделено от запланированного.
+
+Рабочая основа Go Auth, **ещё не готовый production auth продукт**. Парольные сценарии, [email verification](docs/features/email-verification.md), [password recovery](docs/features/password-recovery.md), управление своими SQL-сессиями и опциональный [Telegram login/link/unlink](docs/features/telegram-login.md) реализованы в backend с описанными ограничениями. Роли, MFA, сохраняемые настройки и UI — следующие этапы; оплата вне текущего релиза. Внешняя и финальная приёмка остаются открытыми: [текущий план](docs/planning/implementation.md). Результат переноса инфраструктуры: [template-adoption](docs/template-adoption.md).
 
 ## Локальный запуск
 
