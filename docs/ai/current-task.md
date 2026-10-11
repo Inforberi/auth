@@ -2,6 +2,10 @@
 
 Обновлено 11 октября 2026. Рабочая заметка; полные статусы — [implementation](../planning/implementation.md), результаты — [history](../planning/history.md).
 
+- В AGENTS.md и разделе «Как выполнять» плана закреплено предварительное проектирование ближайших согласованных сценариев без гипотетических абстракций и повторного переписывания логики. Это уточнение правил; рабочий код не менялся.
+
+- Выполнен A3.4b-local: Google OIDC login/link/unlink, disabled по умолчанию. Общие сценарии Telegram перенесены в methods/oidc, bounded verifier/client в integrations/oidc; Telegram API/cookies/prefix/purpose сохранены. [Контракт](../features/google-login.md). Никаких новых dependencies/schema/workers или реальных env/secrets. Google/Telegram live acceptance перед UI/A8, external-only step-up остаётся открытым. Следующий backend этап — A4, роли/permissions; коммит только по запросу.
+
 - Выполнен A3.4a-local: optional email OTP для existing active verified permanent-password email; общие SQL-сессии, keyed verifier/browser binding, encrypted delivery, committed wrong-attempt counter и single-use consumption. [Контракт и ограничения](../features/email-otp.md). Следующий backend шаг — A3.4b, дополнительный выбранный OIDC provider; live SMTP/browser/fault/load и passwordless onboarding не закрыты. Реальные env/БД/secrets не менялись, только source 000001; applied installation требует upgrade, не reset. По запросу пользователя изменения фиксируются по фичам: общий delivery runner — 795b833, email OTP с контрактом/планом — отдельный feat(auth).
 
 - Реализован и локально проверен 5.7c-local: optional временный пароль, atomic pending provisioning/reissue, однократная выдача plaintext без replay/serialization. Первый вход выдаёт только setup authority, complete атомарно устанавливает постоянный пароль и отзывает временный доступ, не подтверждая email и не создавая session. [Контракт и env](../features/temporary-passwords.md).
