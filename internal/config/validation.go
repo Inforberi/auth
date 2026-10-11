@@ -71,6 +71,9 @@ func (cfg Config) validateStorage() error {
 }
 
 func (cfg Config) validateSessions() error {
+	if cfg.Session.FreshAuthTTL < time.Minute || cfg.Session.FreshAuthTTL > 15*time.Minute {
+		return fmt.Errorf("SESSION_FRESH_AUTH_TTL must be between 1m and 15m")
+	}
 	if cfg.Session.SessionTTL <= 0 || cfg.Session.AbsoluteSessionTTL < cfg.Session.SessionTTL || cfg.Session.SessionRefreshThreshold <= 0 || cfg.Session.SessionRefreshThreshold >= cfg.Session.SessionTTL {
 		return fmt.Errorf("invalid session durations")
 	}

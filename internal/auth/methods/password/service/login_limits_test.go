@@ -77,3 +77,20 @@ func TestMissingLoginLimiterFailsClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestReauthenticationLimitsShareIPAndProjectBudgets(t *testing.T) {
+	cipher, err := secretbox.NewScoped("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "password-reset:v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	budget := &loginBudgetStub{}
+	l := NewLoginLimit(budget, cipher, CapacityConfig{LoginIPLimit: 30, LoginEmailLimit: 10, LoginGlobalLimit: 1000})
+	if err := l.AllowUser(t.Context(), "user", "ip"); err != nil {
+		t.Fatal(err)
+	}
+	for i, key := range []string{"login-ip:ip", "reauth-user:user", "login-global"} {
+		if budget.keys[i] != cipher.Digest(key) {
+			t.Fatal("wrong budget scope", budget.keys)
+		}
+	}
+}

@@ -19,10 +19,10 @@
 | `auth.email_verifications` | SHA-256 verifier, один challenge на контакт, expiry; purpose фиксирован таблицей, owner — FK. |
 | `auth.email_verification_outbox` | AES-GCM payload, expiry, due time, до 5 attempts, UUID lease; удаляется вместе с challenge. |
 | `auth.email_verification_audit` | Issuance/confirmation с user UUID, без email/token/payload. Общая audit policy впереди. |
-| `auth.sessions` | Независимый публичный UUID `id`, digest token, owner, auth_version, idle/absolute expiry, revoked_at, device metadata; SQL authority. Индекс `(user_id,created_at DESC,id DESC)` для собственных сессий. |
+| `auth.sessions` | Независимый публичный UUID `id`, digest token, owner, auth_version, idle/absolute expiry, revoked_at, device metadata; SQL authority. Nullable password_verified_at устанавливает только explicit password reauthentication с atomic token rotation. Login/refresh/rotation не обновляют proof; password proof не означает MFA. Индекс `(user_id,created_at DESC,id DESC)` для собственных сессий. |
 | `auth.password_resets` | Digest, один challenge на credential owner, auth_version, expiry; одноразовый consume. |
 | `auth.password_reset_outbox` | Encrypted payload, expiry, attempts, lease; каскадно удаляется с challenge. |
-| `auth.password_audit` | Reset issuance/reset/change/revoke events с user UUID, без token/password. |
+| `auth.password_audit` | Reset issuance/reset/change/revoke и password_reauthenticated events с user UUID, без token/password. Reauthentication audit и смена verifier/proof атомарны; действующий bounded audit retention применяется к новым events. |
 | `auth.account_status_audit` | Actor/target UUID, предыдущий pending/active/blocked и новый active/blocked status, новая auth_version и timestamp. Пишется в одной транзакции с изменением статуса/отзывом; FK сохраняют существование actor/target, индекс owner/date/id. |
 | `auth.account_deletion_audit` | Один event на target UUID, actor/version/timestamp; restrictive FK сохраняют tombstone и attribution. Без email/пароля/raw token. |
 | `auth.account_provisions` | Durable actor/request UUID key, HMAC fingerprint, UUID owner, nullable activation marker, исходный invitation contact ID и last_invited_at для cooldown независимо от cleanup challenge. Contact FK обнуляется при retention-удалении контакта. Deferred owner FK позволяет атомарную регистрацию команды до создания user; replay не создаёт новый invite. |

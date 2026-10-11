@@ -11,7 +11,7 @@ import (
 
 type emailChangeRepository interface {
 	EmailChangeSnapshot(context.Context, domain.UserID) (domain.EmailChangeSnapshot, error)
-	RequestEmailChange(context.Context, domain.EmailChangeSnapshot, string, string, domain.EmailChangeIntent) error
+	RequestEmailChange(context.Context, domain.EmailChangeSnapshot, string, string, domain.EmailChangeIntent, bool, time.Duration) error
 	ConfirmEmailChange(context.Context, string) error
 	ReportEmailChange(context.Context, string) error
 }
@@ -21,14 +21,15 @@ type passwordVerifier interface {
 }
 
 type EmailChangeService struct {
-	repo    emailChangeRepository
-	hash    passwordVerifier
-	account *Service
-	cfg     EmailChangeConfig
+	repo     emailChangeRepository
+	hash     passwordVerifier
+	account  *Service
+	cfg      EmailChangeConfig
+	freshFor time.Duration
 }
 
-func NewEmailChange(repo emailChangeRepository, hash passwordVerifier, account *Service, cfg EmailChangeConfig) *EmailChangeService {
-	return &EmailChangeService{repo: repo, hash: hash, account: account, cfg: cfg}
+func NewEmailChange(repo emailChangeRepository, hash passwordVerifier, account *Service, cfg EmailChangeConfig, freshFor time.Duration) *EmailChangeService {
+	return &EmailChangeService{repo: repo, hash: hash, account: account, cfg: cfg, freshFor: freshFor}
 }
 
 func (s *EmailChangeService) Request(ctx context.Context, user domain.UserID, session, rawEmail, password, ip string) error {
@@ -36,7 +37,7 @@ func (s *EmailChangeService) Request(ctx context.Context, user domain.UserID, se
 	if err != nil {
 		return err
 	}
-	if !domain.ValidUserID(user) || len(session) != 64 || password == "" || len(password) > 1024 {
+	if !domain.ValidUserID(user) || len(session) != 64 || len(password) > 1024 {
 		return domain.ErrFreshAuthRequired
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -51,11 +52,14 @@ func (s *EmailChangeService) Request(ctx context.Context, user domain.UserID, se
 	if err != nil {
 		return err
 	}
-	if err := s.hash.Compare(ctx, password, snapshot.PasswordHash); err != nil {
-		if errors.Is(err, passworddomain.ErrHashBusy) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return err
+	passwordVerified := password != ""
+	if passwordVerified {
+		if err := s.hash.Compare(ctx, password, snapshot.PasswordHash); err != nil {
+			if errors.Is(err, passworddomain.ErrHashBusy) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return err
+			}
+			return domain.ErrFreshAuthRequired
 		}
-		return domain.ErrFreshAuthRequired
 	}
 	if email.String() == snapshot.Email {
 		return domain.ErrInvalidEmailChange
@@ -64,7 +68,7 @@ func (s *EmailChangeService) Request(ctx context.Context, user domain.UserID, se
 	if err != nil {
 		return err
 	}
-	return s.repo.RequestEmailChange(ctx, snapshot, session, email.String(), prepared)
+	return s.repo.RequestEmailChange(ctx, snapshot, session, email.String(), prepared, passwordVerified, s.freshFor)
 }
 
 func (s *EmailChangeService) Confirm(ctx context.Context, token, ip string) error {

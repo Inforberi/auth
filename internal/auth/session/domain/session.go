@@ -15,3 +15,8 @@ type Session struct {
 	CreatedAt         time.Time            `json:"createdAt"`
 	ExpiresAt         time.Time            `json:"expiresAt"`
 }
+
+type PasswordConfirmation struct {
+	VerifiedAt time.Time
+	ExpiresAt  time.Time
+}

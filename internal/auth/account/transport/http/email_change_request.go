@@ -13,11 +13,11 @@ type EmailChangeRequest struct {
 } // @name account_http.EmailChangeRequest
 
 // @Summary Request a login email change
-// @Description Optional EMAIL_CHANGE_ENABLED profile. Requires a valid session, allowed Origin, verified current login email and current password. Old email remains active until confirmation. Sends separate confirmation and security links; no tokens returned.
+// @Description Optional EMAIL_CHANGE_ENABLED profile. Requires a valid session, allowed Origin, verified current login email and either current password or recent session-bound password reauthentication. Omit password after successful reauthentication; a supplied wrong password is always rejected. Old email remains active until confirmation. Sends separate confirmation and security links; no tokens returned.
 // @Tags Account
 // @Accept json
 // @Produce json
-// @Param body body EmailChangeRequest true "new email and current password"
+// @Param body body EmailChangeRequest true "new email, optional current password when already reauthenticated"
 // @Success 202 {object} VerificationResponse
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, invalid_email, invalid_email_change"
 // @Failure 401 {object} httpx.ErrorResponse "codes: unauthorized, fresh_auth_required"

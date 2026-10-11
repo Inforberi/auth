@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 )
 
@@ -38,6 +39,14 @@ func NewLoginLimit(limiter RecoveryLimiter, cipher loginDigester, cfg CapacityCo
 }
 
 func (l *LoginLimit) Allow(ctx context.Context, email, ip string) error {
+	return l.allow(ctx, "login-email:"+email, ip)
+}
+
+func (l *LoginLimit) AllowUser(ctx context.Context, user accountdomain.UserID, ip string) error {
+	return l.allow(ctx, "reauth-user:"+string(user), ip)
+}
+
+func (l *LoginLimit) allow(ctx context.Context, identityKey, ip string) error {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	for _, budget := range []struct {
@@ -45,7 +54,7 @@ func (l *LoginLimit) Allow(ctx context.Context, email, ip string) error {
 		limit int
 	}{
 		{"login-ip:" + ip, l.cfg.LoginIPLimit},
-		{"login-email:" + email, l.cfg.LoginEmailLimit},
+		{identityKey, l.cfg.LoginEmailLimit},
 		{"login-global", l.cfg.LoginGlobalLimit},
 	} {
 		allowed, err := l.limiter.Allow(ctx, l.cipher.Digest(budget.key), budget.limit, time.Minute)

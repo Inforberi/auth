@@ -43,7 +43,7 @@ func newChangeFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, name 
 }
 
 func (f changeFixture) request(ctx context.Context) error {
-	return f.accounts.RequestEmailChange(ctx, f.snapshot, f.params.TokenHash, f.newEmail, f.intent)
+	return f.accounts.RequestEmailChange(ctx, f.snapshot, f.params.TokenHash, f.newEmail, f.intent, true, 5*time.Minute)
 }
 
 func assertChangeLogin(t *testing.T, ctx context.Context, f changeFixture, email string, version int64) {

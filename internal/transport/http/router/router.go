@@ -21,6 +21,7 @@ import (
 type Handlers struct {
 	Session           *sessionhttp.Handler
 	Rotation          *sessionhttp.RotationHandler
+	Reauthentication  *passwordhttp.ReauthenticationHandler
 	Recovery          *passwordhttp.RecoveryHandler
 	Account           *accounthttp.Handler
 	EmailChange       *accounthttp.EmailChangeHandler
@@ -135,8 +136,11 @@ func sessionRoutes(r chi.Router, h Handlers) {
 		cfg = h.Config.Browser
 	}
 	origin := requestmiddleware.RequireOrigin(cfg)
+	if h.Reauthentication != nil {
+		r.With(noStore, origin, h.Middleware.NoRefreshAuth).Post("/reauthenticate/password", h.Reauthentication.Confirm)
+	}
 	if h.Rotation != nil {
-		r.With(noStore, origin, h.Middleware.RotationAuth).Post("/session/rotate", h.Rotation.Rotate)
+		r.With(noStore, origin, h.Middleware.NoRefreshAuth).Post("/session/rotate", h.Rotation.Rotate)
 	}
 	reads := r.With(noStore, h.Middleware.Auth)
 	reads.Get("/me", h.Session.Me)

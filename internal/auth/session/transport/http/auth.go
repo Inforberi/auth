@@ -27,7 +27,7 @@ func (m *Middleware) LogoutAuth(next http.Handler) http.Handler {
 	return m.authenticate(next, true, false)
 }
 
-func (m *Middleware) RotationAuth(next http.Handler) http.Handler {
+func (m *Middleware) NoRefreshAuth(next http.Handler) http.Handler {
 	return m.authenticate(next, false, false)
 }
 

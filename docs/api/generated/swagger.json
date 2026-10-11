@@ -84,7 +84,7 @@
         },
         "/api/v1/auth/email/change": {
             "post": {
-                "description": "Optional EMAIL_CHANGE_ENABLED profile. Requires a valid session, allowed Origin, verified current login email and current password. Old email remains active until confirmation. Sends separate confirmation and security links; no tokens returned.",
+                "description": "Optional EMAIL_CHANGE_ENABLED profile. Requires a valid session, allowed Origin, verified current login email and either current password or recent session-bound password reauthentication. Omit password after successful reauthentication; a supplied wrong password is always rejected. Old email remains active until confirmation. Sends separate confirmation and security links; no tokens returned.",
                 "consumes": [
                     "application/json"
                 ],
@@ -97,7 +97,7 @@
                 "summary": "Request a login email change",
                 "parameters": [
                     {
-                        "description": "new email and current password",
+                        "description": "new email, optional current password when already reauthenticated",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -717,6 +717,77 @@
                     },
                     "503": {
                         "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/reauthenticate/password": {
+            "post": {
+                "description": "Requires current session cookie and allowed Origin. Atomically rotates the token and records password proof for this session only. Does not extend session deadlines, prove MFA or grant permissions. No old-token grace period; serialize requests around reauthentication. Lost successful response requires login. Password and token never returned in JSON.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Session"
+                ],
+                "summary": "Confirm current password for sensitive actions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact HTTPS origin from AUTH_ALLOWED_ORIGINS",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "current password",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/password_http.ReauthenticationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/password_http.ReauthenticationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "code: invalid_json",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "codes: unauthorized, fresh_auth_required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code: invalid_origin",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "code: temporarily_unavailable",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -1458,6 +1529,22 @@
                     "type": "string"
                 },
                 "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "password_http.ReauthenticationRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "password_http.ReauthenticationResponse": {
+            "type": "object",
+            "properties": {
+                "validUntil": {
                     "type": "string"
                 }
             }

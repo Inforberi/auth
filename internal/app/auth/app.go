@@ -81,7 +81,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		activation = passwordhttp.NewActivation(passwordservice.NewActivation(accountRepo, recoverySvc, cfg.Invitation), log)
 	}
 	if cfg.EmailChange.Enabled {
-		changeSvc := accountservice.NewEmailChange(accountRepo, argonHash, accountSvc, cfg.EmailChange)
+		changeSvc := accountservice.NewEmailChange(accountRepo, argonHash, accountSvc, cfg.EmailChange, cfg.Session.FreshAuthTTL)
 		emailChange = accounthttp.NewEmailChange(changeSvc, log)
 		protectedRecovery = passwordhttp.NewProtectedRecovery(passwordservice.NewProtectedRecovery(accountRepo, recoverySvc), log)
 	}
@@ -93,6 +93,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	handler := router.New(router.Handlers{
 		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
 		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessionRepo, tokenGen), log),
+		Reauthentication:  passwordhttp.NewReauthentication(passwordservice.NewReauthentication(passwordRepo, sessionRepo, argonHash, loginLimit, tokenGen, cfg.Session.FreshAuthTTL), log),
 		Recovery:          passwordhttp.NewRecovery(recoverySvc, log),
 		Account:           accounthttp.New(accountSvc, log),
 		EmailChange:       emailChange,

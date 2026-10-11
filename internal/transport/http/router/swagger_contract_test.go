@@ -63,6 +63,8 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 		{"password_http.TemporaryLoginRequest", passwordhttp.TemporaryLoginRequest{}},
 		{"password_http.TemporaryLoginResponse", passwordhttp.TemporaryLoginResponse{}},
 		{"password_http.TemporaryCompleteRequest", passwordhttp.TemporaryCompleteRequest{}},
+		{"password_http.ReauthenticationRequest", passwordhttp.ReauthenticationRequest{}},
+		{"password_http.ReauthenticationResponse", passwordhttp.ReauthenticationResponse{}},
 		{"password_http.RecoveryResponse", passwordhttp.RecoveryResponse{}},
 		{"account_http.ResendRequest", accounthttp.ResendRequest{}},
 		{"account_http.ConfirmRequest", accounthttp.ConfirmRequest{}},

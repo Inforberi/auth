@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -14,6 +13,7 @@ import (
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
+	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
 func checkSessionRotation(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
@@ -22,7 +22,8 @@ func checkSessionRotation(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		t.Fatal(err)
 	}
 	ledger := sessionpostgres.New(db)
-	old := strings.Repeat("a", 64)
+	tokens := tokengenerate.New()
+	old := tokens.Hash("session-rotation-old")
 	p := sessionservice.CreateSessionParams{UserID: owner, AuthVersion: 1, TokenHash: old, CreatedAt: time.Now().UTC(), ExpiresAt: time.Now().UTC().Add(time.Hour), AbsoluteExpiresAt: time.Now().UTC().Add(2 * time.Hour)}
 	if err := ledger.CreateSession(ctx, p); err != nil {
 		t.Fatal(err)
@@ -35,7 +36,7 @@ func checkSessionRotation(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	winners := make(chan string, 16)
 	for i := range 16 {
 		wg.Go(func() {
-			hash := fmt.Sprintf("%064x", i+1000)
+			hash := tokens.Hash(fmt.Sprintf("session-rotation-winner-%d", i))
 			expiry, err := ledger.RotateSession(ctx, owner, old, hash)
 			if err == nil {
 				if !expiry.Equal(before.ExpiresAt) {
@@ -81,7 +82,7 @@ func checkSessionRotation(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			p.UserID, p.TokenHash = user, fmt.Sprintf("%064x", i+2000)
+			p.UserID, p.TokenHash = user, tokens.Hash(fmt.Sprintf("session-rotation-guard-%d", i))
 			if err := ledger.CreateSession(ctx, p); err != nil {
 				t.Fatal(err)
 			}

@@ -18,6 +18,7 @@ type changeRepository struct {
 	email, session, consumed string
 	reads, writes            int
 	err                      error
+	passwordVerified         bool
 }
 
 func (r *changeRepository) EmailChangeSnapshot(context.Context, domain.UserID) (domain.EmailChangeSnapshot, error) {
@@ -25,11 +26,12 @@ func (r *changeRepository) EmailChangeSnapshot(context.Context, domain.UserID) (
 	return r.snapshot, r.err
 }
 
-func (r *changeRepository) RequestEmailChange(ctx context.Context, snapshot domain.EmailChangeSnapshot, session, email string, intent domain.EmailChangeIntent) error {
+func (r *changeRepository) RequestEmailChange(ctx context.Context, snapshot domain.EmailChangeSnapshot, session, email string, intent domain.EmailChangeIntent, passwordVerified bool, freshFor time.Duration) error {
 	if _, ok := ctx.Deadline(); !ok || snapshot != r.snapshot {
 		return errors.New("missing deadline or changed credential snapshot")
 	}
 	r.writes++
+	r.passwordVerified = passwordVerified
 	r.session, r.email, r.intent = session, email, intent
 	return r.err
 }
@@ -65,7 +67,7 @@ func TestEmailChangeService(t *testing.T) {
 	if err := cfg.Validate(true); err != nil {
 		t.Fatal(err)
 	}
-	s := service.NewEmailChange(r, hash, account, cfg)
+	s := service.NewEmailChange(r, hash, account, cfg, 5*time.Minute)
 	ctx := context.Background()
 	if err := s.Request(ctx, r.snapshot.UserID, strings.Repeat("a", 64), " NEW@example.com ", "current-password", "127.0.0.1"); err != nil {
 		t.Fatal(err)
@@ -133,6 +135,10 @@ func TestEmailChangeService(t *testing.T) {
 	}
 	if err := s.Request(ctx, r.snapshot.UserID, strings.Repeat("a", 64), "new@example.com", "wrong", "ip"); !errors.Is(err, domain.ErrFreshAuthRequired) || r.writes != writes {
 		t.Fatal("wrong password queued change", err)
+	}
+	calls = hash.calls
+	if err := s.Request(ctx, r.snapshot.UserID, strings.Repeat("a", 64), "new@example.com", "", "ip"); err != nil || hash.calls != calls || r.passwordVerified {
+		t.Fatal("fresh-session path repeated password check", err)
 	}
 	limits.err = errors.New("limiter unavailable")
 	reads = r.reads

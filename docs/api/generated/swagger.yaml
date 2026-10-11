@@ -165,6 +165,16 @@ definitions:
       token:
         type: string
     type: object
+  password_http.ReauthenticationRequest:
+    properties:
+      password:
+        type: string
+    type: object
+  password_http.ReauthenticationResponse:
+    properties:
+      validUntil:
+        type: string
+    type: object
   password_http.RecoveryResponse:
     properties:
       status:
@@ -295,11 +305,13 @@ paths:
       consumes:
       - application/json
       description: Optional EMAIL_CHANGE_ENABLED profile. Requires a valid session,
-        allowed Origin, verified current login email and current password. Old email
+        allowed Origin, verified current login email and either current password or
+        recent session-bound password reauthentication. Omit password after successful
+        reauthentication; a supplied wrong password is always rejected. Old email
         remains active until confirmation. Sends separate confirmation and security
         links; no tokens returned.
       parameters:
-      - description: new email and current password
+      - description: new email, optional current password when already reauthenticated
         in: body
         name: body
         required: true
@@ -742,6 +754,57 @@ paths:
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
       summary: Get authenticated user and current session IDs
+      tags:
+      - Session
+  /api/v1/auth/reauthenticate/password:
+    post:
+      consumes:
+      - application/json
+      description: Requires current session cookie and allowed Origin. Atomically
+        rotates the token and records password proof for this session only. Does not
+        extend session deadlines, prove MFA or grant permissions. No old-token grace
+        period; serialize requests around reauthentication. Lost successful response
+        requires login. Password and token never returned in JSON.
+      parameters:
+      - description: Exact HTTPS origin from AUTH_ALLOWED_ORIGINS
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: current password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/password_http.ReauthenticationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/password_http.ReauthenticationResponse'
+        "400":
+          description: 'code: invalid_json'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: 'codes: unauthorized, fresh_auth_required'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: 'code: rate_limited'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: 'code: temporarily_unavailable'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Confirm current password for sensitive actions
       tags:
       - Session
   /api/v1/auth/register/email:

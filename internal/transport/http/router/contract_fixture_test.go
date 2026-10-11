@@ -67,6 +67,7 @@ func contractHandlers(env string) Handlers {
 	return Handlers{
 		Session:           sessionhttp.NewHandler(contractManagement{}, log),
 		Rotation:          sessionhttp.NewRotation(contractRotation{}, log),
+		Reauthentication:  passwordhttp.NewReauthentication(contractReauthentication{}, log),
 		Recovery:          passwordhttp.NewRecovery(contractRecovery{}, log),
 		Account:           accounthttp.New(contractAccounts{}, log),
 		EmailChange:       accounthttp.NewEmailChange(contractEmailChange{}, log),
@@ -102,6 +103,12 @@ func (s contractSessions) ValidateSessionWithoutRefresh(ctx context.Context, tok
 }
 
 type contractRotation struct{}
+
+type contractReauthentication struct{}
+
+func (contractReauthentication) Confirm(context.Context, accountdomain.UserID, string, string, string) (*passwordservice.ReauthenticationResult, error) {
+	return &passwordservice.ReauthenticationResult{Token: validCookieToken, ExpiresAt: time.Now().Add(time.Hour), ValidUntil: time.Now().Add(5 * time.Minute)}, nil
+}
 
 func (contractRotation) Rotate(context.Context, accountdomain.UserID, string) (*sessionservice.CreatedSession, error) {
 	return &sessionservice.CreatedSession{RawToken: validCookieToken, ExpiresAt: time.Now().Add(time.Hour)}, nil

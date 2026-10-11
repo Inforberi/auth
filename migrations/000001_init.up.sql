@@ -126,6 +126,7 @@ CREATE TABLE auth.sessions (
   expires_at TIMESTAMPTZ NOT NULL,
   absolute_expires_at TIMESTAMPTZ NOT NULL,
   revoked_at TIMESTAMPTZ,
+  password_verified_at TIMESTAMPTZ,
   user_agent TEXT NOT NULL,
   ip_address TEXT NOT NULL,
   CHECK (created_at<expires_at AND expires_at<=absolute_expires_at)
@@ -158,7 +159,7 @@ CREATE INDEX password_reset_outbox_exhausted ON auth.password_reset_outbox(lease
 CREATE TABLE auth.password_audit (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  event TEXT NOT NULL CHECK (event IN ('password_reset_issued','password_reset','password_changed','sessions_revoked',
+  event TEXT NOT NULL CHECK (event IN ('password_reset_issued','password_reset','password_changed','sessions_revoked','password_reauthenticated',
     'temporary_password_issued','temporary_password_reissued','temporary_password_started','temporary_password_completed')),
   actor_id UUID REFERENCES auth.users(id),
   auth_version BIGINT CHECK (auth_version IS NULL OR auth_version>0),

@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -22,7 +23,7 @@ func (r *Repository) EmailChangeSnapshot(ctx context.Context, user domain.UserID
 	return snapshot, err
 }
 
-func (r *Repository) RequestEmailChange(ctx context.Context, snapshot domain.EmailChangeSnapshot, session, email string, intent domain.EmailChangeIntent) error {
+func (r *Repository) RequestEmailChange(ctx context.Context, snapshot domain.EmailChangeSnapshot, session, email string, intent domain.EmailChangeIntent, passwordVerified bool, freshFor time.Duration) error {
 	return r.transaction(ctx, func(tx pgx.Tx) error {
 		version, err := lockChangeAccount(ctx, tx, snapshot.UserID)
 		if err != nil {
@@ -31,7 +32,12 @@ func (r *Repository) RequestEmailChange(ctx context.Context, snapshot domain.Ema
 		if version != snapshot.AuthVersion {
 			return domain.ErrFreshAuthRequired
 		}
-		if err := requireChangeSession(ctx, tx, snapshot.UserID, session, version); err != nil {
+		if passwordVerified {
+			freshFor = 0
+		} else if freshFor <= 0 {
+			return domain.ErrFreshAuthRequired
+		}
+		if err := requireChangeSession(ctx, tx, snapshot.UserID, session, version, freshFor); err != nil {
 			return err
 		}
 		var valid bool

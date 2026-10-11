@@ -68,12 +68,13 @@ func (r *PasswordRepo) FindUserByUserID(ctx context.Context, userID accountdomai
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	sql := `
-	SELECT p.password_hash
+	SELECT p.password_hash,u.auth_version
 	FROM auth.password_credentials p JOIN auth.users u ON u.id=p.user_id
 	WHERE p.user_id = $1 AND u.status='active' AND u.deleted_at IS NULL
 	`
 	var passwordHash string
-	err := r.db.QueryRow(ctx, sql, userID).Scan(&passwordHash)
+	var version int64
+	err := r.db.QueryRow(ctx, sql, userID).Scan(&passwordHash, &version)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, passworddomain.ErrNotFound
@@ -82,6 +83,8 @@ func (r *PasswordRepo) FindUserByUserID(ctx context.Context, userID accountdomai
 	}
 
 	return &passworddomain.Credential{
+		UserID:       userID,
+		AuthVersion:  version,
 		PasswordHash: passwordHash,
 	}, nil
 }

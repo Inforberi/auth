@@ -8,12 +8,14 @@ Backend request/confirm/report и восстановление password-проф
 
 | POST | Тело | Успех |
 | --- | --- | --- |
-| `/api/v1/auth/email/change` | `email`, `password` | 202 `status: accepted` |
+| `/api/v1/auth/email/change` | `email`, `password` либо только `email` после password reauthentication | 202 `status: accepted` |
 | `/api/v1/auth/email/change/confirm` | `token` | 200 `status: ok`, очистка cookie |
 | `/api/v1/auth/email/change/report` | `token` | 200 `status: ok`, очистка cookie |
 | `/api/v1/auth/email/change/recover` | `token`, `newPassword`, `confirmPassword` | 200 `status: ok`, очистка cookie |
 
 Все четыре ручки требуют один точный `Origin` из `AUTH_ALLOWED_ORIGINS`; ответы `no-store`. Request дополнительно требует текущую сессию. Confirm/report/recover не требуют cookie браузера, открывшего письмо: полномочие даёт соответствующий токен. Для confirm сервер повторно проверяет исходную сессию из запроса, её сроки/version/revocation. Для report/recover скомпрометированная сессия не нужна.
+
+С 6.1b request поддерживает session-bound password fresh-auth: сначала POST `/api/v1/auth/reauthenticate/password`, затем смена email с новым cookie без повторной передачи/Compare пароля. SQL проверяет proof в той же transaction, без дополнительного preflight SQL lookup. Окно `SESSION_FRESH_AUTH_TTL=5m`, отсутствие/истечение/future marker — fresh_auth_required. Прямой request с паролем остаётся рабочим и сам проверяет пароль один раз; неправильный переданный пароль нельзя обойти свежим marker. Прямой request не устанавливает общий marker, чтобы ранее украденный cookie не получил новые полномочия. Не rotating/reauthenticating между request и confirm: intent привязан к прежнему verifier; при его замене ссылка уже не проходит проверку исходной сессии. [Контракт](../api/contract.md#повторное-подтверждение-пароля).
 
 Ссылки содержат `#token=...`: fragment не передаётся серверу при загрузке страницы. Будущий frontend извлекает токен, убирает его из URL, не передаёт analytics и отправляет JSON POST только после нажатия кнопки; странице нужны `Referrer-Policy: no-referrer` и `Cache-Control: no-store`. GET API ничего не меняет и не существует. Frontend не добавлялся; URL в примере — контракт подключения, не работающая страница.
 
