@@ -20,6 +20,14 @@ func (r *Repository) CreateSession(ctx context.Context, p service.CreateSessionP
 		if p.AuthVersion <= 0 || version != p.AuthVersion {
 			return domain.ErrSessionNotFound
 		}
+		// A separate statement sees factor enrollment committed while waiting for the user lock.
+		var mfaRequired bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1)`, p.UserID).Scan(&mfaRequired); err != nil {
+			return err
+		}
+		if mfaRequired {
+			return domain.ErrMFARequired
+		}
 		_, err := tx.Exec(ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,user_agent,ip_address)
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, p.TokenHash, p.UserID, version, p.CreatedAt, p.ExpiresAt, p.AbsoluteExpiresAt, p.UserAgent, p.IPAddress)
 		return err

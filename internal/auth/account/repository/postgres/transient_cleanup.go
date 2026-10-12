@@ -10,6 +10,7 @@ func (r *Repository) purgeTransientAuthData(ctx context.Context, batch int) (int
 	var removed int64
 	for _, challenge := range []struct{ table, key, expiry string }{
 		{"email_verifications", "digest", "expires_at"},
+		{"mfa_enrollments", "user_id", "expires_at"},
 		{"password_resets", "digest", "expires_at"},
 		{"email_login_challenges", "digest", "expires_at"},
 		{"temporary_password_tokens", "digest", "expires_at"},

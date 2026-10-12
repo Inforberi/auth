@@ -42,6 +42,8 @@ func (r *Repository) DeleteAccount(ctx context.Context, deletion domain.AccountD
 		for _, query := range []string{
 			`UPDATE auth.sessions SET revoked_at=COALESCE(revoked_at,clock_timestamp()),user_agent='',ip_address='' WHERE user_id=$1`,
 			`DELETE FROM auth.password_credentials WHERE user_id=$1`,
+			`DELETE FROM auth.mfa_enrollments WHERE user_id=$1`,
+			`DELETE FROM auth.mfa_totp WHERE user_id=$1`,
 			`DELETE FROM auth.temporary_password_credentials WHERE user_id=$1`,
 			`DELETE FROM auth.account_invitations WHERE user_id=$1`,
 			`DELETE FROM auth.email_verifications v USING auth.user_emails e WHERE v.email_id=e.id AND e.user_id=$1`,

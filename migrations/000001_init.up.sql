@@ -174,6 +174,40 @@ CREATE TABLE auth.email_verification_audit (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE auth.mfa_totp (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  secret BYTEA NOT NULL CHECK (octet_length(secret) BETWEEN 48 AND 512),
+  last_step BIGINT NOT NULL CHECK (last_step >= 0),
+  enabled_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+
+CREATE TABLE auth.mfa_enrollments (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  digest TEXT NOT NULL UNIQUE CHECK (digest ~ '^[a-f0-9]{64}$'),
+  auth_version BIGINT NOT NULL CHECK (auth_version > 0),
+  session_hash TEXT NOT NULL CHECK (session_hash ~ '^[a-f0-9]{64}$'),
+  secret BYTEA NOT NULL CHECK (octet_length(secret) BETWEEN 48 AND 512),
+  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT statement_timestamp(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  CHECK (expires_at > created_at AND expires_at <= created_at+interval '10 minutes')
+);
+CREATE INDEX mfa_enrollments_expiry ON auth.mfa_enrollments(expires_at,user_id);
+
+CREATE TABLE auth.mfa_recovery_codes (
+  user_id UUID NOT NULL REFERENCES auth.mfa_totp(user_id) ON DELETE CASCADE,
+  digest TEXT NOT NULL CHECK (digest ~ '^[a-f0-9]{64}$'),
+  PRIMARY KEY (user_id,digest)
+);
+
+CREATE TABLE auth.mfa_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+CREATE INDEX mfa_audit_retention ON auth.mfa_audit(created_at,id);
+
 CREATE TABLE auth.sessions (
   id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
   token_hash TEXT PRIMARY KEY CHECK (token_hash ~ '^[a-f0-9]{64}$'),
