@@ -7,6 +7,7 @@
 | Руководство для интегратора | [auth-guide](../auth-guide.md) | Текущие routes/DTO/настройки и ограничения; читать нужный раздел, не весь справочник по умолчанию |
 | Структура и зависимости | [architecture](../architecture.md), нужный [ADR](../adr/) | `internal/app/auth`, `internal/config`, `internal/server/http` |
 | Следующий этап | [implementation](../planning/implementation.md), при необходимости [roadmap](../planning/roadmap.md) | Статусы задач, затем код соответствующей фичи |
+| Роли и permissions | [roles-permissions](../features/roles-permissions.md) | `internal/access` — каталог, роли, назначения, актуальные SQL permissions; admin HTTP/MFA ещё не опубликованы |
 | HTTP/ошибки/Swagger | [contract](../api/contract.md) | `internal/transport/http/router`, feature `transport/http`, `internal/transport/http/httpx` |
 | SQL и миграции | [schema](../schema.md) | `migrations/000001_init.*.sql`, feature `repository/postgres` |
 | Email verification | [email-verification](../features/email-verification.md) | `internal/auth/account` — `verification_*`, delivery |

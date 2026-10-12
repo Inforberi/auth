@@ -6,6 +6,7 @@
 - [Фичи](features/) — verification, recovery, смена email и удаление аккаунта.
 - [Вход по email-коду](features/email-otp.md) — отдельный optional login без пароля, не verification/MFA.
 - [Вход через Google](features/google-login.md) — optional OIDC login/link/unlink, настройки и ограничения.
+- [Роли и permissions](features/roles-permissions.md) — внутренние роли/назначения, актуальные права, delegation и ограничения до MFA/admin API.
 - [Политика паролей](operations/password-security.md) — проверка пароля, Argon2, безопасный rehash и ограничения.
 - [Roadmap](planning/roadmap.md) — согласованные этапы и scope; [implementation](planning/implementation.md) — конкретные задачи и статусы; [history](planning/history.md) — прошлые результаты проверок, не инструкция следующего шага.
 - [ADR](adr/) — причины архитектурных решений; [template-adoption](template-adoption.md) — происхождение инфраструктуры.

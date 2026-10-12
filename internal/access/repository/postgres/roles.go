@@ -10,11 +10,20 @@ import (
 )
 
 func (r *Repository) ReadRole(ctx context.Context, id domain.RoleID) (domain.Role, error) {
+	return readRole(ctx, r.db, id)
+}
+
+type roleReader interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+func readRole(ctx context.Context, db roleReader, id domain.RoleID) (domain.Role, error) {
 	var role domain.Role
-	err := r.db.QueryRow(ctx, `SELECT r.id,r.key,r.name,r.description,r.system,r.version,
+	err := db.QueryRow(ctx, `SELECT r.id,r.key,r.name,r.description,r.system,r.version,
 		ARRAY(SELECT permission_key FROM auth.role_permissions WHERE role_id=r.id ORDER BY permission_key)
 		FROM auth.roles r WHERE r.id=$1`, id).Scan(
-		&role.ID, &role.Key, &role.Name, &role.Description, &role.System, &role.Version, &role.Permissions)
+		&role.ID, &role.Key, &role.Name, &role.Description, &role.System, &role.Version, &role.Permissions,
+	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Role{}, domain.ErrRoleNotFound
 	}

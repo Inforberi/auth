@@ -6,7 +6,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/access/service"
 )
 
-type Repository struct { db *pgxpool.Pool }
+type Repository struct{ db *pgxpool.Pool }
 
 func New(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
 

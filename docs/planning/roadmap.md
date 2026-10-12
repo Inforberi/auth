@@ -477,7 +477,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 7. Identities / SSO boundary | Не начат | После 0, 4, 6; общий SSO optional |
 | 8. Telegram/OIDC/OTP | Backend локально реализован | Telegram + Google OIDC и email OTP; external/browser/fault/load gates открыты, Mini Apps отложены |
 | 9. Policy/linking | Не начат | После 7–8; admin API зависит от 10 и 13.1 |
-| 10. Roles/permissions | Не начат | После 4, 6; single-app first, provisioning/assignments API после MFA; multi-app/прямые grants optional |
+| 10. Roles/permissions | A4.1/2-local реализованы | Внутренние роли/назначения/delegation/version/audit и актуальные SQL permissions; импорт, системные операции/полная last-admin защита и admin HTTP после MFA остаются открыты |
 | 11. Plans/entitlements | Не начат | После 10; manual grants и effective access без payment provider |
 | 12. Payments | Не начат | После 11; local provider или optional external events adapter; Stars зависит от commerce profile |
 | 13. MFA/cabinet | Не начат | 13.1 после 6 и до публикации admin API; остальное по API готовности |

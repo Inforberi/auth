@@ -7,6 +7,7 @@ CREATE TABLE auth.users (
   status TEXT NOT NULL DEFAULT 'active'
     CONSTRAINT users_status_check CHECK (status IN ('pending', 'active', 'blocked')),
   auth_version BIGINT NOT NULL DEFAULT 1 CHECK (auth_version > 0),
+  access_version BIGINT NOT NULL DEFAULT 1 CHECK (access_version > 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   deleted_at TIMESTAMPTZ,
@@ -43,6 +44,21 @@ CREATE TABLE auth.user_roles (
   PRIMARY KEY (user_id, role_id)
 );
 CREATE INDEX user_roles_by_role ON auth.user_roles(role_id,user_id);
+
+CREATE TABLE auth.access_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id UUID NOT NULL REFERENCES auth.users(id),
+  target_id UUID REFERENCES auth.users(id),
+  role_id UUID NOT NULL REFERENCES auth.roles(id),
+  event TEXT NOT NULL CHECK (event IN ('role_created','role_updated','role_granted','role_revoked')),
+  role_version BIGINT NOT NULL CHECK (role_version > 0),
+  access_version BIGINT CHECK (access_version > 0),
+  role_snapshot JSONB NOT NULL CHECK (jsonb_typeof(role_snapshot)='object' AND octet_length(role_snapshot::text)<=32768),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  CHECK ((target_id IS NOT NULL) = (event IN ('role_granted','role_revoked'))),
+  CHECK ((access_version IS NOT NULL) = (target_id IS NOT NULL))
+);
+CREATE INDEX access_audit_retention ON auth.access_audit(created_at,id);
 
 CREATE TABLE auth.linked_identities (
   issuer TEXT COLLATE "C" NOT NULL CHECK (octet_length(issuer) BETWEEN 1 AND 512 AND btrim(issuer) <> ''),

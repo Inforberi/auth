@@ -8,6 +8,8 @@
 
 ## Владельцы данных
 
+A4 добавляет `auth.roles`, `role_permissions`, `user_roles`, `users.access_version` и `auth.access_audit` с bounded role snapshot. Назначения отдельно от способов входа, optimistic role/assignment versions, FK/unique и индексы для owner/role/retention. Системная роль защищена от обычных mutations; bootstrap и полная last-admin защита block/delete остаются отдельным шагом. [Контракт](features/roles-permissions.md).
+
 A3.1 добавляет `auth.linked_identities`: exact issuer (до 512 байт) + subject (до 255 байт), COLLATE C/составной PK и user_id FK. A3.3 добавляет UNIQUE `(user_id,issuer)` для одной identity/provider/account; его owner-prefix заменяет отдельный индекс user_id. Создание external-only user/identity/profile атомарно, email/password необязательны. При soft deletion ownership остаётся у tombstone; automatic identity release не реализован. Явный authorized unlink освобождает identity, не объединяя будущую регистрацию с прежним UUID. [Контракт](features/external-identities.md).
 
 A3.2/A3.3 добавляют `auth.identity_audit`: user UUID, identity_created/identity_linked/identity_unlinked, auth_version/time, без issuer/subject/token. Запись атомарна с mutation и UNIQUE race rollback, FK сохраняет audit при soft deletion. Индекс created_at/id и existing bounded retention применяют SECURITY_AUDIT_RETENTION_DAYS (по умолчанию 180). Telegram flows в SQL не хранятся: single-use state/binding/verifier/nonce и link purpose/user/session hash живут зашифрованными в Redis 5 минут. Unlink повышает auth_version и отзывает sessions атомарно. [Контракт](features/telegram-login.md).

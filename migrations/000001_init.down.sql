@@ -30,6 +30,7 @@ DROP TABLE IF EXISTS auth.user_profile;
 DROP TABLE IF EXISTS auth.user_emails;
 DROP TABLE IF EXISTS auth.identity_audit;
 DROP TABLE IF EXISTS auth.linked_identities;
+DROP TABLE IF EXISTS auth.access_audit;
 DROP TABLE IF EXISTS auth.user_roles;
 DROP TABLE IF EXISTS auth.role_permissions;
 DROP TABLE IF EXISTS auth.roles;

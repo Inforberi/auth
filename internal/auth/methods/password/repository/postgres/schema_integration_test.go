@@ -19,6 +19,7 @@ func TestPostgresSchema(t *testing.T) {
 	}
 	migrateFixture(t, db, ctx, "up")
 	repo := New(db)
+	t.Run("access roles", func(t *testing.T) { checkAccessRoles(t, db, ctx) })
 	t.Run("email OTP", func(t *testing.T) { checkEmailOTP(t, db, ctx) })
 	t.Run("external identities", func(t *testing.T) { checkIdentityResolution(t, db, ctx) })
 	t.Run("identity management", func(t *testing.T) { checkIdentityManagement(t, db, ctx) })

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Inforberi/financial-intelligence/internal/access/domain"
@@ -11,10 +12,7 @@ import (
 )
 
 func (s *Service) Authorize(ctx context.Context, principal Principal, permission domain.PermissionKey) error {
-	if !s.catalog.Contains(permission) || !accountdomain.ValidUserID(principal.UserID) || len(principal.TokenHash) != 64 {
-		return domain.ErrForbidden
-	}
-	if _, err := hex.DecodeString(principal.TokenHash); err != nil {
+	if !s.catalog.Contains(permission) || !validPrincipal(principal) {
 		return domain.ErrForbidden
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
@@ -27,4 +25,12 @@ func (s *Service) Authorize(ctx context.Context, principal Principal, permission
 		return domain.ErrForbidden
 	}
 	return nil
+}
+
+func validPrincipal(principal Principal) bool {
+	if !accountdomain.ValidUserID(principal.UserID) || len(principal.TokenHash) != 64 || principal.TokenHash != strings.ToLower(principal.TokenHash) {
+		return false
+	}
+	_, err := hex.DecodeString(principal.TokenHash)
+	return err == nil
 }

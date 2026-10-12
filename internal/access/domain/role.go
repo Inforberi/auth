@@ -7,26 +7,31 @@ import (
 	"unicode/utf8"
 )
 
-type RoleID string
-type PermissionKey string
+type (
+	RoleID        string
+	PermissionKey string
+)
 
 const MaxRolePermissions = 128
 
 var (
-	ErrInvalidRole = errors.New("invalid role")
-	ErrForbidden = errors.New("access forbidden")
-	ErrRoleNotFound = errors.New("role not found")
+	ErrInvalidRole       = errors.New("invalid role")
+	ErrForbidden         = errors.New("access forbidden")
+	ErrRoleNotFound      = errors.New("role not found")
 	ErrInvalidPermission = errors.New("invalid permission")
-	keyPattern = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$`)
+	ErrConflict          = errors.New("access conflict")
+	ErrFreshAuthRequired = errors.New("fresh authentication required")
+	ErrTargetUnavailable = errors.New("role assignment target unavailable")
+	keyPattern           = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$`)
 )
 
 type Role struct {
-	ID RoleID
-	Key string
-	Name string
+	ID          RoleID
+	Key         string
+	Name        string
 	Description string
-	System bool
-	Version int64
+	System      bool
+	Version     int64
 	Permissions []PermissionKey
 }
 
