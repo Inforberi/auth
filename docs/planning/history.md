@@ -2,6 +2,16 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат A5.1-local — 12 октября 2026
+
+Реализована внутренняя основа MFA: TOTP через pquerna/otp v1.5.0, шифрование секрета с привязкой к UUID, enrollment по свежей парольной сессии, десять одноразовых резервных кодов с keyed digest. Pending enrollment ограничен сроком, количеством попыток и Redis admission. Подключение фактора атомарно повышает auth_version, отзывает сессии и пишет audit; неверная попытка сохраняет счётчик, техническая ошибка откатывает транзакцию. TOTP time step и recovery code потребляются однократно под SQL lock. Обычная выдача сессии проверяет наличие фактора отдельным PK lookup после user lock; сброс пароля не снимает MFA. Удаление аккаунта и существующие retention workers очищают соответствующие данные без нового worker/pool.
+
+App, HTTP, Swagger и operational ENV пока не подключены: это не завершённый публичный вход с MFA. Verify — внутренняя операция потребления фактора, не полномочие выдачи сессии. Следующий A5.2 связывает primary/browser challenge, фактор и сессию в одной транзакции, затем добавляет защищённое управление MFA. До него вручную включать фактор в рабочей БД нельзя. [Контракт](../features/mfa.md). Изменена только исходная 000001, дополнительных миграций нет; реальные env/secrets/БД не менялись.
+
+Formatter, task check (tests + lint 0 issues), targeted MFA/session race прошли. Полный disposable PostgreSQL 18.6 up/down/up/race — 10.209s: из 16 конкурирующих потреблений одного TOTP или recovery проходит одно; проверены replay, stale/foreign proof, TTL/attempt guards, audit rollback, сохранение MFA при reset и очистка при delete. Тестовый контейнер и том с synthetic data удалены. Security check: достижимых и imported-package уязвимостей нет; прежнее module-only предупреждение GO-2026-5932 относится к неиспользуемому x/crypto/openpgp, исправленной версии нет. Live Redis нового namespace, браузер, authenticator и mixed load остаются открыты; пропускная способность не заявляется. Коммит не выполнялся.
+
+Код и тесты A5.1-local зафиксированы коммитом a9b929c (`feat(mfa): добавил TOTP и резервные коды`); документация — отдельным коммитом по запросу пользователя.
+
 ### Результат 10.3-local — 12 октября 2026
 
 Account status/delete получили last-system-admin guard: destructive операция требует другого active/nondeleted владельца super_admin. Обычная роль или pending/blocked/deleted владелец не считается резервным. Guard выполняется после existing version/deletion checks, но до recovery cancellation/credential/session cleanup/audit; отказ не изменяет состояние. System role edit/assignment/revoke через обычные Access use cases уже запрещены. Status cleanup сгруппирован в локальную функцию без изменения SQL и порядка операций.

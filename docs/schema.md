@@ -8,6 +8,8 @@
 
 ## Владельцы данных
 
+A5.1-local добавляет `auth.mfa_totp` (encrypted secret/last step), `mfa_enrollments` (один pending/user, session/version binding, 10m TTL/5 attempts), `mfa_recovery_codes` (owner-bound keyed verifiers) и `mfa_audit` без secrets. Успешное enrollment увеличивает auth_version и отзывает прежние сессии; ordinary issuance с enabled factor закрыта до bound challenge completion. MFA audit/expired enrollments очищает existing bounded retention. Reset не удаляет фактор, account deletion очищает secrets/recovery. Публичный MFA flow ещё не подключён. [Контракт](features/mfa.md).
+
 A4 добавляет `auth.roles`, `role_permissions`, `user_roles`, `users.access_version` и `auth.access_audit` с bounded role snapshot. Назначения отдельно от способов входа, optimistic role/assignment versions, FK/unique и индексы для owner/role/retention. Системная роль защищена от обычных mutations; bootstrap и полная last-admin защита block/delete остаются отдельным шагом. [Контракт](features/roles-permissions.md).
 
 A3.1 добавляет `auth.linked_identities`: exact issuer (до 512 байт) + subject (до 255 байт), COLLATE C/составной PK и user_id FK. A3.3 добавляет UNIQUE `(user_id,issuer)` для одной identity/provider/account; его owner-prefix заменяет отдельный индекс user_id. Создание external-only user/identity/profile атомарно, email/password необязательны. При soft deletion ownership остаётся у tombstone; automatic identity release не реализован. Явный authorized unlink освобождает identity, не объединяя будущую регистрацию с прежним UUID. [Контракт](features/external-identities.md).

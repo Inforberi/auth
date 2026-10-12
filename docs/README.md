@@ -5,6 +5,7 @@
 - [API-контракт](api/contract.md) — текущее поведение ручек. `api/generated/` содержит только generated Swagger; источник — DTO/аннотации в коде. Генерация: `task swagger`, проверка drift: `task check:api`.
 - [Фичи](features/) — verification, recovery, смена email и удаление аккаунта.
 - [Вход по email-коду](features/email-otp.md) — отдельный optional login без пароля, не verification/MFA.
+- [MFA: TOTP и резервные коды](features/mfa.md) — внутренняя основа A5.1; публичный challenge/HTTP ещё не подключён.
 - [Вход через Google](features/google-login.md) — optional OIDC login/link/unlink, настройки и ограничения.
 - [Роли и permissions](features/roles-permissions.md) — внутренние роли/назначения, актуальные права, delegation и ограничения до MFA/admin API.
 - [Каталог доступов](features/access-catalog.md) — JSON permissions/шаблоны, ручной preview и безопасная загрузка при запуске.

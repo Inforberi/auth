@@ -85,7 +85,10 @@ internal/
 │   └── mfa/
 │       ├── domain/
 │       ├── service/
-│       ├── repository/postgres/
+│       ├── totp/
+│       ├── repository/
+│       │   ├── postgres/
+│       │   └── redis/
 │       └── transport/http/
 ├── access/
 │   ├── domain/
