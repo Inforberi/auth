@@ -9,6 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
+	accessapp "github.com/Inforberi/financial-intelligence/internal/app/access"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
@@ -18,6 +19,7 @@ import (
 )
 
 type App struct {
+	Access             *accessapp.App
 	Provisioning       *accountservice.ProvisionService
 	TemporaryPasswords *passwordservice.TemporaryPasswordService
 	serve              func(context.Context) error

@@ -2,6 +2,14 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат 10.5a-local — 12 октября 2026
+
+Добавлен операторский JSON-каталог permissions и шаблонов ролей версии 1: строгая схема, ограничения размера и количества записей, запрет дублирующихся полей и неизвестных permissions. Проверенный документ неизменяемый; preview CLI и `task access:preview` показывают изменения без обращения к БД. Шаблоны не создают роли и не назначают права автоматически. Контракт и пример — [access-catalog](../features/access-catalog.md).
+
+Отдельный App.Access использует существующий SQL pool и optional ACCESS_CATALOG_FILE. При запуске один запрос с бюджетом 3s отклоняет каталог, в котором отсутствует permission существующей роли. Загрузка не изменяет роли, назначения или аудит. Обновление требует согласованного файла на экземплярах и перезапуска; защищённый runtime/UI импорт остаётся A6/A7. Следующий backend шаг — системные операции и last-effective-admin guards 10.3.
+
+Formatter и task check прошли: tests + lint 0 issues. Targeted race settings/access assembly/CLI прошли. Полный disposable PostgreSQL 18.6 up/down/up/race — 7.517s: проверены отказ при удалении используемого permission и отсутствие изменений SQL при загрузке шаблона с ключом существующей роли. CLI и Task preview выполнены на примере. Тестовый контейнер 7f0bc9238b9caf89a33d5ddf884fa79d5f866345dc4cb836178254fc2b54f04a и том с synthetic data удалены. Реальные env/secrets/БД, dependencies, migrations и Swagger не менялись; новых HTTP routes нет. Нагрузка и согласованное развёртывание нескольких экземпляров не измерялись. Коммит не выполнялся.
+
 ### Результат A4.1/2-local — 12 октября 2026
 
 Продолжена основа access из dacb371. Реализованы внутренние create/update role, grant/revoke assignment, Authorize/UserAccess, role/assignment versions и atomic access audit с bounded role snapshot. Каталог расширяется проектом, core management permissions защищены от подмены; неизвестные права и wildcard закрыты. Роли не зависят от метода входа, назначений до 32/user, permissions до 128/role и 512/catalog. SQL proof проверяет active/nondeleted owner, session/auth_version/expiry/revoke и свежий password proof 5m для mutations. Оператор делегирует только собственные права; self-grant и обычное изменение/назначение/отзыв системной роли запрещены. Полный last-effective-admin guard для block/delete и системные операции ещё не реализованы, как и MFA/HTTP assembly/bootstrap/import/UI; A4 целиком не закрыт.

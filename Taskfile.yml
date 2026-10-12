@@ -84,6 +84,14 @@ tasks:
         cmds:
             - go build -mod=readonly -trimpath -o ./bin/auth ./cmd/auth
 
+    # Доступы — preview каталога без изменения ролей и БД
+    access:preview:
+        desc: Проверить JSON-каталог разрешений и показать изменения
+        vars:
+            CURRENT: ''
+        cmds:
+            - 'go run ./cmd/access-catalog -file {{.FILE | shellQuote}} -current {{.CURRENT | shellQuote}}'
+
     # API — генерация только после изменения контракта
     swagger:
         desc: Пересобрать Swagger

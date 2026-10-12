@@ -1,6 +1,8 @@
 # Текущий шаг
 
-- A4 возобновлён 12 октября: реализованы внутренние создание/редактирование ролей, назначение/отзыв, фактические permissions, optimistic versions/delegation/fresh-password proof и atomic audit. [Контракт](../features/roles-permissions.md). Нет public admin routes/MFA/bootstrap или полной last-effective-admin защиты block/delete; A4 целиком не закрыт. Следом импорт каталога 10.5a и guards 10.3 до публикации после A5. Только source 000001, реальные env/БД/secrets не менялись; коммит только по запросу.
+- Выполнен 10.5a-local: operator JSON v1 permissions/templates, immutable validated document, preview CLI/Task и ACCESS_CATALOG_FILE; App.Access собран отдельно, один startup SQL check закрывает undeclared stored permissions, без SQL writes/auto-apply. [Контракт](../features/access-catalog.md). Runtime/UI импорт остаётся A6/A7. Следующий backend шаг — system-role/last-effective-admin guards 10.3, затем MFA/admin publication. Реальные env/БД/secrets не менялись; коммит только по запросу.
+
+- A4 возобновлён 12 октября: реализованы внутренние создание/редактирование ролей, назначение/отзыв, фактические permissions, optimistic versions/delegation/fresh-password proof и atomic audit. [Контракт](../features/roles-permissions.md). Нет public admin routes/MFA/bootstrap или полной last-effective-admin защиты block/delete; A4 целиком не закрыт. Операторский импорт выполнен выше; guards 10.3 остаются до публикации после A5. Только source 000001, реальные env/БД/secrets не менялись; коммит только по запросу.
 
 Обновлено 12 октября 2026. Рабочая заметка; полные статусы — [implementation](../planning/implementation.md), результаты — [history](../planning/history.md).
 

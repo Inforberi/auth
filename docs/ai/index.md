@@ -8,6 +8,7 @@
 | Структура и зависимости | [architecture](../architecture.md), нужный [ADR](../adr/) | `internal/app/auth`, `internal/config`, `internal/server/http` |
 | Следующий этап | [implementation](../planning/implementation.md), при необходимости [roadmap](../planning/roadmap.md) | Статусы задач, затем код соответствующей фичи |
 | Роли и permissions | [roles-permissions](../features/roles-permissions.md) | `internal/access` — каталог, роли, назначения, актуальные SQL permissions; admin HTTP/MFA ещё не опубликованы |
+| Импорт каталога | [access-catalog](../features/access-catalog.md) | `internal/access/settings`, `cmd/access-catalog`, `internal/app/access`; operator file/preview, не runtime HTTP импорт |
 | HTTP/ошибки/Swagger | [contract](../api/contract.md) | `internal/transport/http/router`, feature `transport/http`, `internal/transport/http/httpx` |
 | SQL и миграции | [schema](../schema.md) | `migrations/000001_init.*.sql`, feature `repository/postgres` |
 | Email verification | [email-verification](../features/email-verification.md) | `internal/auth/account` — `verification_*`, delivery |

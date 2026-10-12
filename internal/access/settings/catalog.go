@@ -10,10 +10,10 @@ import (
 )
 
 type Permission struct {
-	Key         domain.PermissionKey
-	Name        string
-	Description string
-	Group       string
+	Key         domain.PermissionKey `json:"key"`
+	Name        string               `json:"name"`
+	Description string               `json:"description,omitempty"`
+	Group       string               `json:"group,omitempty"`
 }
 
 const (

@@ -113,6 +113,7 @@ func checkAccessRoles(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	}
 	checkAccessRaces(t, ctx, svc, actor, other, role)
 	checkAccessRoleLimit(t, db, ctx, svc, actor, role)
+	checkAccessCatalog(t, db, ctx, role)
 	checkAccessAuditRollback(t, db, ctx, svc, actor)
 	checkAccessSessionGuards(t, db, ctx, svc, other, actor)
 	var count int

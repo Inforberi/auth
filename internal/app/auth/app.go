@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
+	accessapp "github.com/Inforberi/financial-intelligence/internal/app/access"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
@@ -40,6 +41,10 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	pool, rdb, log, err := resources.open(ctx, cfg)
 	if err != nil {
 		return nil, err
+	}
+	access, err := accessapp.New(ctx, pool, cfg.Access)
+	if err != nil {
+		return nil, fmt.Errorf("assemble access: %w", err)
 	}
 
 	now := clock.UTCClock{}
@@ -134,6 +139,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		},
 	})
 	return &App{
+		Access:             access,
 		Provisioning:       provisioning,
 		TemporaryPasswords: temporary,
 		resources:          resources,

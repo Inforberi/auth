@@ -5,6 +5,7 @@ import (
 
 	"github.com/ilyakaznacheev/cleanenv"
 
+	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	googleservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/service"
@@ -20,6 +21,7 @@ import (
 )
 
 type Config struct {
+	Access            accesssettings.Config
 	Browser           requestmiddleware.OriginConfig
 	HTTP              requestmiddleware.CapacityConfig
 	Proxy             requestmiddleware.ProxyConfig

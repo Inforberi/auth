@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "permissions": [
+    {"key": "employees.read", "name": "Просмотр сотрудников", "group": "Сотрудники"},
+    {"key": "employees.phone.read", "name": "Просмотр телефона", "group": "Сотрудники"},
+    {"key": "employees.salary.read", "name": "Просмотр зарплаты", "group": "Сотрудники"}
+  ],
+  "roleTemplates": [
+    {"key": "operator", "name": "Оператор", "permissions": ["employees.read", "employees.phone.read"]},
+    {"key": "accountant", "name": "Бухгалтер", "permissions": ["employees.read", "employees.salary.read"]}
+  ]
+}

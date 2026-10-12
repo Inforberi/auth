@@ -16,15 +16,19 @@
 
 ```text
 cmd/
-└── auth/
+├── auth/
+│   └── main.go
+└── access-catalog/
     └── main.go
 
 internal/
 ├── app/
-│   └── auth/
-│       ├── app.go
-│       ├── account.go
-│       └── run.go
+│   ├── auth/
+│   │   ├── app.go
+│   │   ├── account.go
+│   │   └── run.go
+│   └── access/
+│       └── app.go
 ├── config/
 │   ├── config.go
 │   └── validation.go
