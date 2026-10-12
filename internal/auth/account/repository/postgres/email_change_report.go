@@ -6,11 +6,16 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 )
 
 func (r *Repository) ReportEmailChange(ctx context.Context, digest string) error {
 	return r.transaction(ctx, func(tx pgx.Tx) error {
+		// Security containment may block the last admin, but must serialize with administrative removal.
+		if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
+			return err
+		}
 		var user domain.UserID
 		if err := tx.QueryRow(ctx, `SELECT user_id FROM auth.email_changes WHERE report_digest=$1`, digest).Scan(&user); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {

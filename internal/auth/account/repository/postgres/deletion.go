@@ -7,12 +7,16 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 )
 
 func (r *Repository) DeleteAccount(ctx context.Context, deletion domain.AccountDeletion) (domain.AuthVersion, error) {
 	var version domain.AuthVersion
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
+		if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
+			return err
+		}
 		var deleted *time.Time
 		err := tx.QueryRow(ctx, `SELECT auth_version,deleted_at FROM auth.users WHERE id=$1 FOR UPDATE`, deletion.UserID).Scan(&version, &deleted)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -27,6 +31,9 @@ func (r *Repository) DeleteAccount(ctx context.Context, deletion domain.AccountD
 		// Retry with the current version is a no-op, never a restoration.
 		if deleted != nil {
 			return nil
+		}
+		if err := accesspostgres.RequireAdministratorRemains(ctx, tx, deletion.UserID); err != nil {
+			return err
 		}
 		if err := tx.QueryRow(ctx, `UPDATE auth.users SET email_reuse_blocked=(status='blocked'),status='blocked',deleted_at=clock_timestamp(),
 			auth_version=auth_version+1 WHERE id=$1 RETURNING auth_version`, deletion.UserID).Scan(&version); err != nil {

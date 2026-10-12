@@ -2,6 +2,16 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат 10.3-local — 12 октября 2026
+
+Account status/delete получили last-system-admin guard: destructive операция требует другого active/nondeleted владельца super_admin. Обычная роль или pending/blocked/deleted владелец не считается резервным. Guard выполняется после existing version/deletion checks, но до recovery cancellation/credential/session cleanup/audit; отказ не изменяет состояние. System role edit/assignment/revoke через обычные Access use cases уже запрещены. Status cleanup сгруппирован в локальную функцию без изменения SQL и порядка операций.
+
+Общий Access transaction advisory lock вынесен в adapter helper и используется account status/delete/security email report до row locks. Account и Access явно используют Read Committed, чтобы после ожидания следующий запрос видел committed состояние. Login/Authorize не берут этот lock; новых pools/caches/workers нет. Порядок блокировок и snapshots сверены с PostgreSQL 18 через Context7. Дополнительный запрос проверяет system assignments по имеющимся PK/role index, без прохода всех пользователей. Ожидание ограничено существующими deadlines; cleanup rollback остаётся 5s.
+
+Security report намеренно может блокировать даже последнего украденного администратора, сохраняя системное назначение и protected recovery. Последующий administrative block/delete не отменяет последнее восстановление. Standard reset и protected recovery сохраняют роль, не создают session и не вводят permission/status bypass. Bootstrap, system assignment API, operator emergency recovery, MFA и usable-method/factor policy остаются открыты; trusted account ActorID по-прежнему не заменяет авторизацию. [Контракт и ограничения](../features/roles-permissions.md).
+
+Formatter и task check прошли: tests + lint 0 issues; targeted Access/Account race suite прошёл. Полный disposable PostgreSQL 18.6 up/down/up/race — 9.326s: last owner/stale version/inactive backup, block-block/block-delete/delete-delete concurrency, сохранение account/session/audit при отказе, bounded advisory lock wait, reset-role retention и security report/recovery проверены. Тестовый контейнер a0bafe11c8c7521675025a1777dfd96239c22b3920d50ea3d160de80ffc878be и том с synthetic data удалены. Реальные env/secrets/БД, dependencies/migrations/Swagger/routes не менялись. Полная нагрузка, браузер и production MFA/bootstrap acceptance не измерялись. Коммит не выполнялся.
+
 ### Результат 10.5a-local — 12 октября 2026
 
 Добавлен операторский JSON-каталог permissions и шаблонов ролей версии 1: строгая схема, ограничения размера и количества записей, запрет дублирующихся полей и неизвестных permissions. Проверенный документ неизменяемый; preview CLI и `task access:preview` показывают изменения без обращения к БД. Шаблоны не создают роли и не назначают права автоматически. Контракт и пример — [access-catalog](../features/access-catalog.md).

@@ -7,6 +7,7 @@ var (
 	ErrAccountNotFound     = errors.New("account not found")
 	ErrAccountDeleted      = errors.New("account deleted")
 	ErrAccountConflict     = errors.New("account version conflict")
+	ErrLastAdministrator   = errors.New("last administrator cannot be removed or administratively blocked")
 )
 
 type StatusChange struct {

@@ -14,7 +14,7 @@ import (
 )
 
 func (r *Repository) transaction(ctx context.Context, fn func(pgx.Tx) error) error {
-	tx, err := r.db.Begin(ctx)
+	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func (r *Repository) transaction(ctx context.Context, fn func(pgx.Tx) error) err
 		_ = tx.Rollback(cleanup) //nolint:gosec // Preserve the operation error; commit already closes the transaction.
 	}()
 	// Serialize rare access mutations, not reads, to keep delegation checks current across role edits.
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(734013981)`); err != nil {
+	if err := LockAccessChanges(ctx, tx); err != nil {
 		return err
 	}
 	if err := fn(tx); err != nil {

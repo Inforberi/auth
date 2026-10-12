@@ -30,7 +30,7 @@ func NewWithDelivery(db *pgxpool.Pool, emailChanges, invitations bool) *Reposito
 }
 
 func (r *Repository) transaction(ctx context.Context, fn func(pgx.Tx) error) error {
-	tx, err := r.db.Begin(ctx)
+	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		return err
 	}

@@ -1,8 +1,10 @@
 # Текущий шаг
 
-- Выполнен 10.5a-local: operator JSON v1 permissions/templates, immutable validated document, preview CLI/Task и ACCESS_CATALOG_FILE; App.Access собран отдельно, один startup SQL check закрывает undeclared stored permissions, без SQL writes/auto-apply. [Контракт](../features/access-catalog.md). Runtime/UI импорт остаётся A6/A7. Следующий backend шаг — system-role/last-effective-admin guards 10.3, затем MFA/admin publication. Реальные env/БД/secrets не менялись; коммит только по запросу.
+- Выполнен 10.3-local: last-system-admin guard внутри account block/delete, общий Access lock перед user/session locks и explicit Read Committed; concurrent block/delete оставляют одного active владельца. Security report может блокировать последний украденный аккаунт; повторный admin block/delete не уничтожает его recovery, reset/recovery сохраняют роль. [Границы](../features/roles-permissions.md). Следующий шаг — MFA A5 до admin HTTP/system assignments; bootstrap/emergency recovery и usable-method/factor guard ещё открыты. Новых routes/schema/env/dependencies нет; рабочая БД не менялась, коммит не выполнялся.
 
-- A4 возобновлён 12 октября: реализованы внутренние создание/редактирование ролей, назначение/отзыв, фактические permissions, optimistic versions/delegation/fresh-password proof и atomic audit. [Контракт](../features/roles-permissions.md). Нет public admin routes/MFA/bootstrap или полной last-effective-admin защиты block/delete; A4 целиком не закрыт. Операторский импорт выполнен выше; guards 10.3 остаются до публикации после A5. Только source 000001, реальные env/БД/secrets не менялись; коммит только по запросу.
+- Выполнен 10.5a-local: operator JSON v1 permissions/templates, immutable validated document, preview CLI/Task и ACCESS_CATALOG_FILE; App.Access собран отдельно, один startup SQL check закрывает undeclared stored permissions, без SQL writes/auto-apply. [Контракт](../features/access-catalog.md). Runtime/UI импорт остаётся A6/A7. Зафиксирован коммитом 6e1cc82; реальные env/БД/secrets не менялись.
+
+- A4 возобновлён 12 октября: внутренние создание/редактирование ролей, назначение/отзыв, SQL permissions, versions/delegation/fresh-password proof и atomic audit реализованы. [Контракт](../features/roles-permissions.md). Операторский импорт и block/delete guards выполнены выше; A4 целиком не закрыт, public admin routes/MFA/bootstrap/system assignments ещё нет.
 
 Обновлено 12 октября 2026. Рабочая заметка; полные статусы — [implementation](../planning/implementation.md), результаты — [history](../planning/history.md).
 

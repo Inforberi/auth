@@ -1,10 +1,12 @@
 # Удаление аккаунта и retention — 5.6
 
-Реализован внутренний `account/service/DeletionService.Delete`: target UUID, actor UUID и ожидаемая `auth_version`. Actor — атрибуция аудита, не доказательство разрешения. Сценарий не подключён к router или UI. Публичное удаление требует authorization, fresh-auth/MFA, CSRF и защиты последнего администратора на соответствующих этапах; не вызывать его напрямую из незащищённой ручки.
+Реализован внутренний `account/service/DeletionService.Delete`: target UUID, actor UUID и ожидаемая `auth_version`. Actor — атрибуция аудита, не доказательство разрешения. Сценарий не подключён к router или UI. Защита последнего системного администратора действует внутри транзакции; публичное удаление дополнительно требует authorization, fresh-auth/MFA и CSRF. Не вызывать его напрямую из незащищённой ручки.
 
 ## Транзакция
 
-PostgreSQL блокирует user перед дочерними данными, проверяет существование и ожидаемую version. Active и blocked аккаунты допускают удаление. Один commit устанавливает `blocked/deleted_at`, повышает version, отзывает все сессии и очищает их IP/User-Agent, удаляет password credential (reset challenges/outbox каскадно), verification challenges/outbox, email-change intents/outbox и профиль, снимает verification контактов, записывает deletion audit. Ошибка любой операции, включая audit, откатывает весь переход. Deadline сервиса — 5s.
+PostgreSQL сначала берёт общий Access transaction advisory lock, затем блокирует user перед дочерними данными, проверяет существование и ожидаемую version. Active и blocked аккаунты допускают удаление, кроме владельца `super_admin`, у которого нет другого active/nondeleted системного администратора: операция возвращает ErrLastAdministrator до очистки и аудита. Это сохраняет и recovery последнего security-blocked владельца. [Подробные гарантии и ограничения](roles-permissions.md#системный-администратор-и-незавершённые-части).
+
+Один commit устанавливает `blocked/deleted_at`, повышает version, отзывает все сессии и очищает их IP/User-Agent, удаляет password credential (reset challenges/outbox каскадно), verification challenges/outbox, email-change intents/outbox и профиль, снимает verification контактов, записывает deletion audit. Ошибка любой операции, включая audit, откатывает весь переход. Deadline сервиса — 5s, включая ожидание advisory lock.
 
 Удаление не создаёт письмо, сессию или механизм восстановления. Уже взятое worker письмо физически может дойти, но его ссылка недействительна. Старые login snapshots, reset/verification/change/recovery tokens и admin unblock не восстанавливают удалённый account. Повторный запрос с текущей version возвращает её без нового audit/version bump; прежняя version получает conflict. Нет скрытого retry: если конкурентная операция первой повысила version, вызывающий должен явно перечитать состояние и повторно подтвердить удаление.
 
