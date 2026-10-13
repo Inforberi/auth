@@ -2,25 +2,59 @@
 
 ## Текущее состояние
 
-A5.1-local и A5.2a-local — проверенный внутренний backend, не готовый публичный вход с MFA. Реализованы enrollment, подтверждение первого TOTP, одноразовое потребление TOTP/recovery, SQL-хранение, ограничения, browser-bound login challenge и атомарное создание общей сессии после второго фактора. Модуль пока не собран в App и не подключён к router: в Swagger нельзя включить MFA пользователю. Полный A5 не закрыт.
+A5.2b-local подключает MFA к password, Google/Telegram OIDC и email OTP, App, HTTP и Swagger. При `MFA_ENABLED=true` доступны перечисленные ниже ручки. Подключение и управление фактором пока требуют аккаунта с постоянным паролем и свежего password proof; external-only enrollment/management не опубликованы. Полный A5 и release acceptance не закрыты.
 
-Следующие части A5.2 подключат этот workflow к password/OIDC/email OTP, App/HTTP и защищённому управлению фактором. До публикации нельзя вручную включать фактор в рабочей БД: обычная выдача сессии такому аккаунту намеренно закрыта, а публичного completion ещё нет.
+Без подключённого фактора обычный login сохраняется. При enabled TOTP основной вход возвращает HTTP 202, `status=mfa_required`, `challenge`, `expiresAt` и HttpOnly browser cookie, но не новую session cookie. Старую cookie этого браузера очищаем; это не глобальный logout других сессий. После второго фактора создаётся общая SQL-сессия. MFA не заменяет email verification, permissions или основной вход. Factor state нельзя включать/выключать прямым SQL вместо protected flow.
+
+## Настройки и HTTP
+
+| ENV | По умолчанию | Назначение |
+| --- | --- | --- |
+| `MFA_ENABLED` | `false` | Подключение workflow/routes. Startup с false при уже enrolled factors запрещён; это не обход MFA |
+| `MFA_ISSUER` | `Auth` | Имя установки в authenticator |
+| `MFA_LOGIN_CHALLENGE_TTL` | `5m` | Срок challenge, допустимо 1m–5m |
+| `MFA_USER_OPERATIONS_PER_MINUTE` | `5` | Общий operational admission пользователя для management, primary challenge start и completion |
+| `MFA_IP_OPERATIONS_PER_MINUTE` | `10` | IP admission для start/complete login challenge |
+| `MFA_PROJECT_OPERATIONS_PER_MINUTE` | `500` | Общий budget установки для start/complete и management вместе |
+
+Это бюджеты в минуту, не RPS; минимальный budget — два обращения для start+complete, меньший отклоняется конфигурацией. User/project counters общие для management и login, IP — для start+complete. Более высокие budgets не повышают security budget: login factor — максимум пять обращений на пользователя в минуту независимо от замены challenge; pair token+binding тоже ограничена пятью. Step-up имеет отдельный максимум пяти обращений на пользователя в минуту. SQL attempts/challenge — самостоятельная гарантия. Indexed owner lookup для account admission выполняется до транзакции; внутри неё challenge повторно проверяется. Под SQL row lock нет Redis-вызовов. Все ENV должны быть согласованы между экземплярами; сохраняемые настройки относятся к A6.
+
+| Метод и путь после `/api/v1/auth` | Сценарий |
+| --- | --- |
+| `POST /mfa/login/complete` | JSON `{challenge, code, recovery}` + cookie `__Host-mfa-login`; после commit выдаётся session cookie |
+| `POST /mfa/totp/enrollment` | Текущая session cookie + password proof; возвращает pending token, secret, URI и expiry |
+| `POST /mfa/totp/enrollment/confirm` | JSON `{token, code}`; включает TOTP, один раз отдаёт десять recovery codes, отзывает sessions |
+| `POST /mfa/step-up` | JSON `{code, recovery}` + свежий password proof; подтверждает MFA и ротирует session token без продления lifetime |
+| `POST /mfa/totp/replacement` | Свежие password/MFA proofs; новый pending factor, старый работает до confirm |
+| `POST /mfa/totp/replacement/confirm` | JSON `{token, code}` от нового фактора; заменяет фактор/recovery codes и отзывает sessions |
+| `DELETE /mfa/totp` | Свежие password/MFA proofs; удаляет фактор/codes, отзывает sessions; admin policy может запретить |
+| `POST /mfa/recovery-codes/regenerate` | Свежие password/MFA proofs; один раз отдаёт десять новых codes, отзывает sessions/challenges; TOTP сохраняется |
+
+Owner UUID/hash/auth_version берутся из SQL-validated session context, не из JSON. Completion не требует ordinary session: его authority — primary challenge и browser binding. Все mutations требуют allowed HTTPS Origin; GET/link не выполняет действие. Cookies — Secure, HttpOnly, SameSite=Lax, `__Host-`, Path=/ без Domain. Secrets передаются в JSON owner response под no-store, не в URL; duplicates/missing binding отклоняются. Ошибки: `invalid_json`/`invalid_mfa` 400; `unauthorized` 401; `fresh_auth_required`/`mfa_required_by_policy`/`invalid_origin` 403; `mfa_conflict` 409; `rate_limited` 429 с Retry-After 60; dependency failure 503. При отказе session cookie не выдаётся и не ротируется.
+
+Password flow: войти → `POST /reauthenticate/password` → enrollment start → первый TOTP → сохранить recovery codes → войти снова → завершить challenge следующим TOTP/recovery. Первый код уже потреблён: в login использовать следующий 30-second code либо recovery. Recovery не заменяет основной пароль. Для management не повторять ещё свежие proofs; иначе password reauthentication, затем step-up новым TOTP/recovery.
+
+Замена/отключение/перевыпуск повышают auth_version, отзывают sessions и удаляют pending MFA challenges/enrollment атомарно. При потерянном успешном response plaintext codes перечитать нельзя: снова primary+MFA и protected regeneration. Если потеряны устройство и все codes, обычный reset MFA не снимает; operator lost-factor recovery ещё не реализован.
+
+SQL mutations Access требуют password/MFA proofs не старше пяти минут и current factor. Владельцу system super_admin либо permissions `access.roles.manage`/`access.assignments.manage` отключение MFA запрещено даже при backup administrator. Disable берёт общий Access advisory lock до user/session locks; current roles читаются после ожидания, role change не обходит policy гонкой. Динамические required-MFA правила других ролей — A6. Public admin users/roles API ещё не опубликован; Account status/delete остаются trusted-caller workflows до отдельной авторизации transport.
+
+Google/Telegram-only enrollment/management пока запрещены: требуется отдельный свежий provider proof с проверяемой authentication freshness, не возраст session/callback сам по себе. Аккаунт с паролем может подключить MFA, а затем применять её при Google/Telegram/email OTP login. Completion повторно применяет enabled policy фактически подключённого email OTP/OIDC provider. Password/email verification runtime settings пока A6.
 
 ## Внутренний вход с MFA: A5.2a-local
 
-`service.Login.Start` вызывается только адаптером, уже проверившим основной вход. `PrimaryProof` содержит UUID, auth_version, основной метод и его проверенную ссылку: password hash после Compare, OIDC issuer/subject после provider validation либо ID текущего verified email после потребления email OTP. Ни UUID, ни hash/identity/email ID сами по себе не являются доказательством: этот внутренний контракт запрещено заполнять из JSON, query или headers. Пока существующие method adapters этот workflow не вызывают; их подключение и проверка effective enabled/verification policy остаются следующим шагом.
+`service.Login.Start` вызывается только адаптером, уже проверившим основной вход. `PrimaryProof` содержит UUID, auth_version, основной метод и его проверенную ссылку: актуальный password hash после Compare/CAS rehash, OIDC issuer/subject после provider validation либо ID текущего verified email после потребления email OTP. Эти ссылки не являются самостоятельным доказательством; контракт запрещено заполнять из JSON/query/headers. Session login coordinator подключён к method adapters: обычная SQL issuance либо challenge по `ErrMFARequired`, без обхода через другой метод.
 
 SQL проверяет active/nondeleted account и auth_version под user lock, затем сверяет current credentials/identity/email. Основное доказательство должно быть не старше минуты. Допускается до пяти секунд рассинхронизации backend/DB; при опережении backend сохранённое время ограничивается SQL statement timestamp, будущий authentication time не записывается. Часы должны синхронизироваться. Для email OTP сохраняются ограничения существующего метода: verified текущий email постоянных credentials, без pending provisioning/temporary password. Наличие enabled TOTP обязательно; Start не заменяет регистрацию или обычный вход.
 
-Создаются два независимых случайных значения по 256 бит: challenge token и browser binding. SQL хранит scoped keyed digests, не plaintext. В будущем token будет передаваться в POST body, binding — только в Secure/HttpOnly cookie; текущий этап cookie/route ещё не публикует. Один pending challenge на пользователя, TTL задаётся внутренней конфигурацией и ограничен пятью минутами. Новое проверенное primary login заменяет старый challenge, не создаёт сессию и не меняет фактор. В audit не попадают tokens, binding, password hash или OTP.
+Создаются два независимых случайных значения по 256 бит: challenge token и browser binding. SQL хранит scoped keyed digests, не plaintext. Token передаётся в POST body, binding — в Secure/HttpOnly cookie. Один pending challenge/user с TTL до пяти минут. Новый проверенный primary login заменяет старый challenge, не создаёт сессию и не меняет фактор. В audit не попадают tokens, binding, password hash или OTP.
 
 `Login.Complete` принимает token/binding/код, но не пользовательский UUID, auth_version или MFA timestamp. Владелец берётся из SQL challenge. Порядок блокировок — user → challenge → factor → session; первый digest/binding lookup не блокирует строку. После ожидания user lock отдельный запрос заново проверяет challenge, expiry/attempts/version и исходные credentials. Отзыв/смена credentials или identity, block/delete/version change делают challenge непригодным.
 
 Правильный TOTP/recovery, его потребление, две audit-записи, удаление challenge и INSERT в общую `auth.sessions` коммитятся одной транзакцией. Сбой сессии или audit откатывает всё, включая recovery verifier/TOTP step; raw session token возвращается только после успешного commit. У одного challenge один победитель. Неправильный код коммитит SQL attempts до возврата общей ошибки; максимум пять. Ошибочная browser binding не расходует SQL attempts владельца. Redis completion budget привязан к паре token+binding, поэтому знание одного token не позволяет расходовать бюджет настоящего браузера.
 
-Внутренняя `LoginConfig` требует явных положительных user/IP/project лимитов в минуту и допустимых TTL; скрытых zero-defaults нет. Start и Complete имеют отдельные Redis namespaces/budgets, fail-closed и timeout пять секунд. Completion additionally ограничен пятью обращениями в минуту на пару token+binding; SQL attempts остаются самостоятельной защитой. IP/User-Agent и токены ограничены до зависимостей. Это operational budgets, не capacity/RPS. ENV/сохраняемые настройки подключаются вместе с App/HTTP; дополнительных pools/workers/dependencies нет.
+`LoginConfig` получает явные положительные user/IP/project budgets и TTL из проверенных ENV. Start/Complete имеют отдельные Redis namespaces, fail-closed и timeout пять секунд; pair/account security counters не растут вслед за operational budgets. IP/User-Agent и tokens ограничены до зависимостей. Дополнительных pools/workers/dependencies нет; сохраняемые настройки остаются A6.
 
-MFA-сессия хранит `primary_method`, `primary_verified_at` и `mfa_verified_at`. PostgreSQL задаёт время второго фактора и сроки сессии; middleware получает context из действующей SQL-сессии, не из клиентского header. Refresh, rotation и password reauthentication не обновляют MFA freshness. У старых/обычных сессий nullable proof отсутствует; они не становятся MFA-authenticated автоматически. Admin enforcement, protected step-up/enroll/replace/disable/regeneration и usable-admin policy ещё не подключены — наличие context само по себе их не заменяет.
+MFA-сессия хранит `primary_method`, `primary_verified_at` и `mfa_verified_at`. PostgreSQL задаёт время второго фактора; middleware читает context/auth_version тем же SQL session lookup, не из header. Refresh/rotation/password reauthentication не обновляют MFA freshness. Обновление MFA времени возможно только через protected factor consumption и rotation. У обычных/старых сессий nullable MFA proof отсутствует, они не получают его автоматически. SQL constraint допускает step-up после создания session, сохраняя порядок primary/MFA и absolute deadline.
 
 Expired challenges очищаются existing bounded retention по expiry index, удаление аккаунта удаляет pending challenge. Reset/version change инвалидируют его логически; сброс пароля не снимает фактор. Ошибка или потеря успешного ответа не позволяют повторно получить использованную сессию: пользователь начинает новый основной вход.
 
@@ -30,13 +64,13 @@ Expired challenges очищаются existing bounded retention по expiry ind
 
 Создаются новый случайный секрет 32 байта, manual key, `otpauth` URI для будущего QR и enrollment token 256 бит. В URI issuer задаёт установка, account label — стабильный UUID, не выдуманный email. Профиль — шесть цифр, 30 секунд, HMAC-SHA1; совместим с обычными TOTP authenticators и не зависит от Google/Gmail login. Используется [pquerna/otp v1.5.0](https://github.com/pquerna/otp/tree/v1.5.0), а не собственная реализация OTP. Параметры и replay policy сверены с [RFC 6238](https://www.rfc-editor.org/rfc/rfc6238).
 
-Секрет шифруется существующим AES-GCM Cipher с purpose `mfa:v1`; зашифрованное содержимое включает owner UUID. Перестановка ciphertext между пользователями отклоняется. Новый root key, pool или worker не создаётся. Сборка следующего шага должна передавать scoped cipher из имеющегося operational encryption key; реальные ключи этим шагом не меняются.
+Секрет шифруется существующим AES-GCM Cipher с purpose `mfa:v1` и owner UUID. Перестановка ciphertext между пользователями отклоняется. App передаёт scoped cipher из существующего operational encryption key; новый root key/pool/worker не создаётся, реальные ключи этим шагом не меняются.
 
 Pending enrollment один на пользователя, срок — десять минут, максимум пять неправильных кодов. Повторный start заменяет pending secret/token, но не действующий фактор. Ошибочная попытка подтверждения коммитит счётчик перед возвратом ошибки; infrastructure failure откатывает операцию. Enrollment привязан к той же session hash/auth_version: logout, rotation, block или version change лишают его полномочий. Уже включённый фактор нельзя перезаписать этим сценарием.
 
 `ConfirmEnrollment` заново проверяет свежую сессию и token, валидирует первый код по времени PostgreSQL, затем одной транзакцией сохраняет фактор/использованный time step, десять recovery verifiers, увеличивает auth_version, отзывает все прежние сессии, удаляет pending enrollment и записывает audit. Сбой audit откатывает всё. Ни сессия, ни административные права не выдаются.
 
-Manual key/URI/enrollment token и plaintext recovery codes не сохраняются в аудите и исключены из автоматической JSON-сериализации внутренних результатов. Будущий HTTP DTO должен отдавать их явно только владельцу через защищённый no-store ответ; их нельзя логировать, помещать в URL запросов или включать в telemetry. После потери успешного ответа plaintext коды нельзя перечитать; перевыпуск с новым protected proof — отдельный следующий сценарий.
+Manual key/URI/enrollment token и plaintext recovery codes исключены из автоматической сериализации внутренних результатов; HTTP DTO отдаёт их явно только владельцу под no-store. Их нельзя логировать, помещать в URL или telemetry. Codes возвращаются только после commit и не перечитываются; regeneration требует нового protected proof. Pending enrollment хранит purpose enroll/replace; токены этих сценариев не взаимозаменяемы.
 
 ## Проверка и одноразовость
 
@@ -46,7 +80,7 @@ SQL заново проверяет active/nondeleted пользователя �
 
 Десять резервных кодов имеют по 128 случайных бит, формат — 32 lowercase hex-символа. SQL хранит только owner-bound keyed SHA-256 verifiers. Успешный recovery удаляет ровно свой verifier и пишет audit в той же транзакции; один код имеет одного победителя даже при параллельных запросах. Отказ аудита сохраняет код для явного повторения. Recovery code не заменяет primary login, не отключает MFA, не меняет password/status/роль и не создаёт сессию.
 
-Redis admission выполняется до SQL: общий бюджет пяти MFA операций в минуту на пользователя и 500 на установку, включая start/confirm/verify. Проверка работает fail-closed при ошибке Redis. Это текущие внутренние бюджеты, не измеренная пропускная способность проекта; operational ENV/настройки будут подключены вместе с публичным flow. Для public challenge дополнительно нужны IP/send/attempt bounds A5.2. Unit/SQL тесты используют разрешающий limiter для проверки SQL-конкуренции; live Redis этого нового namespace ещё не проверен.
+Management Redis admission выполняется до SQL и fail-closed, budgets указаны выше. Unit/SQL fixtures используют разрешающий limiter для проверки SQL-конкуренции; отдельный live Redis 8.2 test подтверждает atomic counter, TTL, независимость keys и ошибку закрытого клиента. Это не полная Redis outage/mixed-load acceptance.
 
 ## Сессии и lifecycle
 
@@ -58,11 +92,9 @@ Password reset/change и защитное account recovery не удаляют �
 
 ## Открытые части A5
 
-- Подключение реализованного login challenge к password/OIDC/email OTP и HTTP; effective enabled/verification policy, безопасная cookie/Origin семантика и публичные ошибки.
-- Свежая проверка второго фактора и enforcement для admin operations; client-provided MFA flags запрещены. Session context реализован, protected step-up ещё нет.
-- Protected отключение/замена TOTP и перевыпуск recovery codes, current role/policy/last-admin guards; обычный reset не становится lost-factor bypass.
 - External-only fresh proof/enrollment, required MFA по ролям, безопасный first-admin setup и отдельный lost-factor процесс.
-- App/router/Swagger, operational ENV, browser/live authenticator/Redis/fault/mixed-load acceptance; настройки A6 и UI A7.
+- Public admin users/roles transport с permissions/fresh-auth/MFA, runtime settings A6 и UI A7; internal SQL role mutations уже защищены.
+- Browser/live authenticator/provider, Redis/SQL faults и mixed load/restore acceptance; локальные HTTP/SQL/Redis checks не заменяют release gates A8.
 - SMS после выбора provider; passkeys вне текущего выпуска.
 
 Расширена только исходная `000001_init`: mfa_totp, mfa_enrollments, mfa_login_challenges, mfa_recovery_codes, mfa_audit и nullable session authentication context. Уже применённой установке нужен отдельно согласованный upgrade, не reset или повторный migrate up. Рабочая БД/secrets/env не изменялись.

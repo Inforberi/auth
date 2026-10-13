@@ -1,5 +1,7 @@
 # Схема Auth
 
+A5.2b-local: MFA enrollment хранит purpose enroll/replace; новые audit events покрывают step-up/replace/disable/recovery regeneration. Session MFA timestamp допускается после created_at для step-up, но после primary proof и до absolute deadline; primary/password/MFA proofs не обновляются простым refresh. Management атомарно повышает auth_version, отзывает sessions и удаляет pending MFA challenges. Source 000001 изменена без отдельной миграции; существующей БД нужен согласованный upgrade, не reset. [Публичный MFA API](features/mfa.md).
+
 Источник: `migrations/000001_init` (up/down). Один экземпляр Auth обслуживает один проект; внутренний UUID пользователя не зависит от метода входа.
 
 Оптимизация 6.8a: expiry indexes challenges/outbox, partial exhausted-job indexes; email_changes index совпадает с GREATEST(protect_until,recovery_expires_at). Retention/candidate cutoffs используют statement_timestamp, consumption/lease сохраняют текущие часы. Claim не запускает global cleanup; indexed bounded GC выполняется отдельно. Изменения исходной 000001 не применяются автоматически к существующей БД; [performance](operations/performance.md).
@@ -8,7 +10,7 @@
 
 ## Владельцы данных
 
-A5.1/A5.2a-local добавляют `auth.mfa_totp` (encrypted secret/last step), `mfa_enrollments` (один pending/user, session/version binding, 10m TTL/5 attempts), `mfa_recovery_codes` (owner-bound keyed verifiers), `mfa_login_challenges` (primary/browser/version binding, один pending/user, не более 5m/5 attempts) и `mfa_audit` без secrets. Успешное enrollment увеличивает auth_version и отзывает прежние сессии; ordinary issuance с enabled factor закрыта. Внутренний bound completion атомарно потребляет фактор/challenge и создаёт общую сессию с nullable primary_method/primary_verified_at/mfa_verified_at; старые сессии не получают MFA автоматически. MFA audit/expired challenges очищает existing bounded retention. Reset не удаляет фактор, account deletion очищает secrets/recovery/challenges. Публичный MFA flow ещё не подключён. [Контракт](features/mfa.md).
+A5.1/A5.2 добавляют `auth.mfa_totp` (encrypted secret/last step), `mfa_enrollments` (один pending/user, session/version/purpose binding, 10m TTL/5 attempts), `mfa_recovery_codes` (owner-bound keyed verifiers), `mfa_login_challenges` (primary/browser/version binding, один pending/user, не более 5m/5 attempts) и `mfa_audit` без secrets. Enrollment увеличивает auth_version и отзывает прежние sessions; ordinary issuance с enabled factor закрыта. Public bound completion атомарно потребляет фактор/challenge и создаёт общую сессию с nullable primary_method/primary_verified_at/mfa_verified_at; старые sessions не получают MFA автоматически. Audit/expired challenges очищает existing bounded retention. Reset не удаляет фактор, account deletion очищает secrets/recovery/challenges. [API и ограничения](features/mfa.md).
 
 A4 добавляет `auth.roles`, `role_permissions`, `user_roles`, `users.access_version` и `auth.access_audit` с bounded role snapshot. Назначения отдельно от способов входа, optimistic role/assignment versions, FK/unique и индексы для owner/role/retention. Системная роль защищена от обычных mutations; bootstrap и полная last-admin защита block/delete остаются отдельным шагом. [Контракт](features/roles-permissions.md).
 

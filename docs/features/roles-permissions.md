@@ -32,7 +32,7 @@ Backend access отделён от способов входа. Пользова
 
 Principal содержит user UUID и hash session token, не клиентский список прав. Адаптер обязан получать его из проверенной аутентификации, не из произвольных полей запроса. ReadRole/ListRoles не являются административной авторизацией; до внешней публикации их защищает соответствующий permission check.
 
-Для управления нужны active/nondeleted actor, действующая SQL-сессия с актуальным auth_version и password proof не старше пяти минут. Это ещё не MFA: перед публикацией admin mutations требуется A5. External-only actor без password proof пока не управляет ролями.
+Для управления нужны active/nondeleted actor, действующая SQL-сессия с актуальным auth_version, password и MFA proofs не старше пяти минут и current enrolled factor. Это SQL enforcement A5.2b, не клиентский flag. External-only actor без password proof пока не управляет ролями; public admin transport/bootstrap остаются отдельными задачами.
 
 Оператор должен иметь management permission и все permissions создаваемой/изменяемой/назначаемой роли. При редактировании проверяются прежние и новые права; при отзыве — права отзываемой роли. Это консервативная delegation policy, без скрытого override. Самому себе назначать роль нельзя. Самоотзыв обычной роли допустим; системная роль защищена отдельно.
 
@@ -60,7 +60,7 @@ Principal содержит user UUID и hash session token, не клиентс�
 
 Это гарантия сохранения active системного владельца и recoverable последнего назначения, не проверка доступности SMTP/провайдера или наличия всех будущих MFA факторов. System assignment management, operator emergency recovery, bootstrap и политики usable admin login/MFA остаются 10.3/A5/A6. Status/delete пока trusted-caller backend: ActorID нужен для audit, не заменяет авторизацию. Публичные admin mutations запрещено подключать до permission/fresh-auth/MFA guards. Прямое изменение SQL оператором не защищается этими use cases.
 
-Реализованы operator JSON-каталог/preview и сборка `App.Access` без HTTP/admin routes: [использование](access-catalog.md). Шаблоны доступны для явного выбора, не создают и не меняют SQL-роли автоматически. Не реализованы удаление роли, runtime/browser импорт, MFA, UI и межсервисная передача прав. Trusted API — при конкретной интеграции по 10.5b. Для внешнего backend Auth управляет назначениями, а backend данных применяет ограничения действий/строк/полей, включая read/write/filter/sort/export. Импорт каталога не аутентифицирует этот backend.
+Реализованы operator JSON-каталог/preview и сборка `App.Access` без HTTP/admin routes: [использование](access-catalog.md). Шаблоны доступны для явного выбора, не создают и не меняют SQL-роли автоматически. MFA login/management и SQL guard реализованы в [A5.2b](mfa.md); удаление роли, runtime/browser импорт, UI и межсервисная передача прав ещё не реализованы. Trusted API — при конкретной интеграции по 10.5b. Для внешнего backend Auth управляет назначениями, а backend данных применяет ограничения действий/строк/полей, включая read/write/filter/sort/export. Импорт каталога не аутентифицирует этот backend.
 
 ## Хранение
 
