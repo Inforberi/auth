@@ -9,7 +9,7 @@ import (
 )
 
 // @Summary Confirm protected TOTP replacement
-// @Description Requires the unchanged fresh password/MFA session, replacement token and a code from the new factor. Replaces secret/recovery codes, raises auth_version and revokes all sessions atomically.
+// @Description Requires the unchanged fresh primary/MFA session, replacement token and a code from the new factor. Primary is password, or opt-in verified-email proof for an external-only account. Replaces secret/recovery codes, raises auth_version and revokes all sessions atomically.
 // @Tags MFA
 // @Accept json
 // @Produce json

@@ -29,7 +29,7 @@ func (r *Repository) Consume(ctx context.Context, digest, verifier string) (*ser
    JOIN auth.user_emails e ON e.id=c.email_id AND e.user_id=c.user_id
    JOIN auth.password_credentials p ON p.user_id=c.user_id AND p.email_id=e.id
    JOIN auth.users u ON u.id=c.user_id
-   WHERE c.digest=$1 AND c.auth_version=$2 AND u.auth_version=$2 AND u.status='active' AND u.deleted_at IS NULL
+   WHERE c.digest=$1 AND c.purpose='login' AND c.auth_version=$2 AND u.auth_version=$2 AND u.status='active' AND u.deleted_at IS NULL
    AND c.expires_at>clock_timestamp() AND c.attempts<5 AND e.verified_at IS NOT NULL
    AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials t WHERE t.user_id=u.id)
    AND NOT EXISTS(SELECT 1 FROM auth.account_provisions a WHERE a.user_id=u.id AND a.activated_at IS NULL)
@@ -41,13 +41,7 @@ func (r *Repository) Consume(ctx context.Context, digest, verifier string) (*ser
 			return err
 		}
 		if subtle.ConstantTimeCompare([]byte(expected), []byte(verifier)) != 1 {
-			// Persist the failed attempt; returning the public error inside the transaction would undo it.
-			if _, err := tx.Exec(ctx, `UPDATE auth.email_login_challenges SET attempts=attempts+1 WHERE digest=$1`, digest); err != nil {
-				return err
-			}
-			_, err := tx.Exec(ctx, `DELETE FROM auth.email_login_outbox WHERE digest=$1 AND EXISTS(
-    SELECT 1 FROM auth.email_login_challenges WHERE digest=$1 AND attempts>=5)`, digest)
-			return err
+			return recordFailedCode(ctx, tx, digest)
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.email_login_challenges WHERE digest=$1`, digest); err != nil {
 			return err
@@ -65,4 +59,14 @@ func (r *Repository) Consume(ctx context.Context, digest, verifier string) (*ser
 		return nil, domain.ErrInvalidCode
 	}
 	return &user, nil
+}
+
+func recordFailedCode(ctx context.Context, tx pgx.Tx, digest string) error {
+	// Return the public error after commit, otherwise the attempt counter would roll back.
+	if _, err := tx.Exec(ctx, `UPDATE auth.email_login_challenges SET attempts=attempts+1 WHERE digest=$1`, digest); err != nil {
+		return err
+	}
+	_, err := tx.Exec(ctx, `DELETE FROM auth.email_login_outbox WHERE digest=$1 AND EXISTS(
+		SELECT 1 FROM auth.email_login_challenges WHERE digest=$1 AND attempts>=5)`, digest)
+	return err
 }

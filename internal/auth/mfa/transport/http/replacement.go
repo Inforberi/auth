@@ -7,7 +7,7 @@ import (
 )
 
 // @Summary Start protected TOTP replacement
-// @Description Requires fresh password and MFA proofs. The current factor remains usable until confirmation. Replacement cannot use an ordinary enrollment token.
+// @Description Requires fresh primary and MFA proofs. Primary is password, or opt-in verified-email proof for an external-only account. The current factor remains usable until confirmation. Replacement cannot use an ordinary enrollment token.
 // @Tags MFA
 // @Produce json
 // @Param Origin header string true "Exact allowed HTTPS origin"

@@ -28,6 +28,8 @@ type loginFixture struct {
 	keys            []string
 	expectedVersion int64
 	primary         mfaservice.PrimaryProof
+	reauthProof     mfaservice.Proof
+	replacement     string
 }
 
 func (f *loginFixture) Issue(_ context.Context, email string, c domain.Challenge) error {
@@ -88,7 +90,7 @@ func TestRequestAndConfirm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var mail loginMail
+	var mail codeMail
 	if err = json.Unmarshal(plain, &mail); err != nil || mail.To != f.email {
 		t.Fatal(err)
 	}

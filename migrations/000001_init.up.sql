@@ -236,6 +236,8 @@ CREATE TABLE auth.sessions (
   absolute_expires_at TIMESTAMPTZ NOT NULL,
   revoked_at TIMESTAMPTZ,
   password_verified_at TIMESTAMPTZ,
+  email_reauthenticated_at TIMESTAMPTZ,
+  email_reauthenticated_id UUID,
   primary_method TEXT CHECK (primary_method IN ('password','oidc','emailotp')),
   primary_verified_at TIMESTAMPTZ,
   mfa_verified_at TIMESTAMPTZ,
@@ -243,6 +245,9 @@ CREATE TABLE auth.sessions (
   ip_address TEXT NOT NULL,
   CHECK (created_at<expires_at AND expires_at<=absolute_expires_at),
   CHECK ((primary_method IS NULL)=(primary_verified_at IS NULL)),
+  CHECK ((email_reauthenticated_at IS NULL)=(email_reauthenticated_id IS NULL)),
+  CHECK (email_reauthenticated_at IS NULL OR (email_reauthenticated_at>=created_at
+    AND email_reauthenticated_at<absolute_expires_at)),
   CHECK (mfa_verified_at IS NULL OR (primary_verified_at IS NOT NULL
     AND primary_verified_at<=mfa_verified_at AND mfa_verified_at<absolute_expires_at))
 );
@@ -255,10 +260,13 @@ CREATE TABLE auth.email_login_challenges (
   email_id UUID NOT NULL,
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
   verifier TEXT NOT NULL CHECK (verifier ~ '^[a-f0-9]{64}$'),
+  purpose TEXT NOT NULL DEFAULT 'login' CHECK (purpose IN ('login','reauthenticate')),
+  session_hash TEXT CHECK (session_hash ~ '^[a-f0-9]{64}$'),
   attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   expires_at TIMESTAMPTZ NOT NULL CHECK (expires_at>created_at),
-  FOREIGN KEY (user_id,email_id) REFERENCES auth.user_emails(user_id,id) ON DELETE CASCADE
+  FOREIGN KEY (user_id,email_id) REFERENCES auth.user_emails(user_id,id) ON DELETE CASCADE,
+  CHECK ((purpose='reauthenticate')=(session_hash IS NOT NULL))
 );
 CREATE INDEX email_login_challenges_expiry ON auth.email_login_challenges(expires_at,digest);
 
@@ -280,7 +288,7 @@ CREATE INDEX email_login_outbox_exhausted ON auth.email_login_outbox(lease_until
 CREATE TABLE auth.email_login_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
-  event TEXT NOT NULL CHECK (event IN ('code_issued','code_consumed')),
+  event TEXT NOT NULL CHECK (event IN ('code_issued','code_consumed','reauthentication_issued','email_reauthenticated')),
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

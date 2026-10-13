@@ -11,6 +11,7 @@ import (
 
 func TestEmailOTPConfiguration(t *testing.T) {
 	t.Setenv("EMAIL_OTP_ENABLED", "true")
+	t.Setenv("EMAIL_REAUTHENTICATION_ENABLED", "true")
 	t.Setenv("EMAIL_OTP_TTL", "6m")
 	t.Setenv("EMAIL_OTP_RESEND_INTERVAL", "2m")
 	t.Setenv("EMAIL_OTP_REQUEST_PROJECT_ATTEMPTS_PER_MINUTE", "300")
@@ -19,7 +20,7 @@ func TestEmailOTPConfiguration(t *testing.T) {
 	if err := cleanenv.ReadEnv(&cfg); err != nil || cfg.Validate() != nil {
 		t.Fatal(err, cfg)
 	}
-	if cfg.TTL != 6*time.Minute || cfg.ResendInterval != 2*time.Minute || cfg.RequestGlobalLimit != 300 || cfg.ConfirmGlobalLimit != 400 {
+	if !cfg.ReauthenticationEnabled || cfg.TTL != 6*time.Minute || cfg.ResendInterval != 2*time.Minute || cfg.RequestGlobalLimit != 300 || cfg.ConfirmGlobalLimit != 400 {
 		t.Fatal("env ignored")
 	}
 	for _, mutate := range []func(*otp.Config){
@@ -38,5 +39,13 @@ func TestEmailOTPConfiguration(t *testing.T) {
 	}
 	if (otp.Config{}).Validate() != nil {
 		t.Fatal("disabled profile requires settings")
+	}
+	if (otp.Config{ReauthenticationEnabled: true}).Validate() == nil {
+		t.Fatal("reauthentication accepted invalid budgets")
+	}
+	c := validConfig()
+	c.EmailOTP = cfg
+	if c.Validate() == nil {
+		t.Fatal("email reauthentication enabled without MFA")
 	}
 }

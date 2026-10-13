@@ -29,7 +29,7 @@ func requireFreshMFA(ctx context.Context, tx pgx.Tx, proof service.Proof) error 
 func (r *Repository) StepUp(ctx context.Context, proof service.Proof, replacement string, check service.Check, recovery string) (*service.StepUpCommit, error) {
 	var result service.StepUpCommit
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
-		if err := requireProof(ctx, tx, proof); err != nil {
+		if err := r.requireProof(ctx, tx, proof); err != nil {
 			return err
 		}
 		verified, err := consumeFactor(ctx, tx, proof.UserID, check, recovery)
@@ -38,7 +38,8 @@ func (r *Repository) StepUp(ctx context.Context, proof service.Proof, replacemen
 		}
 		result.VerifiedAt = verified
 		err = tx.QueryRow(ctx, `UPDATE auth.sessions SET token_hash=$3,mfa_verified_at=$4,
-			primary_method=COALESCE(primary_method,'password'),primary_verified_at=COALESCE(primary_verified_at,password_verified_at)
+			primary_method=COALESCE(primary_method,CASE WHEN password_verified_at IS NOT NULL THEN 'password' ELSE 'emailotp' END),
+			primary_verified_at=COALESCE(primary_verified_at,password_verified_at,email_reauthenticated_at)
 			WHERE user_id=$1 AND token_hash=$2 AND revoked_at IS NULL AND expires_at>clock_timestamp()
 			AND absolute_expires_at>clock_timestamp() RETURNING LEAST(expires_at,absolute_expires_at)`,
 			proof.UserID, proof.TokenHash, replacement, verified).Scan(&result.ExpiresAt)
@@ -61,7 +62,7 @@ func (r *Repository) Disable(ctx context.Context, proof service.Proof) error {
 		if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
 			return err
 		}
-		if err := requireProof(ctx, tx, proof); err != nil {
+		if err := r.requireProof(ctx, tx, proof); err != nil {
 			return err
 		}
 		if err := requireFreshMFA(ctx, tx, proof); err != nil {
@@ -89,7 +90,7 @@ func (r *Repository) Disable(ctx context.Context, proof service.Proof) error {
 
 func (r *Repository) RegenerateRecovery(ctx context.Context, proof service.Proof, codes []string) error {
 	return r.transaction(ctx, func(tx pgx.Tx) error {
-		if err := requireProof(ctx, tx, proof); err != nil {
+		if err := r.requireProof(ctx, tx, proof); err != nil {
 			return err
 		}
 		if err := requireFreshMFA(ctx, tx, proof); err != nil {

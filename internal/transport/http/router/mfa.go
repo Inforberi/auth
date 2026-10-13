@@ -8,6 +8,10 @@ func mfaRoutes(r chi.Router, h Handlers) {
 	}
 	r.Post("/mfa/login/complete", h.MFA.CompleteLogin)
 	owner := r.With(h.Middleware.NoRefreshAuth)
+	if h.EmailOTP != nil && h.Config.EmailOTP.ReauthenticationEnabled {
+		owner.Post("/reauthenticate/email/request", h.EmailOTP.RequestReauthentication)
+		owner.Post("/reauthenticate/email/confirm", h.EmailOTP.ConfirmReauthentication)
+	}
 	owner.Post("/mfa/totp/enrollment", h.MFA.StartEnrollment)
 	owner.Post("/mfa/totp/enrollment/confirm", h.MFA.ConfirmEnrollment)
 	owner.Post("/mfa/step-up", h.MFA.StepUp)

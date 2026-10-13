@@ -15,7 +15,7 @@ func New(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
 func (r *Repository) transaction(ctx context.Context, fn func(pgx.Tx) error) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	tx, err := r.db.Begin(ctx)
+	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		return err
 	}

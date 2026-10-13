@@ -13,9 +13,16 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-type Repository struct{ db *pgxpool.Pool }
+type Repository struct {
+	db                *pgxpool.Pool
+	emailProofEnabled bool
+}
 
-func New(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
+func New(db *pgxpool.Pool) *Repository { return NewWithEmailProof(db, false) }
+
+func NewWithEmailProof(db *pgxpool.Pool, enabled bool) *Repository {
+	return &Repository{db: db, emailProofEnabled: enabled}
+}
 
 func (r *Repository) transaction(ctx context.Context, fn func(pgx.Tx) error) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -35,7 +42,7 @@ func (r *Repository) transaction(ctx context.Context, fn func(pgx.Tx) error) err
 	return tx.Commit(ctx)
 }
 
-func requireProof(ctx context.Context, tx pgx.Tx, proof service.Proof) error {
+func (r *Repository) requireProof(ctx context.Context, tx pgx.Tx, proof service.Proof) error {
 	var version int64
 	err := tx.QueryRow(ctx, `SELECT auth_version FROM auth.users WHERE id=$1
 		AND status='active' AND deleted_at IS NULL FOR UPDATE`, proof.UserID).Scan(&version)
@@ -46,10 +53,18 @@ func requireProof(ctx context.Context, tx pgx.Tx, proof service.Proof) error {
 		return err
 	}
 	var id string
-	err = tx.QueryRow(ctx, `SELECT id FROM auth.sessions WHERE user_id=$1 AND token_hash=$2 AND auth_version=$3
+	err = tx.QueryRow(ctx, `SELECT id FROM auth.sessions s WHERE user_id=$1 AND token_hash=$2 AND auth_version=$3
 		AND revoked_at IS NULL AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()
-		AND password_verified_at<=clock_timestamp()
-		AND password_verified_at>clock_timestamp()-interval '5 minutes' FOR UPDATE`, proof.UserID, proof.TokenHash, version).Scan(&id)
+		AND ((password_verified_at<=clock_timestamp() AND password_verified_at>clock_timestamp()-interval '5 minutes')
+		OR ($4 AND email_reauthenticated_at<=clock_timestamp()
+			AND email_reauthenticated_at>clock_timestamp()-interval '5 minutes'
+			AND NOT EXISTS(SELECT 1 FROM auth.password_credentials WHERE user_id=$1)
+			AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials WHERE user_id=$1)
+			AND NOT EXISTS(SELECT 1 FROM auth.account_provisions WHERE user_id=$1 AND activated_at IS NULL)
+			AND EXISTS(SELECT 1 FROM auth.linked_identities WHERE user_id=$1)
+			AND EXISTS(SELECT 1 FROM auth.user_emails e WHERE e.user_id=$1
+				AND e.id=s.email_reauthenticated_id AND e.verified_at IS NOT NULL))) FOR UPDATE OF s`,
+		proof.UserID, proof.TokenHash, version, r.emailProofEnabled).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.ErrProofRequired
 	}

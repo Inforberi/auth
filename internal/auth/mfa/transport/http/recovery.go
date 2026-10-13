@@ -8,7 +8,7 @@ import (
 )
 
 // @Summary Regenerate recovery codes
-// @Description Requires fresh password and MFA proofs. Replaces all recovery codes, returns ten new codes once and revokes sessions/pending challenges atomically. TOTP remains enabled.
+// @Description Requires fresh primary and MFA proofs. Primary is password, or opt-in verified-email proof for an external-only account. Replaces all recovery codes, returns ten new codes once and revokes sessions/pending challenges atomically. TOTP remains enabled.
 // @Tags MFA
 // @Produce json
 // @Param Origin header string true "Exact allowed HTTPS origin"

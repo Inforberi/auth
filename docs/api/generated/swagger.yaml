@@ -65,6 +65,11 @@ definitions:
       code:
         type: string
     type: object
+  emailotp_http.EmailProofResponse:
+    properties:
+      verifiedAt:
+        type: string
+    type: object
   emailotp_http.RequestCodeRequest:
     properties:
       email:
@@ -1252,9 +1257,10 @@ paths:
       - MFA
   /api/v1/auth/mfa/recovery-codes/regenerate:
     post:
-      description: Requires fresh password and MFA proofs. Replaces all recovery codes,
-        returns ten new codes once and revokes sessions/pending challenges atomically.
-        TOTP remains enabled.
+      description: Requires fresh primary and MFA proofs. Primary is password, or
+        opt-in verified-email proof for an external-only account. Replaces all recovery
+        codes, returns ten new codes once and revokes sessions/pending challenges
+        atomically. TOTP remains enabled.
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -1291,9 +1297,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Requires password reauthentication within five minutes. Consumes
-        TOTP/recovery, rotates the current session verifier and records fresh MFA
-        context atomically. Does not extend session lifetime.
+      description: Requires fresh password proof, or opt-in verified-email proof for
+        an external-only account, within five minutes. Consumes TOTP/recovery, rotates
+        the current session verifier and records fresh MFA context atomically. Does
+        not extend session lifetime.
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -1338,9 +1345,10 @@ paths:
       - MFA
   /api/v1/auth/mfa/totp:
     delete:
-      description: Requires fresh password and MFA proofs. Administrative-role policy
-        cannot be bypassed. Removes recovery codes, raises auth_version and revokes
-        all sessions atomically.
+      description: Requires fresh primary and MFA proofs. Primary is password, or
+        opt-in verified-email proof for an external-only account. Administrative-role
+        policy cannot be bypassed. Removes recovery codes, raises auth_version and
+        revokes all sessions atomically.
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -1375,9 +1383,9 @@ paths:
       - MFA
   /api/v1/auth/mfa/totp/enrollment:
     post:
-      description: Requires an active session and password reauthentication within
-        five minutes. Returns the secret once in a no-store owner response. Does not
-        enable MFA before confirmation.
+      description: Requires an active session and fresh password proof, or opt-in
+        verified-email proof for an external-only account, within five minutes. Returns
+        the secret once in a no-store owner response. Does not enable MFA before confirmation.
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -1465,8 +1473,10 @@ paths:
       - MFA
   /api/v1/auth/mfa/totp/replacement:
     post:
-      description: Requires fresh password and MFA proofs. The current factor remains
-        usable until confirmation. Replacement cannot use an ordinary enrollment token.
+      description: Requires fresh primary and MFA proofs. Primary is password, or
+        opt-in verified-email proof for an external-only account. The current factor
+        remains usable until confirmation. Replacement cannot use an ordinary enrollment
+        token.
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -1507,8 +1517,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Requires the unchanged fresh password/MFA session, replacement
-        token and a code from the new factor. Replaces secret/recovery codes, raises
+      description: Requires the unchanged fresh primary/MFA session, replacement token
+        and a code from the new factor. Primary is password, or opt-in verified-email
+        proof for an external-only account. Replaces secret/recovery codes, raises
         auth_version and revokes all sessions atomically.
       parameters:
       - description: Exact allowed HTTPS origin
@@ -1550,6 +1561,105 @@ paths:
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
       summary: Confirm protected TOTP replacement
+      tags:
+      - MFA
+  /api/v1/auth/reauthenticate/email/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Same owner/session/version and one-time flow cookie; rotates the
+        existing session token atomically without extending lifetime. Grants a five-minute
+        email proof, not password proof, MFA proof or administrative permissions.
+        Existing MFA is still required to replace or disable a factor.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Eight-digit email code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/emailotp_http.ConfirmCodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/emailotp_http.EmailProofResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Confirm an email proof for MFA management
+      tags:
+      - MFA
+  /api/v1/auth/reauthenticate/email/request:
+    post:
+      consumes:
+      - application/json
+      description: Optional, existing external-only account with an active session
+        and an already verified owned email. Does not attach or verify a new address,
+        authenticate by password or issue a new session.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Already verified owned email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/emailotp_http.RequestCodeRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/emailotp_http.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'codes: invalid_origin, fresh_auth_required'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Request an email proof for MFA management
       tags:
       - MFA
   /api/v1/auth/reauthenticate/password:

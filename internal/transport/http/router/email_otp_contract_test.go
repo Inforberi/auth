@@ -12,10 +12,20 @@ import (
 
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 )
 
 type contractEmailOTP struct{ calls int }
+
+func (f *contractEmailOTP) RequestReauthentication(ctx context.Context, _ mfaservice.Proof, email, ip string) (*otpservice.RequestedCode, error) {
+	return f.Request(ctx, email, ip)
+}
+
+func (f *contractEmailOTP) ConfirmReauthentication(context.Context, otpservice.ReauthenticationInput) (*otpservice.ReauthenticatedSession, error) {
+	f.calls++
+	return &otpservice.ReauthenticatedSession{Token: validCookieToken, VerifiedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}, nil
+}
 
 func (f *contractEmailOTP) Request(context.Context, string, string) (*otpservice.RequestedCode, error) {
 	f.calls++

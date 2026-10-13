@@ -17,7 +17,7 @@ import (
 )
 
 func assembleEmailOTP(pool *pgxpool.Pool, redis *redis.Client, mail *mailer.Mailer, sessions *sessionservice.Login, tokens *tokengenerate.TokenManager, cfg *config.Config, log *zap.Logger) (*otphttp.Handler, *otpservice.Delivery, error) {
-	if !cfg.EmailOTP.Enabled {
+	if !cfg.EmailOTP.Enabled && !cfg.EmailOTP.ReauthenticationEnabled {
 		return nil, nil, nil
 	}
 	cipher, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "email-login:v1")

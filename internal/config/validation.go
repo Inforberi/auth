@@ -22,6 +22,12 @@ func (cfg Config) Validate() error {
 		cfg.Telegram.Validate,
 		cfg.Google.Validate,
 		cfg.EmailOTP.Validate,
+		func() error {
+			if cfg.EmailOTP.ReauthenticationEnabled && !cfg.MFA.Enabled {
+				return fmt.Errorf("EMAIL_REAUTHENTICATION_ENABLED requires MFA_ENABLED")
+			}
+			return nil
+		},
 		cfg.MFA.Validate,
 		cfg.Retention.Validate,
 		cfg.Capacity.Validate,

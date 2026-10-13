@@ -13,6 +13,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 )
@@ -21,6 +22,19 @@ type httpFixture struct {
 	err     error
 	calls   int
 	binding string
+}
+
+func (f *httpFixture) RequestReauthentication(ctx context.Context, _ mfaservice.Proof, email, ip string) (*service.RequestedCode, error) {
+	return f.Request(ctx, email, ip)
+}
+
+func (f *httpFixture) ConfirmReauthentication(_ context.Context, input service.ReauthenticationInput) (*service.ReauthenticatedSession, error) {
+	f.calls++
+	f.binding = input.Binding
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &service.ReauthenticatedSession{Token: strings.Repeat("A", 43), VerifiedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}, nil
 }
 
 func (f *httpFixture) Request(context.Context, string, string) (*service.RequestedCode, error) {

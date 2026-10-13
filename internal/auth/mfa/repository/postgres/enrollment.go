@@ -22,7 +22,7 @@ func (r *Repository) SaveReplacement(ctx context.Context, proof service.Proof, d
 func (r *Repository) saveEnrollment(ctx context.Context, proof service.Proof, digest string, encrypted []byte, purpose string) (time.Time, error) {
 	var expires time.Time
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
-		if err := requireProof(ctx, tx, proof); err != nil {
+		if err := r.requireProof(ctx, tx, proof); err != nil {
 			return err
 		}
 		if purpose == "replace" {
@@ -61,7 +61,7 @@ func (r *Repository) ConfirmReplacement(ctx context.Context, proof service.Proof
 func (r *Repository) confirmEnrollment(ctx context.Context, proof service.Proof, digest string, check service.Check, recovery []string, purpose string) error {
 	rejected := false
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
-		if err := requireProof(ctx, tx, proof); err != nil {
+		if err := r.requireProof(ctx, tx, proof); err != nil {
 			return err
 		}
 		if purpose == "replace" {

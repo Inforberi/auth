@@ -89,7 +89,7 @@ func contractHandlers(env string) Handlers {
 		EmailOTP:          otphttp.New(&contractEmailOTP{}, log),
 		Config: &config.Config{
 			MFA:      mfaservice.Config{Enabled: true},
-			EmailOTP: otpservice.Config{Enabled: true},
+			EmailOTP: otpservice.Config{Enabled: true, ReauthenticationEnabled: true},
 			Telegram: telegramservice.Config{Enabled: true},
 			Google:   googleservice.Config{Enabled: true},
 			Logger:   logger.Config{Env: env},

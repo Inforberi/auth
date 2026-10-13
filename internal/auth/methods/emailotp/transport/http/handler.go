@@ -10,6 +10,7 @@ import (
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
@@ -21,6 +22,8 @@ const flowCookie = "__Host-email-otp"
 type emailOTPService interface {
 	Request(context.Context, string, string) (*service.RequestedCode, error)
 	Confirm(context.Context, service.ConfirmInput) (*sessionservice.CreatedSession, error)
+	RequestReauthentication(context.Context, mfaservice.Proof, string, string) (*service.RequestedCode, error)
+	ConfirmReauthentication(context.Context, service.ReauthenticationInput) (*service.ReauthenticatedSession, error)
 }
 
 type Handler struct {
@@ -37,7 +40,11 @@ func New(service emailOTPService, log *zap.Logger) *Handler {
 }
 
 func setFlowCookie(w http.ResponseWriter, value string, expires time.Time) {
-	cookie := &http.Cookie{Name: flowCookie, Value: value, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: expires}
+	setNamedFlowCookie(w, flowCookie, value, expires)
+}
+
+func setNamedFlowCookie(w http.ResponseWriter, name, value string, expires time.Time) {
+	cookie := &http.Cookie{Name: name, Value: value, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: expires}
 	if value == "" {
 		cookie.MaxAge = -1
 	}

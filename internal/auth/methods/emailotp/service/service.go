@@ -12,6 +12,8 @@ import (
 type repository interface {
 	Issue(context.Context, string, domain.Challenge) error
 	Consume(context.Context, string, string) (*AuthenticatedAccount, error)
+	IssueReauthentication(context.Context, mfaservice.Proof, string, domain.Challenge) error
+	ConfirmReauthentication(context.Context, mfaservice.Proof, string, string, string) (*ReauthenticatedSession, error)
 }
 
 type cipher interface {
@@ -28,7 +30,10 @@ type sessions interface {
 	BeginLogin(context.Context, mfaservice.PrimaryProof, string, string) (*sessionservice.CreatedSession, error)
 }
 
-type tokens interface{ GenerateToken(...int) (string, error) }
+type tokens interface {
+	GenerateToken(...int) (string, error)
+	Hash(string) string
+}
 
 type Service struct {
 	repo     repository

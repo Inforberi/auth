@@ -15,7 +15,7 @@ type EnrollmentResponse struct {
 } // @name mfa_http.EnrollmentResponse
 
 // @Summary Start TOTP enrollment
-// @Description Requires an active session and password reauthentication within five minutes. Returns the secret once in a no-store owner response. Does not enable MFA before confirmation.
+// @Description Requires an active session and fresh password proof, or opt-in verified-email proof for an external-only account, within five minutes. Returns the secret once in a no-store owner response. Does not enable MFA before confirmation.
 // @Tags MFA
 // @Produce json
 // @Param Origin header string true "Exact allowed HTTPS origin"

@@ -1265,7 +1265,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/mfa/recovery-codes/regenerate": {
             "post": {
-                "description": "Requires fresh password and MFA proofs. Replaces all recovery codes, returns ten new codes once and revokes sessions/pending challenges atomically. TOTP remains enabled.",
+                "description": "Requires fresh primary and MFA proofs. Primary is password, or opt-in verified-email proof for an external-only account. Replaces all recovery codes, returns ten new codes once and revokes sessions/pending challenges atomically. TOTP remains enabled.",
                 "produces": [
                     "application/json"
                 ],
@@ -1318,7 +1318,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/mfa/step-up": {
             "post": {
-                "description": "Requires password reauthentication within five minutes. Consumes TOTP/recovery, rotates the current session verifier and records fresh MFA context atomically. Does not extend session lifetime.",
+                "description": "Requires fresh password proof, or opt-in verified-email proof for an external-only account, within five minutes. Consumes TOTP/recovery, rotates the current session verifier and records fresh MFA context atomically. Does not extend session lifetime.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1389,7 +1389,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/mfa/totp": {
             "delete": {
-                "description": "Requires fresh password and MFA proofs. Administrative-role policy cannot be bypassed. Removes recovery codes, raises auth_version and revokes all sessions atomically.",
+                "description": "Requires fresh primary and MFA proofs. Primary is password, or opt-in verified-email proof for an external-only account. Administrative-role policy cannot be bypassed. Removes recovery codes, raises auth_version and revokes all sessions atomically.",
                 "produces": [
                     "application/json"
                 ],
@@ -1442,7 +1442,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/mfa/totp/enrollment": {
             "post": {
-                "description": "Requires an active session and password reauthentication within five minutes. Returns the secret once in a no-store owner response. Does not enable MFA before confirmation.",
+                "description": "Requires an active session and fresh password proof, or opt-in verified-email proof for an external-only account, within five minutes. Returns the secret once in a no-store owner response. Does not enable MFA before confirmation.",
                 "produces": [
                     "application/json"
                 ],
@@ -1572,7 +1572,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/mfa/totp/replacement": {
             "post": {
-                "description": "Requires fresh password and MFA proofs. The current factor remains usable until confirmation. Replacement cannot use an ordinary enrollment token.",
+                "description": "Requires fresh primary and MFA proofs. Primary is password, or opt-in verified-email proof for an external-only account. The current factor remains usable until confirmation. Replacement cannot use an ordinary enrollment token.",
                 "produces": [
                     "application/json"
                 ],
@@ -1631,7 +1631,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/mfa/totp/replacement/confirm": {
             "post": {
-                "description": "Requires the unchanged fresh password/MFA session, replacement token and a code from the new factor. Replaces secret/recovery codes, raises auth_version and revokes all sessions atomically.",
+                "description": "Requires the unchanged fresh primary/MFA session, replacement token and a code from the new factor. Primary is password, or opt-in verified-email proof for an external-only account. Replaces secret/recovery codes, raises auth_version and revokes all sessions atomically.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1681,6 +1681,148 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/reauthenticate/email/confirm": {
+            "post": {
+                "description": "Same owner/session/version and one-time flow cookie; rotates the existing session token atomically without extending lifetime. Grants a five-minute email proof, not password proof, MFA proof or administrative permissions. Existing MFA is still required to replace or disable a factor.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Confirm an email proof for MFA management",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Eight-digit email code",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/emailotp_http.ConfirmCodeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/emailotp_http.EmailProofResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/reauthenticate/email/request": {
+            "post": {
+                "description": "Optional, existing external-only account with an active session and an already verified owned email. Does not attach or verify a new address, authenticate by password or issue a new session.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Request an email proof for MFA management",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Already verified owned email",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/emailotp_http.RequestCodeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/emailotp_http.StatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "codes: invalid_origin, fresh_auth_required",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -2643,6 +2785,14 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "code": {
+                    "type": "string"
+                }
+            }
+        },
+        "emailotp_http.EmailProofResponse": {
+            "type": "object",
+            "properties": {
+                "verifiedAt": {
                     "type": "string"
                 }
             }

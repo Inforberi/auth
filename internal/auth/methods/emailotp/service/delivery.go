@@ -51,11 +51,14 @@ func (d *Delivery) send(ctx context.Context, payload []byte) error {
 	if err != nil {
 		return err
 	}
-	var message loginMail
+	var message codeMail
 	if err := json.Unmarshal(plain, &message); err != nil {
 		return err
 	}
-	return d.mail.SendContext(ctx, message.To, "Код для входа", message.Body)
+	if message.Subject == "" {
+		message.Subject = "Код для входа"
+	} // Existing queued login payloads have no subject.
+	return d.mail.SendContext(ctx, message.To, message.Subject, message.Body)
 }
 
 func (d *Delivery) RunDelivery(ctx context.Context, report func(error)) {

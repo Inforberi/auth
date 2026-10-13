@@ -15,6 +15,13 @@ type Proof struct {
 	AuthVersion int64
 }
 
+func (p Proof) Validate() error {
+	if !validProof(p) {
+		return domain.ErrProofRequired
+	}
+	return nil
+}
+
 type Check func(encrypted []byte, lastStep int64, now time.Time) (int64, error)
 
 type Repository interface {

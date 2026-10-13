@@ -15,6 +15,7 @@ type mailFixture struct {
 	finished int
 	mails    int
 	fail     error
+	subject  string
 }
 
 func (f *mailFixture) ClaimDelivery(context.Context) (*domain.Delivery, error) { return f.job, nil }
@@ -26,7 +27,11 @@ func (f *mailFixture) FinishDelivery(_ context.Context, _ domain.Delivery, sent 
 
 func (f *mailFixture) SendContext(_ context.Context, to, subject, body string) error {
 	f.mails++
-	if to != "user@example.test" || subject != "Код для входа" || body != "code body" {
+	expected := f.subject
+	if expected == "" {
+		expected = "Код для входа"
+	}
+	if to != "user@example.test" || subject != expected || body != "code body" {
 		return errors.New("wrong mail")
 	}
 	return f.fail
@@ -34,7 +39,7 @@ func (f *mailFixture) SendContext(_ context.Context, to, subject, body string) e
 
 func TestDeliveryEncryptedAndAcknowledged(t *testing.T) {
 	_, _, c := otpFixture(t)
-	plain, err := json.Marshal(loginMail{To: "user@example.test", Body: "code body"})
+	plain, err := json.Marshal(codeMail{To: "user@example.test", Body: "code body"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,5 +65,22 @@ func TestDeliveryEncryptedAndAcknowledged(t *testing.T) {
 	processed, err := NewDelivery(f, c, f).DeliverOne(context.Background())
 	if processed || err != nil || f.finished != 0 || f.mails != 0 {
 		t.Fatal("empty queue", err)
+	}
+}
+
+func TestReauthenticationDeliverySubject(t *testing.T) {
+	_, _, c := otpFixture(t)
+	subject := "Код для подтверждения управления MFA"
+	plain, err := json.Marshal(codeMail{To: "user@example.test", Body: "code body", Subject: subject})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, err := c.Seal(plain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := &mailFixture{job: &domain.Delivery{Payload: payload}, subject: subject}
+	if processed, err := NewDelivery(f, c, f).DeliverOne(t.Context()); err != nil || !processed || !f.sent || f.mails != 1 {
+		t.Fatal(processed, err, f)
 	}
 }

@@ -26,6 +26,7 @@ func TestPostgresSchema(t *testing.T) {
 	t.Run("administrator protection", func(t *testing.T) { checkAdministratorProtection(t, db, ctx) })
 	t.Run("access roles", func(t *testing.T) { checkAccessRoles(t, db, ctx) })
 	t.Run("email OTP", func(t *testing.T) { checkEmailOTP(t, db, ctx) })
+	t.Run("email reauthentication", func(t *testing.T) { checkEmailReauthentication(t, db, ctx) })
 	t.Run("external identities", func(t *testing.T) { checkIdentityResolution(t, db, ctx) })
 	t.Run("identity management", func(t *testing.T) { checkIdentityManagement(t, db, ctx) })
 	t.Run("Google identity", func(t *testing.T) { checkGoogleIdentity(t, db, ctx) })

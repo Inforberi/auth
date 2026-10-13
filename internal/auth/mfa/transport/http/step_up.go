@@ -20,7 +20,7 @@ type (
 )
 
 // @Summary Confirm a fresh second factor
-// @Description Requires password reauthentication within five minutes. Consumes TOTP/recovery, rotates the current session verifier and records fresh MFA context atomically. Does not extend session lifetime.
+// @Description Requires fresh password proof, or opt-in verified-email proof for an external-only account, within five minutes. Consumes TOTP/recovery, rotates the current session verifier and records fresh MFA context atomically. Does not extend session lifetime.
 // @Tags MFA
 // @Accept json
 // @Produce json

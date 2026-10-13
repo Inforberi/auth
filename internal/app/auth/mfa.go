@@ -20,7 +20,7 @@ import (
 )
 
 func assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, sessions *sessionservice.SessionService, tokens *tokengenerate.TokenManager, cfg *config.Config, log *zap.Logger) (*sessionservice.Login, *mfahttp.Handler, error) {
-	repo := mfapostgres.New(pool)
+	repo := mfapostgres.NewWithEmailProof(pool, cfg.EmailOTP.ReauthenticationEnabled)
 	if !cfg.MFA.Enabled {
 		checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()

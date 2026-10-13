@@ -8,7 +8,7 @@ import (
 )
 
 // @Summary Disable TOTP for the current account
-// @Description Requires fresh password and MFA proofs. Administrative-role policy cannot be bypassed. Removes recovery codes, raises auth_version and revokes all sessions atomically.
+// @Description Requires fresh primary and MFA proofs. Primary is password, or opt-in verified-email proof for an external-only account. Administrative-role policy cannot be bypassed. Removes recovery codes, raises auth_version and revokes all sessions atomically.
 // @Tags MFA
 // @Produce json
 // @Param Origin header string true "Exact allowed HTTPS origin"
