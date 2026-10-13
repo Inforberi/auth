@@ -1,5 +1,7 @@
 # Текущий шаг
 
+- Выполнен A5.2a-local: внутренний trusted-primary/browser-bound challenge с TTL/attempt/Redis bounds и атомарные factor/challenge/session/audit. SQL session context приходит в middleware; refresh/rotation не продлевают MFA freshness. One pending/user, credentials/identity/email/version recheck, bounded clock skew без будущих proof times. [Контракт](../features/mfa.md#внутренний-вход-с-mfa-a52a-local). Следующий A5.2b — подключение method adapters/App/HTTP/ENV/effective policy и protected management/step-up/admin enforcement до публикации включения MFA. PrimaryProof запрещён из JSON/headers; пока нет public MFA flow. Source 000001 расширена без новых migration files, реальные env/secrets/БД не менялись. Код и тесты зафиксированы коммитом ad8ee77.
+
 - Выполнен A5.1-local: внутренняя TOTP/enrollment/recovery основа, pquerna/otp v1.5.0, scoped ciphertext/owner binding, fresh password session proof, TTL/attempt/Redis bounds, single-use time step/recovery и atomic audit/version/revoke. Existing retention/deletion и общий SQL session issuance guard подключены; App/HTTP/ENV activation не опубликованы. [Контракт](../features/mfa.md). Следующий A5.2 — bound primary/browser challenge + atomic factor/challenge/session commit и protected MFA management/admin context. Нельзя вручную включать фактор в рабочей БД до completion. Source 000001 изменена без новых migrations; рабочие env/secrets/БД не менялись. Код и тесты зафиксированы коммитом a9b929c.
 
 - Выполнен 10.3-local: last-system-admin guard внутри account block/delete, общий Access lock перед user/session locks и explicit Read Committed; concurrent block/delete оставляют одного active владельца. Security report может блокировать последний украденный аккаунт; повторный admin block/delete не уничтожает его recovery, reset/recovery сохраняют роль. [Границы](../features/roles-permissions.md). Следующий шаг — MFA A5 до admin HTTP/system assignments; bootstrap/emergency recovery и usable-method/factor guard ещё открыты. Новых routes/schema/env/dependencies нет; рабочая БД не менялась. Зафиксирован коммитом d1a34a3.
@@ -8,7 +10,7 @@
 
 - A4 возобновлён 12 октября: внутренние создание/редактирование ролей, назначение/отзыв, SQL permissions, versions/delegation/fresh-password proof и atomic audit реализованы. [Контракт](../features/roles-permissions.md). Операторский импорт и block/delete guards выполнены выше; A4 целиком не закрыт, public admin routes/MFA/bootstrap/system assignments ещё нет.
 
-Обновлено 12 октября 2026. Рабочая заметка; полные статусы — [implementation](../planning/implementation.md), результаты — [history](../planning/history.md).
+Обновлено 13 октября 2026. Рабочая заметка; полные статусы — [implementation](../planning/implementation.md), результаты — [history](../planning/history.md).
 
 - В AGENTS.md и разделе «Как выполнять» плана закреплено предварительное проектирование ближайших согласованных сценариев без гипотетических абстракций и повторного переписывания логики. Это уточнение правил; рабочий код не менялся.
 

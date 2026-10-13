@@ -480,7 +480,7 @@ Fault tests: revoked session не возрождается; blocked user не с
 | 10. Roles/permissions | A4.1/2-local, 10.5a-local и 10.3-local реализованы | Роли/назначения/delegation/version/audit, JSON-каталог/preview и защита последнего системного владельца при block/delete; MFA, runtime/UI импорт, управление системными назначениями/bootstrap/recovery и полный usable-admin guard остаются открыты |
 | 11. Plans/entitlements | Не начат | После 10; manual grants и effective access без payment provider |
 | 12. Payments | Не начат | После 11; local provider или optional external events adapter; Stars зависит от commerce profile |
-| 13. MFA/cabinet | A5.1-local реализован | Внутренняя основа TOTP/enrollment/recovery, session issuance guard и lifecycle; bounded login challenge, MFA context, protected management и App/HTTP ещё не подключены |
+| 13. MFA/cabinet | A5.1/A5.2a-local реализованы | Внутренние TOTP/enrollment/recovery и browser-bound atomic login/session context проверены; подключение method adapters/App/HTTP/policy и protected management остаются A5.2 |
 | 14. Release/переносимость | Не начат | После обязательных модулей и checklist; документация ведётся по ходу |
 
 Текущий порядок: 0, 1.1–1.8, 4, 5.1–5.4, 5.2r/5.2h завершены; 5.5a–d реализованы и 5.5e-local проверен, 5.6a/5.6b-worker проверены локально → 5.7 и остальное 6 → 7/8 → 9/10 → 11/12 → 14. 5.6b-operations/5.5e-staging остаются release gates. Разделы 2–3 и перенос 4.2–4.3 входят в первый этап. Решения этапа 0 принимаются до зависимых задач; 13.1 выполняется после 6 до production admin действий. После 1.8 используем только рабочий Auth и его документацию.
