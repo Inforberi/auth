@@ -1,5 +1,7 @@
 # Схема Auth
 
+A5.2c-local: sessions хранят nullable email_reauthenticated_at/email_reauthenticated_id как snapshot подтверждения; MFA management повторно проверяет актуальные ownership/verification/version. Email challenges получили purpose login/reauthenticate и session_hash для protected flow, с SQL constraint против смешения. Code consume/session rotation/proof/email audit атомарны, lifetime/password/MFA proof не продлеваются. Existing outbox/retention/индексы переиспользованы; новых таблиц или migration files нет. [Контракт](features/mfa.md#подтверждение-управления-mfa-по-почте-a52c-local).
+
 A5.2b-local: MFA enrollment хранит purpose enroll/replace; новые audit events покрывают step-up/replace/disable/recovery regeneration. Session MFA timestamp допускается после created_at для step-up, но после primary proof и до absolute deadline; primary/password/MFA proofs не обновляются простым refresh. Management атомарно повышает auth_version, отзывает sessions и удаляет pending MFA challenges. Source 000001 изменена без отдельной миграции; существующей БД нужен согласованный upgrade, не reset. [Публичный MFA API](features/mfa.md).
 
 Источник: `migrations/000001_init` (up/down). Один экземпляр Auth обслуживает один проект; внутренний UUID пользователя не зависит от метода входа.

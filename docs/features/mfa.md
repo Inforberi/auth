@@ -2,7 +2,7 @@
 
 ## Текущее состояние
 
-A5.2b-local подключает MFA к password, Google/Telegram OIDC и email OTP, App, HTTP и Swagger. При `MFA_ENABLED=true` доступны перечисленные ниже ручки. Подключение и управление фактором пока требуют аккаунта с постоянным паролем и свежего password proof; external-only enrollment/management не опубликованы. Полный A5 и release acceptance не закрыты.
+A5.2b-local подключает MFA к password, Google/Telegram OIDC и email OTP, App, HTTP и Swagger. A5.2c-local добавляет opt-in email proof для external-only с уже verified owned contact. Для password-account по-прежнему нужен password proof: email не снижает его защиту. Первичная безопасная привязка контакта не опубликована; новый external-only пользователь без проверенной почты этим API воспользоваться не может. Полный A5 и release acceptance не закрыты.
 
 Без подключённого фактора обычный login сохраняется. При enabled TOTP основной вход возвращает HTTP 202, `status=mfa_required`, `challenge`, `expiresAt` и HttpOnly browser cookie, но не новую session cookie. Старую cookie этого браузера очищаем; это не глобальный logout других сессий. После второго фактора создаётся общая SQL-сессия. MFA не заменяет email verification, permissions или основной вход. Factor state нельзя включать/выключать прямым SQL вместо protected flow.
 
@@ -16,6 +16,7 @@ A5.2b-local подключает MFA к password, Google/Telegram OIDC и email 
 | `MFA_USER_OPERATIONS_PER_MINUTE` | `5` | Общий operational admission пользователя для management, primary challenge start и completion |
 | `MFA_IP_OPERATIONS_PER_MINUTE` | `10` | IP admission для start/complete login challenge |
 | `MFA_PROJECT_OPERATIONS_PER_MINUTE` | `500` | Общий budget установки для start/complete и management вместе |
+| `EMAIL_REAUTHENTICATION_ENABLED` | `false` | Подтверждение управления MFA на проверенную почту external-only аккаунта; требует MFA_ENABLED, не включает email login |
 
 Это бюджеты в минуту, не RPS; минимальный budget — два обращения для start+complete, меньший отклоняется конфигурацией. User/project counters общие для management и login, IP — для start+complete. Более высокие budgets не повышают security budget: login factor — максимум пять обращений на пользователя в минуту независимо от замены challenge; pair token+binding тоже ограничена пятью. Step-up имеет отдельный максимум пяти обращений на пользователя в минуту. SQL attempts/challenge — самостоятельная гарантия. Indexed owner lookup для account admission выполняется до транзакции; внутри неё challenge повторно проверяется. Под SQL row lock нет Redis-вызовов. Все ENV должны быть согласованы между экземплярами; сохраняемые настройки относятся к A6.
 
@@ -38,7 +39,34 @@ Password flow: войти → `POST /reauthenticate/password` → enrollment sta
 
 SQL mutations Access требуют password/MFA proofs не старше пяти минут и current factor. Владельцу system super_admin либо permissions `access.roles.manage`/`access.assignments.manage` отключение MFA запрещено даже при backup administrator. Disable берёт общий Access advisory lock до user/session locks; current roles читаются после ожидания, role change не обходит policy гонкой. Динамические required-MFA правила других ролей — A6. Public admin users/roles API ещё не опубликован; Account status/delete остаются trusted-caller workflows до отдельной авторизации transport.
 
-Google/Telegram-only enrollment/management пока запрещены: требуется отдельный свежий provider proof с проверяемой authentication freshness, не возраст session/callback сам по себе. Аккаунт с паролем может подключить MFA, а затем применять её при Google/Telegram/email OTP login. Completion повторно применяет enabled policy фактически подключённого email OTP/OIDC provider. Password/email verification runtime settings пока A6.
+Google/Telegram-only management доступен только с opt-in email proof на уже проверенную почту. Возраст session/callback не заменяет подтверждение. Password-account может применять MFA при Google/Telegram/email OTP login. Completion повторно проверяет enabled policy подключённого метода; runtime settings — A6.
+
+## Подтверждение управления MFA по почте: A5.2c-local
+
+Нужны `MFA_ENABLED=true` и `EMAIL_REAUTHENTICATION_ENABLED=true`. `EMAIL_OTP_ENABLED` независимо управляет passwordless login и может оставаться false. Это не второй способ входа, не verification нового адреса и не восстановление потерянного MFA. В таблице MFA routes выше password proof заменяется email proof только для external-only; проверка existing MFA и administrative disable policy сохраняются.
+
+1. Войти через Google/Telegram и завершить уже подключённый MFA, если он есть.
+2. `POST /api/v1/auth/reauthenticate/email/request`, session cookie и JSON `{"email":"already-verified@example.test"}`. SQL проверяет verified owned contact, active/nondeleted user, current version/live session, linked identity, отсутствие permanent/temporary password и pending provision. HTTP 202 устанавливает `__Host-email-reauthentication`; письмо содержит восьмизначный код с назначением «подтверждение управления MFA». Адрес не добавляется к аккаунту.
+3. `POST /api/v1/auth/reauthenticate/email/confirm`, JSON `{"code":"12345678"}`, прежняя session cookie и flow cookie. Owner/version/session hash/purpose проверяются заново. Успех атомарно потребляет код, ротирует текущий token, сохраняет email proof и audit; flow cookie очищается, JSON отдаёт `verifiedAt`. Сессия не создаётся заново, idle/absolute expiry и primary/MFA timestamps не продлеваются; password_verified_at не выставляется. Proof действует пять минут и хранит UUID проверенного адреса.
+4. Для первого enrollment использовать `/mfa/totp/enrollment` и `/confirm`. Для replace/disable/recovery regeneration требуется также свежий MFA: если старый, вызвать `/mfa/step-up` новым TOTP/recovery. Email proof не доказывает владение вторым фактором. Factor mutations повышают version и отзывают sessions как прежде.
+
+Код не подходит для `/email-otp/confirm`: разные digest purposes, cookie names и SQL purpose/session binding. Logout/rotation после запроса, version/status/contact change и expiry отклоняют confirm. Неверные попытки коммитятся: максимум пять/challenge и пять подтверждений/user/minute независимо от reissue. Request — три/user и три/email за 15 минут плюс cooldown и IP/project budgets. TTL/resend/project limits переиспользуют `EMAIL_OTP_*`; counters email/IP/project общие с email login. Redis вызывается до SQL locks и fail-closed.
+
+Переиспользуются encrypted email outbox, delivery runner и indexed retention — без новой очереди/pool/worker/dependency. Ошибка аудита откатывает rotation/consumption/proof. Обычная проверка сессии не получает нового SQL round trip. Email UUID — authentication snapshot; management повторно проверяет актуальные ownership/verification. Отключение EMAIL_REAUTHENTICATION_ENABLED лишает ещё свежий email proof полномочий. Password-account не может заменить password proof этим flow, Access administrative mutations пока сохраняют password + MFA gate; email proof не выдаёт permissions.
+
+Ошибки новых routes используют общий email OTP/MFA mapper: `invalid_json`, `invalid_email`, `invalid_email_login` 400 (последний — invalid/expired/replayed code); `unauthorized` 401; `fresh_auth_required`/`invalid_origin` 403; `rate_limited` 429; `temporarily_unavailable` 503. Неуспешный запрос не меняет cookies.
+
+**Открытая граница:** первичная безопасная привязка контакта — A5.2d вместе с protected users/operator workflow: отдельно доказать account authority и mailbox ownership. Не добавлять verified contact прямым SQL, не принимать verified=true от UI и не объединять аккаунты по provider email. SQL fixtures используют синтетические заранее проверенные контакты, а не реализованный onboarding. Пока нет такого контакта, external-only enrollment/management закрыты.
+
+## Ограничение повторного входа через провайдера
+
+Проверено 13 октября 2026: обычный новый OIDC callback не даёт права подключать или менять MFA у аккаунта без пароля. `iat` — время выдачи токена, не повторного подтверждения личности; текущий `PrimaryProof.VerifiedAt` отмечает проверку основного login адаптером, а не новое введение credentials у провайдера. Этот proof используется для login challenge, но не заменяет management proof.
+
+- [Google Security bundle](https://developers.google.com/identity/siwg/security-bundle#authentication_time) прямо указывает, что Google Account reauth requests не поддерживаются. Подписанный `auth_time` можно запросить через `claims`, но требуется включить Session age claims в настройках проверенного OAuth app; поле может отсутствовать или отражать старый вход. Новый consent/account chooser не обновляет доказательство аутентификации. Нельзя считать отправку `prompt=login` или `max_age=0` достаточной гарантией для Google.
+- [Telegram OIDC](https://core.telegram.org/bots/telegram-login#openid-connect) документирует `sub`, `iss`, `iat`, `exp`, но проверяемая гарантия fresh reauthentication через `auth_time`/`max_age` не подтверждена. Это ограничение имеющихся сведений, не утверждение, что Telegram никогда не поддержит такой сценарий. Нельзя подменять authentication time значением `iat` или временем callback.
+- [OIDC Core](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest) описывает `max_age` и `auth_time`; сам стандарт не подтверждает поддержку каждой возможности конкретным провайдером.
+
+По согласованию выбран отдельный одноразовый email proof для management, реализованный в A5.2c-local выше. Passwordless email login не расширяется на external-only; без предварительно verified owned contact операции закрыты. Provider-specific auth_time flow не реализуется как параллельная замена/fallback. Первое безопасное добавление контакта остаётся A5.2d.
 
 ## Внутренний вход с MFA: A5.2a-local
 
@@ -60,7 +88,7 @@ Expired challenges очищаются existing bounded retention по expiry ind
 
 ## Подключение фактора
 
-Внутренний `StartEnrollment` получает user UUID, hash текущей сессии и ожидаемую auth_version. Репозиторий проверяет active/nondeleted account, действующую сессию той же версии и password proof не старше пяти минут. Actor/user ID сами по себе не являются доказательством. External-only enrollment с другим свежим primary proof ещё не реализован.
+Внутренний `StartEnrollment` получает user UUID, hash текущей сессии и ожидаемую auth_version. Репозиторий проверяет active/nondeleted account, live session/current version и primary proof не старше пяти минут: password либо opt-in verified-email proof для external-only по A5.2c. Actor/user ID сами по себе не являются доказательством; новый адрес без ownership verification этим сценарием не добавляется.
 
 Создаются новый случайный секрет 32 байта, manual key, `otpauth` URI для будущего QR и enrollment token 256 бит. В URI issuer задаёт установка, account label — стабильный UUID, не выдуманный email. Профиль — шесть цифр, 30 секунд, HMAC-SHA1; совместим с обычными TOTP authenticators и не зависит от Google/Gmail login. Используется [pquerna/otp v1.5.0](https://github.com/pquerna/otp/tree/v1.5.0), а не собственная реализация OTP. Параметры и replay policy сверены с [RFC 6238](https://www.rfc-editor.org/rfc/rfc6238).
 
@@ -92,7 +120,7 @@ Password reset/change и защитное account recovery не удаляют �
 
 ## Открытые части A5
 
-- External-only fresh proof/enrollment, required MFA по ролям, безопасный first-admin setup и отдельный lost-factor процесс.
+- Первичная безопасная привязка контакта external-only аккаунту, required MFA по ролям, безопасный first-admin setup и отдельный lost-factor процесс.
 - Public admin users/roles transport с permissions/fresh-auth/MFA, runtime settings A6 и UI A7; internal SQL role mutations уже защищены.
 - Browser/live authenticator/provider, Redis/SQL faults и mixed load/restore acceptance; локальные HTTP/SQL/Redis checks не заменяют release gates A8.
 - SMS после выбора provider; passkeys вне текущего выпуска.

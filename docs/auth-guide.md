@@ -48,7 +48,7 @@ Swagger описывает также выключенные опциональ�
 | Временный пароль | Опционально | Даёт только установку постоянного пароля, не доступ к продукту |
 | Блокировка/удаление аккаунта | Внутренний сервис | Административный HTTP/UI ещё не опубликован |
 | Пользовательские роли и permissions | Запланировано | Нет действующего публичного RBAC API |
-| MFA: authenticator, recovery codes, телефон | Опциональный TOTP/recovery API | [A5.2b-local](features/mfa.md): login challenge, password-account enrollment/step-up/management, ENV и Swagger. External-only management и SMS пока не реализованы |
+| MFA: authenticator, recovery codes, телефон | Опциональный TOTP/recovery API | [A5.2b/c-local](features/mfa.md): login challenge, enrollment/step-up/management; external-only — opt-in email proof на уже verified owned contact. Первичная привязка контакта и SMS не реализованы |
 | Вход по одноразовому email-коду | Опционально | Существующий active аккаунт с verified current password email; без регистрации и MFA |
 | Google OIDC login/link/unlink | Опционально | Отдельный enabled/registration профиль, без auto-merge по email; live acceptance ещё открыта |
 | Другие OAuth/OIDC providers | Не реализовано | Новый provider требует проверяемого adapter/контракта, не произвольного URL из ENV |
