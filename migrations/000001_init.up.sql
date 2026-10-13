@@ -194,6 +194,23 @@ CREATE TABLE auth.mfa_enrollments (
 );
 CREATE INDEX mfa_enrollments_expiry ON auth.mfa_enrollments(expires_at,user_id);
 
+CREATE TABLE auth.mfa_login_challenges (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  digest TEXT NOT NULL UNIQUE CHECK (digest ~ '^[a-f0-9]{64}$'),
+  binding_hash TEXT NOT NULL CHECK (binding_hash ~ '^[a-f0-9]{64}$'),
+  auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  primary_method TEXT NOT NULL CHECK (primary_method IN ('password','oidc','emailotp')),
+  primary_reference TEXT NOT NULL CHECK (octet_length(primary_reference) BETWEEN 1 AND 1024),
+  primary_issuer TEXT NOT NULL CHECK (octet_length(primary_issuer)<=512),
+  primary_verified_at TIMESTAMPTZ NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT statement_timestamp(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  CHECK (expires_at>created_at AND expires_at<=created_at+interval '5 minutes'),
+  CHECK (primary_verified_at<=created_at)
+);
+CREATE INDEX mfa_login_challenges_expiry ON auth.mfa_login_challenges(expires_at,user_id);
+
 CREATE TABLE auth.mfa_recovery_codes (
   user_id UUID NOT NULL REFERENCES auth.mfa_totp(user_id) ON DELETE CASCADE,
   digest TEXT NOT NULL CHECK (digest ~ '^[a-f0-9]{64}$'),
@@ -203,7 +220,7 @@ CREATE TABLE auth.mfa_recovery_codes (
 CREATE TABLE auth.mfa_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
-  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used')),
+  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
 CREATE INDEX mfa_audit_retention ON auth.mfa_audit(created_at,id);
@@ -218,9 +235,15 @@ CREATE TABLE auth.sessions (
   absolute_expires_at TIMESTAMPTZ NOT NULL,
   revoked_at TIMESTAMPTZ,
   password_verified_at TIMESTAMPTZ,
+  primary_method TEXT CHECK (primary_method IN ('password','oidc','emailotp')),
+  primary_verified_at TIMESTAMPTZ,
+  mfa_verified_at TIMESTAMPTZ,
   user_agent TEXT NOT NULL,
   ip_address TEXT NOT NULL,
-  CHECK (created_at<expires_at AND expires_at<=absolute_expires_at)
+  CHECK (created_at<expires_at AND expires_at<=absolute_expires_at),
+  CHECK ((primary_method IS NULL)=(primary_verified_at IS NULL)),
+  CHECK (mfa_verified_at IS NULL OR (primary_verified_at IS NOT NULL
+    AND primary_verified_at<=mfa_verified_at AND mfa_verified_at<=created_at))
 );
 CREATE INDEX sessions_owner ON auth.sessions(user_id,created_at DESC,id DESC);
 CREATE INDEX sessions_retention_due ON auth.sessions(LEAST(revoked_at,expires_at,absolute_expires_at),id);

@@ -16,8 +16,9 @@ import (
 )
 
 type sessionStub struct {
-	err   error
-	calls int
+	err    error
+	calls  int
+	result *service.ValidationResult
 }
 
 const validCookieToken = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -31,7 +32,37 @@ func (s *sessionStub) ValidateSession(context.Context, string) (*service.Validat
 	if s.err != nil {
 		return nil, s.err
 	}
+	if s.result != nil {
+		return s.result, nil
+	}
 	return &service.ValidationResult{UserID: "user", TokenHash: "hash", Extended: true, ExpiresAt: time.Now().Add(time.Hour)}, nil
+}
+
+func TestAuthenticationContextComesFromSession(t *testing.T) {
+	verified := time.Now().UTC()
+	for _, mfa := range []*time.Time{nil, &verified} {
+		svc := &sessionStub{result: &service.ValidationResult{
+			UserID: "user", TokenHash: "hash",
+			PrimaryMethod: "password", PrimaryVerifiedAt: &verified, MFAVerifiedAt: mfa,
+		}}
+		r := httptest.NewRequest("GET", "/", nil)
+		r.AddCookie(&http.Cookie{Name: SessionCookieName, Value: validCookieToken})
+		r.Header.Set("X-MFA-Verified", "true")
+		called := false
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			called = true
+			auth, ok := GetAuthContext(r.Context())
+			if !ok || auth.PrimaryMethod != "password" || auth.PrimaryVerifiedAt != &verified || auth.MFAVerifiedAt != mfa {
+				t.Fatal("authentication context lost or invented")
+			}
+			w.WriteHeader(204)
+		})
+		w := httptest.NewRecorder()
+		New(svc, zap.NewNop()).NoRefreshAuth(next).ServeHTTP(w, r)
+		if !called || w.Code != 204 {
+			t.Fatal("middleware rejected session")
+		}
+	}
 }
 
 func TestAuthContract(t *testing.T) {

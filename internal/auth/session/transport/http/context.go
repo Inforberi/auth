@@ -2,14 +2,18 @@ package http
 
 import (
 	"context"
+	"time"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 )
 
 type Auth struct {
-	SessionID string
-	UserID    accountdomain.UserID
-	TokenHash string
+	SessionID         string
+	UserID            accountdomain.UserID
+	TokenHash         string
+	PrimaryMethod     string
+	PrimaryVerifiedAt *time.Time
+	MFAVerifiedAt     *time.Time
 }
 
 type authContextKey struct{}

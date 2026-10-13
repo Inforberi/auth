@@ -14,6 +14,9 @@ type Session struct {
 	IPAddress         string               `json:"ipAddress"`
 	CreatedAt         time.Time            `json:"createdAt"`
 	ExpiresAt         time.Time            `json:"expiresAt"`
+	PrimaryMethod     string               `json:"primaryMethod,omitempty"`
+	PrimaryVerifiedAt *time.Time           `json:"primaryVerifiedAt,omitempty"`
+	MFAVerifiedAt     *time.Time           `json:"mfaVerifiedAt,omitempty"`
 }
 
 type PasswordConfirmation struct {

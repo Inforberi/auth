@@ -21,6 +21,7 @@ DROP TABLE IF EXISTS auth.sessions;
 DROP TABLE IF EXISTS auth.mfa_audit;
 DROP TABLE IF EXISTS auth.mfa_recovery_codes;
 DROP TABLE IF EXISTS auth.mfa_enrollments;
+DROP TABLE IF EXISTS auth.mfa_login_challenges;
 DROP TABLE IF EXISTS auth.mfa_totp;
 
 DROP TABLE IF EXISTS auth.email_verification_audit;

@@ -35,8 +35,12 @@ func (s *Service) Verify(ctx context.Context, input VerifyInput) (time.Time, err
 }
 
 func (s *Service) check(user accountdomain.UserID, code string) Check {
+	return factorCheck(s.cipher, s.code, user, code)
+}
+
+func factorCheck(cipher Cipher, authenticator Authenticator, user accountdomain.UserID, code string) Check {
 	return func(encrypted []byte, lastStep int64, now time.Time) (int64, error) {
-		plain, err := s.cipher.Open(encrypted)
+		plain, err := cipher.Open(encrypted)
 		if err != nil {
 			return 0, domain.ErrUnavailable
 		}
@@ -45,6 +49,6 @@ func (s *Service) check(user accountdomain.UserID, code string) Check {
 		if !found || owner != string(user) {
 			return 0, domain.ErrUnavailable
 		}
-		return s.code.Match(secret, code, now, lastStep)
+		return authenticator.Match(secret, code, now, lastStep)
 	}
 }

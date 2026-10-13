@@ -10,11 +10,14 @@ import (
 )
 
 type ValidationResult struct {
-	SessionID string
-	UserID    accountdomain.UserID `json:"userId"`
-	TokenHash string
-	ExpiresAt time.Time `json:"expiresAt"`
-	Extended  bool
+	SessionID         string
+	UserID            accountdomain.UserID `json:"userId"`
+	TokenHash         string
+	ExpiresAt         time.Time `json:"expiresAt"`
+	Extended          bool
+	PrimaryMethod     string
+	PrimaryVerifiedAt *time.Time
+	MFAVerifiedAt     *time.Time
 }
 
 func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (*ValidationResult, error) {
@@ -62,10 +65,13 @@ func (s *SessionService) validateSession(ctx context.Context, rawToken string, r
 	}
 
 	return &ValidationResult{
-		SessionID: session.ID,
-		UserID:    session.UserID,
-		TokenHash: hashToken,
-		ExpiresAt: session.ExpiresAt,
-		Extended:  extended,
+		SessionID:         session.ID,
+		UserID:            session.UserID,
+		TokenHash:         hashToken,
+		ExpiresAt:         session.ExpiresAt,
+		Extended:          extended,
+		PrimaryMethod:     session.PrimaryMethod,
+		PrimaryVerifiedAt: session.PrimaryVerifiedAt,
+		MFAVerifiedAt:     session.MFAVerifiedAt,
 	}, nil
 }
