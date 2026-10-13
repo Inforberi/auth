@@ -10,6 +10,7 @@ import (
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
+	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
@@ -58,6 +59,9 @@ var oidcErrors = []httpx.ErrorRule{
 }
 
 func (h *Handler) respondError(w http.ResponseWriter, r *http.Request, err error) {
+	if mfahttp.RespondLoginError(w, r, h.log, err) {
+		return
+	}
 	httpx.RespondError(w, r, h.log, h.feature, err, oidcErrors,
 		httpx.Failure{Status: 503, Code: "temporarily_unavailable", Message: "temporarily unavailable"})
 }

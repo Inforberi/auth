@@ -8,6 +8,7 @@ import (
 )
 
 type Auth struct {
+	AuthVersion       int64
 	SessionID         string
 	UserID            accountdomain.UserID
 	TokenHash         string

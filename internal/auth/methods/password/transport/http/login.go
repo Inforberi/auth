@@ -6,6 +6,7 @@ import (
 	"go.uber.org/zap"
 
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
@@ -28,6 +29,7 @@ type LoginByEmailResponse struct {
 // @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
 // @Param body body LoginByEmailRequest true "login payload"
 // @Success 200 {object} LoginByEmailResponse
+// @Success 202 {object} mfahttp.ChallengeResponse "MFA required; browser binding cookie, no session issued"
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, email_required, password_required, invalid_email, invalid_credentials"
 // @Failure 500 {object} httpx.ErrorResponse "code: internal_error"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited; Retry-After: 60"
@@ -52,10 +54,17 @@ func (h *PasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 		IP:        httpx.IP(r),
 	})
 	if err != nil {
+		if mfahttp.RespondLoginError(w, r, h.log, err) {
+			return
+		}
 		h.respondError(w, r, err, "login", loginClientErrors)
 		return
 	}
 
+	if login.Challenge != nil {
+		mfahttp.RespondChallenge(w, login.Challenge)
+		return
+	}
 	sessionhttp.SetSessionCookie(w, login.Token, login.ExpiresAt)
 	httpx.JSON(w, http.StatusOK, LoginByEmailResponse{Status: "ok"})
 	h.log.Info("user logged in", zap.String("user_id", string(login.UserID)))

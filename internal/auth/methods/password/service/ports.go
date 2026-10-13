@@ -5,11 +5,13 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 )
 
 type session interface {
 	CreateSessionAtVersion(context.Context, accountdomain.UserID, string, string, int64) (*sessionservice.CreatedSession, error)
+	BeginLogin(context.Context, mfaservice.PrimaryProof, string, string) (*sessionservice.CreatedSession, error)
 }
 type passwordRepo interface {
 	RehashPassword(context.Context, accountdomain.UserID, int64, string, string) error

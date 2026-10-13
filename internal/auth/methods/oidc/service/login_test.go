@@ -10,6 +10,7 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
@@ -23,6 +24,12 @@ type loginFixture struct {
 	failure                       string
 	proofs, resolutions, sessions int
 	registration                  bool
+	primary                       mfaservice.PrimaryProof
+}
+
+func (f *loginFixture) BeginLogin(ctx context.Context, proof mfaservice.PrimaryProof, agent, ip string) (*sessionservice.CreatedSession, error) {
+	f.primary = proof
+	return f.CreateSessionAtVersion(ctx, proof.UserID, agent, ip, proof.AuthVersion)
 }
 
 func (f *loginFixture) Allow(context.Context, string, int, int) (bool, error) {
@@ -112,6 +119,9 @@ func testLoginLifecycle(t *testing.T, issuer string) {
 			if failure == "" {
 				if err != nil || result.Session.RawToken != "session" || result.Linked || !f.registration {
 					t.Fatal(result, err)
+				}
+				if f.primary.Method != "oidc" || f.primary.Reference != "subject" || f.primary.Issuer != issuer || f.primary.VerifiedAt.IsZero() {
+					t.Fatal("provider proof lost", f.primary)
 				}
 				if _, err := s.Callback(t.Context(), input); !errors.Is(err, domain.ErrInvalidFlow) {
 					t.Fatal("replayed callback accepted", err)

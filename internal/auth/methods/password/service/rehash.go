@@ -22,5 +22,6 @@ func (l *PasswordService) rehash(ctx context.Context, credential *domain.Credent
 	if err := l.repo.RehashPassword(ctx, credential.UserID, credential.AuthVersion, credential.PasswordHash, hash); err != nil {
 		return fmt.Errorf("rehash password: %w", err)
 	}
+	credential.PasswordHash = hash
 	return nil
 }

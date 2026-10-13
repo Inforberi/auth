@@ -18,7 +18,7 @@ import (
 	telegramclient "github.com/Inforberi/financial-intelligence/internal/integrations/telegram"
 )
 
-func assembleTelegram(ctx context.Context, cfg *config.Config, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.SessionService, log *zap.Logger) (*telegramhttp.Handler, func(), error) {
+func assembleTelegram(ctx context.Context, cfg *config.Config, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, log *zap.Logger) (*telegramhttp.Handler, func(), error) {
 	if !cfg.Telegram.Enabled {
 		return nil, nil, nil
 	}

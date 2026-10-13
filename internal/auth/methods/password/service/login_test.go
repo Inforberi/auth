@@ -313,6 +313,9 @@ func TestLogin_Success(t *testing.T) {
 
 	assert.Equal(t, user, result.UserID)
 	assert.Equal(t, "raw-token", result.Token)
+	if session.primary.Method != "password" || session.primary.Reference != "hashed-password" || session.primary.UserID != user || session.primary.VerifiedAt.IsZero() {
+		t.Fatal("password primary proof lost", session.primary)
+	}
 	assert.Equal(
 		t,
 		now.Add(7*24*time.Hour),

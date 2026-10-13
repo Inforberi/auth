@@ -58,6 +58,7 @@ func (m *Middleware) authenticate(next http.Handler, clearInvalid, refreshCookie
 		ctx := SetAuthContext(
 			r.Context(),
 			Auth{
+				AuthVersion:       session.AuthVersion,
 				SessionID:         session.SessionID,
 				UserID:            session.UserID,
 				TokenHash:         session.TokenHash,

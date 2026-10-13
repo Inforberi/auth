@@ -58,6 +58,9 @@ func requireActor(ctx context.Context, tx pgx.Tx, actor service.Principal, targe
 		AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()
 		AND s.password_verified_at<=clock_timestamp()
 		AND s.password_verified_at>clock_timestamp()-interval '5 minutes'
+		AND s.mfa_verified_at<=clock_timestamp()
+		AND s.mfa_verified_at>clock_timestamp()-interval '5 minutes'
+		AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=s.user_id)
 		FOR UPDATE OF s`, actor.UserID, actor.TokenHash).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.ErrFreshAuthRequired

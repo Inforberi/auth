@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/subtle"
 	"encoding/base64"
+	"time"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 )
 
@@ -63,7 +65,10 @@ func (s *Service) Callback(ctx context.Context, input CallbackInput) (*CallbackR
 	if err != nil {
 		return nil, err
 	}
-	session, err := s.sessions.CreateSessionAtVersion(ctx, user.ID, input.UserAgent, input.IP, int64(user.AuthVersion))
+	session, err := s.sessions.BeginLogin(ctx, mfaservice.PrimaryProof{
+		UserID: user.ID, AuthVersion: int64(user.AuthVersion),
+		Method: "oidc", Issuer: key.Issuer, Reference: key.Subject, VerifiedAt: time.Now().UTC(),
+	}, input.UserAgent, input.IP)
 	if err != nil {
 		return nil, err
 	}

@@ -10,6 +10,7 @@ import (
 )
 
 type ValidationResult struct {
+	AuthVersion       int64
 	SessionID         string
 	UserID            accountdomain.UserID `json:"userId"`
 	TokenHash         string
@@ -65,6 +66,7 @@ func (s *SessionService) validateSession(ctx context.Context, rawToken string, r
 	}
 
 	return &ValidationResult{
+		AuthVersion:       session.AuthVersion,
 		SessionID:         session.ID,
 		UserID:            session.UserID,
 		TokenHash:         hashToken,

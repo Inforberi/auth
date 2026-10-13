@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
@@ -76,4 +77,15 @@ func requireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof)
 		return domain.ErrProofRequired
 	}
 	return nil
+}
+
+func (r *Repository) FindLoginOwner(ctx context.Context, digest, binding string) (accountdomain.UserID, error) {
+	var user accountdomain.UserID
+	err := r.db.QueryRow(ctx, `SELECT c.user_id FROM auth.mfa_login_challenges c JOIN auth.users u ON u.id=c.user_id
+		WHERE c.digest=$1 AND c.binding_hash=$2 AND c.auth_version=u.auth_version AND c.attempts<5
+		AND c.expires_at>clock_timestamp() AND u.status='active' AND u.deleted_at IS NULL`, digest, binding).Scan(&user)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", domain.ErrInvalidCode
+	}
+	return user, err
 }

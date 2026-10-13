@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
@@ -21,6 +22,7 @@ type ConfirmCodeRequest struct {
 // @Param Origin header string true "Exact allowed HTTPS origin"
 // @Param body body ConfirmCodeRequest true "code"
 // @Success 200 {object} StatusResponse
+// @Success 202 {object} mfahttp.ChallengeResponse "MFA required; browser binding cookie, no session issued"
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, invalid_email_login"
 // @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
@@ -51,6 +53,10 @@ func (h *Handler) Confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setFlowCookie(w, "", time.Unix(1, 0))
+	if result.Challenge != nil {
+		mfahttp.RespondChallenge(w, result.Challenge)
+		return
+	}
 	sessionhttp.SetSessionCookie(w, result.RawToken, result.ExpiresAt)
 	httpx.JSON(w, 200, StatusResponse{Status: "ok"})
 }

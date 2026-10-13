@@ -18,7 +18,7 @@ import (
 	googleclient "github.com/Inforberi/financial-intelligence/internal/integrations/google"
 )
 
-func assembleGoogle(ctx context.Context, cfg *config.Config, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.SessionService, log *zap.Logger) (*googlehttp.Handler, func(), error) {
+func assembleGoogle(ctx context.Context, cfg *config.Config, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, log *zap.Logger) (*googlehttp.Handler, func(), error) {
 	if !cfg.Google.Enabled {
 		return nil, nil, nil
 	}

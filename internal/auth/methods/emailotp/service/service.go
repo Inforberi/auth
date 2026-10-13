@@ -4,14 +4,14 @@ import (
 	"context"
 	"time"
 
-	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/domain"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 )
 
 type repository interface {
 	Issue(context.Context, string, domain.Challenge) error
-	Consume(context.Context, string, string) (*accountdomain.User, error)
+	Consume(context.Context, string, string) (*AuthenticatedAccount, error)
 }
 
 type cipher interface {
@@ -25,7 +25,7 @@ type limiter interface {
 }
 
 type sessions interface {
-	CreateSessionAtVersion(context.Context, accountdomain.UserID, string, string, int64) (*sessionservice.CreatedSession, error)
+	BeginLogin(context.Context, mfaservice.PrimaryProof, string, string) (*sessionservice.CreatedSession, error)
 }
 
 type tokens interface{ GenerateToken(...int) (string, error) }

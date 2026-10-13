@@ -19,6 +19,14 @@ type Enrollment struct {
 }
 
 func (s *Service) StartEnrollment(ctx context.Context, proof Proof) (*Enrollment, error) {
+	return s.startEnrollment(ctx, proof, false)
+}
+
+func (s *Service) StartReplacement(ctx context.Context, proof Proof) (*Enrollment, error) {
+	return s.startEnrollment(ctx, proof, true)
+}
+
+func (s *Service) startEnrollment(ctx context.Context, proof Proof, replace bool) (*Enrollment, error) {
 	if !validProof(proof) {
 		return nil, domain.ErrProofRequired
 	}
@@ -40,7 +48,11 @@ func (s *Service) StartEnrollment(ctx context.Context, proof Proof) (*Enrollment
 		return nil, err
 	}
 	token := base64.RawURLEncoding.EncodeToString(entropy[:])
-	expires, err := s.repo.SaveEnrollment(ctx, proof, s.cipher.Digest("enrollment:"+token), encrypted)
+	save := s.repo.SaveEnrollment
+	if replace {
+		save = s.repo.SaveReplacement
+	}
+	expires, err := save(ctx, proof, s.cipher.Digest("enrollment:"+token), encrypted)
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +70,14 @@ type RecoveryCodes struct {
 }
 
 func (s *Service) ConfirmEnrollment(ctx context.Context, input ConfirmInput) (*RecoveryCodes, error) {
+	return s.confirmEnrollment(ctx, input, false)
+}
+
+func (s *Service) ConfirmReplacement(ctx context.Context, input ConfirmInput) (*RecoveryCodes, error) {
+	return s.confirmEnrollment(ctx, input, true)
+}
+
+func (s *Service) confirmEnrollment(ctx context.Context, input ConfirmInput, replace bool) (*RecoveryCodes, error) {
 	if !validProof(input.Proof) {
 		return nil, domain.ErrProofRequired
 	}
@@ -77,7 +97,11 @@ func (s *Service) ConfirmEnrollment(ctx context.Context, input ConfirmInput) (*R
 	if err != nil {
 		return nil, err
 	}
-	if err := s.repo.ConfirmEnrollment(ctx, input.Proof, s.cipher.Digest("enrollment:"+input.Token),
+	confirm := s.repo.ConfirmEnrollment
+	if replace {
+		confirm = s.repo.ConfirmReplacement
+	}
+	if err := confirm(ctx, input.Proof, s.cipher.Digest("enrollment:"+input.Token),
 		s.check(input.Proof.UserID, input.Code), digests); err != nil {
 		return nil, err
 	}

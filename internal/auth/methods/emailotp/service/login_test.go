@@ -10,6 +10,7 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/domain"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
@@ -26,6 +27,7 @@ type loginFixture struct {
 	sessionCalls    int
 	keys            []string
 	expectedVersion int64
+	primary         mfaservice.PrimaryProof
 }
 
 func (f *loginFixture) Issue(_ context.Context, email string, c domain.Challenge) error {
@@ -35,7 +37,7 @@ func (f *loginFixture) Issue(_ context.Context, email string, c domain.Challenge
 	return f.fail
 }
 
-func (f *loginFixture) Consume(_ context.Context, digest, verifier string) (*accountdomain.User, error) {
+func (f *loginFixture) Consume(_ context.Context, digest, verifier string) (*AuthenticatedAccount, error) {
 	f.consumed++
 	if f.fail != nil {
 		return nil, f.fail
@@ -43,7 +45,12 @@ func (f *loginFixture) Consume(_ context.Context, digest, verifier string) (*acc
 	if f.challenge.Digest != digest || f.challenge.Verifier != verifier {
 		return nil, domain.ErrInvalidCode
 	}
-	return &accountdomain.User{ID: "00000000-0000-0000-0000-000000000001", AuthVersion: 7}, nil
+	return &AuthenticatedAccount{User: accountdomain.User{ID: "00000000-0000-0000-0000-000000000001", AuthVersion: 7}, EmailID: "00000000-0000-0000-0000-000000000002"}, nil
+}
+
+func (f *loginFixture) BeginLogin(ctx context.Context, proof mfaservice.PrimaryProof, agent, ip string) (*sessionservice.CreatedSession, error) {
+	f.primary = proof
+	return f.CreateSessionAtVersion(ctx, proof.UserID, agent, ip, proof.AuthVersion)
 }
 
 func (f *loginFixture) Allow(_ context.Context, key string, _ int, _ time.Duration) (bool, error) {
@@ -101,6 +108,9 @@ func TestRequestAndConfirm(t *testing.T) {
 	result, err := s.Confirm(context.Background(), ConfirmInput{Binding: got.Binding, Code: code, IP: "192.0.2.1"})
 	if err != nil || result.RawToken != "session-secret" || f.sessionCalls != 1 || f.expectedVersion != 7 {
 		t.Fatal(result, err, f)
+	}
+	if f.primary.Method != "emailotp" || f.primary.Reference != "00000000-0000-0000-0000-000000000002" || f.primary.VerifiedAt.IsZero() {
+		t.Fatal("consumed email proof lost", f.primary)
 	}
 }
 

@@ -3,11 +3,12 @@ package domain
 import "errors"
 
 var (
-	ErrInvalidCode   = errors.New("invalid MFA code")
-	ErrConflict      = errors.New("MFA state conflict")
-	ErrProofRequired = errors.New("fresh primary authentication required")
-	ErrLimited       = errors.New("MFA rate limited")
-	ErrUnavailable   = errors.New("MFA temporarily unavailable")
+	ErrInvalidCode      = errors.New("invalid MFA code")
+	ErrConflict         = errors.New("MFA state conflict")
+	ErrProofRequired    = errors.New("fresh primary authentication required")
+	ErrLimited          = errors.New("MFA rate limited")
+	ErrUnavailable      = errors.New("MFA temporarily unavailable")
+	ErrRequiredByPolicy = errors.New("MFA is required by administrative policy")
 )
 
 const RecoveryCodeCount = 10

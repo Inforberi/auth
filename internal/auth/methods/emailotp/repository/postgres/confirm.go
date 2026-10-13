@@ -7,12 +7,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 )
 
-func (r *Repository) Consume(ctx context.Context, digest, verifier string) (*accountdomain.User, error) {
-	var user accountdomain.User
+func (r *Repository) Consume(ctx context.Context, digest, verifier string) (*service.AuthenticatedAccount, error) {
+	var user service.AuthenticatedAccount
 	accepted := false
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `SELECT u.id,u.auth_version FROM auth.users u
@@ -25,7 +25,7 @@ func (r *Repository) Consume(ctx context.Context, digest, verifier string) (*acc
 			return err
 		}
 		var expected string
-		err = tx.QueryRow(ctx, `SELECT c.verifier FROM auth.email_login_challenges c
+		err = tx.QueryRow(ctx, `SELECT c.verifier,c.email_id FROM auth.email_login_challenges c
    JOIN auth.user_emails e ON e.id=c.email_id AND e.user_id=c.user_id
    JOIN auth.password_credentials p ON p.user_id=c.user_id AND p.email_id=e.id
    JOIN auth.users u ON u.id=c.user_id
@@ -33,7 +33,7 @@ func (r *Repository) Consume(ctx context.Context, digest, verifier string) (*acc
    AND c.expires_at>clock_timestamp() AND c.attempts<5 AND e.verified_at IS NOT NULL
    AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials t WHERE t.user_id=u.id)
    AND NOT EXISTS(SELECT 1 FROM auth.account_provisions a WHERE a.user_id=u.id AND a.activated_at IS NULL)
-   FOR UPDATE OF c`, digest, user.AuthVersion).Scan(&expected)
+   FOR UPDATE OF c`, digest, user.AuthVersion).Scan(&expected, &user.EmailID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}

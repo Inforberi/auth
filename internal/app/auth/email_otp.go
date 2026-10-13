@@ -16,7 +16,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
-func assembleEmailOTP(pool *pgxpool.Pool, redis *redis.Client, mail *mailer.Mailer, sessions *sessionservice.SessionService, tokens *tokengenerate.TokenManager, cfg *config.Config, log *zap.Logger) (*otphttp.Handler, *otpservice.Delivery, error) {
+func assembleEmailOTP(pool *pgxpool.Pool, redis *redis.Client, mail *mailer.Mailer, sessions *sessionservice.Login, tokens *tokengenerate.TokenManager, cfg *config.Config, log *zap.Logger) (*otphttp.Handler, *otpservice.Delivery, error) {
 	if !cfg.EmailOTP.Enabled {
 		return nil, nil, nil
 	}

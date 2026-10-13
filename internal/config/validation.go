@@ -22,6 +22,7 @@ func (cfg Config) Validate() error {
 		cfg.Telegram.Validate,
 		cfg.Google.Validate,
 		cfg.EmailOTP.Validate,
+		cfg.MFA.Validate,
 		cfg.Retention.Validate,
 		cfg.Capacity.Validate,
 		cfg.HTTP.Validate,

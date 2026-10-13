@@ -26,6 +26,10 @@ type loginRepoStub struct {
 	recovery  string
 }
 
+func (r *loginRepoStub) FindLoginOwner(context.Context, string, string) (accountdomain.UserID, error) {
+	return r.proof.UserID, r.err
+}
+
 func (r *loginRepoStub) SaveLoginChallenge(_ context.Context, proof PrimaryProof, digest, binding string, ttl time.Duration) (time.Time, error) {
 	r.calls++
 	r.proof, r.digest, r.binding = proof, digest, binding
@@ -78,6 +82,12 @@ func TestLoginBoundaries(t *testing.T) {
 	result, err := svc.Complete(context.Background(), input)
 	if len(limit.keys) < 4 || limit.keys[3] != "login:complete:subject:"+cipher.Digest(input.Token+":"+input.Binding) {
 		t.Fatal("browser binding missing from admission budget")
+	}
+	if limit.keys[0] != limit.keys[6] || limit.keys[1] != limit.keys[4] || limit.keys[2] != limit.keys[5] {
+		t.Fatal("start/completion operation budgets are not shared")
+	}
+	if limit.counts[len(limit.counts)-1] != 5 || limit.keys[len(limit.keys)-1] != cipher.Digest("login:factor-user:"+string(proof.UserID)) {
+		t.Fatal("account guessing bound missing")
 	}
 	if err != nil || result.UserID != proof.UserID || len(repo.completed.SessionHash) != 64 || repo.completed.SessionHash == result.Token ||
 		repo.recovery != cipher.Digest("recovery:"+string(proof.UserID)+":"+input.Code) {

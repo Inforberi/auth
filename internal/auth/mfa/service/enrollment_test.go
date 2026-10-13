@@ -20,11 +20,13 @@ type limitStub struct {
 	allowed bool
 	err     error
 	keys    []string
+	counts  []int
 }
 
-func (l *limitStub) Allow(_ context.Context, key string, _ int, _ time.Duration) (bool, error) {
+func (l *limitStub) Allow(_ context.Context, key string, count int, _ time.Duration) (bool, error) {
 	l.calls++
 	l.keys = append(l.keys, key)
+	l.counts = append(l.counts, count)
 	return l.allowed, l.err
 }
 

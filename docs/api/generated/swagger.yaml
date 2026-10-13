@@ -120,14 +120,92 @@ definitions:
       status:
         type: string
     type: object
+  internal_auth_methods_google_transport_http.MFAChallengeResponse:
+    properties:
+      challenge:
+        type: string
+      expiresAt:
+        type: string
+      status:
+        type: string
+    type: object
   internal_auth_methods_google_transport_http.StartResponse:
     properties:
       authorizationUrl:
         type: string
     type: object
+  internal_auth_methods_telegram_transport_http.MFAChallengeResponse:
+    properties:
+      challenge:
+        type: string
+      expiresAt:
+        type: string
+      status:
+        type: string
+    type: object
   internal_auth_methods_telegram_transport_http.StartResponse:
     properties:
       authorizationUrl:
+        type: string
+    type: object
+  mfa_http.ChallengeResponse:
+    properties:
+      challenge:
+        type: string
+      expiresAt:
+        type: string
+      status:
+        type: string
+    type: object
+  mfa_http.CompleteLoginRequest:
+    properties:
+      challenge:
+        type: string
+      code:
+        type: string
+      recovery:
+        type: boolean
+    type: object
+  mfa_http.ConfirmEnrollmentRequest:
+    properties:
+      code:
+        type: string
+      token:
+        type: string
+    type: object
+  mfa_http.EnrollmentResponse:
+    properties:
+      expiresAt:
+        type: string
+      secret:
+        type: string
+      token:
+        type: string
+      uri:
+        type: string
+    type: object
+  mfa_http.RecoveryCodesResponse:
+    properties:
+      codes:
+        items:
+          type: string
+        type: array
+    type: object
+  mfa_http.StatusResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  mfa_http.StepUpRequest:
+    properties:
+      code:
+        type: string
+      recovery:
+        type: boolean
+    type: object
+  mfa_http.StepUpResponse:
+    properties:
+      verifiedAt:
         type: string
     type: object
   oidchttp.CallbackResponse:
@@ -373,6 +451,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/emailotp_http.StatusResponse'
+        "202":
+          description: MFA required; browser binding cookie, no session issued
+          schema:
+            $ref: '#/definitions/mfa_http.ChallengeResponse'
         "400":
           description: 'codes: invalid_json, invalid_email_login'
           schema:
@@ -797,6 +879,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/internal_auth_methods_google_transport_http.CallbackResponse'
+        "202":
+          description: MFA required; browser binding cookie, no session issued
+          schema:
+            $ref: '#/definitions/internal_auth_methods_google_transport_http.MFAChallengeResponse'
         "400":
           description: Bad Request
           schema:
@@ -1009,6 +1095,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/password_http.LoginByEmailResponse'
+        "202":
+          description: MFA required; browser binding cookie, no session issued
+          schema:
+            $ref: '#/definitions/mfa_http.ChallengeResponse'
         "400":
           description: 'codes: invalid_json, email_required, password_required, invalid_email,
             invalid_credentials'
@@ -1115,6 +1205,353 @@ paths:
       summary: Get authenticated user and current session IDs
       tags:
       - Session
+  /api/v1/auth/mfa/login/complete:
+    post:
+      consumes:
+      - application/json
+      description: Requires the same browser binding cookie and allowed Origin. Consumes
+        TOTP/recovery and challenge atomically with SQL session issuance. No client
+        UUID, auth version or MFA timestamp is accepted.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: challenge and second factor
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/mfa_http.CompleteLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.StatusResponse'
+        "400":
+          description: 'codes: invalid_json, invalid_mfa'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: 'code: rate_limited'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: 'code: temporarily_unavailable'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Complete login with a second factor
+      tags:
+      - MFA
+  /api/v1/auth/mfa/recovery-codes/regenerate:
+    post:
+      description: Requires fresh password and MFA proofs. Replaces all recovery codes,
+        returns ten new codes once and revokes sessions/pending challenges atomically.
+        TOTP remains enabled.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.RecoveryCodesResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Regenerate recovery codes
+      tags:
+      - MFA
+  /api/v1/auth/mfa/step-up:
+    post:
+      consumes:
+      - application/json
+      description: Requires password reauthentication within five minutes. Consumes
+        TOTP/recovery, rotates the current session verifier and records fresh MFA
+        context atomically. Does not extend session lifetime.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: second factor
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/mfa_http.StepUpRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.StepUpResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Confirm a fresh second factor
+      tags:
+      - MFA
+  /api/v1/auth/mfa/totp:
+    delete:
+      description: Requires fresh password and MFA proofs. Administrative-role policy
+        cannot be bypassed. Removes recovery codes, raises auth_version and revokes
+        all sessions atomically.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.StatusResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'codes: invalid_origin, fresh_auth_required, mfa_required_by_policy'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Disable TOTP for the current account
+      tags:
+      - MFA
+  /api/v1/auth/mfa/totp/enrollment:
+    post:
+      description: Requires an active session and password reauthentication within
+        five minutes. Returns the secret once in a no-store owner response. Does not
+        enable MFA before confirmation.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.EnrollmentResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'codes: invalid_origin, fresh_auth_required'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: 'code: mfa_conflict'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Start TOTP enrollment
+      tags:
+      - MFA
+  /api/v1/auth/mfa/totp/enrollment/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Consumes the first code, returns ten recovery codes once, raises
+        auth_version and revokes all sessions atomically. Sign in again with MFA;
+        no session is created here.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: enrollment token and first code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/mfa_http.ConfirmEnrollmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.RecoveryCodesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Confirm TOTP enrollment
+      tags:
+      - MFA
+  /api/v1/auth/mfa/totp/replacement:
+    post:
+      description: Requires fresh password and MFA proofs. The current factor remains
+        usable until confirmation. Replacement cannot use an ordinary enrollment token.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.EnrollmentResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Start protected TOTP replacement
+      tags:
+      - MFA
+  /api/v1/auth/mfa/totp/replacement/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Requires the unchanged fresh password/MFA session, replacement
+        token and a code from the new factor. Replaces secret/recovery codes, raises
+        auth_version and revokes all sessions atomically.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: replacement token and new-factor code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/mfa_http.ConfirmEnrollmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.RecoveryCodesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Confirm protected TOTP replacement
+      tags:
+      - MFA
   /api/v1/auth/reauthenticate/password:
     post:
       consumes:
@@ -1398,6 +1835,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/oidchttp.CallbackResponse'
+        "202":
+          description: MFA required; browser binding cookie, no session issued
+          schema:
+            $ref: '#/definitions/internal_auth_methods_telegram_transport_http.MFAChallengeResponse'
         "400":
           description: Bad Request
           schema:

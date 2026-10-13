@@ -42,7 +42,7 @@ func TestAuthenticationContextComesFromSession(t *testing.T) {
 	verified := time.Now().UTC()
 	for _, mfa := range []*time.Time{nil, &verified} {
 		svc := &sessionStub{result: &service.ValidationResult{
-			UserID: "user", TokenHash: "hash",
+			UserID: "user", TokenHash: "hash", AuthVersion: 7,
 			PrimaryMethod: "password", PrimaryVerifiedAt: &verified, MFAVerifiedAt: mfa,
 		}}
 		r := httptest.NewRequest("GET", "/", nil)
@@ -52,7 +52,7 @@ func TestAuthenticationContextComesFromSession(t *testing.T) {
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			called = true
 			auth, ok := GetAuthContext(r.Context())
-			if !ok || auth.PrimaryMethod != "password" || auth.PrimaryVerifiedAt != &verified || auth.MFAVerifiedAt != mfa {
+			if !ok || auth.AuthVersion != 7 || auth.PrimaryMethod != "password" || auth.PrimaryVerifiedAt != &verified || auth.MFAVerifiedAt != mfa {
 				t.Fatal("authentication context lost or invented")
 			}
 			w.WriteHeader(204)

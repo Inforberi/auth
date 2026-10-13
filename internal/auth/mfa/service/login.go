@@ -22,6 +22,7 @@ type PrimaryProof struct {
 }
 
 type LoginConfig struct {
+	AllowPrimary         func(method, issuer string) bool
 	ChallengeTTL         time.Duration
 	SessionTTL           time.Duration
 	AbsoluteSessionTTL   time.Duration
@@ -31,6 +32,7 @@ type LoginConfig struct {
 }
 
 type LoginRepository interface {
+	FindLoginOwner(context.Context, string, string) (accountdomain.UserID, error)
 	SaveLoginChallenge(context.Context, PrimaryProof, string, string, time.Duration) (time.Time, error)
 	CompleteLogin(context.Context, LoginCompletion, LoginFactor) (*LoginCommit, error)
 }
@@ -54,8 +56,8 @@ type Login struct {
 func NewLogin(repo LoginRepository, cipher Cipher, code Authenticator, limit Limiter, tokens loginTokens, cfg LoginConfig) (*Login, error) {
 	if repo == nil || cipher == nil || code == nil || limit == nil || tokens == nil ||
 		cfg.ChallengeTTL <= 0 || cfg.ChallengeTTL > 5*time.Minute || cfg.SessionTTL <= 0 ||
-		cfg.AbsoluteSessionTTL < cfg.SessionTTL || cfg.UserLimitPerMinute <= 0 ||
-		cfg.IPLimitPerMinute <= 0 || cfg.GlobalLimitPerMinute <= 0 {
+		cfg.AbsoluteSessionTTL < cfg.SessionTTL || cfg.UserLimitPerMinute < 2 ||
+		cfg.IPLimitPerMinute < 2 || cfg.GlobalLimitPerMinute < 2 {
 		return nil, errors.New("invalid MFA login configuration")
 	}
 	return &Login{repo: repo, cipher: cipher, code: code, limit: limit, tokens: tokens, cfg: cfg}, nil
@@ -69,6 +71,9 @@ type LoginChallenge struct {
 
 func (s *Login) Start(ctx context.Context, proof PrimaryProof, ip string) (*LoginChallenge, error) {
 	if !validPrimary(proof) || len(ip) > 64 {
+		return nil, domain.ErrProofRequired
+	}
+	if s.cfg.AllowPrimary != nil && !s.cfg.AllowPrimary(proof.Method, proof.Issuer) {
 		return nil, domain.ErrProofRequired
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)

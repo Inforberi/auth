@@ -8,6 +8,7 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 )
 
@@ -81,6 +82,12 @@ func (m *mockHasher) Compare(
 
 type mockSession struct {
 	mock.Mock
+	primary mfaservice.PrimaryProof
+}
+
+func (m *mockSession) BeginLogin(ctx context.Context, proof mfaservice.PrimaryProof, agent, ip string) (*sessionservice.CreatedSession, error) {
+	m.primary = proof
+	return m.CreateSessionAtVersion(ctx, proof.UserID, agent, ip, proof.AuthVersion)
 }
 
 func (m *mockSession) CreateSessionAtVersion(ctx context.Context, id accountdomain.UserID, agent, ip string, version int64) (*sessionservice.CreatedSession, error) {

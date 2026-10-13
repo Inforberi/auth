@@ -186,6 +186,7 @@ CREATE TABLE auth.mfa_enrollments (
   digest TEXT NOT NULL UNIQUE CHECK (digest ~ '^[a-f0-9]{64}$'),
   auth_version BIGINT NOT NULL CHECK (auth_version > 0),
   session_hash TEXT NOT NULL CHECK (session_hash ~ '^[a-f0-9]{64}$'),
+  purpose TEXT NOT NULL DEFAULT 'enroll' CHECK (purpose IN ('enroll','replace')),
   secret BYTEA NOT NULL CHECK (octet_length(secret) BETWEEN 48 AND 512),
   attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
   created_at TIMESTAMPTZ NOT NULL DEFAULT statement_timestamp(),
@@ -220,7 +221,7 @@ CREATE TABLE auth.mfa_recovery_codes (
 CREATE TABLE auth.mfa_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
-  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed')),
+  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
 CREATE INDEX mfa_audit_retention ON auth.mfa_audit(created_at,id);
@@ -243,7 +244,7 @@ CREATE TABLE auth.sessions (
   CHECK (created_at<expires_at AND expires_at<=absolute_expires_at),
   CHECK ((primary_method IS NULL)=(primary_verified_at IS NULL)),
   CHECK (mfa_verified_at IS NULL OR (primary_verified_at IS NOT NULL
-    AND primary_verified_at<=mfa_verified_at AND mfa_verified_at<=created_at))
+    AND primary_verified_at<=mfa_verified_at AND mfa_verified_at<absolute_expires_at))
 );
 CREATE INDEX sessions_owner ON auth.sessions(user_id,created_at DESC,id DESC);
 CREATE INDEX sessions_retention_due ON auth.sessions(LEAST(revoked_at,expires_at,absolute_expires_at),id);

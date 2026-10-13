@@ -21,6 +21,8 @@ func TestPostgresSchema(t *testing.T) {
 	repo := New(db)
 	t.Run("MFA foundation", func(t *testing.T) { checkMFAFoundation(t, db, ctx) })
 	t.Run("MFA login", func(t *testing.T) { checkMFALogin(t, db, ctx) })
+	t.Run("MFA management", func(t *testing.T) { checkMFAManagement(t, db, ctx) })
+	t.Run("MFA HTTP login", func(t *testing.T) { checkMFAHTTPLogin(t, db, ctx) })
 	t.Run("administrator protection", func(t *testing.T) { checkAdministratorProtection(t, db, ctx) })
 	t.Run("access roles", func(t *testing.T) { checkAccessRoles(t, db, ctx) })
 	t.Run("email OTP", func(t *testing.T) { checkEmailOTP(t, db, ctx) })

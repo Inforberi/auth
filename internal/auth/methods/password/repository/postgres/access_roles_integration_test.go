@@ -198,6 +198,16 @@ func checkAccessAuditRollback(t *testing.T, db *pgxpool.Pool, ctx context.Contex
 
 func checkAccessSessionGuards(t *testing.T, db *pgxpool.Pool, ctx context.Context, svc *accessservice.Service, target, actor accessservice.Principal) {
 	t.Helper()
+	for _, query := range []string{
+		`UPDATE auth.sessions SET mfa_verified_at=NULL WHERE token_hash=$1`,
+		`UPDATE auth.sessions SET mfa_verified_at=clock_timestamp()-interval '6 minutes',primary_verified_at=clock_timestamp()-interval '7 minutes' WHERE token_hash=$1`,
+	} {
+		accessExec(t, db, ctx, query, actor.TokenHash)
+		if _, err := svc.CreateRole(ctx, accessservice.CreateRoleInput{Actor: actor, Key: "without_mfa", Name: "Forbidden"}); !errors.Is(err, accessdomain.ErrFreshAuthRequired) {
+			t.Fatal("administrative operation without fresh MFA", err)
+		}
+	}
+	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=clock_timestamp() WHERE token_hash=$1`, actor.TokenHash)
 	accessExec(t, db, ctx, `UPDATE auth.sessions SET password_verified_at=clock_timestamp()-interval '10 minutes' WHERE token_hash=$1`, actor.TokenHash)
 	if _, err := svc.CreateRole(ctx, accessservice.CreateRoleInput{Actor: actor, Key: "stale_reader", Name: "Stale reader"}); !errors.Is(err, accessdomain.ErrFreshAuthRequired) {
 		t.Fatalf("fresh proof: %v", err)
@@ -231,6 +241,10 @@ func accessPrincipal(t *testing.T, db *pgxpool.Pool, ctx context.Context) access
 	principal := accessservice.Principal{UserID: id, TokenHash: hex.EncodeToString(digest[:])}
 	accessExec(t, db, ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,password_verified_at,user_agent,ip_address)
 		VALUES ($1,$2,1,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '1 day',clock_timestamp(),'','')`, principal.TokenHash, id)
+	// Synthetic proofs for the internal Access fixture; real proofs come from MFA login/step-up tests.
+	accessExec(t, db, ctx, `INSERT INTO auth.mfa_totp(user_id,secret,last_step) VALUES ($1,$2,0)`, id, make([]byte, 48))
+	accessExec(t, db, ctx, `UPDATE auth.sessions SET primary_method='password',primary_verified_at=password_verified_at,
+		mfa_verified_at=clock_timestamp() WHERE token_hash=$1`, principal.TokenHash)
 	return principal
 }
 

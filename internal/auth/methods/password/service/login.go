@@ -8,6 +8,7 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 )
 
@@ -22,6 +23,7 @@ type LoginResult struct {
 	UserID    accountdomain.UserID
 	Token     string
 	ExpiresAt time.Time
+	Challenge *mfaservice.LoginChallenge
 }
 
 func (l *PasswordService) Login(ctx context.Context, input LoginInput) (*LoginResult, error) {
@@ -60,7 +62,10 @@ func (l *PasswordService) Login(ctx context.Context, input LoginInput) (*LoginRe
 	if err := l.rehash(ctx, authData, input.Password); err != nil {
 		return nil, err
 	}
-	session, err := l.session.CreateSessionAtVersion(ctx, authData.UserID, input.UserAgent, input.IP, authData.AuthVersion)
+	session, err := l.session.BeginLogin(ctx, mfaservice.PrimaryProof{
+		UserID:      authData.UserID,
+		AuthVersion: authData.AuthVersion, Method: "password", Reference: authData.PasswordHash, VerifiedAt: time.Now().UTC(),
+	}, input.UserAgent, input.IP)
 	if err != nil {
 		if errors.Is(err, sessiondomain.ErrSessionNotFound) || errors.Is(err, sessiondomain.ErrSessionExpired) {
 			return nil, passworddomain.ErrInvalidEmailOrPassword
@@ -72,5 +77,6 @@ func (l *PasswordService) Login(ctx context.Context, input LoginInput) (*LoginRe
 		UserID:    authData.UserID,
 		Token:     session.RawToken,
 		ExpiresAt: session.ExpiresAt,
+		Challenge: session.Challenge,
 	}, nil
 }

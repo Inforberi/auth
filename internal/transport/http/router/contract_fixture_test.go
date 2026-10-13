@@ -19,6 +19,8 @@ import (
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
@@ -72,6 +74,7 @@ func readAPI(t *testing.T) apiDocument {
 func contractHandlers(env string) Handlers {
 	log := zap.NewNop()
 	return Handlers{
+		MFA:               mfahttp.New(&contractMFA{}, &contractMFA{}, log),
 		Session:           sessionhttp.NewHandler(contractManagement{}, log),
 		Rotation:          sessionhttp.NewRotation(contractRotation{}, log),
 		Reauthentication:  passwordhttp.NewReauthentication(contractReauthentication{}, log),
@@ -85,6 +88,7 @@ func contractHandlers(env string) Handlers {
 		Google:            googlehttp.New(&contractTelegram{}, log),
 		EmailOTP:          otphttp.New(&contractEmailOTP{}, log),
 		Config: &config.Config{
+			MFA:      mfaservice.Config{Enabled: true},
 			EmailOTP: otpservice.Config{Enabled: true},
 			Telegram: telegramservice.Config{Enabled: true},
 			Google:   googleservice.Config{Enabled: true},
@@ -134,7 +138,7 @@ func (contractSessions) ValidateSession(_ context.Context, token string) (*sessi
 	if token != validCookieToken {
 		return nil, sessiondomain.ErrSessionNotFound
 	}
-	return &sessionservice.ValidationResult{UserID: "user-1", TokenHash: "hash", SessionID: currentSessionID}, nil
+	return &sessionservice.ValidationResult{UserID: "user-1", TokenHash: "hash", SessionID: currentSessionID, AuthVersion: 7}, nil
 }
 
 const currentSessionID = "11111111-1111-4111-8111-111111111111"

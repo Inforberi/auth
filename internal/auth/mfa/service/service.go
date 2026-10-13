@@ -21,6 +21,11 @@ type Repository interface {
 	SaveEnrollment(context.Context, Proof, string, []byte) (time.Time, error)
 	ConfirmEnrollment(context.Context, Proof, string, Check, []string) error
 	Consume(context.Context, accountdomain.UserID, int64, Check, string) (time.Time, error)
+	SaveReplacement(context.Context, Proof, string, []byte) (time.Time, error)
+	ConfirmReplacement(context.Context, Proof, string, Check, []string) error
+	StepUp(context.Context, Proof, string, Check, string) (*StepUpCommit, error)
+	Disable(context.Context, Proof) error
+	RegenerateRecovery(context.Context, Proof, []string) error
 }
 
 type Cipher interface {
@@ -39,15 +44,29 @@ type Limiter interface {
 }
 
 type Service struct {
-	repo   Repository
-	cipher Cipher
-	code   Authenticator
-	limit  Limiter
-	issuer string
+	repo                   Repository
+	cipher                 Cipher
+	code                   Authenticator
+	limit                  Limiter
+	issuer                 string
+	tokens                 loginTokens
+	userLimit, globalLimit int
 }
 
 func New(repo Repository, cipher Cipher, code Authenticator, limit Limiter, issuer string) *Service {
-	return &Service{repo: repo, cipher: cipher, code: code, limit: limit, issuer: issuer}
+	return &Service{repo: repo, cipher: cipher, code: code, limit: limit, issuer: issuer, userLimit: 5, globalLimit: 500}
+}
+
+func NewConfigured(repo Repository, cipher Cipher, code Authenticator, limit Limiter, tokens loginTokens, cfg Config) (*Service, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	if !cfg.Enabled || repo == nil || cipher == nil || code == nil || limit == nil || tokens == nil {
+		return nil, domain.ErrUnavailable
+	}
+	s := New(repo, cipher, code, limit, cfg.Issuer)
+	s.tokens, s.userLimit, s.globalLimit = tokens, cfg.UserLimitPerMinute, cfg.GlobalLimitPerMinute
+	return s, nil
 }
 
 func validProof(proof Proof) bool {
@@ -66,7 +85,7 @@ func (s *Service) admit(ctx context.Context, user accountdomain.UserID) error {
 		key   string
 		count int
 	}{
-		{s.cipher.Digest("user:" + string(user)), 5}, {"project", 500},
+		{s.cipher.Digest("user:" + string(user)), s.userLimit}, {"project", s.globalLimit},
 	} {
 		allowed, err := s.limit.Allow(ctx, budget.key, budget.count, time.Minute)
 		if err != nil {

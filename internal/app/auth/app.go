@@ -59,7 +59,11 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	argonHash := hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), cfg.Capacity.HashConcurrency)
 	sessionRepo := sessionpostgres.New(pool)
 	sessionSvc := sessionservice.New(now, sessionRepo, tokenGen, cfg.Session)
-	emailOTP, emailOTPDelivery, err := assembleEmailOTP(pool, rdb, mail, sessionSvc, tokenGen, cfg, log)
+	loginSvc, mfaHandler, err := assembleMFA(ctx, pool, rdb, sessionSvc, tokenGen, cfg, log)
+	if err != nil {
+		return nil, fmt.Errorf("assemble MFA: %w", err)
+	}
+	emailOTP, emailOTPDelivery, err := assembleEmailOTP(pool, rdb, mail, loginSvc, tokenGen, cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble email OTP: %w", err)
 	}
@@ -69,19 +73,19 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	}
 	passwordLimits := passwordredis.New(rdb)
 	loginLimit := passwordservice.NewLoginLimit(passwordLimits, resetCipher, cfg.Capacity)
-	passwordSvc := passwordservice.New(passwordRepo, sessionSvc, argonHash, loginLimit)
+	passwordSvc := passwordservice.New(passwordRepo, loginSvc, argonHash, loginLimit)
 	recoverySvc := passwordservice.NewRecovery(passwordRepo, resetCipher, passwordLimits, mail, argonHash, cfg.Password)
 	passwordHandler := passwordhttp.New(passwordSvc,
 		log.With(zap.String("feature", "password_auth"), zap.String("layer", "transport")))
 	middleware := sessionhttp.New(sessionSvc, log)
-	telegram, closeTelegram, err := assembleTelegram(ctx, cfg, accountRepo, rdb, sessionSvc, log)
+	telegram, closeTelegram, err := assembleTelegram(ctx, cfg, accountRepo, rdb, loginSvc, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble telegram: %w", err)
 	}
 	if closeTelegram != nil {
 		resources.add(closeTelegram)
 	}
-	google, closeGoogle, err := assembleGoogle(ctx, cfg, accountRepo, rdb, sessionSvc, log)
+	google, closeGoogle, err := assembleGoogle(ctx, cfg, accountRepo, rdb, loginSvc, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble Google: %w", err)
 	}
@@ -114,6 +118,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		mailTest = dev.NewMailTest(mail, log)
 	}
 	handler := router.New(router.Handlers{
+		MFA:               mfaHandler,
 		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
 		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessionRepo, tokenGen), log),
 		Reauthentication:  passwordhttp.NewReauthentication(passwordservice.NewReauthentication(passwordRepo, sessionRepo, argonHash, loginLimit, tokenGen, cfg.Session.FreshAuthTTL), log),

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
 type CreateSessionParams struct {
@@ -23,6 +24,7 @@ type CreateSessionParams struct {
 type CreatedSession struct {
 	RawToken  string
 	ExpiresAt time.Time
+	Challenge *mfaservice.LoginChallenge
 }
 
 func (s *SessionService) CreateSessionAtVersion(ctx context.Context, userID accountdomain.UserID, userAgent, ip string, version int64) (*CreatedSession, error) {

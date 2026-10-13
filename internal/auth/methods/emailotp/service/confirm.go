@@ -4,7 +4,9 @@ import (
 	"context"
 	"time"
 
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/domain"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 )
 
@@ -13,6 +15,11 @@ type ConfirmInput struct {
 	Binding   string
 	UserAgent string
 	IP        string
+}
+
+type AuthenticatedAccount struct {
+	accountdomain.User
+	EmailID accountdomain.AddressID
 }
 
 func (s *Service) Confirm(ctx context.Context, input ConfirmInput) (*sessionservice.CreatedSession, error) {
@@ -37,5 +44,8 @@ func (s *Service) Confirm(ctx context.Context, input ConfirmInput) (*sessionserv
 		return nil, err
 	}
 	// Consumption stays one-time even if the subsequent session commit or response fails.
-	return s.sessions.CreateSessionAtVersion(ctx, user.ID, input.UserAgent, input.IP, int64(user.AuthVersion))
+	return s.sessions.BeginLogin(ctx, mfaservice.PrimaryProof{
+		UserID: user.ID, AuthVersion: int64(user.AuthVersion),
+		Method: "emailotp", Reference: string(user.EmailID), VerifiedAt: time.Now().UTC(),
+	}, input.UserAgent, input.IP)
 }

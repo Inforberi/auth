@@ -15,6 +15,7 @@ import (
 	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
+	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
@@ -22,6 +23,7 @@ import (
 )
 
 type Handlers struct {
+	MFA               *mfahttp.Handler
 	Session           *sessionhttp.Handler
 	Rotation          *sessionhttp.RotationHandler
 	Reauthentication  *passwordhttp.ReauthenticationHandler
@@ -78,6 +80,7 @@ func New(h Handlers) *chi.Mux {
 	r.Route("/api/v1/", func(r chi.Router) {
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(browserProtection(h))
+			mfaRoutes(r, h)
 			emailOTPRoutes(r, h)
 			googleRoutes(r, h)
 			if h.Telegram != nil && h.Config != nil && h.Config.Telegram.Enabled {

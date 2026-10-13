@@ -15,6 +15,7 @@ type CompleteLoginInput struct {
 }
 
 type LoginCompletion struct {
+	AllowPrimary                     func(method, issuer string) bool
 	Digest, BindingHash, SessionHash string
 	UserAgent, IP                    string
 	SessionTTL, AbsoluteSessionTTL   time.Duration
@@ -45,13 +46,34 @@ func (s *Login) Complete(ctx context.Context, input CompleteLoginInput) (*LoginS
 	if err := s.admitLogin(ctx, "complete", input.Token+":"+input.Binding, input.IP, 5); err != nil {
 		return nil, err
 	}
+	digest, binding := s.cipher.Digest("login:"+input.Token), s.cipher.Digest("browser:"+input.Binding)
+	user, err := s.repo.FindLoginOwner(ctx, digest, binding)
+	if err != nil {
+		return nil, err
+	}
+	// This counter spans all primary logins: replacing a challenge cannot reset guessing admission.
+	allowed, err := s.limit.Allow(ctx, s.cipher.Digest("user:"+string(user)), s.cfg.UserLimitPerMinute, time.Minute)
+	if err != nil {
+		return nil, domain.ErrUnavailable
+	}
+	if !allowed {
+		return nil, domain.ErrLimited
+	}
+	allowed, err = s.limit.Allow(ctx, s.cipher.Digest("login:factor-user:"+string(user)), 5, time.Minute)
+	if err != nil {
+		return nil, domain.ErrUnavailable
+	}
+	if !allowed {
+		return nil, domain.ErrLimited
+	}
 	raw, err := s.tokens.GenerateToken()
 	if err != nil {
 		return nil, err
 	}
 	// The repository owns the challenge's user, not a caller-supplied UUID.
 	result, err := s.repo.CompleteLogin(ctx, LoginCompletion{
-		Digest: s.cipher.Digest("login:" + input.Token), BindingHash: s.cipher.Digest("browser:" + input.Binding),
+		AllowPrimary: s.cfg.AllowPrimary,
+		Digest:       digest, BindingHash: binding,
 		SessionHash: s.tokens.Hash(raw), UserAgent: input.UserAgent, IP: input.IP,
 		SessionTTL: s.cfg.SessionTTL, AbsoluteSessionTTL: s.cfg.AbsoluteSessionTTL,
 	}, func(user accountdomain.UserID) (Check, string) {
@@ -68,13 +90,17 @@ func (s *Login) Complete(ctx context.Context, input CompleteLoginInput) (*LoginS
 }
 
 func (s *Login) admitLogin(ctx context.Context, purpose, subject, ip string, count int) error {
+	subjectKey := "login:" + purpose + ":subject:" + s.cipher.Digest(subject)
+	if purpose == "start" {
+		subjectKey = s.cipher.Digest("user:" + subject)
+	}
 	for _, budget := range []struct {
 		key   string
 		count int
 	}{
-		{"login:" + purpose + ":subject:" + s.cipher.Digest(subject), count},
-		{"login:" + purpose + ":ip:" + s.cipher.Digest(ip), s.cfg.IPLimitPerMinute},
-		{"login:" + purpose + ":project", s.cfg.GlobalLimitPerMinute},
+		{subjectKey, count},
+		{"login:ip:" + s.cipher.Digest(ip), s.cfg.IPLimitPerMinute},
+		{"project", s.cfg.GlobalLimitPerMinute},
 	} {
 		allowed, err := s.limit.Allow(ctx, budget.key, budget.count, time.Minute)
 		if err != nil {

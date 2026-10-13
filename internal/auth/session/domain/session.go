@@ -7,6 +7,7 @@ import (
 )
 
 type Session struct {
+	AuthVersion       int64                `json:"-"`
 	ID                string               `json:"id"`
 	AbsoluteExpiresAt time.Time            `json:"absoluteExpiresAt"`
 	UserID            accountdomain.UserID `json:"userId"`
