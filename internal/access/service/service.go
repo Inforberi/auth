@@ -13,6 +13,13 @@ type Principal struct {
 	TokenHash string
 }
 
+func (p Principal) Validate() error {
+	if !validPrincipal(p) {
+		return domain.ErrFreshAuthRequired
+	}
+	return nil
+}
+
 type Repository interface {
 	HasPermission(context.Context, Principal, domain.PermissionKey) (bool, error)
 	ReadRole(context.Context, domain.RoleID) (domain.Role, error)

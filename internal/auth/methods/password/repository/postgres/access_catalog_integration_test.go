@@ -32,7 +32,7 @@ func checkAccessCatalog(t *testing.T, db *pgxpool.Pool, ctx context.Context, exi
 		t.Fatal(err)
 	}
 	permissions := app.Service.Catalog()
-	if len(app.Templates()) != 1 || len(permissions) != 3 || permissions[2].Key != "reports.read" {
+	if len(app.Templates()) != 1 || len(permissions) != 4 || permissions[3].Key != "reports.read" {
 		t.Fatal("catalog assembly lost definitions")
 	}
 	role, err := app.Service.ReadRole(ctx, existing.ID)

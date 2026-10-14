@@ -17,6 +17,9 @@ func (r *Repository) ClaimDelivery(ctx context.Context) (*domain.VerificationDel
 	if r.invitationDelivery {
 		queues = append(queues, r.claimInvitationDelivery)
 	}
+	if r.emailBindingDelivery {
+		queues = append(queues, r.claimBindingDelivery)
+	}
 	count := uint64(len(queues))
 	start := r.deliveryTurn.Add(1) % count
 	for offset := uint64(0); offset < count; offset++ {
@@ -48,6 +51,9 @@ func (r *Repository) claimVerificationDelivery(ctx context.Context) (*domain.Ver
 }
 
 func (r *Repository) FinishDelivery(ctx context.Context, job domain.VerificationDelivery, sent bool) error {
+	if job.EmailBinding {
+		return r.finishBindingDelivery(ctx, job, sent)
+	}
 	if job.Invitation {
 		return r.finishInvitationDelivery(ctx, job, sent)
 	}

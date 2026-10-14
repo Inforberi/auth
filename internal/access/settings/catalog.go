@@ -17,8 +17,9 @@ type Permission struct {
 }
 
 const (
-	RolesManage       domain.PermissionKey = "access.roles.manage"
-	AssignmentsManage domain.PermissionKey = "access.assignments.manage"
+	RolesManage        domain.PermissionKey = "access.roles.manage"
+	AssignmentsManage  domain.PermissionKey = "access.assignments.manage"
+	EmailBindingManage domain.PermissionKey = "accounts.email.bind"
 )
 
 type Catalog struct {
@@ -26,12 +27,13 @@ type Catalog struct {
 }
 
 func NewCatalog(permissions []Permission) (Catalog, error) {
-	if len(permissions) > 510 {
+	if len(permissions) > 509 {
 		return Catalog{}, domain.ErrInvalidPermission
 	}
 	c := Catalog{permissions: map[domain.PermissionKey]Permission{
-		RolesManage:       {Key: RolesManage, Name: "Manage roles", Group: "Access"},
-		AssignmentsManage: {Key: AssignmentsManage, Name: "Assign and revoke roles", Group: "Access"},
+		RolesManage:        {Key: RolesManage, Name: "Manage roles", Group: "Access"},
+		AssignmentsManage:  {Key: AssignmentsManage, Name: "Assign and revoke roles", Group: "Access"},
+		EmailBindingManage: {Key: EmailBindingManage, Name: "Approve initial email binding", Group: "Accounts"},
 	}}
 	for _, permission := range permissions {
 		if !domain.ValidKey(string(permission.Key)) || !utf8.ValidString(permission.Name) ||

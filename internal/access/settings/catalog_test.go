@@ -14,7 +14,7 @@ func TestCatalog(t *testing.T) {
 		t.Fatal(err)
 	}
 	input[0].Key = "changed"
-	if !catalog.Contains("reports.read") || !catalog.Contains(RolesManage) || catalog.Contains("unknown") {
+	if !catalog.Contains("reports.read") || !catalog.Contains(RolesManage) || !catalog.Contains(EmailBindingManage) || catalog.Contains("unknown") {
 		t.Fatal("catalog ownership or core permissions")
 	}
 	result := catalog.Permissions()

@@ -42,16 +42,22 @@ func mapConflict(err error) error {
 }
 
 func requireActor(ctx context.Context, tx pgx.Tx, actor service.Principal, target string) error {
+	_, err := lockActor(ctx, tx, actor, target)
+	return err
+}
+
+func lockActor(ctx context.Context, tx pgx.Tx, actor service.Principal, target string) (time.Time, error) {
 	rows, err := tx.Query(ctx, `SELECT id FROM auth.users WHERE id=$1 OR id=NULLIF($2,'')::uuid ORDER BY id FOR UPDATE`, actor.UserID, target)
 	if err != nil {
-		return err
+		return time.Time{}, err
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
-		return err
+		return time.Time{}, err
 	}
-	var id string
-	err = tx.QueryRow(ctx, `SELECT s.id FROM auth.sessions s
+	var deadline time.Time
+	err = tx.QueryRow(ctx, `SELECT LEAST(s.expires_at,s.absolute_expires_at,
+		s.password_verified_at+interval '5 minutes',s.mfa_verified_at+interval '5 minutes') FROM auth.sessions s
 		JOIN auth.users u ON u.id=s.user_id AND u.auth_version=s.auth_version
 		WHERE s.user_id=$1 AND s.token_hash=$2 AND s.revoked_at IS NULL
 		AND u.status='active' AND u.deleted_at IS NULL
@@ -61,11 +67,11 @@ func requireActor(ctx context.Context, tx pgx.Tx, actor service.Principal, targe
 		AND s.mfa_verified_at<=clock_timestamp()
 		AND s.mfa_verified_at>clock_timestamp()-interval '5 minutes'
 		AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=s.user_id)
-		FOR UPDATE OF s`, actor.UserID, actor.TokenHash).Scan(&id)
+		FOR UPDATE OF s`, actor.UserID, actor.TokenHash).Scan(&deadline)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return domain.ErrFreshAuthRequired
+		return time.Time{}, domain.ErrFreshAuthRequired
 	}
-	return err
+	return deadline, err
 }
 
 func requireDelegation(ctx context.Context, tx pgx.Tx, actor service.Principal, management domain.PermissionKey, permissions []domain.PermissionKey) error {

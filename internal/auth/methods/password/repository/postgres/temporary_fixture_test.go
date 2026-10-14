@@ -50,7 +50,7 @@ func newTemporaryFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, na
 	if err != nil {
 		t.Fatal(err)
 	}
-	accounts := accountpostgres.NewWithDelivery(db, false, true)
+	accounts := accountpostgres.NewWithDelivery(db, accountpostgres.DeliveryConfig{Invitations: true})
 	repo := NewTemporaryPassword(db, accounts.ProvisionInTransaction)
 	limit := passwordservice.NewLoginLimit(verificationLimits{}, cipher, passwordservice.CapacityConfig{LoginIPLimit: 30, LoginEmailLimit: 10, LoginGlobalLimit: 1000})
 	cfg := passwordservice.TemporaryPasswordConfig{Enabled: true, TTL: time.Hour, SetupTTL: 5 * time.Minute, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}

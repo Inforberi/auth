@@ -30,6 +30,7 @@ type Handlers struct {
 	Recovery          *passwordhttp.RecoveryHandler
 	Account           *accounthttp.Handler
 	EmailChange       *accounthttp.EmailChangeHandler
+	EmailBinding      *accounthttp.EmailBindingHandler
 	ProtectedRecovery *passwordhttp.ProtectedRecoveryHandler
 	Activation        *passwordhttp.ActivationHandler
 	TemporaryPassword *passwordhttp.TemporaryPasswordHandler
@@ -78,6 +79,7 @@ func New(h Handlers) *chi.Mux {
 	}
 
 	r.Route("/api/v1/", func(r chi.Router) {
+		emailBindingRoutes(r, h)
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(browserProtection(h))
 			mfaRoutes(r, h)

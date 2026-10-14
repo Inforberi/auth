@@ -170,8 +170,12 @@ CREATE INDEX email_verification_outbox_exhausted ON auth.email_verification_outb
 CREATE TABLE auth.email_verification_audit (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  event TEXT NOT NULL CHECK (event IN ('email_verification_issued', 'email_verified')),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  event TEXT NOT NULL CHECK (event IN ('email_verification_issued', 'email_verified','email_binding_issued','email_bound')),
+  actor_id UUID REFERENCES auth.users(id),
+  auth_version BIGINT CHECK (auth_version>0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK ((event IN ('email_binding_issued','email_bound'))=(actor_id IS NOT NULL)),
+  CHECK ((event IN ('email_binding_issued','email_bound'))=(auth_version IS NOT NULL))
 );
 
 CREATE TABLE auth.mfa_totp (
@@ -253,6 +257,30 @@ CREATE TABLE auth.sessions (
 );
 CREATE INDEX sessions_owner ON auth.sessions(user_id,created_at DESC,id DESC);
 CREATE INDEX sessions_retention_due ON auth.sessions(LEAST(revoked_at,expires_at,absolute_expires_at),id);
+
+CREATE TABLE auth.email_bindings (
+  id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  actor_id UUID NOT NULL REFERENCES auth.users(id),
+  actor_session_hash TEXT NOT NULL CHECK (actor_session_hash ~ '^[a-f0-9]{64}$'),
+  auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  email public.CITEXT NOT NULL CHECK (octet_length(email::text) BETWEEN 3 AND 255
+    AND email::text=lower(btrim(email::text)) AND position('@' IN email::text)>1),
+  verifier TEXT NOT NULL CHECK (verifier ~ '^[a-f0-9]{64}$'),
+  payload BYTEA NOT NULL CHECK (octet_length(payload) BETWEEN 28 AND 8192),
+  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT statement_timestamp(),
+  expires_at TIMESTAMPTZ NOT NULL CHECK (expires_at>created_at AND expires_at<=created_at+interval '5 minutes'),
+  available_at TIMESTAMPTZ NOT NULL DEFAULT statement_timestamp(),
+  delivery_attempts INTEGER NOT NULL DEFAULT 0 CHECK (delivery_attempts BETWEEN 0 AND 5),
+  lease UUID,
+  lease_until TIMESTAMPTZ,
+  delivered_at TIMESTAMPTZ,
+  CHECK (user_id<>actor_id),
+  CHECK ((lease IS NULL)=(lease_until IS NULL))
+);
+CREATE INDEX email_bindings_expiry ON auth.email_bindings(expires_at,user_id);
+CREATE INDEX email_bindings_due ON auth.email_bindings(available_at,id) WHERE delivered_at IS NULL;
 
 CREATE TABLE auth.email_login_challenges (
   digest TEXT PRIMARY KEY CHECK (digest ~ '^[a-f0-9]{64}$'),

@@ -22,6 +22,13 @@ func (cfg Config) Validate() error {
 		cfg.Telegram.Validate,
 		cfg.Google.Validate,
 		cfg.EmailOTP.Validate,
+		cfg.EmailBinding.Validate,
+		func() error {
+			if cfg.EmailBinding.Enabled && (!cfg.MFA.Enabled || !cfg.EmailOTP.ReauthenticationEnabled) {
+				return fmt.Errorf("EMAIL_BINDING_ENABLED requires MFA_ENABLED and EMAIL_REAUTHENTICATION_ENABLED")
+			}
+			return nil
+		},
 		func() error {
 			if cfg.EmailOTP.ReauthenticationEnabled && !cfg.MFA.Enabled {
 				return fmt.Errorf("EMAIL_REAUTHENTICATION_ENABLED requires MFA_ENABLED")

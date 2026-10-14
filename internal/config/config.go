@@ -28,6 +28,7 @@ type Config struct {
 	Proxy             requestmiddleware.ProxyConfig
 	Account           accountservice.Config
 	EmailChange       accountservice.EmailChangeConfig
+	EmailBinding      accountservice.EmailBindingConfig
 	Invitation        accountservice.InvitationConfig
 	TemporaryPassword passwordservice.TemporaryPasswordConfig
 	EmailOTP          otpservice.Config

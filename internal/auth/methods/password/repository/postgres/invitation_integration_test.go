@@ -49,7 +49,7 @@ func newInvitationFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, n
 	if err != nil {
 		t.Fatal(err)
 	}
-	repo := accountpostgres.NewWithDelivery(db, false, true)
+	repo := accountpostgres.NewWithDelivery(db, accountpostgres.DeliveryConfig{Invitations: true})
 	account := accountservice.New(repo, verificationLimits{}, cipher, nil, accountservice.Config{})
 	cfg := accountservice.InvitationConfig{Enabled: true, URL: "https://app.example.com/activate", TTL: 24 * time.Hour, ActivationGlobalLimit: 100}
 	recovery := passwordservice.NewRecovery(nil, cipher, verificationLimits{}, nil, invitationTestHasher{}, passwordservice.Config{})

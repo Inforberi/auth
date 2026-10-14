@@ -80,6 +80,21 @@ definitions:
       status:
         type: string
     type: object
+  http.ConfirmEmailBindingRequest:
+    properties:
+      code:
+        type: string
+    type: object
+  http.EmailBindingRequest:
+    properties:
+      email:
+        type: string
+    type: object
+  http.EmailBindingResponse:
+    properties:
+      expiresAt:
+        type: string
+    type: object
   http.MeResponse:
     properties:
       sessionId:
@@ -374,6 +389,66 @@ info:
   title: Auth API
   version: "1.0"
 paths:
+  /api/v1/admin/users/{id}/email-binding:
+    post:
+      consumes:
+      - application/json
+      description: Requires accounts.email.bind and fresh password plus MFA in SQL.
+        Explicit target UUID, active external-only account without contacts. Sends
+        a code but does not reserve/attach the address, create an account or bypass
+        the owner's MFA. Approval expires no later than the administrator's current
+        authentication proof.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Target user UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Email approved for this user
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.EmailBindingRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/http.EmailBindingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Approve a user's initial email binding
+      tags:
+      - Admin Users
   /api/v1/auth/change-password:
     post:
       consumes:
@@ -524,6 +599,61 @@ paths:
       summary: Request a passwordless email login code
       tags:
       - Email OTP
+  /api/v1/auth/email/binding/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Requires the target's live session, mailed eight-digit code and
+        fresh MFA if a factor is enrolled. Rechecks the approving administrator's
+        current password/MFA/session/permission in SQL. Atomically creates a verified
+        contact, raises auth_version, revokes all target sessions and records audit.
+        Does not create login authority or merge accounts.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Code from the approved email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.ConfirmEmailBindingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/account_http.VerificationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Confirm the owner's initial email binding
+      tags:
+      - Account
   /api/v1/auth/email/change:
     post:
       consumes:

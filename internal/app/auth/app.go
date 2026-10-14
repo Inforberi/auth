@@ -50,11 +50,15 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	now := clock.UTCClock{}
 	tokenGen := tokengenerate.New()
 	mail := mailer.New(cfg.MailSender)
-	accountSvc, accountRepo, err := assembleAccount(pool, rdb, mail, cfg.Account, cfg.EmailChange.Enabled, cfg.Invitation.Enabled)
+	accountSvc, accountRepo, err := assembleAccount(pool, rdb, mail, cfg.Account, accountpostgres.DeliveryConfig{EmailChanges: cfg.EmailChange.Enabled, Invitations: cfg.Invitation.Enabled, EmailBinding: cfg.EmailBinding.Enabled})
 	if err != nil {
 		return nil, fmt.Errorf("assemble account: %w", err)
 	}
 	passwordRepo := assembleRegistration(pool, accountSvc, accountRepo)
+	emailBinding, err := assembleEmailBinding(accountRepo, rdb, cfg, log)
+	if err != nil {
+		return nil, fmt.Errorf("assemble email binding: %w", err)
+	}
 	retentionSvc := accountservice.NewRetention(accountRepo, cfg.Retention)
 	argonHash := hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), cfg.Capacity.HashConcurrency)
 	sessionRepo := sessionpostgres.New(pool)
@@ -118,6 +122,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		mailTest = dev.NewMailTest(mail, log)
 	}
 	handler := router.New(router.Handlers{
+		EmailBinding:      emailBinding,
 		MFA:               mfaHandler,
 		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
 		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessionRepo, tokenGen), log),

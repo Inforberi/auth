@@ -1,4 +1,5 @@
 DROP TABLE IF EXISTS auth.email_login_audit;
+DROP TABLE IF EXISTS auth.email_bindings;
 DROP TABLE IF EXISTS auth.email_login_outbox;
 DROP TABLE IF EXISTS auth.email_login_challenges;
 DROP TABLE IF EXISTS auth.temporary_password_reissues;

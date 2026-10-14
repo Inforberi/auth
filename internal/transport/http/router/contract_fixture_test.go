@@ -10,6 +10,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/docs/api/generated"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
@@ -74,6 +75,7 @@ func readAPI(t *testing.T) apiDocument {
 func contractHandlers(env string) Handlers {
 	log := zap.NewNop()
 	return Handlers{
+		EmailBinding:      accounthttp.NewEmailBinding(&contractEmailBinding{}, log),
 		MFA:               mfahttp.New(&contractMFA{}, &contractMFA{}, log),
 		Session:           sessionhttp.NewHandler(contractManagement{}, log),
 		Rotation:          sessionhttp.NewRotation(contractRotation{}, log),
@@ -88,12 +90,13 @@ func contractHandlers(env string) Handlers {
 		Google:            googlehttp.New(&contractTelegram{}, log),
 		EmailOTP:          otphttp.New(&contractEmailOTP{}, log),
 		Config: &config.Config{
-			MFA:      mfaservice.Config{Enabled: true},
-			EmailOTP: otpservice.Config{Enabled: true, ReauthenticationEnabled: true},
-			Telegram: telegramservice.Config{Enabled: true},
-			Google:   googleservice.Config{Enabled: true},
-			Logger:   logger.Config{Env: env},
-			Browser:  requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}},
+			EmailBinding: accountservice.EmailBindingConfig{Enabled: true},
+			MFA:          mfaservice.Config{Enabled: true},
+			EmailOTP:     otpservice.Config{Enabled: true, ReauthenticationEnabled: true},
+			Telegram:     telegramservice.Config{Enabled: true},
+			Google:       googleservice.Config{Enabled: true},
+			Logger:       logger.Config{Env: env},
+			Browser:      requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}},
 		},
 		PasswordHandler: passwordhttp.New(contractPasswords{}, log),
 		Middleware:      sessionhttp.New(contractSessions{}, log),
