@@ -7,6 +7,7 @@
 | Руководство для интегратора | [auth-guide](../auth-guide.md) | Текущие routes/DTO/настройки и ограничения; читать нужный раздел, не весь справочник по умолчанию |
 | Структура и зависимости | [architecture](../architecture.md), нужный [ADR](../adr/) | `internal/app/auth`, `internal/config`, `internal/server/http` |
 | Следующий этап | [implementation](../planning/implementation.md), при необходимости [roadmap](../planning/roadmap.md) | Статусы задач, затем код соответствующей фичи |
+| Первый супер-администратор | [initial-setup](../features/initial-setup.md) | Account setup start/complete; singleton marker, operator proof + email/TOTP; не lost-admin recovery |
 | Роли и permissions | [roles-permissions](../features/roles-permissions.md) | `internal/access` — каталог, роли, назначения, актуальные SQL permissions; admin HTTP/MFA ещё не опубликованы |
 | Импорт каталога | [access-catalog](../features/access-catalog.md) | `internal/access/settings`, `cmd/access-catalog`, `internal/app/access`; operator file/preview, не runtime HTTP импорт |
 | HTTP/ошибки/Swagger | [contract](../api/contract.md) | `internal/transport/http/router`, feature `transport/http`, `internal/transport/http/httpx` |

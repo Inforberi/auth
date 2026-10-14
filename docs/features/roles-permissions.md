@@ -34,7 +34,7 @@ A5.2d публикует отдельный protected admin endpoint [перви
 
 Principal содержит user UUID и hash session token, не клиентский список прав. Адаптер обязан получать его из проверенной аутентификации, не из произвольных полей запроса. ReadRole/ListRoles не являются административной авторизацией; до внешней публикации их защищает соответствующий permission check.
 
-Для управления нужны active/nondeleted actor, действующая SQL-сессия с актуальным auth_version, password и MFA proofs не старше пяти минут и current enrolled factor. Это SQL enforcement A5.2b, не клиентский flag. External-only actor без password proof пока не управляет ролями; public admin transport/bootstrap остаются отдельными задачами.
+Для управления нужны active/nondeleted actor, действующая SQL-сессия с актуальным auth_version, password и MFA proofs не старше пяти минут и current enrolled factor. Это SQL enforcement A5.2b, не клиентский flag. External-only actor без password proof пока не управляет ролями; общий public admin transport ещё открыт, первичный setup описан ниже.
 
 Оператор должен иметь management permission и все permissions создаваемой/изменяемой/назначаемой роли. При редактировании проверяются прежние и новые права; при отзыве — права отзываемой роли. Это консервативная delegation policy, без скрытого override. Самому себе назначать роль нельзя. Самоотзыв обычной роли допустим; системная роль защищена отдельно.
 
@@ -52,7 +52,7 @@ Principal содержит user UUID и hash session token, не клиентс�
 
 ## Системный администратор и незавершённые части
 
-`super_admin` — зарезервированный key/system flag. Обычные create/update/assignment операции не создают, не изменяют, не назначают и не отзывают эту роль; автоматического wildcard bypass нет. Production bootstrap не реализован; SQL seed используется исключительно в изолированных тестах.
+`super_admin` — зарезервированный key/system flag. Обычные create/update/assignment операции не создают, не изменяют, не назначают и не отзывают эту роль; автоматического wildcard bypass нет. [Первоначальный setup](initial-setup.md) создаёт первого владельца только после operator/email/TOTP proof, с тремя core permissions и durable marker. Прямой SQL seed используется исключительно в изолированных тестах; operational/browser/UI acceptance setup ещё открыты.
 
 Внутренние account status/delete операции защищают последнее системное назначение: блокировка или удаление его владельца разрешены только при наличии другого active/nondeleted пользователя с `super_admin`. Pending, blocked и deleted не считаются резервным администратором. Обычная роль, даже с management permissions, не заменяет системного администратора. Неактивного последнего владельца также нельзя удалить или административно заблокировать повторно: такой запрос мог бы уничтожить его оставшееся восстановление. Отказ — `account/domain.ErrLastAdministrator`; устаревшая auth_version по-прежнему даёт account conflict раньше этой проверки. Уже завершённое удаление с текущей version остаётся no-op.
 
@@ -60,7 +60,7 @@ Principal содержит user UUID и hash session token, не клиентс�
 
 Защитный report уже подтверждённой смены email — намеренное исключение: он блокирует даже последнего супер-админа, иначе украденный аккаунт нельзя было бы обезопасить. Назначение сохраняется, сессии отзываются, existing protected recovery возвращает доступ без повышения роли и создания сессии. После security block нельзя административным повторным block/delete уничтожить последнее восстановление. Обычный password reset сохраняет роль и не снимает административную блокировку.
 
-Это гарантия сохранения active системного владельца и recoverable последнего назначения, не проверка доступности SMTP/провайдера или наличия всех будущих MFA факторов. System assignment management, operator emergency recovery, bootstrap и политики usable admin login/MFA остаются 10.3/A5/A6. Status/delete пока trusted-caller backend: ActorID нужен для audit, не заменяет авторизацию. Публичные admin mutations запрещено подключать до permission/fresh-auth/MFA guards. Прямое изменение SQL оператором не защищается этими use cases.
+Это гарантия сохранения active системного владельца и recoverable последнего назначения, не проверка доступности SMTP/провайдера или наличия всех будущих MFA факторов. Первичный setup выполнен в 10.3a-local; system assignment management, operator emergency recovery и политики usable admin login/MFA остаются 10.3/A5/A6. Status/delete пока trusted-caller backend: ActorID нужен для audit, не заменяет авторизацию. Публичные admin mutations запрещено подключать до permission/fresh-auth/MFA guards. Прямое изменение SQL оператором не защищается этими use cases.
 
 Реализованы operator JSON-каталог/preview и сборка `App.Access` без HTTP/admin routes: [использование](access-catalog.md). Шаблоны доступны для явного выбора, не создают и не меняют SQL-роли автоматически. MFA login/management и SQL guard реализованы в [A5.2b](mfa.md); удаление роли, runtime/browser импорт, UI и межсервисная передача прав ещё не реализованы. Trusted API — при конкретной интеграции по 10.5b. Для внешнего backend Auth управляет назначениями, а backend данных применяет ограничения действий/строк/полей, включая read/write/filter/sort/export. Импорт каталога не аутентифицирует этот backend.
 

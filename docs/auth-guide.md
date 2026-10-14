@@ -1805,7 +1805,7 @@ GC/heap/goroutine/connection leak проверки под длительной �
 
 ### 11.3. Первый запуск и восстановление администратора
 
-После появления UI первый запуск должен позволить один раз создать первого super-admin. При уже завершённой инициализации повторный посетитель не должен захватить admin через setup page. Конкурентные попытки setup должны обрабатываться атомарно.
+Backend первоначальной настройки уже реализован, UI-мастер будет позже: [подробный контракт](features/initial-setup.md). `POST /api/v1/setup/start` требует отдельного operator secret, отправляет email-код и возвращает TOTP enrollment; `POST /api/v1/setup/complete` подтверждает оба кода и атомарно создаёт первого super-admin с durable initialized marker. Настройка opt-in через INITIAL_SETUP_ENABLED/INITIAL_SETUP_SECRET вместе с MFA_ENABLED. Default password/first-visitor takeover нет; root encryption key в мастер не передаётся. После completion обычный password/MFA login, повторный setup закрыт, даже если администратор потерян.
 
 Обычный забытый пароль — через email recovery, если применима настроенная политика. Для потери почты/второго фактора нужен отдельный контролируемый break-glass процесс без сброса базы: права operator, короткое полномочие, audit и отзыв сессий. Конкретный script/ENV ещё не реализован; постоянного публичного «admin password override» сейчас нет.
 
