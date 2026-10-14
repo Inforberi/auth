@@ -22,7 +22,7 @@
 | Account status/deletion/retention | [account-deletion](../features/account-deletion.md), [architecture](../architecture.md) | Account `status.go`/`deletion.go`/`retention*.go`, `internal/config`, app lifecycle; SQL/env tests |
 | Sessions | [ADR 002](../adr/002-sessions-and-transactions.md), [contract](../api/contract.md) | `internal/auth/session` |
 | MFA | [mfa](../features/mfa.md) | `internal/auth/mfa` — management/atomic login; `methods/emailotp/reauthentication_*` — opt-in verified-email proof для external-only; App/ENV/routes/Swagger, SQL fresh-MFA guard для Access |
-| Потеря всех MFA-факторов | [mfa-recovery](../planning/mfa-recovery.md), [CLI](../features/admin-recovery.md#решения-по-mfa-recovery-131d1-local) | 13.1d.1–d.2 internal start/approve/cancel/atomic complete/durable delivery готовы; App/HTTP/ENV/worker registration ещё нет, не MFA disable |
+| Потеря всех MFA-факторов | [mfa-recovery](../planning/mfa-recovery.md), [CLI](../features/admin-recovery.md#решения-по-mfa-recovery-131d1-local) | 13.1d.1–d.3 opt-in HTTP/App/ENV/Swagger/operator workflow/durable delivery готовы; default-off, d.4 operational приёмка открыта, не MFA disable |
 | Внешние identities | [external-identities](../features/external-identities.md) | Account domain `linked_identity`, service/repository `identity_resolution` |
 | Telegram login | [telegram-login](../features/telegram-login.md) | `methods/telegram` + shared `methods/oidc`, `integrations/telegram`, app/auth `telegram.go` |
 | Google login | [google-login](../features/google-login.md) | `methods/google` + shared `methods/oidc`, fixed `integrations/google` + bounded `integrations/oidc`, app/auth `google.go` |

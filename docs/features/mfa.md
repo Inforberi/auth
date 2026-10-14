@@ -1,6 +1,6 @@
 # MFA: TOTP и резервные коды
 
-Потеря authenticator и всех recovery codes: [этап 13.1d](../planning/mfa-recovery.md). Реализованы внутренние bound start/complete, operator approve/cancel и durable notification delivery. После одобрения и нового TOTP atomic commit меняет фактор/codes/version, отзывает старые сессии и сохраняет audit/notice; ни session, ни MFA-off не выдаются. App/HTTP/ENV/worker registration пока отсутствуют. Password operator CLI authority не является MFA recovery authority: для новых MFA-действий нужна отдельная DB-группа.
+Потеря authenticator и всех recovery codes: [этап 13.1d](../planning/mfa-recovery.md). Реализованы opt-in HTTP start/complete, operator approve/cancel, App/ENV/Swagger и durable notification delivery. После одобрения и нового TOTP atomic commit меняет фактор/codes/version, отзывает старые сессии и сохраняет audit/notice; ни session, ни MFA-off не выдаются. По умолчанию recovery выключен; перед включением внедрение утверждает независимую проверку владельца. Password operator CLI authority не является MFA recovery authority: для новых MFA-действий нужна отдельная DB-группа. UI и полная operational приёмка ещё впереди.
 
 ## Текущее состояние
 
@@ -13,6 +13,7 @@ A5.2b-local подключает MFA к password, Google/Telegram OIDC и email 
 | ENV | По умолчанию | Назначение |
 | --- | --- | --- |
 | `MFA_ENABLED` | `false` | Подключение workflow/routes. Startup с false при уже enrolled factors запрещён; это не обход MFA |
+| `MFA_RECOVERY_ENABLED` | `false` | Operator-assisted lost-factor start/complete; требует MFA_ENABLED, отдельные DB grants и утверждённую проверку владельца. Не отключает доставку уже committed security notices |
 | `MFA_ISSUER` | `Auth` | Имя установки в authenticator |
 | `MFA_LOGIN_CHALLENGE_TTL` | `5m` | Срок challenge, допустимо 1m–5m |
 | `MFA_USER_OPERATIONS_PER_MINUTE` | `5` | Общий operational admission пользователя для management, primary challenge start и completion |
@@ -25,6 +26,8 @@ A5.2b-local подключает MFA к password, Google/Telegram OIDC и email 
 | Метод и путь после `/api/v1/auth` | Сценарий |
 | --- | --- |
 | `POST /mfa/login/complete` | JSON `{challenge, code, recovery}` + cookie `__Host-mfa-login`; после commit выдаётся session cookie |
+| `POST /mfa/recovery/start` | Opt-in JSON `{challenge}` + та же browser cookie; возвращает новый candidate/request/expiry без session и замены старого фактора |
+| `POST /mfa/recovery/complete` | Opt-in JSON `{requestId, challenge, code}` + browser cookie, CLI approval и новый TOTP; десять новых codes один раз, старые сессии/cookies отзываются, новая session не выдаётся |
 | `POST /mfa/totp/enrollment` | Текущая session cookie + password proof; возвращает pending token, secret, URI и expiry |
 | `POST /mfa/totp/enrollment/confirm` | JSON `{token, code}`; включает TOTP, один раз отдаёт десять recovery codes, отзывает sessions |
 | `POST /mfa/step-up` | JSON `{code, recovery}` + свежий password proof; подтверждает MFA и ротирует session token без продления lifetime |

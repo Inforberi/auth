@@ -1,6 +1,6 @@
 # Текущий API-контракт
 
-Состояние на 11 октября 2026. Источник маршрутов — `internal/transport/http/router`; DTO и error mapping — transport каждой фичи. Спецификация — Swagger 2.0, не OpenAPI 3.
+Состояние на 14 октября 2026. Источник маршрутов — `internal/transport/http/router`; DTO и error mapping — transport каждой фичи. Спецификация — Swagger 2.0, не OpenAPI 3.
 
 | Метод и путь | Успех | Ошибки |
 | --- | --- | --- |
@@ -9,6 +9,8 @@
 | GET `/health/ready` | 200, `status` | 503 без деталей зависимости |
 | POST `/api/v1/auth/register/email` | 201, `userID`, Set-Cookie, queued verification | 400 validation, 409 email conflict, 429 limits, 503 limits/deadline, 500 internal_error; ошибка не доказывает rollback аккаунта |
 | POST `/api/v1/auth/login/email` | 200, `status`, Set-Cookie | 400 validation/invalid_credentials, 500 internal_error |
+| POST `/api/v1/auth/mfa/recovery/start` | 200, `status=operator_approval_required`, requestId/secret/uri/expiresAt, без session | Opt-in MFA_RECOVERY_ENABLED + MFA_ENABLED; existing primary challenge/browser cookie, Origin/no-store; 400 invalid_json/invalid_mfa, 403 Origin, 429 limits, 503 dependency, disabled route 404 |
+| POST `/api/v1/auth/mfa/recovery/complete` | 200, codes один раз, очистка старых cookies, без session | JSON requestId/challenge/code + browser cookie/current operator approval/new TOTP; atomic factor/codes/version/revoke/audit/notice. 400 invalid_json/invalid_mfa, 403 Origin, 429 limits, 503 dependency, disabled route 404 |
 | POST `/api/v1/auth/email-otp/request` | 202, status accepted и browser-bound flow cookie, optional profile | 400 invalid_json/invalid_email, 403 Origin, 429 limits, 503 dependency; только существующий active verified password email |
 | POST `/api/v1/auth/email-otp/confirm` | 200, status ok и обычная session cookie | 400 invalid_email_login/invalid_json, 403 Origin, 429 limits, 503 dependency; восемь цифр, TTL, пять неверных попыток, single-use; не MFA/fresh password proof |
 | POST `/api/v1/auth/telegram/start` | 200, authorizationUrl и flow cookie, optional profile | 403 invalid_origin, 429 rate_limited, 503 temporarily_unavailable; disabled route отсутствует |

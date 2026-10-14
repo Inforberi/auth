@@ -37,6 +37,8 @@ Default capacity одной таблицы cleanup — до 144000 кандид�
 
 ## Сеть и эксплуатация
 
+MFA security outbox использует тот же pool и один последовательный consumer даже при MFA_RECOVERY_ENABLED=false, чтобы доставить ранее committed событие. В пустой очереди это один indexed claim приблизительно раз/секунду на API instance; до 10 jobs/tick, без goroutine на каждое письмо, SMTP до 20s вне SQL locks, claim/finish до 5s и lease 30s. До четырёх delivery consumers/API instance вместе с optional email OTP; каждый выполняет SQL шаг последовательно и освобождает connection до SMTP. Retention остаётся отдельной bounded задачей. Все входят в MAX_CONNS, не создают новые pools и не обещают фиксированный delivery RPS. Failed security jobs сохраняются/исключаются из partial due index; оператор контролирует pending age/failed_at, обычный retention их не удаляет. Safe ERROR log — сигнал сбоя, не полноценные metrics/alerts или доказательство доставки.
+
 Без trusted CIDR X-Forwarded-For игнорируется. Для доверенного peer цепочка разбирается справа налево до первого недоверенного адреса; некорректный заголовок не становится ключом лимита. Proxy обязан корректно дописывать или перезаписывать заголовок. Не доверять всем сетям и не открывать прямой API доступ в обход proxy. Default пустой: за proxy все пользователи разделят socket-IP лимит, пока не настроены конкретные CIDR.
 
 Readiness объединяет параллельные probes и использует результат не более секунды, без кеширования прав пользователей. Liveness не занимает admission slot. Заголовки ограничены 16 KiB, JSON — 1 MiB; неправильный формат session cookie отсекается до SQL. Admission ограничивает обработчики, но не все TCP/idle connections: на TLS ingress нужны connection/rate/body/header limits и защита от slow clients.

@@ -4,7 +4,7 @@
 
 ## Решения по MFA recovery (13.1d.1-local)
 
-В том же executable появились два отдельных действия. Они **только одобряют/отменяют внутренний recovery request**, не меняют TOTP, пароль, роли, статус или сессии и не выдают вход. В d.2 реализованы внутренние `mfa/service.Recovery.Start`/`Complete` и durable notification delivery; owner HTTP/App/ENV/worker registration ещё не подключены. Публичного workflow пока нет. Не создавать candidates прямым SQL вместо будущего API.
+В том же executable появились два отдельных действия. Они **только одобряют/отменяют recovery request**, не меняют TOTP, пароль, роли, статус или сессии и не выдают вход. Owner HTTP start/complete и App delivery подключены opt-in в d.3; по умолчанию MFA_RECOVERY_ENABLED=false. Не создавать candidates прямым SQL вместо workflow. [HTTP-контракт](mfa.md#настройки-и-http).
 
 Для этих действий нужна другая инфраструктурная группа: `auth_mfa_recovery_operator`. Членство в `auth_recovery_operator` для смены пароля её не заменяет. DBA отдельно создаёт NOLOGIN группу/персональный LOGIN и применяет `deploy/mfa-recovery-grants.sql` владельцем миграций после адаптации database identifier. Не давать оператору/runtime CREATE в trusted schema, владение функцией или дополнительные write-grants.
 
@@ -34,7 +34,17 @@ MFA-APPROVE test localhost:5432/auth 11111111-1111-4111-8111-111111111111 222222
 
 При потере ответа исход может быть неизвестен. Сверить request state и audit через уполномоченного DBA; не создавать/одобрять новый candidate автоматически. Audit переживает удаление transient request. Completion повторно проверяет current OID/name/LOGIN/membership: отозванный, отключённый или пересозданный одноимённый DB оператор не оставляет рабочего approval. Одного `approved` для замены недостаточно.
 
-Полный workflow ещё **не доступен через HTTP/UI**. Далее App/HTTP/ENV и worker registration, затем operational drill. До включения внедрение утверждает независимую проверку владельца. [Следующие шаги и ограничения](../planning/mfa-recovery.md).
+HTTP workflow доступен только при MFA_ENABLED=true и MFA_RECOVERY_ENABLED=true, UI ещё нет. До внешнего включения внедрение утверждает независимую проверку владельца и выполняет operational drill. ENV не является доказательством личности. App отвергает включение при отсутствии отдельной NOLOGIN group/function grants и при owner/superuser/operator runtime connection; DATABASE_URL приложения и AUTH_RECOVERY_DATABASE_URL CLI должны быть разными доверенными DB identities. [Шаги и ограничения](../planning/mfa-recovery.md).
+
+После owner HTTP start оператор может сопоставить несекретный request UUID с target metadata, не читая secret. Проверка личности остаётся независимой от этих идентификаторов:
+
+```sql
+SELECT user_id,request_id,auth_version,state,expires_at
+FROM auth.mfa_recovery_requests
+WHERE request_id='22222222-2222-4222-8222-222222222222';
+```
+
+CLI требует оба UUID и точного destination/version confirmation. После approval владелец завершает POST `/api/v1/auth/mfa/recovery/complete` из того же браузера с исходным challenge и новым TOTP; оператор не получает code/secret/recovery codes. Успешный ответ возвращает `{codes:[...]}`, не session; далее обычный primary+новый MFA login. Ручки поддерживают password/включённые OIDC/email OTP primary, не заменяют отдельное восстановление потерянного пароля.
 
 ## Завершение и уведомление MFA (13.1d.2-local)
 
@@ -44,7 +54,7 @@ Security notice идёт на snapshot email, подтверждённого д�
 
 Durable job не зависит от старой auth_version, consumed request, текущего email или audit retention. SMTP outage не откатывает commit; lease/backoff допускают максимум пять отправок. После успеха ciphertext удаляется, после исчерпания retry сохраняется с failed_at. Crash на последней lease не запускает шестую отправку; потеря успешного SMTP ack может дать повторное информационное письмо (at-least-once), но не повторную смену MFA.
 
-App пока не запускает новый delivery worker. В d.3 зарегистрировать его через существующий bounded runner/pool/SMTP, настроить операционное наблюдение pending age/failed jobs. Disabled recovery не должен обрывать уведомления о уже committed событиях. Разбор failed jobs — отдельное полномочие DBA/операций: MFA approval group не получает UPDATE/secret SELECT этой очереди. Не очищать таблицу «для исправления ошибки» и не снимать MFA ради SMTP outage.
+App запускает security delivery через существующий bounded runner/pool/SMTP, даже при MFA_RECOVERY_ENABLED=false: отключение новых операций не обрывает committed события. ERROR log сообщает о сбое без dependency details; наблюдение pending age/failed jobs и оповещение оператора ещё требуют внедренческой настройки. Разбор failed jobs — отдельное полномочие DBA/операций: MFA approval group не получает UPDATE/secret SELECT этой очереди. Не очищать таблицу «для исправления ошибки» и не снимать MFA ради SMTP outage.
 
 После устранения причины доставки DBA может явно повторить **конкретную** failed job, сверив incident и UUID, без чтения encrypted payload и без изменения MFA. Пример SQL, не автоматическая операция приложения:
 

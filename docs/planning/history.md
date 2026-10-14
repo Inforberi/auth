@@ -2,6 +2,20 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат 13.1d.3-local — 14 октября 2026
+
+Реализация зафиксирована в `1447d15` — `feat(auth): подключил API восстановления MFA`; контракт, runbook и статусы плана — отдельным документационным коммитом.
+
+Подключены POST /api/v1/auth/mfa/recovery/start и /complete, feature-owned DTO/Swagger/common MFA mapper, strict JSON/allowed Origin/no-store/single login-cookie binding. Owner/actor/version/approval/binding из JSON не принимаются; start не меняет cookies или действующий factor, complete возвращает codes один раз и очищает старые cookies без новой session. MFA_RECOVERY_ENABLED default false в Config/env examples, requires MFA_ENABLED; router скрывает disabled routes, service запрещает обе операции до зависимостей. Primary policy reuse с MFA login, без общего provider reauthentication обхода. App при enabled выполняет один bounded SQL startup check operator NOLOGIN group/decision function grants/runtime separation, не создаёт roles/grants и не использует operator/owner connection как runtime.
+
+Security delivery зарегистрирована независимо от operation flag на existing scoped cipher/pool/SMTP, через прежний bounded runner/cancellation/join. Safe ERROR log сообщает сбой без raw dependency/body/recipient. До четырёх последовательных delivery consumers/API instance, empty MFA queue около одного indexed claim/s, все входят в общий MAX_CONNS; pools/неограниченные очереди/worker per mail не добавлены. Pending/exhausted security events сохраняются. Schema/migration files/dependencies/реальные settings не менялись. UI, operator identity process и live settings не реализованы.
+
+Formatter, task check (all Go tests, lint 0 issues), Swagger generation/drift и App/MFA/config/router race прошли. Final disposable PostgreSQL 18.6 full source up/down/up + operator/request/completion/security suites — 11.753s; real restricted runtime HTTP start → separate DB operator approval → HTTP complete → delivery after disabled flag проверены. Runtime/operator/owner/missing-execute-grants startup checks, HTTP cookies/Origin/unknown JSON/GET/disabled/limits/sanitization, independent service flags, shared effective adapter policy и lifecycle/error logging покрыты. Первый full SQL прогон выявил inherited expired-session fixture: host Go created_at мог оказаться позже container clock expiry и нарушить sessions constraint. Только fixture переведена на одно statement_timestamp БД с корректным past lifetime; constraints/runtime не ослаблены, повтор suite прошёл.
+
+Context7 chi v5.3.2 docs использованы для routing/middleware; PostgreSQL Context7 request был недоступен, fallback — [официальные PostgreSQL 18 privilege/session functions](https://www.postgresql.org/docs/18/functions-info.html) и restricted-role SQL tests. Реальные env/secrets/БД/пользователи не читались и не менялись. Настоящие SMTP/browser/authenticator/operator verification, multi-instance faults/load/GC/полные metrics/alerts не проверены; capacity/RPS не заявляется. Далее d.4 operational drill с утверждённой проверкой владельца, не автоматическое включение recovery. Коммит не выполнялся.
+
+Временный PostgreSQL `136e0e99c62d6060060ae65eaae5bbc4b5993883cb2e2399884107a9b2314c49` удалён вместе с volume и только синтетическими данными; реальная установка не затрагивалась.
+
 ### Результат 13.1d.2-local — 14 октября 2026
 
 Реализация зафиксирована в `def6666` — `feat(auth): добавил завершение восстановления MFA и уведомления`; контракт, runbook и статусы плана — отдельным документационным коммитом.
