@@ -75,6 +75,7 @@ func readAPI(t *testing.T) apiDocument {
 func contractHandlers(env string) Handlers {
 	log := zap.NewNop()
 	return Handlers{
+		Setup:             accounthttp.NewSetup(&contractSetup{}, log),
 		EmailBinding:      accounthttp.NewEmailBinding(&contractEmailBinding{}, log),
 		MFA:               mfahttp.New(&contractMFA{}, &contractMFA{}, log),
 		Session:           sessionhttp.NewHandler(contractManagement{}, log),
@@ -90,6 +91,7 @@ func contractHandlers(env string) Handlers {
 		Google:            googlehttp.New(&contractTelegram{}, log),
 		EmailOTP:          otphttp.New(&contractEmailOTP{}, log),
 		Config: &config.Config{
+			InitialSetup: accountservice.SetupConfig{Enabled: true},
 			EmailBinding: accountservice.EmailBindingConfig{Enabled: true},
 			MFA:          mfaservice.Config{Enabled: true},
 			EmailOTP:     otpservice.Config{Enabled: true, ReauthenticationEnabled: true},

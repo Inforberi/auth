@@ -128,6 +128,40 @@ definitions:
           $ref: '#/definitions/http.SessionResponse'
         type: array
     type: object
+  http.SetupCompleteRequest:
+    properties:
+      emailCode:
+        type: string
+      token:
+        type: string
+      totp:
+        type: string
+    type: object
+  http.SetupCompleteResponse:
+    properties:
+      recoveryCodes:
+        items:
+          type: string
+        type: array
+    type: object
+  http.SetupStartRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  http.SetupStartResponse:
+    properties:
+      expiresAt:
+        type: string
+      secret:
+        type: string
+      token:
+        type: string
+      uri:
+        type: string
+    type: object
   httpx.ErrorResponse:
     properties:
       code:
@@ -2350,6 +2384,114 @@ paths:
       summary: Send test email
       tags:
       - Dev
+  /api/v1/setup/complete:
+    post:
+      consumes:
+      - application/json
+      description: Consumes installation proof and pending intent with email and TOTP
+        codes. Atomically creates account, verified contact, factor, recovery codes,
+        system grant and durable initialized marker. Returns recovery codes once;
+        does not issue a session. Setup stays closed after restart or loss of administrator.
+      parameters:
+      - description: Installation operator proof
+        in: header
+        name: X-Setup-Token
+        required: true
+        type: string
+      - description: Setup confirmation
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.SetupCompleteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.SetupCompleteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Complete first administrator setup exactly once
+      tags:
+      - Setup
+  /api/v1/setup/start:
+    post:
+      consumes:
+      - application/json
+      description: Requires installation operator secret and allowed HTTPS Origin.
+        Sends email code. Returns bounded setup token and TOTP enrollment data, not
+        a login session. No user exists yet. A retry after one minute replaces previous
+        intent.
+      parameters:
+      - description: 32-byte installation proof (base64url)
+        in: header
+        name: X-Setup-Token
+        required: true
+        type: string
+      - description: First administrator credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.SetupStartRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/http.SetupStartResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Start operator-controlled first administrator setup
+      tags:
+      - Setup
   /health/live:
     get:
       produces:

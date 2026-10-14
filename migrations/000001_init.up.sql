@@ -22,6 +22,24 @@ CREATE TABLE auth.users (
 CREATE INDEX users_email_release_due ON auth.users(deleted_at,id)
   WHERE deleted_at IS NOT NULL AND NOT email_reuse_blocked AND email_released_at IS NULL;
 
+CREATE TABLE auth.initial_setup (
+  singleton BOOLEAN PRIMARY KEY CHECK (singleton),
+  initialized_at TIMESTAMPTZ,
+  administrator_id UUID,
+  operator_hash TEXT CHECK (operator_hash ~ '^[a-f0-9]{64}$'),
+  request_hash TEXT CHECK (request_hash ~ '^[a-f0-9]{64}$'),
+  payload BYTEA CHECK (octet_length(payload) BETWEEN 28 AND 8192),
+  created_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ,
+  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+  CHECK ((initialized_at IS NULL) = (administrator_id IS NULL)),
+  CHECK ((request_hash IS NULL) = (payload IS NULL)),
+  CHECK ((payload IS NULL) = (created_at IS NULL)),
+  CHECK ((payload IS NULL) = (expires_at IS NULL)),
+  CHECK (payload IS NULL OR (operator_hash IS NOT NULL AND expires_at>created_at AND expires_at<=created_at+interval '10 minutes')),
+  CHECK (initialized_at IS NULL OR (operator_hash IS NULL AND payload IS NULL))
+);
+
 CREATE TABLE auth.roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   key TEXT COLLATE "C" NOT NULL UNIQUE CHECK (octet_length(key) BETWEEN 1 AND 96 AND key ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$'),

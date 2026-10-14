@@ -23,6 +23,7 @@ import (
 )
 
 type Handlers struct {
+	Setup             *accounthttp.SetupHandler
 	MFA               *mfahttp.Handler
 	Session           *sessionhttp.Handler
 	Rotation          *sessionhttp.RotationHandler
@@ -79,6 +80,7 @@ func New(h Handlers) *chi.Mux {
 	}
 
 	r.Route("/api/v1/", func(r chi.Router) {
+		setupRoutes(r, h)
 		emailBindingRoutes(r, h)
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(browserProtection(h))

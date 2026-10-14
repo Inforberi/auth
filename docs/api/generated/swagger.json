@@ -2784,6 +2784,160 @@
                 }
             }
         },
+        "/api/v1/setup/complete": {
+            "post": {
+                "description": "Consumes installation proof and pending intent with email and TOTP codes. Atomically creates account, verified contact, factor, recovery codes, system grant and durable initialized marker. Returns recovery codes once; does not issue a session. Setup stays closed after restart or loss of administrator.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Setup"
+                ],
+                "summary": "Complete first administrator setup exactly once",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Installation operator proof",
+                        "name": "X-Setup-Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Setup confirmation",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.SetupCompleteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.SetupCompleteResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/setup/start": {
+            "post": {
+                "description": "Requires installation operator secret and allowed HTTPS Origin. Sends email code. Returns bounded setup token and TOTP enrollment data, not a login session. No user exists yet. A retry after one minute replaces previous intent.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Setup"
+                ],
+                "summary": "Start operator-controlled first administrator setup",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "32-byte installation proof (base64url)",
+                        "name": "X-Setup-Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "First administrator credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.SetupStartRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/http.SetupStartResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/health/live": {
             "get": {
                 "produces": [
@@ -3043,6 +3197,59 @@
                     "items": {
                         "$ref": "#/definitions/http.SessionResponse"
                     }
+                }
+            }
+        },
+        "http.SetupCompleteRequest": {
+            "type": "object",
+            "properties": {
+                "emailCode": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                },
+                "totp": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.SetupCompleteResponse": {
+            "type": "object",
+            "properties": {
+                "recoveryCodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "http.SetupStartRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.SetupStartResponse": {
+            "type": "object",
+            "properties": {
+                "expiresAt": {
+                    "type": "string"
+                },
+                "secret": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                },
+                "uri": {
+                    "type": "string"
                 }
             }
         },

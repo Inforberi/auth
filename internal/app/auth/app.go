@@ -61,6 +61,10 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	}
 	retentionSvc := accountservice.NewRetention(accountRepo, cfg.Retention)
 	argonHash := hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), cfg.Capacity.HashConcurrency)
+	setup, err := assembleSetup(accountRepo, rdb, mail, argonHash, cfg, log)
+	if err != nil {
+		return nil, fmt.Errorf("assemble setup: %w", err)
+	}
 	sessionRepo := sessionpostgres.New(pool)
 	sessionSvc := sessionservice.New(now, sessionRepo, tokenGen, cfg.Session)
 	loginSvc, mfaHandler, err := assembleMFA(ctx, pool, rdb, sessionSvc, tokenGen, cfg, log)
@@ -122,6 +126,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		mailTest = dev.NewMailTest(mail, log)
 	}
 	handler := router.New(router.Handlers{
+		Setup:             setup,
 		EmailBinding:      emailBinding,
 		MFA:               mfaHandler,
 		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),

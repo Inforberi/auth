@@ -29,6 +29,7 @@ type Config struct {
 	Account           accountservice.Config
 	EmailChange       accountservice.EmailChangeConfig
 	EmailBinding      accountservice.EmailBindingConfig
+	InitialSetup      accountservice.SetupConfig
 	Invitation        accountservice.InvitationConfig
 	TemporaryPassword passwordservice.TemporaryPasswordConfig
 	EmailOTP          otpservice.Config

@@ -23,6 +23,8 @@ func (cfg Config) Validate() error {
 		cfg.Google.Validate,
 		cfg.EmailOTP.Validate,
 		cfg.EmailBinding.Validate,
+		cfg.InitialSetup.Validate,
+		cfg.validateInitialSetup,
 		func() error {
 			if cfg.EmailBinding.Enabled && (!cfg.MFA.Enabled || !cfg.EmailOTP.ReauthenticationEnabled) {
 				return fmt.Errorf("EMAIL_BINDING_ENABLED requires MFA_ENABLED and EMAIL_REAUTHENTICATION_ENABLED")

@@ -8,6 +8,11 @@ import (
 
 func (r *Repository) purgeTransientAuthData(ctx context.Context, batch int) (int64, error) {
 	var removed int64
+	// Expiry discards only the pending encrypted intent, never the installation marker or operator pin.
+	if _, err := r.db.Exec(ctx, `UPDATE auth.initial_setup SET request_hash=NULL,payload=NULL,created_at=NULL,expires_at=NULL,attempts=0
+		WHERE singleton AND initialized_at IS NULL AND expires_at<=statement_timestamp()`); err != nil {
+		return 0, err
+	}
 	for _, challenge := range []struct{ table, key, expiry string }{
 		{"email_verifications", "digest", "expires_at"},
 		{"email_bindings", "user_id", "expires_at"},
