@@ -2,6 +2,40 @@
 
 10.3b-local. Есть два независимых пути: обычный email reset и отдельная операторская CLI на случай недоступной почты/SMTP. Потеря MFA — другой сценарий; ни один из этих путей не отключает фактор.
 
+## Решения по MFA recovery (13.1d.1-local)
+
+В том же executable появились два отдельных действия. Они **только одобряют/отменяют внутренний recovery request**, не меняют TOTP, пароль, роли, статус или сессии и не выдают вход. Owner HTTP start/complete, atomic replacement и notification delivery ещё не подключены. Сейчас запрос может создать внутренний `mfa/service.Recovery.Start`; публичной ручки для него пока нет. Не создавать candidates прямым SQL вместо будущего workflow.
+
+Для этих действий нужна другая инфраструктурная группа: `auth_mfa_recovery_operator`. Членство в `auth_recovery_operator` для смены пароля её не заменяет. DBA отдельно создаёт NOLOGIN группу/персональный LOGIN и применяет `deploy/mfa-recovery-grants.sql` владельцем миграций после адаптации database identifier. Не давать оператору/runtime CREATE в trusted schema, владение функцией или дополнительные write-grants.
+
+Grants открывают только metadata пользователя/request и EXECUTE `auth.decide_mfa_recovery`. Прямое чтение candidate/current TOTP/primary reference и UPDATE request/users не разрешены. Операция SECURITY DEFINER имеет фиксированный безопасный search_path, без dynamic SQL и PUBLIC EXECUTE; проверяет именно `session_user`/membership, записывает его OID/name, environment и incident reference вместе с audit в одной транзакции. Migration owner/DBA остаётся доверенным инфраструктурным субъектом, не sandbox. Не применять через shared forced-user pooler.
+
+Перед одобрением оператор обязан независимо проверить владельца по утверждённой внедрением процедуре. Request UUID, знание пароля/почты или наличие браузера сами по себе личность не доказывают. User UUID/request UUID не секреты и не login authority; secret/QR/cookie/recovery codes оператору не нужны и в CLI не передаются.
+
+Пример для локального test окружения; `AUTH_RECOVERY_DATABASE_URL` передаётся отдельно защищённым способом и содержит credentials именно MFA operator login:
+
+```bash
+./bin/admin-recovery mfa-approve \
+  -environment test \
+  -user 11111111-1111-4111-8111-111111111111 \
+  -request 22222222-2222-4222-8222-222222222222 \
+  -reason INC-42
+```
+
+Preview показывает environment/host:port/database, реального DB operator, account/request UUID, state, expiry и incident reference. Затем нужно ввести точную строку:
+
+```text
+MFA-APPROVE test localhost:5432/auth 11111111-1111-4111-8111-111111111111 22222222-2222-4222-8222-222222222222 v2
+```
+
+Сверять реальный destination с инцидентом; имя environment — метка, не доказательство окружения. Для отмены те же флаги и `mfa-cancel`; подтверждение начинается с `MFA-CANCEL`. Password pipe FD 3 не используется. Прежние правила single endpoint/TLS/loopback/санитизации DSN/ограниченного пула сохраняются. Ожидание подтверждения интерактивное; после ввода актуальность проверяется повторно, поэтому истёкший за это время request не одобряется.
+
+Срок ограничен уже существующим primary challenge (максимум 5 минут). Approval его не продлевает. Одобрение однократно: повторный approve, неверные UUID/version, consumed/expired challenge, cancelled request, blocked/deleted account или отозванный DB доступ дают безопасный отказ. Cancel допустим для pending/approved и окончателен для этого UUID. Новое owner-start/reissue создаёт другой UUID/secret и очищает approval; нужен новый операторский выбор. Новый primary challenge и normal MFA login инвалидируют прежний recovery request. Истёкший/уже удалённый request отменять не требуется: он не даёт authority.
+
+При потере ответа исход может быть неизвестен. Сверить request state и audit через уполномоченного DBA; не создавать/одобрять новый candidate автоматически. Audit переживает удаление transient request. Отзыв membership запрещает следующие решения; проверка текущих OID/name/membership при окончательной замене обязательна в следующем d.2, не считать `approved` достаточным доказательством для будущего completion.
+
+Этот подэтап ещё **не восстанавливает доступ при потере всех факторов**. До публикации нужны atomic completion, durable notification и App/HTTP/ENV, затем operational drill. [Следующие шаги и ограничения](../planning/mfa-recovery.md).
+
 ## Обычный путь
 
 Существующие `POST /api/v1/auth/forgot-password` и `POST /api/v1/auth/reset-password`, [контракт](password-recovery.md). Ссылка сама не меняет пароль: нужен POST с новым паролем и одноразовым token.

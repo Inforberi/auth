@@ -461,6 +461,8 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 ## 6. Текущий статус
 
+14 октября 2026, 13.1d.1-local: [сценарий потери всех MFA-факторов](mfa-recovery.md) получил внутренние encrypted request/reissue и CLI approve/cancel с отдельными metadata-only DB grants/session_user/OID/audit. Старый фактор/codes/сессии/права не меняются, публичного recovery пока нет. Далее d.2 atomic completion/durable notification → d.3 App/HTTP/ENV → d.4 приёмка; внешнее включение зависит от утверждённой проверки владельца.
+
 14 октября 2026, 10.3b-local: готова отдельная CLI смены пароля существующего super-admin через DB operator membership + точное подтверждение target/version. Сохранены роли/MFA/status/setup marker, атомарны revoke/cleanup/audit; обычный email reset проверен для admin. [Runbook](../features/admin-recovery.md). Внешняя операторская приёмка и lost-factor recovery ещё открыты; runtime HTTP bypass не добавлялся.
 
 14 октября 2026, 10.3a-local: backend первого супер-администратора реализован — operator secret + email/TOTP proof, atomic account/system grant/audit/durable marker и две opt-in ручки. Общие Auth зависимости без новых workers; setup не выдаёт session и не открывается после потери admin. [Контракт](../features/initial-setup.md), проверки — [history](history.md). UI, аварийное recovery и внешняя приёмка пока открыты.

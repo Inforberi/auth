@@ -1,5 +1,7 @@
 # MFA: TOTP и резервные коды
 
+Потеря authenticator и всех recovery codes: [этап 13.1d](../planning/mfa-recovery.md). Реализован только d.1: внутренний bound request и operator approve/cancel конкретного candidate после primary login. Completion/delivery и публичные App/HTTP/ENV ещё отсутствуют; ни session, ни MFA-off не выдаются. Password operator CLI authority не является MFA recovery authority: для новых MFA-действий нужна отдельная DB-группа.
+
 ## Текущее состояние
 
 A5.2b-local подключает MFA к password, Google/Telegram OIDC и email OTP, App, HTTP и Swagger. A5.2c-local добавляет opt-in email proof для external-only с verified owned contact; A5.2d-local — [первичную привязку через администратора](email-binding.md). Для password-account по-прежнему нужен password proof: email не снижает его защиту. Без verified contact сначала выполняется binding; самостоятельного добавления доверенной почты одной session cookie нет. Полный A5 и release acceptance не закрыты.
