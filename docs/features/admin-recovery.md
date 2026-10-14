@@ -4,7 +4,7 @@
 
 ## Решения по MFA recovery (13.1d.1-local)
 
-В том же executable появились два отдельных действия. Они **только одобряют/отменяют внутренний recovery request**, не меняют TOTP, пароль, роли, статус или сессии и не выдают вход. Owner HTTP start/complete, atomic replacement и notification delivery ещё не подключены. Сейчас запрос может создать внутренний `mfa/service.Recovery.Start`; публичной ручки для него пока нет. Не создавать candidates прямым SQL вместо будущего workflow.
+В том же executable появились два отдельных действия. Они **только одобряют/отменяют внутренний recovery request**, не меняют TOTP, пароль, роли, статус или сессии и не выдают вход. В d.2 реализованы внутренние `mfa/service.Recovery.Start`/`Complete` и durable notification delivery; owner HTTP/App/ENV/worker registration ещё не подключены. Публичного workflow пока нет. Не создавать candidates прямым SQL вместо будущего API.
 
 Для этих действий нужна другая инфраструктурная группа: `auth_mfa_recovery_operator`. Членство в `auth_recovery_operator` для смены пароля её не заменяет. DBA отдельно создаёт NOLOGIN группу/персональный LOGIN и применяет `deploy/mfa-recovery-grants.sql` владельцем миграций после адаптации database identifier. Не давать оператору/runtime CREATE в trusted schema, владение функцией или дополнительные write-grants.
 
@@ -32,9 +32,31 @@ MFA-APPROVE test localhost:5432/auth 11111111-1111-4111-8111-111111111111 222222
 
 Срок ограничен уже существующим primary challenge (максимум 5 минут). Approval его не продлевает. Одобрение однократно: повторный approve, неверные UUID/version, consumed/expired challenge, cancelled request, blocked/deleted account или отозванный DB доступ дают безопасный отказ. Cancel допустим для pending/approved и окончателен для этого UUID. Новое owner-start/reissue создаёт другой UUID/secret и очищает approval; нужен новый операторский выбор. Новый primary challenge и normal MFA login инвалидируют прежний recovery request. Истёкший/уже удалённый request отменять не требуется: он не даёт authority.
 
-При потере ответа исход может быть неизвестен. Сверить request state и audit через уполномоченного DBA; не создавать/одобрять новый candidate автоматически. Audit переживает удаление transient request. Отзыв membership запрещает следующие решения; проверка текущих OID/name/membership при окончательной замене обязательна в следующем d.2, не считать `approved` достаточным доказательством для будущего completion.
+При потере ответа исход может быть неизвестен. Сверить request state и audit через уполномоченного DBA; не создавать/одобрять новый candidate автоматически. Audit переживает удаление transient request. Completion повторно проверяет current OID/name/LOGIN/membership: отозванный, отключённый или пересозданный одноимённый DB оператор не оставляет рабочего approval. Одного `approved` для замены недостаточно.
 
-Этот подэтап ещё **не восстанавливает доступ при потере всех факторов**. До публикации нужны atomic completion, durable notification и App/HTTP/ENV, затем operational drill. [Следующие шаги и ограничения](../planning/mfa-recovery.md).
+Полный workflow ещё **не доступен через HTTP/UI**. Далее App/HTTP/ENV и worker registration, затем operational drill. До включения внедрение утверждает независимую проверку владельца. [Следующие шаги и ограничения](../planning/mfa-recovery.md).
+
+## Завершение и уведомление MFA (13.1d.2-local)
+
+Внутренний Complete проверяет тот же request/challenge/browser, актуальный primary и новый TOTP. Одной транзакцией заменяет фактор и recovery digests, увеличивает auth_version, отзывает сессии/незавершённые полномочия и пишет operator audit/security job. CLI не получает новые codes. Они возвращаются владельцу только при успешном commit один раз; если response потерян — вход новым TOTP и существующая protected regeneration. Автоматической login session нет, status/roles/password/contact/setup marker не меняются. Неверный код расходует одну из пяти committed attempts; чужой/unapproved request не расходует attempts. Общий account guessing cap разделяется с обычным MFA login и не растёт при reissue.
+
+Security notice идёт на snapshot email, подтверждённого до начала запроса. Отсутствие такого адреса отмечается `notification_queued=false`: оператор обязан сам уведомить владельца по независимо проверенному каналу, не помечать email verified и не отправлять sensitive события на непроверенную почту. В письме только событие/время/request UUID, без secret, QR, codes или изменяющей GET-ссылки.
+
+Durable job не зависит от старой auth_version, consumed request, текущего email или audit retention. SMTP outage не откатывает commit; lease/backoff допускают максимум пять отправок. После успеха ciphertext удаляется, после исчерпания retry сохраняется с failed_at. Crash на последней lease не запускает шестую отправку; потеря успешного SMTP ack может дать повторное информационное письмо (at-least-once), но не повторную смену MFA.
+
+App пока не запускает новый delivery worker. В d.3 зарегистрировать его через существующий bounded runner/pool/SMTP, настроить операционное наблюдение pending age/failed jobs. Disabled recovery не должен обрывать уведомления о уже committed событиях. Разбор failed jobs — отдельное полномочие DBA/операций: MFA approval group не получает UPDATE/secret SELECT этой очереди. Не очищать таблицу «для исправления ошибки» и не снимать MFA ради SMTP outage.
+
+После устранения причины доставки DBA может явно повторить **конкретную** failed job, сверив incident и UUID, без чтения encrypted payload и без изменения MFA. Пример SQL, не автоматическая операция приложения:
+
+```sql
+UPDATE auth.mfa_recovery_outbox
+SET attempts=0,failed_at=NULL,available_at=clock_timestamp()
+WHERE id='33333333-3333-4333-8333-333333333333'
+  AND failed_at IS NOT NULL AND lease IS NULL
+RETURNING id;
+```
+
+Учитывать возможное повторное письмо и сохранять операционный след такого решения. Pending/failed job не удаляется обычным retention; срок ручного разбора и дальнейшего хранения encrypted recipient определяется операционной политикой. Пока нет реальной browser/SMTP/operator приёмки, не считать локальные тесты production acceptance.
 
 ## Обычный путь
 

@@ -2,6 +2,20 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат 13.1d.2-local — 14 октября 2026
+
+Реализация зафиксирована в `def6666` — `feat(auth): добавил завершение восстановления MFA и уведомления`; контракт, runbook и статусы плана — отдельным документационным коммитом.
+
+Реализован внутренний Recovery.Complete: indexed approved-request/browser preflight, current primary/status/version/effective method и approver OID/name/LOGIN/membership recheck под Access → user → challenge → request locks. Общий normal-login/recovery account guessing cap не сбрасывается новым request/primary; invalid TOTP фиксирует committed attempt до пяти, unapproved/foreign browser не расходует SQL attempts. Reuse scoped owner-bound TOTP check и recovery generator; plaintext codes возвращаются только после commit, session не выдаётся. Atomic factor/step/recovery/version/revoke/challenge cleanup/audit сохраняет password/contact/status/roles/access_version/setup. Audit/notification insert failure откатывает всё, last system admin/external-only не теряют профиль или полномочия.
+
+Добавлен independent mfa_recovery_outbox и RecoveryDelivery: encrypted ранее verified contact/event snapshot без FK к consumed request/audit и без version/status filter при отправке. Existing SMTP/scoped cipher/paced runner, claim/finish deadlines, 20s send, 30s lease/SKIP LOCKED/backoff/lease CAS. Пять отправок, success удаляет ciphertext, exhaustion сохраняет failed_at/job для операционного разбора; последняя abandoned lease не отправляет шестое письмо. Pending/failed job не очищает ordinary retention; at-least-once delivery не меняет MFA повторно. No verified contact — audit notification_queued=false, независимое операторское уведомление, без verified/password provision. Нет нового dependency/pool/worker per mail/scripts/HTTP/ENV; App registration оставлена d.3. Изменён только initial source 000001 up/down.
+
+Formatter и task check (all Go tests, lint 0 issues), финальные MFA/CLI Go race и повторный lint прошли. Disposable PostgreSQL 18.6: completion suite 1.517s; final full source schema up/down/up + password/MFA operator + completion/guards/delivery/race suites — 11.302s. Проверены 16 completions/один winner, audit/outbox rollback, version/status/primary/policy/browser/request/reissue/expiry/cancel/attempt bounds, revoked/disabled/recreated operator, external-only и отсутствие verified contact. Normal-login/password-reset concurrency оставляет одного winner. Unit counter подтверждает общий guessing budget recovery/reissue/normal login. Delivery: 16 claims/одна lease, stale ack/reclaim, backoff/SMTP retry, contact/version snapshot, audit/transient retention, exhaustion/abandoned final lease с сохранением failed job. PostgreSQL 18 explicit locking/Read Committed semantics сверены через Context7.
+
+Реальные env/secrets/БД и пользователи не читались и не менялись; настоящие SMTP/browser/operator identity drill/fault/load/GC не проверены, RPS не заявляется. App/HTTP/ENV/delivery registration и полная operational acceptance остаются открытыми; disabled operations не должны обрывать pending security notifications. Коммит не выполнялся.
+
+Временный PostgreSQL-контейнер `c785ad1be72649a447a486680def85e68e7ee6a5bd11604321e49d6c7df30bc3` удалён вместе с volume и только синтетическими данными. Реальные установки не затрагивались.
+
 ### Результат 13.1d.1-local — 14 октября 2026
 
 Реализация зафиксирована в `0e3a6af` — `feat(auth): добавил запрос и одобрение восстановления MFA`; план, ограничения и операторский контракт — отдельным документационным коммитом.

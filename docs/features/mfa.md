@@ -1,6 +1,6 @@
 # MFA: TOTP и резервные коды
 
-Потеря authenticator и всех recovery codes: [этап 13.1d](../planning/mfa-recovery.md). Реализован только d.1: внутренний bound request и operator approve/cancel конкретного candidate после primary login. Completion/delivery и публичные App/HTTP/ENV ещё отсутствуют; ни session, ни MFA-off не выдаются. Password operator CLI authority не является MFA recovery authority: для новых MFA-действий нужна отдельная DB-группа.
+Потеря authenticator и всех recovery codes: [этап 13.1d](../planning/mfa-recovery.md). Реализованы внутренние bound start/complete, operator approve/cancel и durable notification delivery. После одобрения и нового TOTP atomic commit меняет фактор/codes/version, отзывает старые сессии и сохраняет audit/notice; ни session, ни MFA-off не выдаются. App/HTTP/ENV/worker registration пока отсутствуют. Password operator CLI authority не является MFA recovery authority: для новых MFA-действий нужна отдельная DB-группа.
 
 ## Текущее состояние
 
