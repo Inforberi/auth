@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
@@ -81,7 +82,7 @@ func (r *Repository) Disable(ctx context.Context, proof service.Proof) error {
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_totp WHERE user_id=$1`, proof.UserID); err != nil {
 			return err
 		}
-		if err := invalidateFactors(ctx, tx, proof); err != nil {
+		if err := invalidateFactors(ctx, tx, proof.UserID); err != nil {
 			return err
 		}
 		return audit(ctx, tx, proof.UserID, "totp_disabled")
@@ -102,21 +103,21 @@ func (r *Repository) RegenerateRecovery(ctx context.Context, proof service.Proof
 		if _, err := tx.Exec(ctx, `INSERT INTO auth.mfa_recovery_codes(user_id,digest) SELECT $1,unnest($2::text[])`, proof.UserID, codes); err != nil {
 			return err
 		}
-		if err := invalidateFactors(ctx, tx, proof); err != nil {
+		if err := invalidateFactors(ctx, tx, proof.UserID); err != nil {
 			return err
 		}
 		return audit(ctx, tx, proof.UserID, "recovery_regenerated")
 	})
 }
 
-func invalidateFactors(ctx context.Context, tx pgx.Tx, proof service.Proof) error {
+func invalidateFactors(ctx context.Context, tx pgx.Tx, user accountdomain.UserID) error {
 	for _, query := range []string{
 		`UPDATE auth.users SET auth_version=auth_version+1 WHERE id=$1`,
 		`UPDATE auth.sessions SET revoked_at=clock_timestamp() WHERE user_id=$1 AND revoked_at IS NULL`,
 		`DELETE FROM auth.mfa_enrollments WHERE user_id=$1`,
 		`DELETE FROM auth.mfa_login_challenges WHERE user_id=$1`,
 	} {
-		if _, err := tx.Exec(ctx, query, proof.UserID); err != nil {
+		if _, err := tx.Exec(ctx, query, user); err != nil {
 			return err
 		}
 	}

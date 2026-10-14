@@ -102,7 +102,7 @@ func (r *Repository) confirmEnrollment(ctx context.Context, proof service.Proof,
 		if _, err := tx.Exec(ctx, `INSERT INTO auth.mfa_recovery_codes(user_id,digest) SELECT $1,unnest($2::text[])`, proof.UserID, recovery); err != nil {
 			return err
 		}
-		if err := invalidateFactors(ctx, tx, proof); err != nil {
+		if err := invalidateFactors(ctx, tx, proof.UserID); err != nil {
 			return err
 		}
 		event := "totp_enabled"

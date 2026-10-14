@@ -109,6 +109,10 @@ func (s *Service) confirmEnrollment(ctx context.Context, input ConfirmInput, rep
 }
 
 func (s *Service) recoveryCodes(user accountdomain.UserID) ([]string, []string, error) {
+	return generateRecoveryCodes(s.cipher, user)
+}
+
+func generateRecoveryCodes(cipher Cipher, user accountdomain.UserID) ([]string, []string, error) {
 	codes, digests := make([]string, domain.RecoveryCodeCount), make([]string, domain.RecoveryCodeCount)
 	for index := range codes {
 		var entropy [16]byte
@@ -116,7 +120,7 @@ func (s *Service) recoveryCodes(user accountdomain.UserID) ([]string, []string, 
 			return nil, nil, err
 		}
 		codes[index] = hex.EncodeToString(entropy[:])
-		digests[index] = s.cipher.Digest("recovery:" + string(user) + ":" + codes[index])
+		digests[index] = cipher.Digest("recovery:" + string(user) + ":" + codes[index])
 	}
 	return codes, digests, nil
 }

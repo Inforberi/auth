@@ -52,19 +52,8 @@ func (s *Login) Complete(ctx context.Context, input CompleteLoginInput) (*LoginS
 		return nil, err
 	}
 	// This counter spans all primary logins: replacing a challenge cannot reset guessing admission.
-	allowed, err := s.limit.Allow(ctx, s.cipher.Digest("user:"+string(user)), s.cfg.UserLimitPerMinute, time.Minute)
-	if err != nil {
-		return nil, domain.ErrUnavailable
-	}
-	if !allowed {
-		return nil, domain.ErrLimited
-	}
-	allowed, err = s.limit.Allow(ctx, s.cipher.Digest("login:factor-user:"+string(user)), 5, time.Minute)
-	if err != nil {
-		return nil, domain.ErrUnavailable
-	}
-	if !allowed {
-		return nil, domain.ErrLimited
+	if err := admitFactorUser(ctx, s.cipher, s.limit, s.cfg.UserLimitPerMinute, user); err != nil {
+		return nil, err
 	}
 	raw, err := s.tokens.GenerateToken()
 	if err != nil {
@@ -91,6 +80,25 @@ func (s *Login) Complete(ctx context.Context, input CompleteLoginInput) (*LoginS
 
 func (s *Login) admitLogin(ctx context.Context, purpose, subject, ip string, count int) error {
 	return admitLogin(ctx, s.cipher, s.limit, s.cfg, purpose, subject, ip, count)
+}
+
+func admitFactorUser(ctx context.Context, cipher Cipher, limit Limiter, operations int, user accountdomain.UserID) error {
+	for _, budget := range []struct {
+		key   string
+		count int
+	}{
+		{cipher.Digest("user:" + string(user)), operations},
+		{cipher.Digest("login:factor-user:" + string(user)), 5},
+	} {
+		allowed, err := limit.Allow(ctx, budget.key, budget.count, time.Minute)
+		if err != nil {
+			return domain.ErrUnavailable
+		}
+		if !allowed {
+			return domain.ErrLimited
+		}
+	}
+	return nil
 }
 
 func admitLogin(ctx context.Context, cipher Cipher, limit Limiter, cfg LoginConfig, purpose, subject, ip string, count int) error {

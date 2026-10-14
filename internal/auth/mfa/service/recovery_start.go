@@ -12,6 +12,8 @@ import (
 type RecoveryRepository interface {
 	FindLoginOwner(context.Context, string, string) (accountdomain.UserID, error)
 	SaveRecoveryRequest(context.Context, RecoveryRequest) (*RecoveryCandidate, error)
+	FindRecoveryOwner(context.Context, string, string, string) (accountdomain.UserID, error)
+	CompleteRecovery(context.Context, RecoveryCompletion) error
 }
 
 type RecoveryRequest struct {

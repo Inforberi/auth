@@ -270,22 +270,42 @@ CREATE TABLE auth.mfa_recovery_codes (
 CREATE TABLE auth.mfa_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
-  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated','recovery_requested','recovery_approved','recovery_cancelled')),
+  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated','recovery_requested','recovery_approved','recovery_cancelled','recovery_completed')),
   request_id UUID,
   auth_version BIGINT CHECK (auth_version>0),
   operator_oid OID,
   operator_name TEXT,
   environment TEXT,
   reason TEXT,
+  notification_queued BOOLEAN,
   created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
-  CHECK ((event IN ('recovery_requested','recovery_approved','recovery_cancelled'))=(request_id IS NOT NULL)),
-  CHECK ((event IN ('recovery_requested','recovery_approved','recovery_cancelled'))=(auth_version IS NOT NULL)),
-  CHECK ((event IN ('recovery_approved','recovery_cancelled'))=(operator_oid IS NOT NULL)),
-  CHECK ((event IN ('recovery_approved','recovery_cancelled'))=(operator_name IS NOT NULL)),
-  CHECK ((event IN ('recovery_approved','recovery_cancelled'))=(environment IS NOT NULL)),
-  CHECK ((event IN ('recovery_approved','recovery_cancelled'))=(reason IS NOT NULL))
+  CHECK ((event IN ('recovery_requested','recovery_approved','recovery_cancelled','recovery_completed'))=(request_id IS NOT NULL)),
+  CHECK ((event IN ('recovery_requested','recovery_approved','recovery_cancelled','recovery_completed'))=(auth_version IS NOT NULL)),
+  CHECK ((event IN ('recovery_approved','recovery_cancelled','recovery_completed'))=(operator_oid IS NOT NULL)),
+  CHECK ((event IN ('recovery_approved','recovery_cancelled','recovery_completed'))=(operator_name IS NOT NULL)),
+  CHECK ((event IN ('recovery_approved','recovery_cancelled','recovery_completed'))=(environment IS NOT NULL)),
+  CHECK ((event IN ('recovery_approved','recovery_cancelled','recovery_completed'))=(reason IS NOT NULL)),
+  CHECK ((event='recovery_completed')=(notification_queued IS NOT NULL))
 );
 CREATE INDEX mfa_audit_retention ON auth.mfa_audit(created_at,id);
+
+-- Security notifications survive consumed requests, auth_version changes and audit retention.
+CREATE TABLE auth.mfa_recovery_outbox (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  request_id UUID NOT NULL UNIQUE,
+  payload BYTEA NOT NULL CHECK (octet_length(payload) BETWEEN 28 AND 8192),
+  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+  available_at TIMESTAMPTZ NOT NULL DEFAULT statement_timestamp(),
+  lease UUID,
+  lease_until TIMESTAMPTZ,
+  failed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  CHECK ((lease IS NULL)=(lease_until IS NULL)),
+  CHECK (attempts<5 OR lease IS NOT NULL OR failed_at IS NOT NULL),
+  CHECK (failed_at IS NULL OR (attempts=5 AND lease IS NULL))
+);
+CREATE INDEX mfa_recovery_outbox_due ON auth.mfa_recovery_outbox(available_at,id) WHERE failed_at IS NULL;
 
 -- Operators may decide on metadata, but cannot mutate candidates or forge another operator's approval.
 CREATE FUNCTION auth.decide_mfa_recovery(target UUID, request UUID, version BIGINT, approve BOOLEAN, env TEXT, incident TEXT)

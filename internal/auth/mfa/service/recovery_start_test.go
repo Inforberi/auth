@@ -17,8 +17,19 @@ import (
 
 type recoveryRepoStub struct {
 	loginRepoStub
-	request RecoveryRequest
-	saveErr error
+	request    RecoveryRequest
+	saveErr    error
+	completion RecoveryCompletion
+}
+
+func (r *recoveryRepoStub) FindRecoveryOwner(context.Context, string, string, string) (accountdomain.UserID, error) {
+	return r.proof.UserID, r.err
+}
+
+func (r *recoveryRepoStub) CompleteRecovery(_ context.Context, input RecoveryCompletion) error {
+	r.calls++
+	r.completion = input
+	return r.saveErr
 }
 
 func (r *recoveryRepoStub) SaveRecoveryRequest(_ context.Context, input RecoveryRequest) (*RecoveryCandidate, error) {

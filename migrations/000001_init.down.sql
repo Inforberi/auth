@@ -22,6 +22,7 @@ DROP TABLE IF EXISTS auth.password_resets;
 DROP TABLE IF EXISTS auth.sessions;
 DROP FUNCTION IF EXISTS auth.decide_mfa_recovery(UUID,UUID,BIGINT,BOOLEAN,TEXT,TEXT);
 DROP TABLE IF EXISTS auth.mfa_audit;
+DROP TABLE IF EXISTS auth.mfa_recovery_outbox;
 DROP TABLE IF EXISTS auth.mfa_recovery_codes;
 DROP TABLE IF EXISTS auth.mfa_enrollments;
 DROP TABLE IF EXISTS auth.mfa_recovery_requests;
