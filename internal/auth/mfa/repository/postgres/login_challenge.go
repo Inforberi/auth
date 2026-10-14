@@ -37,6 +37,10 @@ func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.Prima
 		if !enabled {
 			return domain.ErrConflict
 		}
+		// A new primary challenge never inherits approval for an older candidate/browser.
+		if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_recovery_requests WHERE user_id=$1`, proof.UserID); err != nil {
+			return err
+		}
 		err = tx.QueryRow(ctx, `INSERT INTO auth.mfa_login_challenges
 			(user_id,digest,binding_hash,auth_version,primary_method,primary_reference,primary_issuer,primary_verified_at,expires_at)
 			VALUES ($1,$2,$3,$4,$5,$6,$7,LEAST($8::timestamptz,statement_timestamp()),statement_timestamp()+$9::double precision*interval '1 second')

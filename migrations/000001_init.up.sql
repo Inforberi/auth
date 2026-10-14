@@ -234,6 +234,33 @@ CREATE TABLE auth.mfa_login_challenges (
 );
 CREATE INDEX mfa_login_challenges_expiry ON auth.mfa_login_challenges(expires_at,user_id);
 
+CREATE TABLE auth.mfa_recovery_requests (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  request_id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+  challenge_digest TEXT NOT NULL REFERENCES auth.mfa_login_challenges(digest) ON DELETE CASCADE,
+  auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  secret BYTEA NOT NULL CHECK (octet_length(secret) BETWEEN 48 AND 512),
+  state TEXT NOT NULL DEFAULT 'pending' CHECK (state IN ('pending','approved','cancelled')),
+  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+  operator_oid OID,
+  operator_name TEXT,
+  approved_at TIMESTAMPTZ,
+  environment TEXT,
+  reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT statement_timestamp(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  CHECK (expires_at>created_at AND expires_at<=created_at+interval '5 minutes'),
+  CHECK ((state='approved')=(operator_oid IS NOT NULL AND operator_name IS NOT NULL
+    AND approved_at IS NOT NULL AND environment IS NOT NULL AND reason IS NOT NULL)),
+  CHECK (state='approved' OR (operator_oid IS NULL AND operator_name IS NULL
+    AND approved_at IS NULL AND environment IS NULL AND reason IS NULL)),
+  CHECK (operator_name IS NULL OR octet_length(operator_name) BETWEEN 1 AND 63),
+  CHECK (environment IS NULL OR environment IN ('dev','test','prod')),
+  CHECK (reason IS NULL OR (octet_length(reason) BETWEEN 1 AND 500 AND reason=btrim(reason))),
+  CHECK (approved_at IS NULL OR (approved_at>=created_at AND approved_at<expires_at))
+);
+CREATE INDEX mfa_recovery_requests_expiry ON auth.mfa_recovery_requests(expires_at,user_id);
+
 CREATE TABLE auth.mfa_recovery_codes (
   user_id UUID NOT NULL REFERENCES auth.mfa_totp(user_id) ON DELETE CASCADE,
   digest TEXT NOT NULL CHECK (digest ~ '^[a-f0-9]{64}$'),
@@ -243,10 +270,65 @@ CREATE TABLE auth.mfa_recovery_codes (
 CREATE TABLE auth.mfa_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
-  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated')),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated','recovery_requested','recovery_approved','recovery_cancelled')),
+  request_id UUID,
+  auth_version BIGINT CHECK (auth_version>0),
+  operator_oid OID,
+  operator_name TEXT,
+  environment TEXT,
+  reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  CHECK ((event IN ('recovery_requested','recovery_approved','recovery_cancelled'))=(request_id IS NOT NULL)),
+  CHECK ((event IN ('recovery_requested','recovery_approved','recovery_cancelled'))=(auth_version IS NOT NULL)),
+  CHECK ((event IN ('recovery_approved','recovery_cancelled'))=(operator_oid IS NOT NULL)),
+  CHECK ((event IN ('recovery_approved','recovery_cancelled'))=(operator_name IS NOT NULL)),
+  CHECK ((event IN ('recovery_approved','recovery_cancelled'))=(environment IS NOT NULL)),
+  CHECK ((event IN ('recovery_approved','recovery_cancelled'))=(reason IS NOT NULL))
 );
 CREATE INDEX mfa_audit_retention ON auth.mfa_audit(created_at,id);
+
+-- Operators may decide on metadata, but cannot mutate candidates or forge another operator's approval.
+CREATE FUNCTION auth.decide_mfa_recovery(target UUID, request UUID, version BIGINT, approve BOOLEAN, env TEXT, incident TEXT)
+RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
+DECLARE
+  actor OID;
+  current_version BIGINT;
+  challenge TEXT;
+  pending auth.mfa_recovery_requests%ROWTYPE;
+BEGIN
+  SELECT login.oid INTO actor FROM pg_catalog.pg_roles login
+    WHERE login.rolname=session_user AND login.rolcanlogin AND EXISTS (
+      SELECT 1 FROM pg_catalog.pg_roles g WHERE g.rolname='auth_mfa_recovery_operator'
+      AND pg_catalog.pg_has_role(session_user,g.oid,'MEMBER'));
+  IF actor IS NULL THEN RETURN false; END IF;
+  IF approve IS NULL OR env IS NULL OR env NOT IN ('dev','test','prod') OR incident IS NULL
+    OR octet_length(incident) NOT BETWEEN 1 AND 500 OR incident<>btrim(incident)
+    OR incident ~ '[[:cntrl:]]' THEN RETURN false; END IF;
+  PERFORM pg_catalog.pg_advisory_xact_lock(734013981);
+  SELECT auth_version INTO current_version FROM auth.users
+    WHERE id=target AND status='active' AND deleted_at IS NULL FOR UPDATE;
+  IF current_version IS DISTINCT FROM version THEN RETURN false; END IF;
+  SELECT digest INTO challenge FROM auth.mfa_login_challenges WHERE user_id=target
+    AND auth_version=version AND attempts<5 AND expires_at>clock_timestamp() FOR UPDATE;
+  IF challenge IS NULL THEN RETURN false; END IF;
+  SELECT * INTO pending FROM auth.mfa_recovery_requests WHERE user_id=target
+    AND request_id=request AND auth_version=version AND challenge_digest=challenge
+    AND attempts<5 AND expires_at>clock_timestamp() FOR UPDATE;
+  IF NOT FOUND OR pending.state='cancelled' OR (approve AND pending.state<>'pending')
+    OR NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=target) THEN RETURN false; END IF;
+  UPDATE auth.mfa_recovery_requests SET state=CASE WHEN approve THEN 'approved' ELSE 'cancelled' END,
+    operator_oid=CASE WHEN approve THEN actor END,
+    operator_name=CASE WHEN approve THEN session_user::text END,
+    approved_at=CASE WHEN approve THEN clock_timestamp() END,
+    environment=CASE WHEN approve THEN env END,reason=CASE WHEN approve THEN incident END
+    WHERE user_id=target;
+  INSERT INTO auth.mfa_audit(user_id,event,request_id,auth_version,operator_oid,operator_name,environment,reason)
+    VALUES(target,CASE WHEN approve THEN 'recovery_approved' ELSE 'recovery_cancelled' END,
+      request,version,actor,session_user::text,env,incident);
+  RETURN true;
+END;
+$$;
+REVOKE ALL ON FUNCTION auth.decide_mfa_recovery(UUID,UUID,BIGINT,BOOLEAN,TEXT,TEXT) FROM PUBLIC;
 
 CREATE TABLE auth.sessions (
   id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),

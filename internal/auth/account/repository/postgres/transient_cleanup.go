@@ -17,6 +17,7 @@ func (r *Repository) purgeTransientAuthData(ctx context.Context, batch int) (int
 		{"email_verifications", "digest", "expires_at"},
 		{"email_bindings", "user_id", "expires_at"},
 		{"mfa_enrollments", "user_id", "expires_at"},
+		{"mfa_recovery_requests", "user_id", "expires_at"},
 		{"mfa_login_challenges", "user_id", "expires_at"},
 		{"password_resets", "digest", "expires_at"},
 		{"email_login_challenges", "digest", "expires_at"},

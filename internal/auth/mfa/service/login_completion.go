@@ -90,19 +90,23 @@ func (s *Login) Complete(ctx context.Context, input CompleteLoginInput) (*LoginS
 }
 
 func (s *Login) admitLogin(ctx context.Context, purpose, subject, ip string, count int) error {
-	subjectKey := "login:" + purpose + ":subject:" + s.cipher.Digest(subject)
+	return admitLogin(ctx, s.cipher, s.limit, s.cfg, purpose, subject, ip, count)
+}
+
+func admitLogin(ctx context.Context, cipher Cipher, limit Limiter, cfg LoginConfig, purpose, subject, ip string, count int) error {
+	subjectKey := "login:" + purpose + ":subject:" + cipher.Digest(subject)
 	if purpose == "start" {
-		subjectKey = s.cipher.Digest("user:" + subject)
+		subjectKey = cipher.Digest("user:" + subject)
 	}
 	for _, budget := range []struct {
 		key   string
 		count int
 	}{
 		{subjectKey, count},
-		{"login:ip:" + s.cipher.Digest(ip), s.cfg.IPLimitPerMinute},
-		{"project", s.cfg.GlobalLimitPerMinute},
+		{"login:ip:" + cipher.Digest(ip), cfg.IPLimitPerMinute},
+		{"project", cfg.GlobalLimitPerMinute},
 	} {
-		allowed, err := s.limit.Allow(ctx, budget.key, budget.count, time.Minute)
+		allowed, err := limit.Allow(ctx, budget.key, budget.count, time.Minute)
 		if err != nil {
 			return domain.ErrUnavailable
 		}

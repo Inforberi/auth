@@ -20,7 +20,7 @@ type options struct {
 	reason      string
 }
 
-const usage = "admin-recovery -environment <dev|test|prod> -user <UUID> -reason <incident reference>\nAUTH_RECOVERY_DATABASE_URL: dedicated operator connection. New password: pipe on descriptor 3.\n"
+const usage = "admin-recovery -environment <dev|test|prod> -user <UUID> -reason <incident reference>\nAUTH_RECOVERY_DATABASE_URL: dedicated operator connection. New password: pipe on descriptor 3.\nadmin-recovery <mfa-approve|mfa-cancel> -environment <dev|test|prod> -user <UUID> -request <UUID> -reason <incident reference>\nMFA decisions do not replace the factor or issue a session.\n"
 
 func main() {
 	if err := run(context.Background(), os.Args[1:]); err != nil {
@@ -50,6 +50,9 @@ func parseOptions(args []string) (options, error) {
 }
 
 func run(ctx context.Context, args []string) error {
+	if len(args) > 0 && (args[0] == "mfa-approve" || args[0] == "mfa-cancel") {
+		return runMFA(ctx, args)
+	}
 	opts, err := parseOptions(args)
 	if errors.Is(err, flag.ErrHelp) {
 		_, err = io.WriteString(os.Stdout, usage)

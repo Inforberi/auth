@@ -28,9 +28,8 @@ func execute(ctx context.Context, opts options, destination string, svc recovery
 	if _, err := fmt.Fprintf(output, "Environment: %q\nDatabase: %q\nOperator: %q\nTarget: %s (%s), auth_version=%d\nReason: %q\nRoles, MFA, contact and account status will not change.\nType exactly:\n%s\n> ", opts.environment, destination+"/"+target.Database, target.Operator, opts.user, target.Status, target.AuthVersion, opts.reason, confirmation); err != nil {
 		return errors.New("cannot display recovery confirmation")
 	}
-	line, err := bufio.NewReader(io.LimitReader(input, 512)).ReadString('\n')
-	if (err != nil && !errors.Is(err, io.EOF)) || strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r") != confirmation {
-		return errors.New("recovery cancelled: confirmation mismatch")
+	if err := confirmRecovery(input, confirmation); err != nil {
+		return err
 	}
 	password, err := passwordInput()
 	if err != nil {
@@ -43,6 +42,14 @@ func execute(ctx context.Context, opts options, destination string, svc recovery
 	}
 	_, err = fmt.Fprintf(output, "Password reset committed; auth_version=%d. Old sessions revoked. Sign in normally with MFA.\n", version)
 	return err
+}
+
+func confirmRecovery(input io.Reader, confirmation string) error {
+	line, err := bufio.NewReader(io.LimitReader(input, 512)).ReadString('\n')
+	if (err != nil && !errors.Is(err, io.EOF)) || strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r") != confirmation {
+		return errors.New("recovery cancelled: confirmation mismatch")
+	}
+	return nil
 }
 
 func publicError(err error) error {
