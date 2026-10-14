@@ -19,6 +19,8 @@ Backend access отделён от способов входа. Пользова
 
 Это внутренние use cases, не опубликованные HTTP-ручки. `service.New(repository, catalog)` получает существующий PostgreSQL pool через access repository; новых pools, Redis caches и workers нет.
 
+A5.2d публикует отдельный protected admin endpoint [первичной привязки почты](email-binding.md), не общий roles/users/status API. Встроенный `accounts.email.bind` разрешает только approval конкретного external-only target; текущие permission/password/MFA/session проверяются в SQL при выдаче и подтверждении. Выдача core permission существующим ролям не автоматическая. Владельцу этого административного permission отключение MFA запрещено, как и владельцам access management permissions.
+
 | Метод | Назначение |
 | --- | --- |
 | `Catalog` | Каталог доступных permissions для будущего UI |

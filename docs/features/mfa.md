@@ -2,7 +2,7 @@
 
 ## Текущее состояние
 
-A5.2b-local подключает MFA к password, Google/Telegram OIDC и email OTP, App, HTTP и Swagger. A5.2c-local добавляет opt-in email proof для external-only с уже verified owned contact. Для password-account по-прежнему нужен password proof: email не снижает его защиту. Первичная безопасная привязка контакта не опубликована; новый external-only пользователь без проверенной почты этим API воспользоваться не может. Полный A5 и release acceptance не закрыты.
+A5.2b-local подключает MFA к password, Google/Telegram OIDC и email OTP, App, HTTP и Swagger. A5.2c-local добавляет opt-in email proof для external-only с verified owned contact; A5.2d-local — [первичную привязку через администратора](email-binding.md). Для password-account по-прежнему нужен password proof: email не снижает его защиту. Без verified contact сначала выполняется binding; самостоятельного добавления доверенной почты одной session cookie нет. Полный A5 и release acceptance не закрыты.
 
 Без подключённого фактора обычный login сохраняется. При enabled TOTP основной вход возвращает HTTP 202, `status=mfa_required`, `challenge`, `expiresAt` и HttpOnly browser cookie, но не новую session cookie. Старую cookie этого браузера очищаем; это не глобальный logout других сессий. После второго фактора создаётся общая SQL-сессия. MFA не заменяет email verification, permissions или основной вход. Factor state нельзя включать/выключать прямым SQL вместо protected flow.
 
@@ -37,7 +37,7 @@ Password flow: войти → `POST /reauthenticate/password` → enrollment sta
 
 Замена/отключение/перевыпуск повышают auth_version, отзывают sessions и удаляют pending MFA challenges/enrollment атомарно. При потерянном успешном response plaintext codes перечитать нельзя: снова primary+MFA и protected regeneration. Если потеряны устройство и все codes, обычный reset MFA не снимает; operator lost-factor recovery ещё не реализован.
 
-SQL mutations Access требуют password/MFA proofs не старше пяти минут и current factor. Владельцу system super_admin либо permissions `access.roles.manage`/`access.assignments.manage` отключение MFA запрещено даже при backup administrator. Disable берёт общий Access advisory lock до user/session locks; current roles читаются после ожидания, role change не обходит policy гонкой. Динамические required-MFA правила других ролей — A6. Public admin users/roles API ещё не опубликован; Account status/delete остаются trusted-caller workflows до отдельной авторизации transport.
+SQL mutations Access требуют password/MFA proofs не старше пяти минут и current factor. Владельцу system super_admin либо permissions `access.roles.manage`/`access.assignments.manage`/`accounts.email.bind` отключение MFA запрещено даже при backup administrator. Disable берёт общий Access advisory lock до user/session locks; current roles читаются после ожидания, role change не обходит policy гонкой. Динамические required-MFA правила других ролей — A6. Из admin users API опубликовано только разрешение initial email binding; общий users/roles/status transport остаётся отдельной задачей.
 
 Google/Telegram-only management доступен только с opt-in email proof на уже проверенную почту. Возраст session/callback не заменяет подтверждение. Password-account может применять MFA при Google/Telegram/email OTP login. Completion повторно проверяет enabled policy подключённого метода; runtime settings — A6.
 
@@ -56,7 +56,7 @@ Google/Telegram-only management доступен только с opt-in email pr
 
 Ошибки новых routes используют общий email OTP/MFA mapper: `invalid_json`, `invalid_email`, `invalid_email_login` 400 (последний — invalid/expired/replayed code); `unauthorized` 401; `fresh_auth_required`/`invalid_origin` 403; `rate_limited` 429; `temporarily_unavailable` 503. Неуспешный запрос не меняет cookies.
 
-**Открытая граница:** первичная безопасная привязка контакта — A5.2d вместе с protected users/operator workflow: отдельно доказать account authority и mailbox ownership. Не добавлять verified contact прямым SQL, не принимать verified=true от UI и не объединять аккаунты по provider email. SQL fixtures используют синтетические заранее проверенные контакты, а не реализованный onboarding. Пока нет такого контакта, external-only enrollment/management закрыты.
+**Первый контакт:** [A5.2d-local](email-binding.md) позволяет администратору с fresh password/MFA и `accounts.email.bind` разрешить конкретную привязку; владелец подтверждает код из своей сессии и сохраняет existing MFA guard. Затем новый login и отдельный email proof для management. Не использовать direct SQL/UI verified=true или auto-merge. Общий first-admin setup и самостоятельный onboarding без оператора ещё не реализованы.
 
 ## Ограничение повторного входа через провайдера
 
@@ -66,7 +66,7 @@ Google/Telegram-only management доступен только с opt-in email pr
 - [Telegram OIDC](https://core.telegram.org/bots/telegram-login#openid-connect) документирует `sub`, `iss`, `iat`, `exp`, но проверяемая гарантия fresh reauthentication через `auth_time`/`max_age` не подтверждена. Это ограничение имеющихся сведений, не утверждение, что Telegram никогда не поддержит такой сценарий. Нельзя подменять authentication time значением `iat` или временем callback.
 - [OIDC Core](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest) описывает `max_age` и `auth_time`; сам стандарт не подтверждает поддержку каждой возможности конкретным провайдером.
 
-По согласованию выбран отдельный одноразовый email proof для management, реализованный в A5.2c-local выше. Passwordless email login не расширяется на external-only; без предварительно verified owned contact операции закрыты. Provider-specific auth_time flow не реализуется как параллельная замена/fallback. Первое безопасное добавление контакта остаётся A5.2d.
+По согласованию выбран отдельный email proof для management, реализованный в A5.2c-local выше; первый contact добавляется через A5.2d-local. Passwordless email login не расширяется на external-only; без verified owned contact management закрыт. Provider-specific auth_time flow не реализуется как параллельная замена/fallback.
 
 ## Внутренний вход с MFA: A5.2a-local
 
@@ -120,7 +120,7 @@ Password reset/change и защитное account recovery не удаляют �
 
 ## Открытые части A5
 
-- Первичная безопасная привязка контакта external-only аккаунту, required MFA по ролям, безопасный first-admin setup и отдельный lost-factor процесс.
+- Required MFA по ролям, безопасный first-admin setup, отдельный lost-factor процесс и самостоятельный external-only onboarding без оператора.
 - Public admin users/roles transport с permissions/fresh-auth/MFA, runtime settings A6 и UI A7; internal SQL role mutations уже защищены.
 - Browser/live authenticator/provider, Redis/SQL faults и mixed load/restore acceptance; локальные HTTP/SQL/Redis checks не заменяют release gates A8.
 - SMS после выбора provider; passkeys вне текущего выпуска.

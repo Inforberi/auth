@@ -12,6 +12,7 @@
 | HTTP/ошибки/Swagger | [contract](../api/contract.md) | `internal/transport/http/router`, feature `transport/http`, `internal/transport/http/httpx` |
 | SQL и миграции | [schema](../schema.md) | `migrations/000001_init.*.sql`, feature `repository/postgres` |
 | Email verification | [email-verification](../features/email-verification.md) | `internal/auth/account` — `verification_*`, delivery |
+| Первая почта external-only | [email-binding](../features/email-binding.md) | Account `email_binding*`, Access SQL authorize-in-transaction, admin approval + owner confirmation; не self-service onboarding/first-admin setup |
 | Обычный password recovery | [password-recovery](../features/password-recovery.md) | `internal/auth/methods/password` — forgot/reset/change |
 | Provisioning/приглашения | [invitations](../features/invitations.md) | Account `provision`/`invitation_*`, password `activate_invitation`, app и router |
 | Временный пароль | [temporary-passwords](../features/temporary-passwords.md) | Password `temporary_*` в domain/service/repository/transport; atomic account provisioning callback, app и router |

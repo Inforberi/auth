@@ -47,6 +47,7 @@ Swagger описывает также выключенные опциональ�
 | Приглашение и установка пароля | Опционально | Создание/перевыпуск внутри Go, активация через HTTP |
 | Временный пароль | Опционально | Даёт только установку постоянного пароля, не доступ к продукту |
 | Блокировка/удаление аккаунта | Внутренний сервис | Административный HTTP/UI ещё не опубликован |
+| Первая почта Google/Telegram-only | Опциональный API | [Администратор разрешает, владелец подтверждает](features/email-binding.md); отдельный permission, fresh password/MFA, без auto-merge и самостоятельного onboarding |
 | Пользовательские роли и permissions | Запланировано | Нет действующего публичного RBAC API |
 | MFA: authenticator, recovery codes, телефон | Опциональный TOTP/recovery API | [A5.2b/c-local](features/mfa.md): login challenge, enrollment/step-up/management; external-only — opt-in email proof на уже verified owned contact. Первичная привязка контакта и SMS не реализованы |
 | Вход по одноразовому email-коду | Опционально | Существующий active аккаунт с verified current password email; без регистрации и MFA |

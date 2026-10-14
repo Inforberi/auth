@@ -1,5 +1,7 @@
 # Текущий шаг
 
+- Выполнен A5.2d-local: admin approval по UUID/permission/fresh password+MFA и owner mail-code confirmation с existing-factor guard; atomic contact/version/revoke/audit, shared delivery/retention, ENV и две ручки. [Контракт](../features/email-binding.md). Самостоятельного onboarding/first-admin bypass нет; следующие открытые части — bootstrap/lost-factor, общий protected users/roles API и policy/settings перед UI. Реальные env/secrets/БД не менялись, только initial migration source; реализация зафиксирована в 9bbfc5e. Проверки — history.
+
 - Выполнен A5.2c-local: opt-in email proof для MFA management external-only с verified owned contact, две session-bound ручки, atomic consume/rotation/proof/audit, existing encrypted delivery/limits. EMAIL_REAUTHENTICATION_ENABLED независим от email login, требует MFA_ENABLED. Password/MFA/Access guards сохранены. [Контракт](../features/mfa.md#подтверждение-управления-mfa-по-почте-a52c-local). Следующий A5.2d — безопасная первичная привязка контакта вместе с protected users/operator workflow; без verified contact external-only onboarding пока не готов. Initial migration расширена; реальные env/secrets/БД не менялись; реализация зафиксирована в 85a023e.
 
 - A5.2c-analysis выявил ограничение provider reauthentication: callback/iat не разрешает MFA management. По согласованию вместо него реализован отдельный email proof выше; первичная безопасная привязка контакта остаётся A5.2d. [Причины](../features/mfa.md#ограничение-повторного-входа-через-провайдера).
@@ -16,7 +18,7 @@
 
 - A4 возобновлён 12 октября: внутренние создание/редактирование ролей, назначение/отзыв, SQL permissions, versions/delegation/fresh-password proof и atomic audit реализованы. [Контракт](../features/roles-permissions.md). Операторский импорт и block/delete guards выполнены выше; A4 целиком не закрыт, public admin routes/MFA/bootstrap/system assignments ещё нет.
 
-Обновлено 13 октября 2026. Рабочая заметка; полные статусы — [implementation](../planning/implementation.md), результаты — [history](../planning/history.md).
+Обновлено 14 октября 2026. Рабочая заметка; полные статусы — [implementation](../planning/implementation.md), результаты — [history](../planning/history.md).
 
 - В AGENTS.md и разделе «Как выполнять» плана закреплено предварительное проектирование ближайших согласованных сценариев без гипотетических абстракций и повторного переписывания логики. Это уточнение правил; рабочий код не менялся.
 
