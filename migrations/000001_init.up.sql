@@ -366,9 +366,16 @@ CREATE TABLE auth.password_audit (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   event TEXT NOT NULL CHECK (event IN ('password_reset_issued','password_reset','password_changed','sessions_revoked','password_reauthenticated',
-    'temporary_password_issued','temporary_password_reissued','temporary_password_started','temporary_password_completed')),
+    'temporary_password_issued','temporary_password_reissued','temporary_password_started','temporary_password_completed','operator_password_reset')),
   actor_id UUID REFERENCES auth.users(id),
   auth_version BIGINT CHECK (auth_version IS NULL OR auth_version>0),
+  operator_name TEXT CHECK (octet_length(operator_name) BETWEEN 1 AND 63),
+  environment TEXT CHECK (environment IN ('dev','test','prod')),
+  reason TEXT CHECK (octet_length(reason) BETWEEN 1 AND 500 AND reason=btrim(reason)),
+  CHECK ((event='operator_password_reset') = (operator_name IS NOT NULL)),
+  CHECK ((operator_name IS NOT NULL) = (environment IS NOT NULL)),
+  CHECK ((operator_name IS NOT NULL) = (reason IS NOT NULL)),
+  CHECK (event<>'operator_password_reset' OR (auth_version IS NOT NULL AND actor_id IS NULL)),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

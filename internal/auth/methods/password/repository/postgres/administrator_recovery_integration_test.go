@@ -15,7 +15,7 @@ import (
 
 func checkAdministratorRecovery(t *testing.T, db *pgxpool.Pool, ctx context.Context, role string) {
 	t.Run("standard-reset-preserves-role", func(t *testing.T) {
-		f := newStatusFixture(t, db, ctx, "admin-reset")
+		f := newMFALoginFixture(t, db, ctx, "admin-reset").statusFixture
 		assignAdministrator(t, db, ctx, role, f.user)
 		accessExec(t, db, ctx, `UPDATE auth.user_emails SET verified_at=clock_timestamp() WHERE user_id=$1`, f.user)
 		challenge := passworddomain.ResetChallenge{Digest: tokengenerate.New().Hash("admin-reset"), Payload: make([]byte, 32), ExpiresAt: time.Now().Add(time.Hour)}
@@ -26,9 +26,27 @@ func checkAdministratorRecovery(t *testing.T, db *pgxpool.Pool, ctx context.Cont
 			t.Fatal(err)
 		}
 		assertAdministratorRole(t, db, ctx, f.user, role, "active")
-		if _, err := f.change(ctx, accountdomain.StatusBlocked, 2); !errors.Is(err, accountdomain.ErrLastAdministrator) {
+		var factors, codes int
+		if err := db.QueryRow(ctx, `SELECT (SELECT count(*) FROM auth.mfa_totp WHERE user_id=$1),(SELECT count(*) FROM auth.mfa_recovery_codes WHERE user_id=$1)`, f.user).Scan(&factors, &codes); err != nil || factors != 1 || codes != 10 {
+			t.Fatal("standard reset changed MFA", err)
+		}
+		if _, err := f.change(ctx, accountdomain.StatusBlocked, 3); !errors.Is(err, accountdomain.ErrLastAdministrator) {
 			t.Fatal("reset lost administrator protection", err)
 		}
+	})
+	t.Run("standard-reset-does-not-unblock", func(t *testing.T) {
+		f := newStatusFixture(t, db, ctx, "admin-blocked-reset")
+		assignAdministrator(t, db, ctx, role, f.user)
+		challenge := passworddomain.ResetChallenge{Digest: tokengenerate.New().Hash("admin-blocked-reset"), Payload: make([]byte, 32), ExpiresAt: time.Now().Add(time.Hour)}
+		if err := f.passwords.IssueReset(ctx, f.email, challenge); err != nil {
+			t.Fatal(err)
+		}
+		accessExec(t, db, ctx, `UPDATE auth.users SET status='blocked' WHERE id=$1`, f.user)
+		if err := f.passwords.ConsumeReset(ctx, challenge.Digest, "replacement"); !errors.Is(err, passworddomain.ErrInvalidReset) {
+			t.Fatal("blocked reset accepted", err)
+		}
+		accessExec(t, db, ctx, `UPDATE auth.sessions SET revoked_at=clock_timestamp() WHERE user_id=$1`, f.user)
+		assertAdministratorRole(t, db, ctx, f.user, role, "blocked")
 	})
 	t.Run("security-containment-preserves-recovery", func(t *testing.T) {
 		f := newChangeFixture(t, db, ctx, "last-admin-protection")

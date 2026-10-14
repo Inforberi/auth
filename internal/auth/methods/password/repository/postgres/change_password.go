@@ -40,17 +40,3 @@ func (r *PasswordRepo) ChangePassword(ctx context.Context, user accountdomain.Us
 		return revokeForPassword(ctx, tx, user, "password_changed")
 	})
 }
-
-func revokeForPassword(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, event string) error {
-	if _, err := tx.Exec(ctx, `UPDATE auth.users SET auth_version=auth_version+1 WHERE id=$1`, user); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, `UPDATE auth.sessions SET revoked_at=clock_timestamp() WHERE user_id=$1 AND revoked_at IS NULL`, user); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, `DELETE FROM auth.password_resets WHERE user_id=$1`, user); err != nil {
-		return err
-	}
-	_, err := tx.Exec(ctx, `INSERT INTO auth.password_audit(user_id,event) VALUES ($1,$2)`, user, event)
-	return err
-}
