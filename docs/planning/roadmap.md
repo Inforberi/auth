@@ -461,6 +461,8 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 ## 6. Текущий статус
 
+14 октября 2026, 10.3b-local: готова отдельная CLI смены пароля существующего super-admin через DB operator membership + точное подтверждение target/version. Сохранены роли/MFA/status/setup marker, атомарны revoke/cleanup/audit; обычный email reset проверен для admin. [Runbook](../features/admin-recovery.md). Внешняя операторская приёмка и lost-factor recovery ещё открыты; runtime HTTP bypass не добавлялся.
+
 14 октября 2026, 10.3a-local: backend первого супер-администратора реализован — operator secret + email/TOTP proof, atomic account/system grant/audit/durable marker и две opt-in ручки. Общие Auth зависимости без новых workers; setup не выдаёт session и не открывается после потери admin. [Контракт](../features/initial-setup.md), проверки — [history](history.md). UI, аварийное recovery и внешняя приёмка пока открыты.
 
 Этапы 0, 1 и 4 завершены. 5.1–5.4 и 5.5a–d реализованы и локально проверены: verification/recovery/session HTTP API/account status, opt-in email change/report/protected password recovery и необходимая часть SQL session security. 5.5e-local завершён, 5.6a deletion и 5.6b-worker реализованы и локально проверены; далее provisioning 5.7. Restore/ban-erasure 5.6b-operations открыты. Provenance — [template-adoption](../template-adoption.md); проверки и границы — ниже. Внешняя приёмка 5.5e-staging остаётся открытой: почта/browser и операционные процедуры ещё не проверены; auth/RBAC/MFA/billing release gates впереди, шаблон не готов к production release.

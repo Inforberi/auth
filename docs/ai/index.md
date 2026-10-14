@@ -15,6 +15,7 @@
 | Email verification | [email-verification](../features/email-verification.md) | `internal/auth/account` — `verification_*`, delivery |
 | Первая почта external-only | [email-binding](../features/email-binding.md) | Account `email_binding*`, Access SQL authorize-in-transaction, admin approval + owner confirmation; не self-service onboarding/first-admin setup |
 | Обычный password recovery | [password-recovery](../features/password-recovery.md) | `internal/auth/methods/password` — forgot/reset/change |
+| Аварийный пароль super-admin | [admin-recovery](../features/admin-recovery.md) | `cmd/admin-recovery`, password operator_recovery и deploy/recovery-grants.sql; DB operator + exact target/version confirmation, без MFA/status/role override |
 | Provisioning/приглашения | [invitations](../features/invitations.md) | Account `provision`/`invitation_*`, password `activate_invitation`, app и router |
 | Временный пароль | [temporary-passwords](../features/temporary-passwords.md) | Password `temporary_*` в domain/service/repository/transport; atomic account provisioning callback, app и router |
 | Смена email и защитный recovery | [email-change](../features/email-change.md) | `internal/auth/account` — `email_change_*`; password `protected_recovery*` |

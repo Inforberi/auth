@@ -18,6 +18,8 @@
 cmd/
 ├── auth/
 │   └── main.go
+├── admin-recovery/
+│   └── main.go
 └── access-catalog/
     └── main.go
 
@@ -360,7 +362,7 @@ UUID пользователя неизменен; email, username и provider di
 
 Auth-only deployment не требует payment secrets, provider connections или billing workers. Entitlements могут работать без оплаты через manual/trial grants. Billing-enabled профиль подключает checkout и обслуживает обязательства. Выключение новых продаж существующего billing deployment не выключает cancellation/webhooks/reconciliation и не удаляет историю/grants. Полное снятие интеграции допускается лишь после завершения обязательств. Нельзя выключением модуля молча разрешить платную функцию: неизвестный feature или недоступный evaluator даёт отказ; отсутствие платных ограничений задаётся явно проектом.
 
-Доступ к настройкам ролей, назначениям, тарифам и оплате защищают разные permissions. Admin не получает Pro, Pro не получает admin. Защищённые admin API публикуются после MFA 13.1: fresh auth, audit, проверка scope и optimistic version/conflict при изменении. Первоначальная настройка супер-админа — одноразовая operator-controlled операция с durable initialized marker: backend 10.3a-local реализован внутри account/service/repository/transport, [контракт](features/initial-setup.md). Email/TOTP доказываются до атомарного создания user/password/factor/system grant; root encryption key не является operator proof. UI-мастер — позже в 14.4u-setup. Потеря admin не открывает setup заново: обычное password recovery по почте, аварийное — отдельно контролируемый CLI/runbook без reset БД или MFA bypass (10.3b ещё открыт). Каталог custom roles и ручные назначения — UI поверх access API, не privileged поля аккаунта; общие management routes/settings/UI и operational acceptance остаются в плане.
+Доступ к настройкам ролей, назначениям, тарифам и оплате защищают разные permissions. Admin не получает Pro, Pro не получает admin. Защищённые admin API публикуются после MFA 13.1: fresh auth, audit, проверка scope и optimistic version/conflict при изменении. Первоначальная настройка супер-админа — одноразовая operator-controlled операция с durable initialized marker: backend 10.3a-local реализован внутри account/service/repository/transport, [контракт](features/initial-setup.md). Email/TOTP доказываются до атомарного создания user/password/factor/system grant; root encryption key не является operator proof. UI-мастер — позже в 14.4u-setup. Потеря admin не открывает setup заново: обычный password recovery по почте или [отдельная operator CLI](features/admin-recovery.md) 10.3b-local без reset БД, смены status/roles или MFA bypass. CLI собирает только password service/repository и ограниченный SQL pool, не HTTP app/Redis/SMTP/root secrets. Lost-factor recovery и внешняя operator acceptance ещё открыты. Каталог custom roles и ручные назначения — UI поверх access API, не privileged поля аккаунта; общие management routes/settings/UI остаются в плане.
 
 UI также позволит вводить/заменять SMTP/provider secrets через отдельный protected API. Чтение даст только configured/masked state, storage защищается шифрованием/secret storage, audit исключает payload. Минимальные operational root key и первый admin остаются вне этой UI-зависимости. Настройки и UI — последние функциональные задачи 14.4s–14.4u перед release 14.5, не уже реализованная возможность; текущие email env остаются startup configuration.
 

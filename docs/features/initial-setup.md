@@ -91,7 +91,7 @@ Email до completion не резервируется. Конкурирующа�
 
 Marker не зависит от наличия роли/активного администратора. Restart, удаление cookies, потеря роли, блокировка или удаление пользователя не открывают setup. Даже БД с прежней системной ролью без marker не принимается за новую установку. Нет публичного reset marker или startup admin/password override. Backup/restore должен сохранять marker; direct SQL reset не является поддерживаемым recovery.
 
-Системная роль не wildcard: пользовательские permissions добавляются через отдельное управление ролями. Полный protected users/roles API, settings/UI и аварийное password/lost-factor восстановление остаются следующими этапами.
+Системная роль не wildcard: пользовательские permissions добавляются через отдельное управление ролями. Для потерянного пароля доступна [операторская CLI](admin-recovery.md), которая не открывает setup и не отключает MFA. Полный protected users/roles API, settings/UI и lost-factor восстановление остаются следующими этапами.
 
 ## Проверки и границы
 
