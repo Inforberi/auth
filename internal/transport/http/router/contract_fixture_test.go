@@ -77,7 +77,7 @@ func contractHandlers(env string) Handlers {
 	return Handlers{
 		Setup:             accounthttp.NewSetup(&contractSetup{}, log),
 		EmailBinding:      accounthttp.NewEmailBinding(&contractEmailBinding{}, log),
-		MFA:               mfahttp.New(&contractMFA{}, &contractMFA{}, log),
+		MFA:               mfahttp.NewWithRecovery(&contractMFA{}, &contractMFA{}, &contractMFARecovery{}, log),
 		Session:           sessionhttp.NewHandler(contractManagement{}, log),
 		Rotation:          sessionhttp.NewRotation(contractRotation{}, log),
 		Reauthentication:  passwordhttp.NewReauthentication(contractReauthentication{}, log),
@@ -93,7 +93,7 @@ func contractHandlers(env string) Handlers {
 		Config: &config.Config{
 			InitialSetup: accountservice.SetupConfig{Enabled: true},
 			EmailBinding: accountservice.EmailBindingConfig{Enabled: true},
-			MFA:          mfaservice.Config{Enabled: true},
+			MFA:          mfaservice.Config{Enabled: true, RecoveryEnabled: true},
 			EmailOTP:     otpservice.Config{Enabled: true, ReauthenticationEnabled: true},
 			Telegram:     telegramservice.Config{Enabled: true},
 			Google:       googleservice.Config{Enabled: true},

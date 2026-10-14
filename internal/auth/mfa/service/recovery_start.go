@@ -31,23 +31,27 @@ type RecoveryCandidate struct {
 }
 
 type Recovery struct {
-	repo   RecoveryRepository
-	cipher Cipher
-	code   Authenticator
-	limit  Limiter
-	issuer string
-	cfg    LoginConfig
+	repo    RecoveryRepository
+	cipher  Cipher
+	code    Authenticator
+	limit   Limiter
+	issuer  string
+	cfg     LoginConfig
+	enabled bool
 }
 
-func NewRecovery(repo RecoveryRepository, cipher Cipher, code Authenticator, limit Limiter, issuer string, cfg LoginConfig) (*Recovery, error) {
-	if repo == nil || cipher == nil || code == nil || limit == nil || issuer == "" || len(issuer) > 128 ||
-		cfg.UserLimitPerMinute < 2 || cfg.IPLimitPerMinute < 2 || cfg.GlobalLimitPerMinute < 2 {
+func NewRecovery(repo RecoveryRepository, cipher Cipher, code Authenticator, limit Limiter, cfg Config, allowPrimary func(string, string) bool) (*Recovery, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	if repo == nil || cipher == nil || code == nil || limit == nil {
 		return nil, errors.New("invalid MFA recovery configuration")
 	}
-	if cfg.AllowPrimary == nil {
-		cfg.AllowPrimary = func(method, _ string) bool { return method == "password" }
+	if allowPrimary == nil {
+		allowPrimary = func(method, _ string) bool { return method == "password" }
 	}
-	return &Recovery{repo: repo, cipher: cipher, code: code, limit: limit, issuer: issuer, cfg: cfg}, nil
+	admission := LoginConfig{AllowPrimary: allowPrimary, UserLimitPerMinute: cfg.UserLimitPerMinute, IPLimitPerMinute: cfg.IPLimitPerMinute, GlobalLimitPerMinute: cfg.GlobalLimitPerMinute}
+	return &Recovery{repo: repo, cipher: cipher, code: code, limit: limit, issuer: cfg.Issuer, cfg: admission, enabled: cfg.Enabled && cfg.RecoveryEnabled}, nil
 }
 
 type StartRecoveryInput struct {
@@ -55,6 +59,9 @@ type StartRecoveryInput struct {
 }
 
 func (s *Recovery) Start(ctx context.Context, input StartRecoveryInput) (*RecoveryCandidate, error) {
+	if !s.enabled {
+		return nil, domain.ErrUnavailable
+	}
 	if !validLoginToken(input.Token) || !validLoginToken(input.Binding) || len(input.IP) > 64 {
 		return nil, domain.ErrInvalidCode
 	}

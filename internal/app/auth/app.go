@@ -67,7 +67,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	}
 	sessionRepo := sessionpostgres.New(pool)
 	sessionSvc := sessionservice.New(now, sessionRepo, tokenGen, cfg.Session)
-	loginSvc, mfaHandler, err := assembleMFA(ctx, pool, rdb, sessionSvc, tokenGen, cfg, log)
+	loginSvc, mfaHandler, mfaDelivery, err := assembleMFA(ctx, pool, rdb, sessionSvc, tokenGen, mail, cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble MFA: %w", err)
 	}
@@ -166,10 +166,11 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 			serve := func(ctx context.Context) error {
 				return httpserver.Run(ctx, log, cfg.Server, handler)
 			}
+			workers := []deliveryWorker{recoverySvc, accountSvc, mfaDelivery}
 			if emailOTPDelivery != nil {
-				return runWithDelivery(ctx, log, serve, recoverySvc, accountSvc, emailOTPDelivery)
+				workers = append(workers, emailOTPDelivery)
 			}
-			return runWithDelivery(ctx, log, serve, recoverySvc, accountSvc)
+			return runWithDelivery(ctx, log, serve, workers...)
 		},
 	}, nil
 }

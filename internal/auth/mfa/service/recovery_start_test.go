@@ -49,7 +49,7 @@ func TestRecoveryStartBoundaries(t *testing.T) {
 	user := accountdomain.UserID("11111111-1111-4111-8111-111111111111")
 	repo := &recoveryRepoStub{loginRepoStub: loginRepoStub{proof: PrimaryProof{UserID: user}}}
 	limit := &limitStub{allowed: true}
-	svc, err := NewRecovery(repo, cipher, totp.Authenticator{}, limit, "Auth", loginTestConfig())
+	svc, err := NewRecovery(repo, cipher, totp.Authenticator{}, limit, recoveryTestConfig(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,5 +97,34 @@ func TestRecoveryStartBoundaries(t *testing.T) {
 	repo.saveErr = errors.New("audit failed")
 	if result, err := svc.Start(context.Background(), input); err == nil || result != nil {
 		t.Fatal("candidate exposed without commit")
+	}
+}
+
+func recoveryTestConfig() Config {
+	return Config{Enabled: true, RecoveryEnabled: true, Issuer: "Auth", ChallengeTTL: 5 * time.Minute, UserLimitPerMinute: 5, IPLimitPerMinute: 10, GlobalLimitPerMinute: 500}
+}
+
+func TestDisabledRecoveryStopsBeforeDependencies(t *testing.T) {
+	cipher, err := secretbox.NewScoped(base64.StdEncoding.EncodeToString(make([]byte, 32)), "mfa:v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, mfaEnabled := range []bool{false, true} {
+		cfg := recoveryTestConfig()
+		cfg.Enabled, cfg.RecoveryEnabled = mfaEnabled, false
+		repo, limit := &recoveryRepoStub{}, &limitStub{allowed: true}
+		svc, err := NewRecovery(repo, cipher, totp.Authenticator{}, limit, cfg, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := svc.Start(context.Background(), StartRecoveryInput{}); !errors.Is(err, domain.ErrUnavailable) {
+			t.Fatal("disabled start", err)
+		}
+		if _, err := svc.Complete(context.Background(), CompleteRecoveryInput{}); !errors.Is(err, domain.ErrUnavailable) {
+			t.Fatal("disabled complete", err)
+		}
+		if repo.calls != 0 || limit.calls != 0 {
+			t.Fatal("disabled recovery touched dependencies")
+		}
 	}
 }

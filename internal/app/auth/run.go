@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -12,6 +13,7 @@ import (
 	accessapp "github.com/Inforberi/financial-intelligence/internal/app/access"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
@@ -84,12 +86,20 @@ func (r *resources) open(ctx context.Context, cfg *config.Config) (*pgxpool.Pool
 	return pool, rdb, log, nil
 }
 
-func startDelivery(ctx context.Context, service interface {
+type deliveryWorker interface {
 	RunDelivery(context.Context, func(error))
-}, log *zap.Logger,
+}
+
+func startDelivery(ctx context.Context, service deliveryWorker, log *zap.Logger,
 ) func() {
 	return startBackground(ctx, func(ctx context.Context) {
-		service.RunDelivery(ctx, func(error) { log.Warn("email delivery processing failed") })
+		service.RunDelivery(ctx, func(err error) {
+			if errors.Is(err, mfadomain.ErrRecoveryDelivery) {
+				log.Error("MFA security notification delivery failed; inspect durable queue")
+				return
+			}
+			log.Warn("email delivery processing failed")
+		})
 	})
 }
 
@@ -103,9 +113,7 @@ func startBackground(ctx context.Context, run func(context.Context)) func() {
 	return func() { cancel(); <-done }
 }
 
-func runWithDelivery(ctx context.Context, log *zap.Logger, serve func(context.Context) error, workers ...interface {
-	RunDelivery(context.Context, func(error))
-},
+func runWithDelivery(ctx context.Context, log *zap.Logger, serve func(context.Context) error, workers ...deliveryWorker,
 ) error {
 	for _, worker := range workers {
 		stop := startDelivery(ctx, worker, log)

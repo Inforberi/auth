@@ -22,6 +22,9 @@ type RecoveryCompletion struct {
 }
 
 func (s *Recovery) Complete(ctx context.Context, input CompleteRecoveryInput) (*RecoveryCodes, error) {
+	if !s.enabled {
+		return nil, domain.ErrUnavailable
+	}
 	if !accountdomain.ValidUserID(accountdomain.UserID(input.RequestID)) || !validLoginToken(input.Token) ||
 		!validLoginToken(input.Binding) || !domain.ValidCode(input.Code) || len(input.IP) > 64 {
 		return nil, domain.ErrInvalidCode

@@ -39,3 +39,24 @@ func TestMFAConfiguration(t *testing.T) {
 		t.Fatal("disabled MFA requires configuration")
 	}
 }
+
+func TestMFARecoveryConfiguration(t *testing.T) {
+	t.Setenv("MFA_ENABLED", "true")
+	t.Setenv("MFA_RECOVERY_ENABLED", "false")
+	var c mfa.Config
+	if err := cleanenv.ReadEnv(&c); err != nil || c.RecoveryEnabled || c.Validate() != nil {
+		t.Fatal("disabled recovery", err)
+	}
+	t.Setenv("MFA_RECOVERY_ENABLED", "true")
+	if err := cleanenv.ReadEnv(&c); err != nil || !c.RecoveryEnabled || c.Validate() != nil {
+		t.Fatal("recovery env", err)
+	}
+	c.Enabled = false
+	if c.Validate() == nil {
+		t.Fatal("recovery without MFA")
+	}
+	t.Setenv("MFA_RECOVERY_ENABLED", "not-a-bool")
+	if err := cleanenv.ReadEnv(&c); err == nil {
+		t.Fatal("malformed recovery bool")
+	}
+}

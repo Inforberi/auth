@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	Enabled              bool          `env:"MFA_ENABLED" env-default:"false"`
+	RecoveryEnabled      bool          `env:"MFA_RECOVERY_ENABLED" env-default:"false"`
 	Issuer               string        `env:"MFA_ISSUER" env-default:"Auth"`
 	ChallengeTTL         time.Duration `env:"MFA_LOGIN_CHALLENGE_TTL" env-default:"5m"`
 	UserLimitPerMinute   int           `env:"MFA_USER_OPERATIONS_PER_MINUTE" env-default:"5"`
@@ -17,6 +18,9 @@ type Config struct {
 }
 
 func (c Config) Validate() error {
+	if c.RecoveryEnabled && !c.Enabled {
+		return fmt.Errorf("MFA_RECOVERY_ENABLED requires MFA_ENABLED")
+	}
 	if !c.Enabled {
 		return nil
 	}

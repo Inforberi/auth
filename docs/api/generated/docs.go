@@ -1477,6 +1477,148 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/auth/mfa/recovery/complete": {
+            "post": {
+                "description": "Requires the same primary challenge/browser, exact current operator-approved request and new TOTP. Rechecks method/status/version/operator identity and membership. Atomically replaces factor/recovery codes, revokes sessions and records audit/durable verified-contact notification. Returns codes once, clears old cookies, never issues a session or disables MFA. Expired, unapproved, cancelled, foreign and replayed requests share invalid_mfa. Five wrong codes exhaust the request and account guessing budget is shared with normal MFA login. Missing verified contact requires independent operator notification.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Complete operator-assisted MFA replacement",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request, primary challenge and new TOTP",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/mfa_http.CompleteRecoveryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfa_http.RecoveryCodesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "codes: invalid_json, invalid_mfa",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code: invalid_origin",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "route absent when disabled",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "code: temporarily_unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/mfa/recovery/start": {
+            "post": {
+                "description": "Opt-in MFA_RECOVERY_ENABLED. Requires a live primary login challenge, its single browser cookie and allowed Origin, not a session. Returns a new candidate once; old MFA stays active. Reissue discards old approval without extending the primary TTL. Independent owner verification and CLI approval are required before completion. No user UUID, actor, version or approved flag accepted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Request operator-assisted MFA replacement",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "primary login challenge",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/mfa_http.StartRecoveryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfa_http.RecoveryCandidateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "codes: invalid_json, invalid_mfa",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code: invalid_origin",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "route absent when disabled",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "code: temporarily_unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/mfa/step-up": {
             "post": {
                 "description": "Requires fresh password proof, or opt-in verified-email proof for an external-only account, within five minutes. Consumes TOTP/recovery, rotates the current session verifier and records fresh MFA context atomically. Does not extend session lifetime.",
@@ -3347,6 +3489,20 @@ const docTemplate = `{
                 }
             }
         },
+        "mfa_http.CompleteRecoveryRequest": {
+            "type": "object",
+            "properties": {
+                "challenge": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "requestId": {
+                    "type": "string"
+                }
+            }
+        },
         "mfa_http.ConfirmEnrollmentRequest": {
             "type": "object",
             "properties": {
@@ -3375,6 +3531,26 @@ const docTemplate = `{
                 }
             }
         },
+        "mfa_http.RecoveryCandidateResponse": {
+            "type": "object",
+            "properties": {
+                "expiresAt": {
+                    "type": "string"
+                },
+                "requestId": {
+                    "type": "string"
+                },
+                "secret": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "uri": {
+                    "type": "string"
+                }
+            }
+        },
         "mfa_http.RecoveryCodesResponse": {
             "type": "object",
             "properties": {
@@ -3383,6 +3559,14 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "mfa_http.StartRecoveryRequest": {
+            "type": "object",
+            "properties": {
+                "challenge": {
+                    "type": "string"
                 }
             }
         },

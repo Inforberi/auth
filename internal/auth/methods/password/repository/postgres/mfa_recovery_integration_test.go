@@ -10,6 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -26,9 +27,9 @@ func recoveryService(t *testing.T, db *pgxpool.Pool, allow func(string, string) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc, err := mfaservice.NewRecovery(mfapostgres.New(db), cipher, mfatotp.Authenticator{}, mfaTestLimit{}, "Auth", mfaservice.LoginConfig{
-		AllowPrimary: allow, UserLimitPerMinute: 5, IPLimitPerMinute: 10, GlobalLimitPerMinute: 500,
-	})
+	svc, err := mfaservice.NewRecovery(mfapostgres.New(db), cipher, mfatotp.Authenticator{}, mfaTestLimit{}, mfaservice.Config{
+		Enabled: true, RecoveryEnabled: true, Issuer: "Auth", ChallengeTTL: 5 * time.Minute, UserLimitPerMinute: 5, IPLimitPerMinute: 10, GlobalLimitPerMinute: 500,
+	}, allow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,6 +58,20 @@ func TestMFARecoveryRequestSchema(t *testing.T) {
 	opPool := operatorPool(t, ctx, db, "auth_mfa_schema_operator")
 	op := mfapostgres.New(opPool)
 	runtimeRepo := mfapostgres.New(operatorPool(t, ctx, db, "auth_mfa_schema_runtime"))
+	if err := runtimeRepo.CheckRecoveryOperator(ctx); err != nil {
+		t.Fatal("dedicated runtime readiness", err)
+	}
+	if err := op.CheckRecoveryOperator(ctx); err == nil {
+		t.Fatal("operator used as runtime")
+	}
+	if err := mfapostgres.New(db).CheckRecoveryOperator(ctx); err == nil {
+		t.Fatal("owner used as runtime")
+	}
+	accessExec(t, db, ctx, `REVOKE EXECUTE ON FUNCTION auth.decide_mfa_recovery(UUID,UUID,BIGINT,BOOLEAN,TEXT,TEXT) FROM auth_mfa_recovery_operator`)
+	if err := runtimeRepo.CheckRecoveryOperator(ctx); err == nil {
+		t.Fatal("missing operator execute grant")
+	}
+	accessExec(t, db, ctx, `GRANT EXECUTE ON FUNCTION auth.decide_mfa_recovery(UUID,UUID,BIGINT,BOOLEAN,TEXT,TEXT) TO auth_mfa_recovery_operator`)
 	svc := recoveryService(t, db, nil)
 	f := newMFALoginFixture(t, db, ctx, "lost-factor")
 	input := f.start(t, ctx)

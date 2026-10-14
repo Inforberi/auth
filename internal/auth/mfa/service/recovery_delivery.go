@@ -89,5 +89,5 @@ func (s *RecoveryDelivery) send(ctx context.Context, payload []byte) error {
 }
 
 func (s *RecoveryDelivery) RunDelivery(ctx context.Context, report func(error)) {
-	delivery.Run(ctx, s.DeliverOne, report)
+	delivery.Run(ctx, s.DeliverOne, func(error) { report(domain.ErrRecoveryDelivery) })
 }

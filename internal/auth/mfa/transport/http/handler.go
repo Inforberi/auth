@@ -25,14 +25,24 @@ type login interface {
 	Complete(context.Context, service.CompleteLoginInput) (*service.LoginSession, error)
 }
 
+type recovery interface {
+	Start(context.Context, service.StartRecoveryInput) (*service.RecoveryCandidate, error)
+	Complete(context.Context, service.CompleteRecoveryInput) (*service.RecoveryCodes, error)
+}
+
 type Handler struct {
 	management management
 	login      login
+	recovery   recovery
 	log        *zap.Logger
 }
 
 func New(management management, login login, log *zap.Logger) *Handler {
-	return &Handler{management: management, login: login, log: log}
+	return NewWithRecovery(management, login, nil, log)
+}
+
+func NewWithRecovery(management management, login login, recovery recovery, log *zap.Logger) *Handler {
+	return &Handler{management: management, login: login, recovery: recovery, log: log}
 }
 
 type StatusResponse struct {

@@ -24,7 +24,7 @@ func TestRecoveryCompletionContract(t *testing.T) {
 	user := accountdomain.UserID("11111111-1111-4111-8111-111111111111")
 	repo := &recoveryRepoStub{loginRepoStub: loginRepoStub{proof: PrimaryProof{UserID: user}}}
 	limit := &limitStub{allowed: true}
-	svc, err := NewRecovery(repo, cipher, totp.Authenticator{}, limit, "Auth", loginTestConfig())
+	svc, err := NewRecovery(repo, cipher, totp.Authenticator{}, limit, recoveryTestConfig(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,9 @@ func TestRecoveryGuessingBudgetSurvivesReissue(t *testing.T) {
 	budget := &recoveryBudget{used: map[string]int{}}
 	cfg := loginTestConfig()
 	cfg.UserLimitPerMinute, cfg.IPLimitPerMinute, cfg.GlobalLimitPerMinute = 100, 100, 1000
-	svc, err := NewRecovery(repo, cipher, totp.Authenticator{}, budget, "Auth", cfg)
+	recoveryCfg := recoveryTestConfig()
+	recoveryCfg.UserLimitPerMinute, recoveryCfg.IPLimitPerMinute, recoveryCfg.GlobalLimitPerMinute = 100, 100, 1000
+	svc, err := NewRecovery(repo, cipher, totp.Authenticator{}, budget, recoveryCfg, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

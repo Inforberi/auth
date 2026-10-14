@@ -25,7 +25,8 @@ func checkFreshAuthentication(t *testing.T, db *pgxpool.Pool, ctx context.Contex
 		{"blocked", `UPDATE auth.users SET status='blocked' WHERE id=$1`},
 		{"deleted", `UPDATE auth.users SET status='blocked',deleted_at=clock_timestamp() WHERE id=$1`},
 		{"revoked", `UPDATE auth.sessions SET revoked_at=clock_timestamp() WHERE user_id=$1`},
-		{"expired", `UPDATE auth.sessions SET expires_at=clock_timestamp() WHERE user_id=$1`},
+		{"expired", `UPDATE auth.sessions SET created_at=statement_timestamp()-interval '2 minutes',
+			expires_at=statement_timestamp()-interval '1 minute' WHERE user_id=$1`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newChangeFixture(t, db, ctx, fmt.Sprintf("fresh-guard-%d", i))

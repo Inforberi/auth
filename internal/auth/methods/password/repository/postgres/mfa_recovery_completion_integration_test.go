@@ -82,11 +82,12 @@ func TestMFARecoveryCompletionSchema(t *testing.T) {
 	db, ctx := schemaFixture(t)
 	migrateFixture(t, db, ctx, "up")
 	accessExec(t, db, ctx, `CREATE ROLE auth_mfa_recovery_operator NOLOGIN;
-		CREATE ROLE auth_mfa_completion_operator LOGIN PASSWORD 'synthetic-recovery-only'`)
+		CREATE ROLE auth_mfa_completion_operator LOGIN PASSWORD 'synthetic-recovery-only';
+		CREATE ROLE auth_mfa_completion_runtime LOGIN PASSWORD 'synthetic-recovery-only'`)
 	t.Cleanup(func() {
 		migrateFixture(t, db, ctx, "down")
 		accessExec(t, db, ctx, `REVOKE CONNECT ON DATABASE auth_schema_test FROM auth_mfa_recovery_operator;
-			DROP ROLE auth_mfa_completion_operator; DROP ROLE auth_mfa_recovery_operator`)
+			DROP ROLE auth_mfa_completion_operator; DROP ROLE auth_mfa_completion_runtime; DROP ROLE auth_mfa_recovery_operator`)
 	})
 	grants, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "..", "..", "deploy", "mfa-recovery-grants.sql"))
 	if err != nil {
@@ -94,6 +95,8 @@ func TestMFARecoveryCompletionSchema(t *testing.T) {
 	}
 	accessExec(t, db, ctx, strings.ReplaceAll(string(grants), "ON DATABASE auth TO", "ON DATABASE auth_schema_test TO"))
 	accessExec(t, db, ctx, `GRANT auth_mfa_recovery_operator TO auth_mfa_completion_operator`)
+	accessExec(t, db, ctx, `GRANT USAGE ON SCHEMA auth TO auth_mfa_completion_runtime;
+		GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA auth TO auth_mfa_completion_runtime`)
 	opPool := operatorPool(t, ctx, db, "auth_mfa_completion_operator")
 	op := mfapostgres.New(opPool)
 	t.Run("race-atomicity-and-normal-login", func(t *testing.T) {
@@ -180,6 +183,7 @@ func TestMFARecoveryCompletionSchema(t *testing.T) {
 		}
 		checkMFARecoveryDelivery(t, db, ctx, f)
 	})
+	checkMFARecoveryHTTP(t, db, operatorPool(t, ctx, db, "auth_mfa_completion_runtime"), ctx, op)
 	checkMFARecoveryRaces(t, db, ctx, op)
 	checkMFARecoveryCompletionGuards(t, db, ctx, op)
 }

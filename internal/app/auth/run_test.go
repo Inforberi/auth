@@ -5,11 +5,14 @@ import (
 	"errors"
 	stdlog "log"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 
+	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 )
@@ -61,6 +64,7 @@ func TestNewReleasesResourcesOnStartupFailure(t *testing.T) {
 type testDeliveryWorker struct {
 	started chan struct{}
 	stopped chan struct{}
+	err     error
 }
 
 func TestBackgroundCancellationJoinsWorker(t *testing.T) {
@@ -77,10 +81,30 @@ func TestBackgroundCancellationJoinsWorker(t *testing.T) {
 	}
 }
 
-func (w *testDeliveryWorker) RunDelivery(ctx context.Context, _ func(error)) {
+func (w *testDeliveryWorker) RunDelivery(ctx context.Context, report func(error)) {
 	close(w.started)
+	if w.err != nil {
+		report(w.err)
+	}
 	<-ctx.Done()
 	close(w.stopped)
+}
+
+func TestSecurityDeliveryReportsWithoutDependencyDetails(t *testing.T) {
+	for _, err := range []error{mfadomain.ErrRecoveryDelivery, errors.New("smtp-private-password")} {
+		core, logs := observer.New(zap.DebugLevel)
+		worker := &testDeliveryWorker{started: make(chan struct{}), stopped: make(chan struct{}), err: err}
+		stop := startDelivery(t.Context(), worker, zap.New(core))
+		<-worker.started
+		stop()
+		entries := logs.All()
+		if len(entries) != 1 || strings.Contains(entries[0].Message, "private-password") || len(entries[0].Context) != 0 {
+			t.Fatal("unsafe delivery log", entries)
+		}
+		if errors.Is(err, mfadomain.ErrRecoveryDelivery) && entries[0].Level != zap.ErrorLevel {
+			t.Fatal("security delivery error is not actionable")
+		}
+	}
 }
 
 func TestDeliveryStopsBeforeResourcesClose(t *testing.T) {

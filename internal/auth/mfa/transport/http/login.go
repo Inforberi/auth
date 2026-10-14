@@ -48,16 +48,23 @@ func (h *Handler) CompleteLogin(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 400, "invalid_json", "invalid JSON")
 		return
 	}
-	binding := ""
-	if cookies := r.CookiesNamed(LoginCookie); len(cookies) == 1 {
-		binding = cookies[0].Value
-	}
-	result, err := h.login.Complete(r.Context(), service.CompleteLoginInput{Token: input.Challenge, Binding: binding, Code: input.Code, Recovery: input.Recovery, UserAgent: httpx.UserAgent(r), IP: httpx.IP(r)})
+	result, err := h.login.Complete(r.Context(), service.CompleteLoginInput{Token: input.Challenge, Binding: loginBinding(r), Code: input.Code, Recovery: input.Recovery, UserAgent: httpx.UserAgent(r), IP: httpx.IP(r)})
 	if err != nil {
 		h.respondError(w, r, err)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: LoginCookie, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: -1, Expires: time.Unix(1, 0)})
+	clearLoginCookie(w)
 	sessionhttp.SetSessionCookie(w, result.Token, result.ExpiresAt)
 	httpx.JSON(w, 200, StatusResponse{Status: "ok"})
+}
+
+func loginBinding(r *http.Request) string {
+	if cookies := r.CookiesNamed(LoginCookie); len(cookies) == 1 {
+		return cookies[0].Value
+	}
+	return ""
+}
+
+func clearLoginCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{Name: LoginCookie, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: -1, Expires: time.Unix(1, 0)})
 }

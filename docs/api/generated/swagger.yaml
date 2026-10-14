@@ -220,6 +220,15 @@ definitions:
       recovery:
         type: boolean
     type: object
+  mfa_http.CompleteRecoveryRequest:
+    properties:
+      challenge:
+        type: string
+      code:
+        type: string
+      requestId:
+        type: string
+    type: object
   mfa_http.ConfirmEnrollmentRequest:
     properties:
       code:
@@ -238,12 +247,30 @@ definitions:
       uri:
         type: string
     type: object
+  mfa_http.RecoveryCandidateResponse:
+    properties:
+      expiresAt:
+        type: string
+      requestId:
+        type: string
+      secret:
+        type: string
+      status:
+        type: string
+      uri:
+        type: string
+    type: object
   mfa_http.RecoveryCodesResponse:
     properties:
       codes:
         items:
           type: string
         type: array
+    type: object
+  mfa_http.StartRecoveryRequest:
+    properties:
+      challenge:
+        type: string
     type: object
   mfa_http.StatusResponse:
     properties:
@@ -1455,6 +1482,112 @@ paths:
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
       summary: Regenerate recovery codes
+      tags:
+      - MFA
+  /api/v1/auth/mfa/recovery/complete:
+    post:
+      consumes:
+      - application/json
+      description: Requires the same primary challenge/browser, exact current operator-approved
+        request and new TOTP. Rechecks method/status/version/operator identity and
+        membership. Atomically replaces factor/recovery codes, revokes sessions and
+        records audit/durable verified-contact notification. Returns codes once, clears
+        old cookies, never issues a session or disables MFA. Expired, unapproved,
+        cancelled, foreign and replayed requests share invalid_mfa. Five wrong codes
+        exhaust the request and account guessing budget is shared with normal MFA
+        login. Missing verified contact requires independent operator notification.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: request, primary challenge and new TOTP
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/mfa_http.CompleteRecoveryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.RecoveryCodesResponse'
+        "400":
+          description: 'codes: invalid_json, invalid_mfa'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: route absent when disabled
+          schema:
+            type: string
+        "429":
+          description: 'code: rate_limited'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: 'code: temporarily_unavailable'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Complete operator-assisted MFA replacement
+      tags:
+      - MFA
+  /api/v1/auth/mfa/recovery/start:
+    post:
+      consumes:
+      - application/json
+      description: Opt-in MFA_RECOVERY_ENABLED. Requires a live primary login challenge,
+        its single browser cookie and allowed Origin, not a session. Returns a new
+        candidate once; old MFA stays active. Reissue discards old approval without
+        extending the primary TTL. Independent owner verification and CLI approval
+        are required before completion. No user UUID, actor, version or approved flag
+        accepted.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: primary login challenge
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/mfa_http.StartRecoveryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.RecoveryCandidateResponse'
+        "400":
+          description: 'codes: invalid_json, invalid_mfa'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: route absent when disabled
+          schema:
+            type: string
+        "429":
+          description: 'code: rate_limited'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: 'code: temporarily_unavailable'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Request operator-assisted MFA replacement
       tags:
       - MFA
   /api/v1/auth/mfa/step-up:

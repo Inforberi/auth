@@ -12,6 +12,24 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
+func (r *Repository) CheckRecoveryOperator(ctx context.Context) error {
+	var ready bool
+	err := r.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_catalog.pg_roles g
+		JOIN pg_catalog.pg_proc p ON p.oid=pg_catalog.to_regprocedure('auth.decide_mfa_recovery(uuid,uuid,bigint,boolean,text,text)')
+		WHERE g.rolname='auth_mfa_recovery_operator' AND NOT g.rolcanlogin AND p.prosecdef
+		AND pg_catalog.has_function_privilege(g.oid,p.oid,'EXECUTE')
+		AND NOT pg_catalog.pg_has_role(session_user,g.oid,'MEMBER')
+		AND NOT pg_catalog.has_function_privilege(session_user,p.oid,'EXECUTE')
+		AND NOT pg_catalog.has_function_privilege(current_user,p.oid,'EXECUTE'))`).Scan(&ready)
+	if err != nil {
+		return err
+	}
+	if !ready {
+		return errors.New("MFA recovery requires a dedicated NOLOGIN operator group, decision function grants and a non-operator runtime connection")
+	}
+	return nil
+}
+
 func (r *Repository) RecoveryTarget(ctx context.Context, user accountdomain.UserID, request string) (*service.RecoveryTarget, error) {
 	var result service.RecoveryTarget
 	err := r.db.QueryRow(ctx, `SELECT current_database(),session_user::text,c.state,c.auth_version,c.expires_at
