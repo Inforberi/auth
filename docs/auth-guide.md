@@ -43,7 +43,7 @@ Swagger описывает также выключенные опциональ�
 | Отвязка Telegram от password-аккаунта | Опционально | Та же свежая проверка; остаётся постоянный пароль; все сессии отзываются |
 | Отвязка последнего входа у Telegram-only пользователя | Не поддерживается | Сейчас нет альтернативного доказательства и сценария безопасного восстановления |
 | Список и отзыв собственных сессий | Реализовано | Только свои сессии; нет административного списка всех пользователей |
-| Внутреннее создание пользователя | Внутренний сервис | Само по себе не выдаёт пароль, сессию или роль |
+| Ручное создание пользователя | Protected admin API | accounts.users.manage + fresh password/MFA; само по себе не выдаёт сессию или роль |
 | Приглашение и установка пароля | Опционально | Создание/перевыпуск внутри Go, активация через HTTP |
 | Временный пароль | Опционально | Даёт только установку постоянного пароля, не доступ к продукту |
 | Блокировка/удаление аккаунта | Внутренний сервис | Административный HTTP/UI ещё не опубликован |
@@ -426,11 +426,11 @@ Logout — только текущая сессия. Logout-all — все те�
 
 ### 7.1. Создание оператором
 
-Внутренний `App.Provisioning.Provision` принимает actor UUID, UUID idempotency key, optional email и Invite. Профиль включается INVITATIONS_ENABLED.
+POST `/api/v1/admin/users` принимает `{idempotencyKey,email?,invite?}`; профиль включается INVITATIONS_ENABLED вместе с MFA_ENABLED. Использует существующий `App.Provisioning.Provision`, но principal берётся только из текущей SQL-сессии, не JSON. [Полный контракт](features/invitations.md#admin-api-132a2-local).
 
 Без Invite создаётся pending account/profile и optional неподтверждённый контакт. С Invite нужен email и ставится приглашение. Ни роль, ни обычный пароль, ни сессия автоматически не выдаются.
 
-Actor нужен для attribution. Он **не подтверждает полномочия** вызывающего. Сегодня это функция для доверенного Go caller, не безопасная публичная admin-ручка.
+Нужны `accounts.users.manage` и свежие password + MFA; актуальные permissions/session/factor проверяются внутри транзакции, включая replay. NoRefreshAuth, exact Origin и no-store; никакой HTTP Authorize → trusted ActorID-only записи.
 
 Повтор той же команды с тем же actor/key и нормализованными параметрами возвращает прежний UUID без повторной выдачи. Другие параметры с тем же ключом конфликтуют. Не заменяйте idempotency key новым на каждый сетевой retry.
 
@@ -438,19 +438,19 @@ Actor нужен для attribution. Он **не подтверждает пол
 
 Основной рекомендуемый операторский сценарий:
 
-1. Доверенный backend создаёт пользователя и invitation.
+1. Авторизованный администратор вызывает POST `/api/v1/admin/users` с email и `invite:true`.
 2. Письмо ведёт на frontend activation page.
 3. Пользователь задаёт постоянный пароль через invitations/activate.
 4. В одной транзакции подтверждается приглашённый email, устанавливается пароль и активируется тот же UUID.
 5. Сессия не создаётся: затем обычный login.
 
-Просроченное приглашение можно перевыпустить через внутренний ReissueInvitation при допустимом состоянии и cooldown. Старые token/job становятся недействительны. Публичного POST создания/перевыпуска приглашений сейчас нет.
+Просроченное приглашение можно перевыпустить POST `/api/v1/admin/users/{id}/invitation` с новым idempotencyKey при допустимом состоянии и cooldown. Старые token/job становятся недействительны. Повтор того же ключа — replay без новой отправки; актуальные management права и proofs нужны и для него.
 
 ### 7.3. Временный пароль
 
 Дополнительный выключенный профиль, а не обязательная часть обычной регистрации.
 
-1. Доверенный backend вызывает `App.TemporaryPasswords.Provision`.
+1. Администратор вызывает POST `/api/v1/admin/users/temporary-password` с `{idempotencyKey,email}`; нужны TEMPORARY_PASSWORD_ENABLED, MFA_ENABLED и `accounts.users.manage` + fresh password/MFA.
 2. Сервис генерирует случайный временный пароль и отдаёт plaintext только при первом успешном вызове.
 3. Оператор передаёт его по защищённому каналу; готового admin UI выдачи пока нет.
 4. Пользователь вызывает temporary-password/login.
@@ -1082,7 +1082,7 @@ Setup token разрешает только установку пароля. О�
 }
 ```
 
-Поведение и ограничения: Активирует существующий pending UUID, устанавливает пароль и подтверждает приглашённый email. Не выдаёт роль и session cookie; затем обычный login. Создание/перевыпуск invitation — только внутренние команды.
+Поведение и ограничения: Активирует существующий pending UUID, устанавливает пароль и подтверждает приглашённый email. Не выдаёт роль и session cookie; затем обычный login. Создание/перевыпуск invitation — отдельные защищённые [admin-команды](features/invitations.md#admin-api-132a2-local).
 
 Ошибки сценария по текущему Swagger:
 
@@ -1620,8 +1620,8 @@ Request дополнительно ограничен 10/IP/min и 3/email/15min
 | INVITATION_URL | https://localhost:8443/activate-account | Frontend задания пароля |
 | INVITATION_TTL | 24h | Срок invitation, 1m–7d |
 | INVITATION_REISSUE_COOLDOWN | 1m | Интервал выдач одному user, 1s–24h |
-| INVITATION_REISSUE_ACTOR_ATTEMPTS_PER_MINUTE | 30 | Попытки перевыпуска одного инициатора за минуту |
-| INVITATION_REISSUE_PROJECT_ATTEMPTS_PER_MINUTE | 100 | Общий budget перевыпуска проекта |
+| INVITATION_ISSUE_ACTOR_ATTEMPTS_PER_MINUTE | 30 | Общие попытки создания/выдачи/перевыпуска invitations одного инициатора за минуту, включая replay |
+| INVITATION_ISSUE_PROJECT_ATTEMPTS_PER_MINUTE | 100 | Общий минутный budget этих команд всех API проекта; не capacity/RPS |
 | ACTIVATION_GLOBAL_LIMIT | 100 | Общие activation attempts за минуту |
 
 Activation также ограничена 10/IP/min. Issuance/reissue metadata не является публичным токеном и не удаляется автоматически как обычная истёкшая сессия.
@@ -1799,7 +1799,7 @@ GC/heap/goroutine/connection leak проверки под длительной �
 
 Пользовательская роль объединяет permissions. Protected API позволяет создать свою обычную роль и вручную назначить/отозвать её у пользователя. Название роли не подменяет серверную проверку конкретных полномочий. [Ручки, версии, примеры и ограничения](features/roles-permissions.md#http-api-a43-local).
 
-Roles/assignments API уже использует текущие permissions и transaction-owned audit/fresh-password/MFA guards; `/api/v1/auth/access` возвращает собственные права для UI, не заменяя backend authorization. Общий users create/invite/temporary-password admin transport ещё впереди. Административные permissions отличаются от публичных user methods этого руководства. Системная роль не управляется обычными role endpoints.
+Roles/assignments и users create/invite/temporary-password API используют текущие permissions и transaction-owned audit/fresh-password/MFA guards; `/api/v1/auth/access` возвращает собственные права для UI, не заменяя backend authorization. Создание и role assignment — разные действия с разными permissions. Административные permissions отличаются от публичных user methods этого руководства. Системная роль не управляется обычными role endpoints.
 
 Последний активный super-admin должен быть защищён от случайного удаления/лишения доступа. Роль «оплатил» не нужна текущему auth релизу; финансовые статусы отложены.
 

@@ -2,9 +2,9 @@
 
 ## Реализованный профиль 5.7a
 
-`account/service/ProvisionService.Provision` — внутренний сценарий, независимый от public registration. При включённом профиле доступен через `App.Provisioning`. Actor UUID задаёт attribution, но не заменяет authorization. Административной HTTP-ручки пока нет: её подключение требует permissions, MFA, fresh-auth и CSRF в 10/13.1.
+`account/service/ProvisionService.Provision` — сценарий, независимый от public registration, доступный через `App.Provisioning` и protected admin API 13.2a.2-local. Вместо доверенного ActorID принимает проверенный principal (user UUID + hash текущей SQL-сессии). `accounts.users.manage`, active/current session, свежие password + MFA и существующий factor проверяются в транзакции записи, в том числе при replay. UUID сам по себе полномочием не является.
 
-Вход: actor UUID, отдельный UUID idempotency key, необязательный email, флаг Invite. Без Invite создаются UUID/профиль и optional неподтверждённый контакт. С Invite обязателен email; создаются также одноразовый invitation challenge и encrypted mail intent. Все записи, включая audit, коммитятся одной SQL-транзакцией. Аккаунт имеет status `pending`, пароль/сессия/роли/permissions/платные grants не выдаются.
+Вход: principal из session context, отдельный UUID idempotency key, необязательный email, флаг Invite. Без Invite создаются UUID/профиль и optional неподтверждённый контакт. С Invite обязателен email; создаются также одноразовый invitation challenge и encrypted mail intent. Все записи, включая audit, коммитятся одной SQL-транзакцией. Аккаунт имеет status `pending`, пароль/сессия/роли/permissions/платные grants не выдаются.
 
 Ключ команды scoped по actor. Повтор с теми же нормализованными параметрами возвращает прежний UUID с Reused=true, без повторного письма. Другие параметры с тем же ключом — конфликт. Чужой/занятый email — конфликт, без auto-merge, новых полномочий или изменения существующего пользователя. Повтор после активации/expiry/delete не создаёт аккаунт или invitation заново. Durable command identity и activation marker сохраняются вместе с UUID; это не полный PII erasure.
 
@@ -22,7 +22,7 @@ Block/delete атомарно отменяют invitation/outbox. Простое
 
 | Env | Default | Значение |
 | --- | --- | --- |
-| INVITATIONS_ENABLED | false | Внутренний provisioning и публичный POST активации |
+| INVITATIONS_ENABLED | false | Provisioning, admin create/reissue и публичный POST активации; admin routes также требуют MFA_ENABLED |
 | INVITATION_URL | не задан | Доверенный frontend URL; HTTPS обязателен в production |
 | INVITATION_TTL | 24h | Срок одноразового приглашения; 1m–7d |
 | ACTIVATION_GLOBAL_LIMIT | 100 | Попытки активации в минуту для всего проекта |
@@ -33,7 +33,7 @@ Invitation delivery — третья очередь существующего a
 
 ## Перевыпуск приглашения — 5.7b
 
-`App.Provisioning.ReissueInvitation` принимает actor UUID, существующий user UUID и отдельный UUID idempotency key. Создания нового пользователя, смены адреса, назначения прав и активации здесь нет. Actor — attribution; будущий admin transport обязан отдельно проверить permissions/MFA/fresh-auth/CSRF.
+`App.Provisioning.ReissueInvitation` принимает principal, существующий user UUID и отдельный UUID idempotency key. Создания нового пользователя, смены адреса, назначения прав и активации здесь нет. Guard проверяется перед чтением адреса и повторно в транзакции перевыпуска; это разные гарантии доступа к контакту и актуальности записи, не предварительный HTTP Authorize вместо SQL enforcement.
 
 Новая команда допустима только для provisioned pending account без credentials, verification и activation marker, с исходным сохранённым контактом. SQL блокирует пользователя до контакта и повторно проверяет актуальность. В одной транзакции записываются command identity, замена challenge, encrypted outbox, время отправки и `reissued` audit. Старый token/job удаляется; новый token привязан к текущей auth_version и имеет новый TTL. Ошибка любого шага откатывает всё.
 
@@ -42,14 +42,35 @@ Invitation delivery — третья очередь существующего a
 | Env | Default | Назначение |
 | --- | --- | --- |
 | `INVITATION_REISSUE_COOLDOWN` | 1m | Минимальный интервал между выдачами для одного пользователя; 1s–24h |
-| `INVITATION_REISSUE_ACTOR_ATTEMPTS_PER_MINUTE` | 30 | Попытки команды за минутное окно для одного инициатора |
-| `INVITATION_REISSUE_PROJECT_ATTEMPTS_PER_MINUTE` | 100 | Попытки команды за минутное окно всех API проекта с общим Redis/scoped key |
+| `INVITATION_ISSUE_ACTOR_ATTEMPTS_PER_MINUTE` | 30 | Общие попытки создания аккаунта/выдачи/перевыпуска за минутное окно одного инициатора, включая replay |
+| `INVITATION_ISSUE_PROJECT_ATTEMPTS_PER_MINUTE` | 100 | Общие попытки этих команд всех API проекта с общим Redis/scoped key |
 
-Квоты не означают RPS сервиса. Уже отправленное или находящееся в SMTP письмо отозвать нельзя: даже если старое письмо придёт после перевыпуска, его token недействителен. Delivery/GC остаются прежними, новых workers и HTTP-ручек нет. Durable command metadata хранится как существующие provisioning records; автоматическая очистка ключей не добавлена, чтобы не превращать поздний retry в новое письмо. После retention-удаления исходного контакта replay не восстанавливает его.
+Квоты не означают RPS сервиса. Прежние `INVITATION_REISSUE_ACTOR_ATTEMPTS_PER_MINUTE` / `INVITATION_REISSUE_PROJECT_ATTEMPTS_PER_MINUTE` переименованы в `INVITATION_ISSUE_*`: теперь бюджет общий с первичной выдачей. Старые ENV имена больше не читаются; если они были настроены, оператор должен перенести значения. Реальные ENV автоматически не меняются. Redis namespace сохранён, чтобы обновление не обнуляло действующий budget. Cooldown по-прежнему отдельный `INVITATION_REISSUE_COOLDOWN`.
+
+Уже отправленное или находящееся в SMTP письмо отозвать нельзя: даже если старое письмо придёт после перевыпуска, его token недействителен. Delivery/GC остаются прежними, новых workers нет. Durable command metadata хранится как существующие provisioning records; автоматическая очистка ключей не добавлена, чтобы не превращать поздний retry в новое письмо. После retention-удаления исходного контакта replay не восстанавливает его.
+
+## Admin API 13.2a.2-local
+
+| Метод | Body | Результат |
+| --- | --- | --- |
+| POST `/api/v1/admin/users` | `{idempotencyKey,email?,invite?}` | Первый commit 201 `{userId,reused:false}`, replay 200 `{userId,reused:true}` без новой отправки |
+| POST `/api/v1/admin/users/{id}/invitation` | `{idempotencyKey}` | 200 `{userId,reused}`; отдельная команда отправки для существующего pending provisioned account |
+
+Обе ручки требуют включённые `INVITATIONS_ENABLED` и `MFA_ENABLED`, `__Host-session`, точный разрешённый Origin и application/json; без профиля 404, без сессии 401. NoRefreshAuth не продлевает session/freshness; ответы no-store, новых cookies нет. Actor/roles/verified/password из JSON не принимаются. Service один раз проверяет email; SQL constraints и current-state checks остаются отдельной транзакционной гарантией. SQL mutations берут общий Access lock до user/session locks, чтобы committed отзыв management permission был виден после ожидания.
+
+Пример создания с приглашением:
+
+```json
+{"idempotencyKey":"11111111-1111-4111-8111-111111111111","email":"user@example.com","invite":true}
+```
+
+`invite` по умолчанию false: это только pending UUID/profile, не готовый доступ. Без контакта приглашение отправить нельзя. Для повторной отправки использовать отдельную reissue-команду, не менять параметры старого ключа. JSON не содержит raw invitation token; письмо отправляет существующий outbox worker после commit. HTTP success означает постановку intent, не подтверждение получения письма. Роли назначаются отдельно через [Access API](roles-permissions.md#http-api-a43-local).
+
+Ошибки: 400 `invalid_json`/`invalid_email`; 403 `forbidden`/`fresh_auth_required`/`invalid_origin`; 409 `provisioning_conflict` (в том числе некорректный UUID команды/цели), `email_unavailable`, `target_unavailable`, `issuance_cooldown`; 429 `rate_limited` с Retry-After 60; 503 `temporarily_unavailable`. Текущие permissions/password/MFA обязательны и для committed replay после смены сессии: idempotency не заменяет authority. До подготовки письма применяются Redis actor/project budgets; таймаут SQL/общей операции — 5s. Административное чтение адреса и последующая запись используют короткие отдельные транзакции; SMTP/Redis не вызываются под SQL locks.
 
 ## Открытые границы профиля
 
-Дополнительный профиль 5.7c-local реализован отдельно: сервис генерирует временный пароль с TTL, первый вход разрешает только установку постоянного пароля, account остаётся pending до смены. Credentials/полномочие отзываются атомарно; временный пароль не подтверждает email, не создаёт session и не назначает роли. Приглашение остаётся основным способом; [контракт](temporary-passwords.md), [план безопасной operator выдачи](../planning/implementation.md#57c-опциональный-временный-пароль). Admin/UI и MFA остаются впереди.
+Дополнительный профиль временного пароля реализован отдельно: сервис генерирует пароль с TTL, первый вход разрешает только установку постоянного пароля, account остаётся pending до смены. Credentials/полномочие отзываются атомарно; временный пароль не подтверждает email, не создаёт session и не назначает роли. Приглашение остаётся основным способом; [контракт и admin выдача](temporary-passwords.md). UI и внешняя приёмка остаются впереди; MFA/admin backend уже подключены локально.
 
 Это backend password-профиль, не административный UI и не production acceptance. Перевыпуск 5.7b реализован отдельно; повтор исходной provisioning-команды не является resend. Активация bare account без контакта/другими методами — после реализации соответствующих proof flows 7/8. Не восстанавливать доступ ручными SQL UPDATE или повторным public registration.
 

@@ -1,6 +1,10 @@
 # Текущий шаг
 
-- Реализация A4.3-local / 13.2a.1 зафиксирована в `bda012a`; следующий backend-подэтап — 13.2a.2. Обязательная внешняя приёмка A8-admin-e2e и 13.1d.4 остаётся открытой.
+- Реализация 13.2a.2-local зафиксирована в `86f6f07`; далее 10.6 users list/detail и protected lifecycle. Внешние A8-admin-e2e/13.1d.4 остаются открытыми.
+
+- Выполнен 13.2a.2-local: четыре protected admin issuance routes; existing provisioning/invitation/temporary use cases теперь требуют session principal и SQL accounts.users.manage/fresh password/MFA, включая committed replay и повторный guard после hashing. Current permissions после Access lock, явный Read Committed; new first admin получает четыре core permissions, existing assignments не меняются. [Контракт](../features/invitations.md#admin-api-132a2-local), [temporary](../features/temporary-passwords.md#admin-api-132a2-local). ENV лимитов приглашений переименованы INVITATION_REISSUE_* → INVITATION_ISSUE_* (только ACTOR/PROJECT_ATTEMPTS_PER_MINUTE, cooldown прежний); значения реального ENV не трогались. Все tests/lint/Swagger/race и full disposable SQL прошли, проверены revoke-during-hash/wait и one-secret/16 requests. Далее bounded users list/detail и protected status/delete по 10.6 с transaction-owned guards; system assignments/policy/settings/UI ещё открыты. Обязательная внешняя приёмка A8-admin-e2e и 13.1d.4 остаётся незакрытой. Schema/dependencies/pools/workers/рабочие БД не менялись. Коммит только по запросу.
+
+- Реализация предыдущего A4.3-local / 13.2a.1 зафиксирована в `bda012a`.
 
 - 15 октября: A4.3-local / 13.2a.1 — Access HTTP (catalog/list/detail/create/update/grant/revoke/self/target), shared SQL mutation guards и NoRefreshAuth/Origin/mapper/Swagger; target read permission+session в одном SQL statement. [Контракт](../features/roles-permissions.md#http-api-a43-local). Далее 13.2a.2: protected provisioning/invitation/temporary password, сначала transaction-owned authority вместо trusted ActorID-only; не добавлять TOCTOU Authorize → trusted write. По просьбе пользователя A8-admin-e2e со всеми synthetic workflows явно оставлен обязательным перед выпуском, вместе с открытым 13.1d.4 drill. Рабочие ENV/БД не менялись; новых dependencies/schema/workers нет. Коммит только по запросу.
 

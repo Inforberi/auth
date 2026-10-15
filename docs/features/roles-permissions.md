@@ -6,12 +6,14 @@ Backend access отделён от способов входа. Пользова
 
 Каталог объявляет поддерживаемые действия проекта через `settings.NewCatalog`. Permission имеет стабильный key, name, description и group. Пример ключей: `reports.read`, `reports.phone.read`, `reports.salary.read`. Произвольное название в UI не создаёт действующий доступ: backend данных должен проверять соответствующий key.
 
-Два системных действия встроены в каталог:
+Системные действия встроены в каталог:
 
 | Permission | Действие |
 | --- | --- |
 | `access.roles.manage` | Создание и редактирование обычных ролей |
 | `access.assignments.manage` | Назначение и отзыв обычных ролей |
+| `accounts.email.bind` | Одобрение первичного контакта external-only пользователя |
+| `accounts.users.manage` | Создание pending пользователей, выдача/перевыпуск приглашений и временных паролей |
 
 Продукт не может подменить эти записи. Каталог ограничен 512 permissions, одна роль — 128 permissions; повторные ключи и wildcard отклоняются. Ключ — lowercase ASCII с сегментами через точку, максимум 96 байт. Название и описание поддерживают UTF-8 и имеют ограничения размера.
 
@@ -104,7 +106,9 @@ Admin target read проверяет actor/session/permission и читает ta
 
 Ошибки: 400 `invalid_json`/`invalid_query`/`invalid_role`/`invalid_permission`, 401 `unauthorized`, 403 `forbidden`/`fresh_auth_required`/`invalid_origin`, 404 `role_not_found`, 409 `access_conflict`/`target_unavailable`, 503 `temporarily_unavailable`. Domain validation выполняется в service один раз, mapper общий для Access; raw SQL/DSN/secret не попадают в ответы или логи. Reads role list/detail требуют до двух bounded SQL запросов после session middleware; self/target access — по одному. Mutations используют существующие bounded транзакции с атомарным audit, без дополнительного предварительного HTTP Authorize.
 
-Общий users create/invite/temporary-password transport ещё не опубликован: внутренний ActorID-only provisioning должен получить transaction-owned permission/fresh-auth guard в 13.2a.2. Браузерная сквозная приёмка с синтетическими пользователями, реальными MFA/SMTP и UI обязательна в A8-admin-e2e; локальные тесты её не заменяют.
+Users create/invite/temporary-password transport опубликован в 13.2a.2-local с `accounts.users.manage`, verified principal и transaction-owned password/MFA guard: [создание/приглашения](invitations.md#admin-api-132a2-local), [временные пароли](temporary-passwords.md#admin-api-132a2-local). Permission не даёт права назначать роли, блокировать/удалять или сбрасывать пароль active аккаунта. Владельцу этого management permission отключение MFA запрещено. Браузерная сквозная приёмка с синтетическими пользователями, реальными MFA/SMTP и UI обязательна в A8-admin-e2e; локальные тесты её не заменяют.
+
+Новая чистая установка через initial setup получает четыре core permissions. Уже сохранённые роли/назначения автоматически не меняются: при обновлении старого тестового развёртывания `accounts.users.manage` требует отдельного контролируемого DBA upgrade существующей системной роли с audit/incident; не direct SQL из UI и не self-promotion через обычный API. Нового bootstrap bypass, автоматического wildcard grant или reset БД для этого нет.
 
 ## Хранение
 
