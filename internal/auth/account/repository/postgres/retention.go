@@ -58,6 +58,7 @@ func (r *Repository) PurgeRetention(ctx context.Context, cfg service.RetentionCo
 			"account_deletion_audit", "email_change_audit", "invitation_audit",
 			"identity_audit",
 			"access_audit",
+			"auth_settings_audit",
 			"email_login_audit",
 			"mfa_audit",
 		} {

@@ -65,6 +65,29 @@ CREATE TABLE auth.user_roles (
 );
 CREATE INDEX user_roles_by_role ON auth.user_roles(role_id,user_id);
 
+CREATE TABLE auth.auth_settings (
+  singleton BOOLEAN PRIMARY KEY CHECK (singleton),
+  version BIGINT NOT NULL DEFAULT 1 CHECK (version > 0),
+  password_enabled BOOLEAN NOT NULL,
+  email_otp_enabled BOOLEAN NOT NULL,
+  google_enabled BOOLEAN NOT NULL,
+  telegram_enabled BOOLEAN NOT NULL,
+  registration_enabled BOOLEAN NOT NULL,
+  google_registration_enabled BOOLEAN NOT NULL,
+  telegram_registration_enabled BOOLEAN NOT NULL,
+  password_email_verification TEXT NOT NULL CHECK (password_email_verification IN ('disabled','optional','required'))
+);
+
+CREATE TABLE auth.auth_settings_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id UUID NOT NULL REFERENCES auth.users(id),
+  version BIGINT NOT NULL UNIQUE CHECK (version > 1),
+  previous_policy JSONB NOT NULL CHECK (jsonb_typeof(previous_policy)='object' AND octet_length(previous_policy::text)<=4096),
+  next_policy JSONB NOT NULL CHECK (jsonb_typeof(next_policy)='object' AND octet_length(next_policy::text)<=4096),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+CREATE INDEX auth_settings_audit_retention ON auth.auth_settings_audit(created_at,id);
+
 CREATE TABLE auth.access_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id UUID NOT NULL REFERENCES auth.users(id),

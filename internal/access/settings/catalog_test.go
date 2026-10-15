@@ -28,6 +28,7 @@ func TestCatalog(t *testing.T) {
 		{{Key: UsersRead, Name: "Overwrite"}},
 		{{Key: UsersStatusManage, Name: "Overwrite"}},
 		{{Key: UsersDelete, Name: "Overwrite"}},
+		{{Key: AuthSettingsManage, Name: "Overwrite"}},
 		{{Key: "reports.read", Name: "Read"}, {Key: "reports.read", Name: "Duplicate"}},
 		{{Key: "reports.*", Name: "Wildcard"}},
 		{{Key: "reports.read", Name: ""}},

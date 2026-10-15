@@ -24,6 +24,7 @@ const (
 	UsersRead          domain.PermissionKey = "accounts.users.read"
 	UsersStatusManage  domain.PermissionKey = "accounts.users.status.manage"
 	UsersDelete        domain.PermissionKey = "accounts.users.delete"
+	AuthSettingsManage domain.PermissionKey = "auth.settings.manage"
 )
 
 type Catalog struct {
@@ -31,7 +32,7 @@ type Catalog struct {
 }
 
 func NewCatalog(permissions []Permission) (Catalog, error) {
-	if len(permissions) > 505 {
+	if len(permissions) > 504 {
 		return Catalog{}, domain.ErrInvalidPermission
 	}
 	c := Catalog{permissions: map[domain.PermissionKey]Permission{
@@ -42,6 +43,7 @@ func NewCatalog(permissions []Permission) (Catalog, error) {
 		UsersRead:          {Key: UsersRead, Name: "View users and authentication configuration", Group: "Accounts"},
 		UsersStatusManage:  {Key: UsersStatusManage, Name: "Block and unblock users", Group: "Accounts"},
 		UsersDelete:        {Key: UsersDelete, Name: "Delete user accounts", Group: "Accounts"},
+		AuthSettingsManage: {Key: AuthSettingsManage, Name: "Manage authentication settings", Group: "Auth"},
 	}}
 	for _, permission := range permissions {
 		if !domain.ValidKey(string(permission.Key)) || !utf8.ValidString(permission.Name) ||

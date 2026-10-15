@@ -1,4 +1,6 @@
 DROP TABLE IF EXISTS auth.initial_setup;
+DROP TABLE IF EXISTS auth.auth_settings_audit;
+DROP TABLE IF EXISTS auth.auth_settings;
 DROP TABLE IF EXISTS auth.email_login_audit;
 DROP TABLE IF EXISTS auth.email_bindings;
 DROP TABLE IF EXISTS auth.email_login_outbox;
