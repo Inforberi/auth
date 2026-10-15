@@ -1,5 +1,11 @@
 # Текущий шаг
 
+- Реализация A4.3-local / 13.2a.1 зафиксирована в `bda012a`; следующий backend-подэтап — 13.2a.2. Обязательная внешняя приёмка A8-admin-e2e и 13.1d.4 остаётся открытой.
+
+- 15 октября: A4.3-local / 13.2a.1 — Access HTTP (catalog/list/detail/create/update/grant/revoke/self/target), shared SQL mutation guards и NoRefreshAuth/Origin/mapper/Swagger; target read permission+session в одном SQL statement. [Контракт](../features/roles-permissions.md#http-api-a43-local). Далее 13.2a.2: protected provisioning/invitation/temporary password, сначала transaction-owned authority вместо trusted ActorID-only; не добавлять TOCTOU Authorize → trusted write. По просьбе пользователя A8-admin-e2e со всеми synthetic workflows явно оставлен обязательным перед выпуском, вместе с открытым 13.1d.4 drill. Рабочие ENV/БД не менялись; новых dependencies/schema/workers нет. Коммит только по запросу.
+
+- 15 октября: подготовлен [чек-лист 13.1d.4](../operations/mfa-recovery-acceptance.md): prerequisites, browser/authenticator/operator flow, реальные SMTP/fault/multi-instance проверки и evidence. Внешняя приёмка NOT RUN, этап открыт; нужны разрешённое изолированное HTTPS-окружение и независимая операторская процедура. Код/ENV/БД не менялись, прежние suites повторно не запускались. Далее — внешний drill либо отдельное согласование перехода к protected admin API с сохранением открытого release gate.
+
 - Выполнен 13.1d.3-local: opt-in HTTP recovery start/complete, App/ENV/Swagger, default-off service/router gates и shared primary policy; startup check отдельной NOLOGIN operator group/function grants/non-owner runtime. Durable delivery запускается независимо от разрешения новых recovery на existing pool/SMTP, lifecycle join/safe ERROR reporting. [Контракт](../features/mfa.md), [план/границы](../planning/mfa-recovery.md). Следующий d.4 — полный browser/authenticator/SMTP/operator/fault drill, затем protected admin API/settings/UI; без самостоятельного включения real ENV. Task check/lint, Swagger drift, App/MFA/config/router race, full disposable SQL up/down/up/operator + HTTP/runtime workflow прошли (history). Исправлена старая clock-skew нестабильность только expiry fixture. Реальные env/secrets/БД не менялись, новых migration files/schema/dependencies нет; реализация зафиксирована в 1447d15.
 
 - Выполнен 13.1d.2-local: internal Complete с current primary/browser/request/approver OID+name+LOGIN+membership, committed attempts и shared guessing cap; atomic factor/recovery rotation/version/revoke/cleanup/audit + independent encrypted verified-contact notice. Existing paced delivery/SMTP/lease/backoff, пять попыток, retained failed jobs без retention loss; no session/status/role/password/contact/setup override. [Результат/границы](../planning/mfa-recovery.md), [runbook](../features/admin-recovery.md#завершение-и-уведомление-mfa-131d2-local). Следующий d.3 — App/HTTP/ENV/worker registration, затем полная приёмка. Task check/lint, MFA/CLI race, disposable PG full up/down/up/operator/completion/delivery/race suites прошли (history). Публичного recovery ещё нет; real env/secrets/БД не менялись, только source 000001; реализация зафиксирована в def6666.
@@ -28,7 +34,7 @@
 
 - A4 возобновлён 12 октября: внутренние создание/редактирование ролей, назначение/отзыв, SQL permissions, versions/delegation/fresh-password proof и atomic audit реализованы. [Контракт](../features/roles-permissions.md). Операторский импорт и block/delete guards выполнены выше; A4 целиком не закрыт, public admin routes/MFA/bootstrap/system assignments ещё нет.
 
-Обновлено 14 октября 2026. Рабочая заметка; полные статусы — [implementation](../planning/implementation.md), результаты — [history](../planning/history.md).
+Обновлено 15 октября 2026. Рабочая заметка; полные статусы — [implementation](../planning/implementation.md), результаты — [history](../planning/history.md).
 
 - В AGENTS.md и разделе «Как выполнять» плана закреплено предварительное проектирование ближайших согласованных сценариев без гипотетических абстракций и повторного переписывания логики. Это уточнение правил; рабочий код не менялся.
 

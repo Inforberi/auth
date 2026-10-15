@@ -53,7 +53,7 @@ Audit: start/approve/cancel/complete, request/target UUID, реальный оп
 1. **13.1d.1 — внутренний request/approval/cancel.** Проверить existing primary/factor/version guarantees, определить SQL request/notification lifecycle и grants. Реализовать immutable request binding/CLI/audit без публичного включения незавершённого flow.
 2. **13.1d.2 — completion/delivery.** Reuse TOTP/cipher/recovery generation; atomic consume/replace/version/revoke/cleanup/audit/notification. Lock order Access → user → challenge/request/factor. Не ослаблять обычный enrollment/replace ради lost-factor.
 3. **13.1d.3 — App/HTTP/ENV/Swagger.** Две ручки работают с CLI вместе, API проверяет flags/grants/effective methods. UI ещё не делать; endpoint «только отключить MFA» не публиковать.
-4. **13.1d.4 — приёмка/runbook.** Unit/HTTP, restricted SQL roles, disposable race и операционная процедура. Browser/authenticator/SMTP/identity drill и faults — внешние release gates, не объявлять их закрытыми unit-тестами.
+4. **13.1d.4 — приёмка/runbook.** Unit/HTTP, restricted SQL roles, disposable race и операционная процедура. Browser/authenticator/SMTP/identity drill и faults — внешние release gates, не объявлять их закрытыми unit-тестами. [Пошаговая приёмка](../operations/mfa-recovery-acceptance.md) подготовлена 15 октября; внешние случаи NOT RUN до предоставления изолированного окружения и участников.
 
 ### Фактический результат 13.1d.1
 

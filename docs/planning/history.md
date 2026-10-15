@@ -2,6 +2,24 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат A4.3-local / 13.2a.1 — 15 октября 2026
+
+Реализация зафиксирована в `bda012a` — `feat(access): добавил API ролей и назначений`; документация и план внешней приёмки фиксируются отдельно. Ниже описан рабочий заход до коммита.
+
+Подключены девять Access routes: собственные права, каталог permissions, list/detail/create/update custom roles, UUID lookup назначений target, grant/revoke. Actor только из existing NoRefreshAuth context; Origin/no-store/JSON/common error mapper/Swagger. Mutations переиспользуют SQL delegation, optimistic role/access versions, fresh password + MFA, current factor/session/user и atomic audit; отдельного HTTP Authorize перед записью нет. System role и self-grant запрещены прежними use cases. Administrative reads требуют текущие permissions, но не продлевают session/proofs и не требуют нового MFA step-up. Assigned permissions pending/blocked target не означают действующий доступ.
+
+Новая target-read SQL операция проверяет authority и читает назначения одним statement, unknown/deleted target и отсутствие permission дают одинаковый 403. Own access — один запрос, role list/detail — до двух после session middleware; list keyset 1..100 без count/per-role queries, catalog bounded 512. Нет новых pools/workers/Redis caches/dependencies/ENV/schema или изменений working DB. Создание пользователей, приглашения и выдача временного пароля через admin transport остаются 13.2a.2: сначала transaction-owned permission/fresh-auth boundary, не Authorize → старый trusted ActorID-only вызов.
+
+Проверено: project formatter, итоговый task check (все Go tests, lint 0 issues), Swagger generation + итоговый check:api; targeted Go race для Access/router/App/HTTP-SQL. Disposable PostgreSQL 18.6 TestAccessHTTPSchema — PASS 0.39s, повтор под race также PASS. Реальная restricted runtime DB identity, session middleware → router → service → SQL: create/read/catalog/list/grant/effective-access/revoke, role/version/delegation/system/self guards, отсутствие password/MFA proof, немедленное отсутствие management rights после SQL revoke и 16 concurrent HTTP edits с одним winner; audit только успешных mutations. MFA proofs синтетические, authenticator/SMTP/браузер этим тестом не проверялись. Обычный полный go test без explicit fixture пропускает SQL integration tests; отдельный прогон выше их действительно выполнил.
+
+Context7 chi routing/group/URLParam docs сверены с установленным v5.3.2; новых API библиотек не введено. На подготовительных прогонах исправлены ошибочное ожидание duplicate-key rejection в тесте (существующий JSON decoder не менялся), errorlint errors.Is и regeneration drift после уточнения комментария. Итоговые проверки прошли. Временный контейнер a8b4d5dd315d40ef118417826c2f58d1b3738d1363adcfe232d28048d921c260 удалён с volume и синтетическими данными; реальные env/secrets/БД не читались и не менялись. A8-admin-e2e с synthetic users/roles/first-admin/MFA/UI/SMTP явно добавлен как обязательный незакрытый пункт перед выпуском; 13.1d.4 остаётся открытым. Коммит не выполнялся.
+
+### Подготовка приёмки 13.1d.4 — 15 октября 2026
+
+Добавлен [операционный чек-лист](../operations/mfa-recovery-acceptance.md): изолированное HTTPS-окружение, независимая проверка владельца, реальный authenticator/SMTP, отказы Redis/delivery, restart/lease, multi-instance concurrency и evidence без секретов. Отдельно описано, какие гарантии уже проверялись автоматическими тестами и почему это не закрывает внешнюю приёмку. Все внешние случаи NOT RUN; 13.1d.4 остаётся открытым до предоставления окружения и участников.
+
+Только документация и статусы; код, ENV, зависимости и БД не менялись. Прежние Go/SQL suites повторно не запускались. Коммит не выполнялся.
+
 ### Результат 13.1d.3-local — 14 октября 2026
 
 Реализация зафиксирована в `1447d15` — `feat(auth): подключил API восстановления MFA`; контракт, runbook и статусы плана — отдельным документационным коммитом.

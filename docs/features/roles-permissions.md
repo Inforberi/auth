@@ -17,7 +17,7 @@ Backend access отделён от способов входа. Пользова
 
 ## Backend-контракт
 
-Это внутренние use cases, не опубликованные HTTP-ручки. `service.New(repository, catalog)` получает существующий PostgreSQL pool через access repository; новых pools, Redis caches и workers нет.
+`service.New(repository, catalog)` получает существующий PostgreSQL pool через access repository; новых pools, Redis caches и workers нет. В A4.3-local внутренние mutations подключены к protected HTTP без повторной реализации. Trusted ReadRole/ListRoles остаются внутренними; HTTP вызывает отдельно авторизованные management queries.
 
 A5.2d публикует отдельный protected admin endpoint [первичной привязки почты](email-binding.md), не общий roles/users/status API. Встроенный `accounts.email.bind` разрешает только approval конкретного external-only target; текущие permission/password/MFA/session проверяются в SQL при выдаче и подтверждении. Выдача core permission существующим ролям не автоматическая. Владельцу этого административного permission отключение MFA запрещено, как и владельцам access management permissions.
 
@@ -34,7 +34,7 @@ A5.2d публикует отдельный protected admin endpoint [перви
 
 Principal содержит user UUID и hash session token, не клиентский список прав. Адаптер обязан получать его из проверенной аутентификации, не из произвольных полей запроса. ReadRole/ListRoles не являются административной авторизацией; до внешней публикации их защищает соответствующий permission check.
 
-Для управления нужны active/nondeleted actor, действующая SQL-сессия с актуальным auth_version, password и MFA proofs не старше пяти минут и current enrolled factor. Это SQL enforcement A5.2b, не клиентский flag. External-only actor без password proof пока не управляет ролями; общий public admin transport ещё открыт, первичный setup описан ниже.
+Для изменений нужны active/nondeleted actor, действующая SQL-сессия с актуальным auth_version, password и MFA proofs не старше пяти минут и current enrolled factor. Это SQL enforcement A5.2b, не клиентский flag. External-only actor без password proof пока не управляет ролями; первичный setup описан ниже. Для административного чтения нужны текущие permissions/session, но повторное password/MFA подтверждение не требуется.
 
 Оператор должен иметь management permission и все permissions создаваемой/изменяемой/назначаемой роли. При редактировании проверяются прежние и новые права; при отзыве — права отзываемой роли. Это консервативная delegation policy, без скрытого override. Самому себе назначать роль нельзя. Самоотзыв обычной роли допустим; системная роль защищена отдельно.
 
@@ -60,9 +60,51 @@ Principal содержит user UUID и hash session token, не клиентс�
 
 Защитный report уже подтверждённой смены email — намеренное исключение: он блокирует даже последнего супер-админа, иначе украденный аккаунт нельзя было бы обезопасить. Назначение сохраняется, сессии отзываются, existing protected recovery возвращает доступ без повышения роли и создания сессии. После security block нельзя административным повторным block/delete уничтожить последнее восстановление. Обычный password reset сохраняет роль и не снимает административную блокировку.
 
-Это гарантия сохранения active системного владельца и recoverable последнего назначения, не проверка доступности SMTP/провайдера или наличия всех будущих MFA факторов. Первичный setup выполнен в 10.3a-local; system assignment management, operator emergency recovery и политики usable admin login/MFA остаются 10.3/A5/A6. Status/delete пока trusted-caller backend: ActorID нужен для audit, не заменяет авторизацию. Публичные admin mutations запрещено подключать до permission/fresh-auth/MFA guards. Прямое изменение SQL оператором не защищается этими use cases.
+Это гарантия сохранения active системного владельца и recoverable последнего назначения, не проверка доступности SMTP/провайдера или наличия всех будущих MFA факторов. Первичный setup выполнен в 10.3a-local, operator password/lost-factor recovery — локально в 10.3b/13.1d; их внешняя приёмка открыта. System assignment management и политики usable admin login/MFA остаются 10.3/A5/A6. Status/delete пока trusted-caller backend: ActorID нужен для audit, не заменяет авторизацию. Эти публичные admin mutations запрещено подключать до permission/fresh-auth/MFA guards. Прямое изменение SQL оператором не защищается этими use cases.
 
-Реализованы operator JSON-каталог/preview и сборка `App.Access` без HTTP/admin routes: [использование](access-catalog.md). Шаблоны доступны для явного выбора, не создают и не меняют SQL-роли автоматически. MFA login/management и SQL guard реализованы в [A5.2b](mfa.md); удаление роли, runtime/browser импорт, UI и межсервисная передача прав ещё не реализованы. Trusted API — при конкретной интеграции по 10.5b. Для внешнего backend Auth управляет назначениями, а backend данных применяет ограничения действий/строк/полей, включая read/write/filter/sort/export. Импорт каталога не аутентифицирует этот backend.
+Реализованы operator JSON-каталог/preview и сборка `App.Access`: [использование](access-catalog.md). Шаблоны доступны для явного выбора, не создают и не меняют SQL-роли автоматически. MFA login/management и SQL guard реализованы в [A5.2b](mfa.md); удаление роли, runtime/browser импорт, UI и межсервисная передача прав ещё не реализованы. Trusted API — при конкретной интеграции по 10.5b. Для внешнего backend Auth управляет назначениями, а backend данных применяет ограничения действий/строк/полей, включая read/write/filter/sort/export. Импорт каталога не аутентифицирует этот backend.
+
+## HTTP API A4.3-local
+
+База `/api/v1`, HTTPS, существующая `__Host-session` cookie. Actor UUID и token hash берутся только из NoRefreshAuth context. Запросы не обновляют сессию или freshness; все ответы идут с `Cache-Control: no-store`. Mutations требуют разрешённый Origin и JSON; неизвестные поля, включая actor/system/approval, не принимаются. Новых ENV или secrets нет. При `MFA_ENABLED=false` mutation routes не регистрируются; чтения доступны по текущим правам.
+
+| Метод и путь | Назначение и права |
+| --- | --- |
+| GET `/auth/access` | Собственные `accessVersion`, `roleIds`, `permissions`; без management permission, но с актуальной SQL-сессией |
+| GET `/admin/permissions` | Объявленный каталог: key/name/description/group; roles.manage **или** assignments.manage |
+| GET `/admin/roles?after=reader&limit=50` | Метаданные без permissions; те же права, limit 1..100, по умолчанию 50 |
+| GET `/admin/roles/{id}` | Полная роль с permissions/version; те же права |
+| POST `/admin/roles` | Create custom role; roles.manage, delegation, fresh password + MFA |
+| POST `/admin/roles/{id}` | Полная замена definition с expectedVersion; тот же SQL guard, включая прежние права роли |
+| GET `/admin/users/{id}/access` | Назначения и объединение известных permissions по UUID; assignments.manage |
+| POST `/admin/users/{id}/roles/{roleId}` | Grant с expectedRoleVersion/expectedAccessVersion; assignments.manage, delegation, fresh password + MFA |
+| DELETE `/admin/users/{id}/roles/{roleId}` | Revoke с тем же обязательным JSON body и SQL guard |
+
+В таблице короткие имена означают полные `access.roles.manage` / `access.assignments.manage`. Каталог не позволяет создавать произвольные backend permissions через HTTP. System role видна в чтениях, но не изменяется/назначается/отзывается обычными mutations. Управление дополнительными системными администраторами — отдельная незавершённая задача.
+
+List возвращает `{roles:[метаданные],nextAfter:"последний key"}`. Cursor исключающий, порядок по key; если страница короче limit, nextAfter пустой. Полная последняя страница может потребовать ещё один пустой запрос. Нет total-count, SQL на каждую роль или загрузки всех ролей. При конкурентном переименовании key список не является snapshot; после изменения обновить просмотр.
+
+Пример create body:
+
+```json
+{"key":"report_reader","name":"Чтение отчётов","description":"Без редактирования","permissions":["reports.read"]}
+```
+
+Permission `reports.read` должен быть объявлен в operator catalog и доступен администратору. Ответ 201 содержит id/key/name/description/system/version/permissions. Повтор key — 409; API не назначает созданную роль автоматически. Для update передать все поля definition и `expectedVersion` из detail; отсутствующий permissions означает пустой набор, не частичное сохранение старых прав.
+
+Для назначения сначала прочитать role detail и target `/access`, затем отправить:
+
+```json
+{"expectedRoleVersion":1,"expectedAccessVersion":1}
+```
+
+Ответ `{accessVersion:2}`. При 409 перечитать актуальное состояние и принять решение, а не автоматически подставлять новые версии поверх чужих изменений. DELETE также требует body. Потеря ответа не означает отсутствие commit; сначала чтение. Повтор текущего no-op не создаёт audit/update. Новая версия назначения не меняет auth_version и не требует нового входа: следующая SQL authorization видит grant/revoke.
+
+Admin target read проверяет actor/session/permission и читает target одним SQL statement; неизвестный/deleted target и отсутствие прав дают одинаковый 403. Pending/blocked target может иметь назначения, но не получает действующий доступ: обычные authorization/session checks по-прежнему требуют active/nondeleted. User `/auth/access` не принимает target UUID или клиентский список прав. Это данные для UI, не bearer authority для внешнего backend; backend данных проверяет доступ самостоятельно. `accessVersion` не является ETag всего набора effective permissions.
+
+Ошибки: 400 `invalid_json`/`invalid_query`/`invalid_role`/`invalid_permission`, 401 `unauthorized`, 403 `forbidden`/`fresh_auth_required`/`invalid_origin`, 404 `role_not_found`, 409 `access_conflict`/`target_unavailable`, 503 `temporarily_unavailable`. Domain validation выполняется в service один раз, mapper общий для Access; raw SQL/DSN/secret не попадают в ответы или логи. Reads role list/detail требуют до двух bounded SQL запросов после session middleware; self/target access — по одному. Mutations используют существующие bounded транзакции с атомарным audit, без дополнительного предварительного HTTP Authorize.
+
+Общий users create/invite/temporary-password transport ещё не опубликован: внутренний ActorID-only provisioning должен получить transaction-owned permission/fresh-auth guard в 13.2a.2. Браузерная сквозная приёмка с синтетическими пользователями, реальными MFA/SMTP и UI обязательна в A8-admin-e2e; локальные тесты её не заменяют.
 
 ## Хранение
 
