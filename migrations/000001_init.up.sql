@@ -21,6 +21,8 @@ CREATE TABLE auth.users (
 );
 CREATE INDEX users_email_release_due ON auth.users(deleted_at,id)
   WHERE deleted_at IS NOT NULL AND NOT email_reuse_blocked AND email_released_at IS NULL;
+CREATE INDEX users_directory_page ON auth.users(created_at DESC,id DESC) WHERE deleted_at IS NULL;
+CREATE INDEX users_directory_status_page ON auth.users(status,created_at DESC,id DESC) WHERE deleted_at IS NULL;
 
 CREATE TABLE auth.initial_setup (
   singleton BOOLEAN PRIMARY KEY CHECK (singleton),

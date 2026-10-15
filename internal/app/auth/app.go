@@ -131,6 +131,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		mailTest = dev.NewMailTest(mail, log)
 	}
 	handler := router.New(router.Handlers{
+		UserDirectory:     accounthttp.NewUserDirectory(accountservice.NewUserDirectory(accountRepo), log),
 		Provisioning:      provisioningHandler,
 		TemporaryAdmin:    temporaryAdmin,
 		Access:            accesshttp.New(access.Service, log),

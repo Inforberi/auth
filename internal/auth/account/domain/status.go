@@ -3,11 +3,13 @@ package domain
 import "errors"
 
 var (
-	ErrInvalidStatusChange = errors.New("invalid account status change")
-	ErrAccountNotFound     = errors.New("account not found")
-	ErrAccountDeleted      = errors.New("account deleted")
-	ErrAccountConflict     = errors.New("account version conflict")
-	ErrLastAdministrator   = errors.New("last administrator cannot be removed or administratively blocked")
+	ErrInvalidStatusChange   = errors.New("invalid account status change")
+	ErrAccountNotFound       = errors.New("account not found")
+	ErrAccountDeleted        = errors.New("account deleted")
+	ErrAccountConflict       = errors.New("account version conflict")
+	ErrLastAdministrator     = errors.New("last administrator cannot be removed or administratively blocked")
+	ErrInvalidUserQuery      = errors.New("invalid user directory query")
+	ErrUserDirectoryConflict = errors.New("user directory data exceeds supported bounds")
 )
 
 type StatusChange struct {

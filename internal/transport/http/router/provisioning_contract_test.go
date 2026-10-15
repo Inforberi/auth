@@ -92,6 +92,9 @@ func TestProvisioningHTTPContracts(t *testing.T) {
 				{"conflict", "POST", "https://localhost:8443", `{}`, true, false, accountdomain.ErrProvisionConflict, 409},
 				{"dependency", "POST", "https://localhost:8443", `{}`, true, false, errors.New("password=sensitive"), 503},
 			} {
+				if tc.method == "GET" && endpoint.create {
+					continue
+				} // User listing has its own read contract.
 				t.Run(tc.name, func(t *testing.T) {
 					s := &contractProvisioning{err: tc.err, reused: tc.reused}
 					temp := &contractTemporaryAdmin{err: tc.err, reused: tc.reused}
@@ -149,7 +152,11 @@ func TestProvisioningDisabledRoutes(t *testing.T) {
 		for _, path := range paths {
 			w := httptest.NewRecorder()
 			New(h).ServeHTTP(w, httptest.NewRequest("POST", path, nil))
-			if w.Code != 404 {
+			want := 404
+			if path == "/api/v1/admin/users" || path == "/api/v1/admin/users/temporary-password" {
+				want = 405
+			}
+			if w.Code != want {
 				t.Fatal("disabled route exposed", flag, path, w.Code)
 			}
 		}

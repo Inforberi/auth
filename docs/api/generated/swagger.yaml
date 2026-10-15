@@ -170,6 +170,89 @@ definitions:
     required:
     - email
     type: object
+  account_http.UserContactResponse:
+    properties:
+      email:
+        type: string
+      verifiedAt:
+        type: string
+    type: object
+  account_http.UserDetailResponse:
+    properties:
+      accessVersion:
+        type: integer
+      authVersion:
+        type: integer
+      contacts:
+        items:
+          $ref: '#/definitions/account_http.UserContactResponse'
+        type: array
+      createdAt:
+        type: string
+      deletedAt:
+        type: string
+      displayName:
+        type: string
+      email:
+        type: string
+      emailVerified:
+        type: boolean
+      externalIssuers:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      mfaEnrolled:
+        type: boolean
+      passwordConfigured:
+        type: boolean
+      roles:
+        items:
+          $ref: '#/definitions/account_http.UserRoleResponse'
+        type: array
+      status:
+        type: string
+      temporaryPasswordRequired:
+        type: boolean
+    type: object
+  account_http.UserPageResponse:
+    properties:
+      nextCursor:
+        type: string
+      users:
+        items:
+          $ref: '#/definitions/account_http.UserSummaryResponse'
+        type: array
+    type: object
+  account_http.UserRoleResponse:
+    properties:
+      id:
+        type: string
+      key:
+        type: string
+      name:
+        type: string
+      system:
+        type: boolean
+      version:
+        type: integer
+    type: object
+  account_http.UserSummaryResponse:
+    properties:
+      createdAt:
+        type: string
+      displayName:
+        type: string
+      email:
+        type: string
+      emailVerified:
+        type: boolean
+      id:
+        type: string
+      status:
+        type: string
+    type: object
   account_http.VerificationResponse:
     properties:
       status:
@@ -843,6 +926,65 @@ paths:
       tags:
       - Admin Access
   /api/v1/admin/users:
+    get:
+      description: Requires current accounts.users.read and SQL session; no fresh
+        password/MFA or session renewal for this read. Newest createdAt/UUID first,
+        exclusive cursor, nondeleted users only. Exact normalized email and optional
+        status filters, no substring search, offset or total count. Selected display
+        email prefers password contact, otherwise first retained contact by UUID.
+        One bounded SQL statement checks permission and reads a page.
+      parameters:
+      - description: Opaque exclusive nextCursor from the previous page
+        in: query
+        name: before
+        type: string
+      - description: Account status
+        enum:
+        - pending
+        - active
+        - blocked
+        in: query
+        name: status
+        type: string
+      - description: Exact email, not a substring
+        in: query
+        name: email
+        type: string
+      - default: 50
+        description: Page size 1..100, default 50
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/account_http.UserPageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: List users
+      tags:
+      - Admin Users
     post:
       consumes:
       - application/json
@@ -900,6 +1042,55 @@ paths:
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
       summary: Create a pending user, optionally with an email invitation
+      tags:
+      - Admin Users
+  /api/v1/admin/users/{id}:
+    get:
+      description: Requires current accounts.users.read, not a user UUID claim or
+        management permission alone. Includes stored status/versions, contact verification,
+        configured password/MFA, external issuers and role metadata. Configuration
+        is not a guarantee of usable login or effective access. No password hash,
+        subject, token, MFA secret or recovery codes. UUID lookup also supports retained
+        soft-deleted users without restoring them. Contacts/providers/roles bounded
+        to 32; overflow is an explicit conflict, not silent truncation.
+      parameters:
+      - description: User UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/account_http.UserDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read a user card
       tags:
       - Admin Users
   /api/v1/admin/users/{id}/access:

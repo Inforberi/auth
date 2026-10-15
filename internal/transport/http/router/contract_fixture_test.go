@@ -76,6 +76,7 @@ func readAPI(t *testing.T) apiDocument {
 func contractHandlers(env string) Handlers {
 	log := zap.NewNop()
 	return Handlers{
+		UserDirectory:     accounthttp.NewUserDirectory(&contractUserDirectory{}, log),
 		Provisioning:      accounthttp.NewProvisioning(&contractProvisioning{}, log),
 		TemporaryAdmin:    passwordhttp.NewTemporaryAdmin(&contractTemporaryAdmin{}, log),
 		Access:            accesshttp.New(&contractAccess{}, log),

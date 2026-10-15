@@ -30,7 +30,7 @@ type ProvisionRequest struct {
 // @Failure 503 {object} httpx.ErrorResponse
 // @Router /api/v1/admin/users [post]
 func (h *ProvisioningHandler) Provision(w http.ResponseWriter, r *http.Request) {
-	actor, ok := provisioningActor(w, r)
+	actor, ok := accountActor(w, r)
 	if !ok {
 		return
 	}
