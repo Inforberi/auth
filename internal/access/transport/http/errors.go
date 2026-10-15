@@ -4,10 +4,12 @@ import (
 	"net/http"
 
 	"github.com/Inforberi/financial-intelligence/internal/access/domain"
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
 var accessErrors = []httpx.ErrorRule{
+	httpx.MatchError(accountdomain.ErrLastAdministrator, 409, "last_administrator", "last usable administrator must remain"),
 	httpx.MatchError(domain.ErrInvalidRole, 400, "invalid_role", "invalid role"),
 	httpx.MatchError(domain.ErrInvalidPermission, 400, "invalid_permission", "invalid permission"),
 	httpx.MatchError(domain.ErrFreshAuthRequired, 403, "fresh_auth_required", "fresh password and MFA required"),

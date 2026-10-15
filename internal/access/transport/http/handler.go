@@ -21,6 +21,7 @@ type accessService interface {
 	CreateRole(context.Context, service.CreateRoleInput) (domain.Role, error)
 	UpdateRole(context.Context, service.UpdateRoleInput) (domain.Role, error)
 	ChangeAssignment(context.Context, service.AssignmentInput) (int64, error)
+	ChangeAdministrator(context.Context, service.AdministratorInput) (int64, error)
 	UserAccess(context.Context, service.Principal) (domain.UserAccess, error)
 	AssignmentAccess(context.Context, service.Principal, accountdomain.UserID) (domain.UserAccess, error)
 }

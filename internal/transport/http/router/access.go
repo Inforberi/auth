@@ -20,4 +20,6 @@ func accessRoutes(r chi.Router, h Handlers) {
 	protected.Post("/admin/roles/{id}", h.Access.UpdateRole)
 	protected.Post("/admin/users/{id}/roles/{roleId}", h.Access.GrantRole)
 	protected.Delete("/admin/users/{id}/roles/{roleId}", h.Access.RevokeRole)
+	protected.Post("/admin/users/{id}/administrator", h.Access.GrantAdministrator)
+	protected.Delete("/admin/users/{id}/administrator", h.Access.RevokeAdministrator)
 }

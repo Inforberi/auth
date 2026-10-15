@@ -27,6 +27,7 @@ type Repository interface {
 	CreateRole(context.Context, CreateRoleInput) (domain.Role, error)
 	UpdateRole(context.Context, UpdateRoleInput) (domain.Role, error)
 	ChangeAssignment(context.Context, AssignmentInput) (int64, error)
+	ChangeAdministrator(context.Context, AdministratorInput) (int64, error)
 	ReadAccess(context.Context, Principal, []domain.PermissionKey) (domain.UserAccess, error)
 	ReadAssignments(context.Context, Principal, accountdomain.UserID, []domain.PermissionKey) (domain.UserAccess, error)
 }

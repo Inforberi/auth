@@ -20,13 +20,44 @@ import (
 
 type captureService struct {
 	accessService
-	create     service.CreateRoleInput
-	update     service.UpdateRoleInput
-	assignment service.AssignmentInput
-	calls      int
-	err        error
-	after      string
-	limit      int
+	create        service.CreateRoleInput
+	update        service.UpdateRoleInput
+	assignment    service.AssignmentInput
+	administrator service.AdministratorInput
+	calls         int
+	err           error
+	after         string
+	limit         int
+}
+
+func (s *captureService) ChangeAdministrator(_ context.Context, input service.AdministratorInput) (int64, error) {
+	s.calls++
+	s.administrator = input
+	return 2, s.err
+}
+
+func TestAdministratorTransport(t *testing.T) {
+	svc := &captureService{}
+	h := New(svc, zap.NewNop())
+	mux := chi.NewRouter()
+	mux.Post("/users/{id}/administrator", h.GrantAdministrator)
+	mux.Delete("/users/{id}/administrator", h.RevokeAdministrator)
+	for _, method := range []string{"POST", "DELETE"} {
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, accessRequest(method, "/users/33333333-3333-4333-8333-333333333333/administrator", `{"expectedAuthVersion":3,"expectedAccessVersion":4,"expectedRoleVersion":5}`))
+		input := svc.administrator
+		if w.Code != 200 || input.Actor != testActor || input.UserID != "33333333-3333-4333-8333-333333333333" || input.ExpectedAuthVersion != 3 || input.ExpectedAccessVersion != 4 || input.ExpectedRoleVersion != 5 || input.Grant != (method == "POST") {
+			t.Fatal(w.Code, input)
+		}
+		for _, body := range []string{`{`, `{"actorId":"forged"}`, `{"expectedAuthVersion":"1"}`, `{"grant":true}`} {
+			before := svc.calls
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, accessRequest(method, "/users/33333333-3333-4333-8333-333333333333/administrator", body))
+			if w.Code != 400 || svc.calls != before {
+				t.Fatal("invalid JSON reached service", w.Code)
+			}
+		}
+	}
 }
 
 func (s *captureService) CreateRole(_ context.Context, input service.CreateRoleInput) (domain.Role, error) {

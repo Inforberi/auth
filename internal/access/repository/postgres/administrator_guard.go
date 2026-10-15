@@ -24,7 +24,8 @@ func RequireAdministratorRemains(ctx context.Context, tx pgx.Tx, target accountd
 		SELECT 1 FROM auth.roles r JOIN auth.user_roles ur ON ur.role_id=r.id
 		JOIN auth.users u ON u.id=ur.user_id
 		WHERE r.key='super_admin' AND r.system AND u.id<>$1
-		AND u.status='active' AND u.deleted_at IS NULL
+		AND EXISTS(SELECT 1 FROM auth.role_permissions rp WHERE rp.role_id=r.id AND rp.permission_key='access.assignments.manage')
+		AND `+usableAdministrator+`
 	)`, target).Scan(&allowed)
 	if err != nil {
 		return err
@@ -34,3 +35,11 @@ func RequireAdministratorRemains(ctx context.Context, tx pgx.Tx, target accountd
 	}
 	return nil
 }
+
+// This is local credential readiness, not proof that mail delivery or a human-held factor is available.
+const usableAdministrator = `u.status='active' AND u.deleted_at IS NULL
+	AND EXISTS(SELECT 1 FROM auth.password_credentials p JOIN auth.user_emails e
+		ON e.id=p.email_id AND e.user_id=p.user_id WHERE p.user_id=u.id AND e.verified_at IS NOT NULL)
+	AND EXISTS(SELECT 1 FROM auth.mfa_totp m WHERE m.user_id=u.id)
+	AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials t WHERE t.user_id=u.id)
+	AND NOT EXISTS(SELECT 1 FROM auth.account_provisions p WHERE p.user_id=u.id AND (p.activated_at IS NULL OR p.password_change_required))`

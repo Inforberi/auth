@@ -13,6 +13,19 @@ definitions:
           type: string
         type: array
     type: object
+  access_http.AdministratorRequest:
+    properties:
+      expectedAccessVersion:
+        type: integer
+      expectedAuthVersion:
+        type: integer
+      expectedRoleVersion:
+        type: integer
+    required:
+    - expectedAccessVersion
+    - expectedAuthVersion
+    - expectedRoleVersion
+    type: object
   access_http.AssignmentRequest:
     properties:
       expectedAccessVersion:
@@ -1217,6 +1230,130 @@ paths:
       summary: Read a user's role assignments and permission union
       tags:
       - Admin Access
+  /api/v1/admin/users/{id}/administrator:
+    delete:
+      consumes:
+      - application/json
+      description: Requires current super_admin membership, access.assignments.manage,
+        delegated system-role permissions and fresh password plus MFA. Current target
+        auth/access and role versions are checked in the same transaction. Preserves
+        another active administrator with permanent password, verified login email,
+        enrolled TOTP and no pending/temporary activation. Self-revoke is allowed
+        only with such a backup. Access changes immediately; no-op replay still requires
+        current authority. Does not delete the account, disable MFA or change the
+        system role itself.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Target user UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current target auth/access and super_admin role versions
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/access_http.AdministratorRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/access_http.AssignmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Revoke the system administrator role
+      tags:
+      - Access
+    post:
+      consumes:
+      - application/json
+      description: Requires current super_admin membership, access.assignments.manage,
+        all delegated system-role permissions and fresh password plus MFA in one transaction.
+        No self-grant or arbitrary system role. Target must be active, have a permanent
+        password, verified login email and enrolled TOTP, with no pending activation/temporary
+        credentials. Requires current target auth/access and system role versions.
+        Does not create credentials, a session, a new role or a bootstrap bypass.
+        Authorized current-version replay is a no-op.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Target user UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current target auth/access and super_admin role versions
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/access_http.AdministratorRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/access_http.AssignmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Assign the system administrator role
+      tags:
+      - Access
   /api/v1/admin/users/{id}/email-binding:
     post:
       consumes:

@@ -771,6 +771,172 @@
                 }
             }
         },
+        "/api/v1/admin/users/{id}/administrator": {
+            "post": {
+                "description": "Requires current super_admin membership, access.assignments.manage, all delegated system-role permissions and fresh password plus MFA in one transaction. No self-grant or arbitrary system role. Target must be active, have a permanent password, verified login email and enrolled TOTP, with no pending activation/temporary credentials. Requires current target auth/access and system role versions. Does not create credentials, a session, a new role or a bootstrap bypass. Authorized current-version replay is a no-op.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Access"
+                ],
+                "summary": "Assign the system administrator role",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target user UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Current target auth/access and super_admin role versions",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/access_http.AdministratorRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/access_http.AssignmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Requires current super_admin membership, access.assignments.manage, delegated system-role permissions and fresh password plus MFA. Current target auth/access and role versions are checked in the same transaction. Preserves another active administrator with permanent password, verified login email, enrolled TOTP and no pending/temporary activation. Self-revoke is allowed only with such a backup. Access changes immediately; no-op replay still requires current authority. Does not delete the account, disable MFA or change the system role itself.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Access"
+                ],
+                "summary": "Revoke the system administrator role",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target user UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Current target auth/access and super_admin role versions",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/access_http.AdministratorRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/access_http.AssignmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/users/{id}/email-binding": {
             "post": {
                 "description": "Requires accounts.email.bind and fresh password plus MFA in SQL. Explicit target UUID, active external-only account without contacts. Sends a code but does not reserve/attach the address, create an account or bypass the owner's MFA. Approval expires no later than the administrator's current authentication proof.",
@@ -4397,6 +4563,25 @@
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "access_http.AdministratorRequest": {
+            "type": "object",
+            "required": [
+                "expectedAccessVersion",
+                "expectedAuthVersion",
+                "expectedRoleVersion"
+            ],
+            "properties": {
+                "expectedAccessVersion": {
+                    "type": "integer"
+                },
+                "expectedAuthVersion": {
+                    "type": "integer"
+                },
+                "expectedRoleVersion": {
+                    "type": "integer"
                 }
             }
         },

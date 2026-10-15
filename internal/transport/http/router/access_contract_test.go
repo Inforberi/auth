@@ -51,6 +51,11 @@ func (s *contractAccess) ChangeAssignment(context.Context, accessservice.Assignm
 	return 2, s.err
 }
 
+func (s *contractAccess) ChangeAdministrator(context.Context, accessservice.AdministratorInput) (int64, error) {
+	s.calls++
+	return 2, s.err
+}
+
 func (s *contractAccess) UserAccess(context.Context, accessservice.Principal) (accessdomain.UserAccess, error) {
 	s.calls++
 	return accessdomain.UserAccess{Version: 1}, s.err
@@ -72,6 +77,8 @@ func TestAccessRouteGuards(t *testing.T) {
 		{"POST", "/api/v1/admin/roles/22222222-2222-4222-8222-222222222222"},
 		{"POST", "/api/v1/admin/users/22222222-2222-4222-8222-222222222222/roles/33333333-3333-4333-8333-333333333333"},
 		{"DELETE", "/api/v1/admin/users/22222222-2222-4222-8222-222222222222/roles/33333333-3333-4333-8333-333333333333"},
+		{"POST", "/api/v1/admin/users/22222222-2222-4222-8222-222222222222/administrator"},
+		{"DELETE", "/api/v1/admin/users/22222222-2222-4222-8222-222222222222/administrator"},
 	} {
 		t.Run(endpoint.method+endpoint.path, func(t *testing.T) {
 			h := contractHandlers("prod")
@@ -115,8 +122,13 @@ func TestAccessMutationRequiresEnabledMFA(t *testing.T) {
 	h.Config.MFA.Enabled = false
 	router := New(h)
 	for _, method := range []string{"POST", "DELETE"} {
-		path := "/api/v1/admin/users/22222222-2222-4222-8222-222222222222/roles/33333333-3333-4333-8333-333333333333"
 		w := httptest.NewRecorder()
+		router.ServeHTTP(w, httptest.NewRequest(method, "/api/v1/admin/users/22222222-2222-4222-8222-222222222222/administrator", nil))
+		if w.Code != 404 {
+			t.Fatal("MFA-disabled administrator mutation exposed", w.Code)
+		}
+		path := "/api/v1/admin/users/22222222-2222-4222-8222-222222222222/roles/33333333-3333-4333-8333-333333333333"
+		w = httptest.NewRecorder()
 		router.ServeHTTP(w, httptest.NewRequest(method, path, nil))
 		if w.Code != 404 {
 			t.Fatal("MFA-disabled mutation is exposed", w.Code)

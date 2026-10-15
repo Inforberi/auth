@@ -19,6 +19,7 @@ func TestAccessSwaggerDTOs(t *testing.T) {
 		{"CreateRoleRequest", accesshttp.CreateRoleRequest{}},
 		{"UpdateRoleRequest", accesshttp.UpdateRoleRequest{}},
 		{"AssignmentRequest", accesshttp.AssignmentRequest{}},
+		{"AdministratorRequest", accesshttp.AdministratorRequest{}},
 		{"AssignmentResponse", accesshttp.AssignmentResponse{}},
 		{"RoleResponse", accesshttp.RoleResponse{}},
 		{"RoleSummaryResponse", accesshttp.RoleSummaryResponse{}},

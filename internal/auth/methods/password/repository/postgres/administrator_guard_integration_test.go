@@ -104,10 +104,23 @@ func checkAdministratorProtection(t *testing.T, db *pgxpool.Pool, ctx context.Co
 
 func assignAdministrator(t *testing.T, db *pgxpool.Pool, ctx context.Context, role string, user accountdomain.UserID) {
 	t.Helper()
+	prepareUsableAdministrator(t, db, ctx, user)
 	accessExec(t, db, ctx, `INSERT INTO auth.user_roles(user_id,role_id) VALUES ($1,$2)`, user, role)
 	t.Cleanup(func() {
 		accessExec(t, db, ctx, `DELETE FROM auth.user_roles WHERE user_id=$1 AND role_id=$2`, user, role)
 	})
+}
+
+func prepareUsableAdministrator(t *testing.T, db *pgxpool.Pool, ctx context.Context, user accountdomain.UserID) {
+	t.Helper()
+	accessExec(t, db, ctx, `WITH e AS (INSERT INTO auth.user_emails(user_id,email)
+		SELECT $1::uuid,'admin-fixture-'||($1::uuid)::text||'@example.com'
+		WHERE NOT EXISTS(SELECT 1 FROM auth.password_credentials WHERE user_id=$1::uuid)
+		ON CONFLICT(email) DO UPDATE SET email=EXCLUDED.email RETURNING id)
+		INSERT INTO auth.password_credentials(user_id,email_id,password_hash) SELECT $1::uuid,id,'synthetic-hash' FROM e`, user)
+	accessExec(t, db, ctx, `UPDATE auth.user_emails SET verified_at=clock_timestamp()
+		WHERE id IN (SELECT email_id FROM auth.password_credentials WHERE user_id=$1)`, user)
+	accessExec(t, db, ctx, `INSERT INTO auth.mfa_totp(user_id,secret,last_step) VALUES($1,$2,0) ON CONFLICT(user_id) DO NOTHING`, user, make([]byte, 48))
 }
 
 func removeAdministrator(ctx context.Context, f statusFixture, action string, version accountdomain.AuthVersion) error {

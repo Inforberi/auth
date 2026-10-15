@@ -132,8 +132,11 @@ func checkLifecycleAdministratorRaces(t *testing.T, db *pgxpool.Pool, ctx contex
 	if err := db.QueryRow(ctx, `INSERT INTO auth.roles(key,name,system) VALUES('super_admin','Super admin',true) RETURNING id`).Scan(&role); err != nil {
 		t.Fatal(err)
 	}
+	accessExec(t, db, ctx, `INSERT INTO auth.role_permissions(role_id,permission_key) VALUES($1,'access.assignments.manage')`, role)
 	for _, actions := range [][2]string{{"block", "block"}, {"delete", "delete"}, {"block", "delete"}} {
 		first, second := accessPrincipal(t, db, ctx), accessPrincipal(t, db, ctx)
+		prepareUsableAdministrator(t, db, ctx, first.UserID)
+		prepareUsableAdministrator(t, db, ctx, second.UserID)
 		accessExec(t, db, ctx, `INSERT INTO auth.user_roles(user_id,role_id) VALUES($1,$3),($2,$3)`, first.UserID, second.UserID, role)
 		remove := func(target accountdomain.UserID, action string) error {
 			if action == "block" {
