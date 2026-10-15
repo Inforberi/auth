@@ -476,7 +476,7 @@ POST `/api/v1/admin/users/{id}/status` с `{status,expectedAuthVersion}` бло�
 
 POST/DELETE `/api/v1/admin/users/{id}/administrator` назначают/снимают super_admin только по запросу существующего супер-администратора со свежими password/MFA proofs и текущими target auth/access + role versions. Custom management role этого права не даёт. Для назначения нужен готовый permanent password + verified login email + TOTP; снять/заблокировать/удалить последнего такого владельца нельзя. [Контракт и примеры](features/roles-permissions.md#управление-супер-администраторами--103c-local).
 
-Редактирования самой system role через обычный API, принудительного обхода последнего способа входа и общего settings/secrets UI пока нет. При настройках A6 отдельно защищаем последний вход от отключения методов. Предварительная backend-приёмка обязательна перед UI, затем повторная сквозная приёмка с UI перед выпуском.
+Редактирования самой system role через обычный API, принудительного обхода последнего способа входа и общего settings/secrets UI пока нет. В A6.1 готов [внутренний не-секретный settings store](features/auth-settings.md), но HTTP и runtime-применение flags ещё не подключены: приложение использует ENV. В A6.2 подключаем отдельный административный password+TOTP intent и enforcement всех публичных методов перед публикацией settings API. Предварительная backend-приёмка обязательна перед UI, затем повторная сквозная приёмка с UI перед выпуском.
 
 <a id="http-reference"></a>
 ## 8. Справочник HTTP-методов

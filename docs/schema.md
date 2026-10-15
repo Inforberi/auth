@@ -1,5 +1,7 @@
 # Схема Auth
 
+A6.1-local: `auth.auth_settings` — singleton/version и типизированные не-секретные public methods/registration/verification flags. `auth.auth_settings_audit` — actor/version/ограниченные previous/next snapshots, индекс retention; secrets сюда не входят. Инициализация не перезаписывает сохранённый ENV seed и отказывает при потере строки после initialized setup marker. Settings runtime/App/HTTP пока не подключены; [границы подэтапа](features/auth-settings.md). Исходные 000001 up/down изменены только для новой установки; существующей БД нужен согласованный upgrade, не reset.
+
 10.3b-local: password_audit добавлен `operator_password_reset` и обязательные для него operator_name/environment/reason/auth_version; SQL constraints не позволяют маскировать обычный audit под operator event. Отдельного recovery ledger/token table нет: single-use confirmation привязано к монотонной auth_version пользователя. CLI не пишет role/status/MFA/initial_setup; [runbook](features/admin-recovery.md). Роли и grants PostgreSQL выдаются отдельно DBA, не миграцией/startup.
 
 10.3a-local: `auth.initial_setup` — singleton pending encrypted intent/operator+request hashes/TTL/attempts и durable initialized timestamp/administrator UUID. Маркер не FK-зависим от пользователя и не очищается retention. Completion одной транзакцией создаёт пользователя/contact/password/TOTP/recovery/system role/grant и audit, очищает pending secrets. Истёкший intent очищается existing retention без сброса operator pin/marker. [Контракт](features/initial-setup.md).

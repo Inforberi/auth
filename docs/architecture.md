@@ -84,6 +84,10 @@ internal/
 │   │   │   ├── postgres/
 │   │   │   └── redis/
 │   │   └── transport/http/
+│   ├── settings/                # не-секретная Auth policy; runtime/API подключаются в A6.2
+│   │   ├── domain/
+│   │   ├── service/
+│   │   └── repository/postgres/
 │   └── mfa/
 │       ├── domain/
 │       ├── service/

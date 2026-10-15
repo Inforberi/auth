@@ -17,6 +17,7 @@ Backend access отделён от способов входа. Пользова
 | `accounts.users.read` | Список и карточка пользователей без права изменять их |
 | `accounts.users.status.manage` | Административная блокировка и разблокировка |
 | `accounts.users.delete` | Необратимое удаление аккаунта с сохранением tombstone |
+| `auth.settings.manage` | Чтение и изменение не-секретной Auth policy: внутренний store A6.1, HTTP/runtime enforcement ещё A6.2 |
 
 Продукт не может подменить эти записи. Каталог ограничен 512 permissions, одна роль — 128 permissions; повторные ключи и wildcard отклоняются. Ключ — lowercase ASCII с сегментами через точку, максимум 96 байт. Название и описание поддерживают UTF-8 и имеют ограничения размера.
 
@@ -57,7 +58,7 @@ Principal содержит user UUID и hash session token, не клиентс�
 
 ## Системный администратор и незавершённые части
 
-`super_admin` — зарезервированный key/system flag. Обычные create/update/assignment операции не создают, не изменяют, не назначают и не отзывают эту роль; автоматического wildcard bypass нет. Отдельные [system assignment endpoints](#управление-супер-администраторами--103c-local) разрешают назначение и снятие, но не изменение содержимого роли. [Первоначальный setup](initial-setup.md) создаёт первого владельца только после operator/email/TOTP proof, с семью core permissions и durable marker. Прямой SQL seed используется исключительно в изолированных тестах; operational/browser/UI acceptance setup ещё открыты.
+`super_admin` — зарезервированный key/system flag. Обычные create/update/assignment операции не создают, не изменяют, не назначают и не отзывают эту роль; автоматического wildcard bypass нет. Отдельные [system assignment endpoints](#управление-супер-администраторами--103c-local) разрешают назначение и снятие, но не изменение содержимого роли. [Первоначальный setup](initial-setup.md) создаёт первого владельца только после operator/email/TOTP proof, с восемью core permissions и durable marker. Прямой SQL seed используется исключительно в изолированных тестах; operational/browser/UI acceptance setup ещё открыты.
 
 Общий SQL guard для system revoke и account status/delete защищает последнее системное назначение: нужен другой active/nondeleted владелец `super_admin` с постоянными password credentials, подтверждённым credential email, enrolled TOTP и без pending/temporary activation. Системная роль должна содержать `access.assignments.manage`. Просто active строка без рабочего password/MFA профиля больше не считается резервом. Обычная роль, даже с management permissions, не заменяет системного администратора. Неактивного последнего владельца также нельзя удалить, административно заблокировать повторно или лишить system assignment: это уничтожило бы его оставшееся восстановление. Отказ — `account/domain.ErrLastAdministrator`; устаревшие версии дают conflict раньше этой проверки. Уже завершённое удаление с текущей version остаётся no-op.
 
@@ -136,7 +137,7 @@ Admin target read проверяет actor/session/permission и читает ta
 
 Users create/invite/temporary-password transport опубликован в 13.2a.2-local с `accounts.users.manage`, verified principal и transaction-owned password/MFA guard: [создание/приглашения](invitations.md#admin-api-132a2-local), [временные пароли](temporary-passwords.md#admin-api-132a2-local). Permission не даёт права назначать роли, блокировать/удалять или сбрасывать пароль active аккаунта. Владельцу этого management permission отключение MFA запрещено. Браузерная сквозная приёмка с синтетическими пользователями, реальными MFA/SMTP и UI обязательна в A8-admin-e2e; локальные тесты её не заменяют.
 
-Новая чистая установка через initial setup получает семь core permissions. Уже сохранённые роли/назначения автоматически не меняются: при обновлении старого тестового развёртывания новые `accounts.users.manage` / `accounts.users.read` / `accounts.users.status.manage` / `accounts.users.delete` требуют отдельного контролируемого DBA upgrade существующей системной роли с audit/incident; не direct SQL из UI и не self-promotion через обычный API. Read, issuance, status и delete permissions независимы. [Список/карточка](user-directory.md) не требуют нового password/MFA proof, не продлевают session и не дают административных mutations. Нового bootstrap bypass, автоматического wildcard grant или reset БД для этого нет.
+Новая чистая установка через initial setup получает восемь core permissions. Уже сохранённые роли/назначения автоматически не меняются: новые permissions, включая `auth.settings.manage`, требуют отдельного контролируемого DBA upgrade существующей системной роли с audit/incident; не direct SQL из UI и не self-promotion через обычный API. Read, issuance, status/delete и settings permissions независимы. [Список/карточка](user-directory.md) не требуют нового password/MFA proof, не продлевают session и не дают административных mutations. Нового bootstrap bypass, автоматического wildcard grant или reset БД для этого нет.
 
 ## Хранение
 
