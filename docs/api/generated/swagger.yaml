@@ -137,6 +137,31 @@ definitions:
       password:
         type: string
     type: object
+  account_http.ProvisionRequest:
+    properties:
+      email:
+        type: string
+      idempotencyKey:
+        type: string
+      invite:
+        type: boolean
+    required:
+    - idempotencyKey
+    type: object
+  account_http.ProvisionResponse:
+    properties:
+      reused:
+        type: boolean
+      userId:
+        type: string
+    type: object
+  account_http.ReissueInvitationRequest:
+    properties:
+      idempotencyKey:
+        type: string
+    required:
+    - idempotencyKey
+    type: object
   account_http.ResendRequest:
     properties:
       email:
@@ -534,6 +559,17 @@ definitions:
       token:
         type: string
     type: object
+  password_http.TemporaryIssueResponse:
+    properties:
+      expiresAt:
+        type: string
+      password:
+        type: string
+      reused:
+        type: boolean
+      userId:
+        type: string
+    type: object
   password_http.TemporaryLoginRequest:
     properties:
       email:
@@ -549,6 +585,23 @@ definitions:
         type: string
       token:
         type: string
+    type: object
+  password_http.TemporaryProvisionRequest:
+    properties:
+      email:
+        type: string
+      idempotencyKey:
+        type: string
+    required:
+    - email
+    - idempotencyKey
+    type: object
+  password_http.TemporaryReissueRequest:
+    properties:
+      idempotencyKey:
+        type: string
+    required:
+    - idempotencyKey
     type: object
   router.HealthResponse:
     properties:
@@ -789,6 +842,66 @@ paths:
       summary: Replace a custom role's definition
       tags:
       - Admin Access
+  /api/v1/admin/users:
+    post:
+      consumes:
+      - application/json
+      description: Requires INVITATIONS_ENABLED, MFA_ENABLED, accounts.users.manage
+        and fresh password plus MFA checked in the write transaction, including replay.
+        Actor comes only from the current session. UUID idempotency key is scoped
+        by actor; mismatched parameters or occupied email conflict. No roles, verified
+        email, password or session are granted. Replay does not resend mail or reactivate
+        the account.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: UUID command key; email required when invite=true
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/account_http.ProvisionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Committed replay, no new invitation
+          schema:
+            $ref: '#/definitions/account_http.ProvisionResponse'
+        "201":
+          description: First successful creation
+          schema:
+            $ref: '#/definitions/account_http.ProvisionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Create a pending user, optionally with an email invitation
+      tags:
+      - Admin Users
   /api/v1/admin/users/{id}/access:
     get:
       description: Requires current access.assignments.manage. UUID lookup only, no
@@ -890,6 +1003,66 @@ paths:
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
       summary: Approve a user's initial email binding
+      tags:
+      - Admin Users
+  /api/v1/admin/users/{id}/invitation:
+    post:
+      consumes:
+      - application/json
+      description: Requires accounts.users.manage and fresh password plus MFA; current
+        SQL authority is checked on reads, writes and replay. UUID command key, original
+        unverified contact, pending provisioned user only. No email changes, new user,
+        roles, session or bypass of temporary-password activation. Cooldown and Redis
+        budgets apply. Replay does not send another message.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Pending user UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New command key, or the same key for a retry
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/account_http.ReissueInvitationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/account_http.ProvisionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Reissue a pending user's email invitation
       tags:
       - Admin Users
   /api/v1/admin/users/{id}/roles/{roleId}:
@@ -1019,6 +1192,127 @@ paths:
       summary: Assign a custom role to a user
       tags:
       - Admin Access
+  /api/v1/admin/users/{id}/temporary-password:
+    post:
+      consumes:
+      - application/json
+      description: Requires accounts.users.manage and current fresh password plus
+        MFA on both preflight/replay and mutation. Only an existing pending temporary-password
+        account, original unverified contact and cooldown; does not reset an active
+        user's password. First commit returns a new secret once and invalidates old
+        temporary/setup authority. Replay preserves stored expiry and never returns
+        password. No email, roles or session are granted.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Pending temporary user UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: UUID command key
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/password_http.TemporaryReissueRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/password_http.TemporaryIssueResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Reissue a pending user's temporary password
+      tags:
+      - Admin Users
+  /api/v1/admin/users/temporary-password:
+    post:
+      consumes:
+      - application/json
+      description: Requires TEMPORARY_PASSWORD_ENABLED, MFA_ENABLED, accounts.users.manage
+        and current fresh password plus MFA. Independent of invitations. Server generates
+        the secret; response contains password only on first commit. Replay never
+        returns it or extends TTL. No email verification, roles or session. Protect
+        the response, do not log or cache it. Lost response requires a new reissue
+        command after cooldown.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: UUID command key and unoccupied email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/password_http.TemporaryProvisionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Replay without password or original expiresAt
+          schema:
+            $ref: '#/definitions/password_http.TemporaryIssueResponse'
+        "201":
+          description: First commit, plaintext password once
+          schema:
+            $ref: '#/definitions/password_http.TemporaryIssueResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Create a pending user with a one-time temporary password
+      tags:
+      - Admin Users
   /api/v1/auth/access:
     get:
       description: Current SQL role IDs, known permissions and assignment version,

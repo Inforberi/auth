@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
+	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
@@ -45,9 +47,13 @@ type temporaryTestRepo struct {
 	issued, found, begun, checked, completed int
 	reused                                   bool
 	err, completeErr                         error
+	lookupErr                                error
 }
 
 func (r *temporaryTestRepo) FindTemporaryProvision(context.Context, accountservice.ProvisionCommand) (*TemporaryIssueResult, error) {
+	if r.lookupErr != nil {
+		return nil, r.lookupErr
+	}
 	if r.reused {
 		return &TemporaryIssueResult{UserID: "00000000-0000-4000-8000-000000000002", Reused: true}, nil
 	}
@@ -55,6 +61,9 @@ func (r *temporaryTestRepo) FindTemporaryProvision(context.Context, accountservi
 }
 
 func (r *temporaryTestRepo) FindTemporaryReissue(_ context.Context, input TemporaryReissueInput) (*TemporaryIssueResult, error) {
+	if r.lookupErr != nil {
+		return nil, r.lookupErr
+	}
 	if r.reused {
 		return &TemporaryIssueResult{UserID: input.UserID, Reused: true}, nil
 	}
@@ -106,7 +115,7 @@ func temporaryFixture(t *testing.T) (*TemporaryPasswordService, *temporaryTestRe
 
 func TestTemporarySecretIssuedOnce(t *testing.T) {
 	s, repo, hash, _ := temporaryFixture(t)
-	input := TemporaryProvisionInput{ActorID: "00000000-0000-4000-8000-000000000001", IdempotencyKey: "00000000-0000-4000-8000-000000000003", Email: " USER@example.com "}
+	input := TemporaryProvisionInput{Actor: temporaryActor(), IdempotencyKey: "00000000-0000-4000-8000-000000000003", Email: " USER@example.com "}
 	first, err := s.Provision(context.Background(), input)
 	if err != nil || len(first.Password) != 43 || repo.command.Input.Email != "user@example.com" || repo.command.Input.Invite {
 		t.Fatal("invalid creation", first, err)
@@ -124,7 +133,7 @@ func TestTemporarySecretIssuedOnce(t *testing.T) {
 	if err != nil || second.Password != "" || second.UserID != first.UserID || repo.command.Fingerprint != fingerprint {
 		t.Fatal("replay exposed secret", err)
 	}
-	reissued, err := s.Reissue(context.Background(), TemporaryReissueInput{ActorID: input.ActorID, UserID: first.UserID, IdempotencyKey: input.IdempotencyKey})
+	reissued, err := s.Reissue(context.Background(), TemporaryReissueInput{Actor: input.Actor, UserID: first.UserID, IdempotencyKey: input.IdempotencyKey})
 	if err != nil || reissued.Password != "" {
 		t.Fatal("reissue replay exposed secret", err)
 	}
@@ -138,7 +147,7 @@ func TestTemporaryIssueValidationAndLimits(t *testing.T) {
 	if _, err := s.Provision(context.Background(), TemporaryProvisionInput{}); !errors.Is(err, accountdomain.ErrProvisionConflict) || hash.generated != 0 {
 		t.Fatal("invalid identifiers reached hash", err)
 	}
-	input := TemporaryProvisionInput{ActorID: "00000000-0000-4000-8000-000000000001", IdempotencyKey: "00000000-0000-4000-8000-000000000003", Email: "user@example.com"}
+	input := TemporaryProvisionInput{Actor: temporaryActor(), IdempotencyKey: "00000000-0000-4000-8000-000000000003", Email: "user@example.com"}
 	limit.allow = false
 	if _, err := s.Provision(context.Background(), input); !errors.Is(err, domain.ErrRecoveryLimited) || repo.issued != 0 || hash.generated != 0 {
 		t.Fatal("quota bypass", err)
@@ -151,5 +160,24 @@ func TestTemporaryIssueValidationAndLimits(t *testing.T) {
 	s.cfg.Enabled = false
 	if _, err := s.Provision(context.Background(), input); !errors.Is(err, domain.ErrTemporaryPasswordDisabled) {
 		t.Fatal(err)
+	}
+}
+
+func temporaryActor() accessservice.Principal {
+	return accessservice.Principal{UserID: "00000000-0000-4000-8000-000000000001", TokenHash: strings.Repeat("a", 64)}
+}
+
+func TestTemporaryUnauthorizedPreflightDoesNotHash(t *testing.T) {
+	s, repo, hash, _ := temporaryFixture(t)
+	repo.lookupErr = accessdomain.ErrForbidden
+	input := TemporaryProvisionInput{Actor: temporaryActor(), IdempotencyKey: "00000000-0000-4000-8000-000000000003", Email: "user@example.com"}
+	if _, err := s.Provision(context.Background(), input); !errors.Is(err, accessdomain.ErrForbidden) {
+		t.Fatal(err)
+	}
+	if _, err := s.Reissue(context.Background(), TemporaryReissueInput{Actor: input.Actor, UserID: "00000000-0000-4000-8000-000000000002", IdempotencyKey: input.IdempotencyKey}); !errors.Is(err, accessdomain.ErrForbidden) {
+		t.Fatal(err)
+	}
+	if hash.generated != 0 || repo.issued != 0 {
+		t.Fatal("unauthorized lookup reached Argon2 or mutation")
 	}
 }

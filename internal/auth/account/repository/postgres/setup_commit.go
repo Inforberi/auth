@@ -40,7 +40,7 @@ func commitInitialAdministrator(ctx context.Context, tx pgx.Tx, account *domain.
 	if err := tx.QueryRow(ctx, `INSERT INTO auth.roles(key,name,system) VALUES('super_admin','Супер-администратор',true) RETURNING id`).Scan(&role); err != nil {
 		return err
 	}
-	permissions := []string{string(settings.RolesManage), string(settings.AssignmentsManage), string(settings.EmailBindingManage)}
+	permissions := []string{string(settings.RolesManage), string(settings.AssignmentsManage), string(settings.EmailBindingManage), string(settings.UsersManage)}
 	if _, err := tx.Exec(ctx, `INSERT INTO auth.role_permissions(role_id,permission_key) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING`, role, permissions); err != nil {
 		return err
 	}

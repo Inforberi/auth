@@ -322,6 +322,172 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/admin/users": {
+            "post": {
+                "description": "Requires INVITATIONS_ENABLED, MFA_ENABLED, accounts.users.manage and fresh password plus MFA checked in the write transaction, including replay. Actor comes only from the current session. UUID idempotency key is scoped by actor; mismatched parameters or occupied email conflict. No roles, verified email, password or session are granted. Replay does not resend mail or reactivate the account.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Create a pending user, optionally with an email invitation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "UUID command key; email required when invite=true",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/account_http.ProvisionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Committed replay, no new invitation",
+                        "schema": {
+                            "$ref": "#/definitions/account_http.ProvisionResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "First successful creation",
+                        "schema": {
+                            "$ref": "#/definitions/account_http.ProvisionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/temporary-password": {
+            "post": {
+                "description": "Requires TEMPORARY_PASSWORD_ENABLED, MFA_ENABLED, accounts.users.manage and current fresh password plus MFA. Independent of invitations. Server generates the secret; response contains password only on first commit. Replay never returns it or extends TTL. No email verification, roles or session. Protect the response, do not log or cache it. Lost response requires a new reissue command after cooldown.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Create a pending user with a one-time temporary password",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "UUID command key and unoccupied email",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/password_http.TemporaryProvisionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Replay without password or original expiresAt",
+                        "schema": {
+                            "$ref": "#/definitions/password_http.TemporaryIssueResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "First commit, plaintext password once",
+                        "schema": {
+                            "$ref": "#/definitions/password_http.TemporaryIssueResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/users/{id}/access": {
             "get": {
                 "description": "Requires current access.assignments.manage. UUID lookup only, no user enumeration. One SQL statement checks actor session/permission and reads the target. Unknown/deleted target and unauthorized actor share forbidden. Pending/blocked targets may have assignments but cannot exercise permissions. accessVersion is for assignment concurrency, not permission caching.",
@@ -424,6 +590,90 @@ const docTemplate = `{
                         "description": "Accepted",
                         "schema": {
                             "$ref": "#/definitions/http.EmailBindingResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/{id}/invitation": {
+            "post": {
+                "description": "Requires accounts.users.manage and fresh password plus MFA; current SQL authority is checked on reads, writes and replay. UUID command key, original unverified contact, pending provisioned user only. No email changes, new user, roles, session or bypass of temporary-password activation. Cooldown and Redis budgets apply. Replay does not send another message.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Reissue a pending user's email invitation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pending user UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New command key, or the same key for a retry",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/account_http.ReissueInvitationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/account_http.ProvisionResponse"
                         }
                     },
                     "400": {
@@ -632,6 +882,90 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/{id}/temporary-password": {
+            "post": {
+                "description": "Requires accounts.users.manage and current fresh password plus MFA on both preflight/replay and mutation. Only an existing pending temporary-password account, original unverified contact and cooldown; does not reset an active user's password. First commit returns a new secret once and invalidates old temporary/setup authority. Replay preserves stored expiry and never returns password. No email, roles or session are granted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Reissue a pending user's temporary password",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pending temporary user UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "UUID command key",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/password_http.TemporaryReissueRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/password_http.TemporaryIssueResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -3948,6 +4282,45 @@ const docTemplate = `{
                 }
             }
         },
+        "account_http.ProvisionRequest": {
+            "type": "object",
+            "required": [
+                "idempotencyKey"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "idempotencyKey": {
+                    "type": "string"
+                },
+                "invite": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "account_http.ProvisionResponse": {
+            "type": "object",
+            "properties": {
+                "reused": {
+                    "type": "boolean"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
+        "account_http.ReissueInvitationRequest": {
+            "type": "object",
+            "required": [
+                "idempotencyKey"
+            ],
+            "properties": {
+                "idempotencyKey": {
+                    "type": "string"
+                }
+            }
+        },
         "account_http.ResendRequest": {
             "type": "object",
             "required": [
@@ -4556,6 +4929,23 @@ const docTemplate = `{
                 }
             }
         },
+        "password_http.TemporaryIssueResponse": {
+            "type": "object",
+            "properties": {
+                "expiresAt": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "reused": {
+                    "type": "boolean"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
         "password_http.TemporaryLoginRequest": {
             "type": "object",
             "properties": {
@@ -4577,6 +4967,32 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "password_http.TemporaryProvisionRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "idempotencyKey"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "idempotencyKey": {
+                    "type": "string"
+                }
+            }
+        },
+        "password_http.TemporaryReissueRequest": {
+            "type": "object",
+            "required": [
+                "idempotencyKey"
+            ],
+            "properties": {
+                "idempotencyKey": {
                     "type": "string"
                 }
             }

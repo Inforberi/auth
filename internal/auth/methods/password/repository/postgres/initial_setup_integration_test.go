@@ -138,7 +138,7 @@ func TestInitialSetupSchema(t *testing.T) {
 		(SELECT count(*) FROM auth.mfa_totp WHERE user_id=$1 AND last_step=123456),
 		(SELECT count(*) FROM auth.mfa_recovery_codes WHERE user_id=$1),
 		(SELECT count(*) FROM auth.access_audit WHERE target_id=$1),
-		(SELECT count(*) FROM auth.role_permissions rp JOIN auth.user_roles ur ON ur.role_id=rp.role_id WHERE ur.user_id=$1)`, account.UserID).Scan(&email, &factor, &codes, &audits, &permissions); err != nil || email != 1 || factor != 1 || codes != 10 || audits != 1 || permissions != 3 {
+		(SELECT count(*) FROM auth.role_permissions rp JOIN auth.user_roles ur ON ur.role_id=rp.role_id WHERE ur.user_id=$1)`, account.UserID).Scan(&email, &factor, &codes, &audits, &permissions); err != nil || email != 1 || factor != 1 || codes != 10 || audits != 1 || permissions != 4 {
 		t.Fatal("incomplete setup", err, email, factor, codes, audits, permissions)
 	}
 	var erased bool

@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
@@ -37,10 +38,7 @@ type invitationFixture struct {
 
 func newInvitationFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, name string) invitationFixture {
 	t.Helper()
-	actor, err := New(db).CreateUser(ctx, "inviter-"+name+"@example.com", "actor-hash")
-	if err != nil {
-		t.Fatal(err)
-	}
+	actor := provisioningPrincipal(t, db, ctx)
 	var key string
 	if err := db.QueryRow(ctx, `SELECT gen_random_uuid()::text`).Scan(&key); err != nil {
 		t.Fatal(err)
@@ -55,8 +53,21 @@ func newInvitationFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, n
 	recovery := passwordservice.NewRecovery(nil, cipher, verificationLimits{}, nil, invitationTestHasher{}, passwordservice.Config{})
 	return invitationFixture{
 		accounts: repo, provision: accountservice.NewProvisioning(repo, account, cfg), activation: passwordservice.NewActivation(repo, recovery, cfg), cipher: cipher,
-		input: accountservice.ProvisionInput{ActorID: actor, IdempotencyKey: key, Email: "invited-" + name + "@example.com", Invite: true},
+		input: accountservice.ProvisionInput{Actor: actor, IdempotencyKey: key, Email: "invited-" + name + "@example.com", Invite: true},
 	}
+}
+
+func provisioningPrincipal(t *testing.T, db *pgxpool.Pool, ctx context.Context) accessservice.Principal {
+	t.Helper()
+	actor := accessPrincipal(t, db, ctx)
+	// Synthetic current password/MFA proofs are provided by accessPrincipal, not a login bypass in runtime.
+	accessExec(t, db, ctx, `WITH role AS (
+		INSERT INTO auth.roles(key,name) VALUES('provision_operator','Provision operator')
+		ON CONFLICT(key) DO UPDATE SET name=EXCLUDED.name RETURNING id
+	), permission AS (
+		INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,'accounts.users.manage' FROM role ON CONFLICT DO NOTHING
+	) INSERT INTO auth.user_roles(user_id,role_id) SELECT $1,id FROM role`, actor.UserID)
+	return actor
 }
 
 func (f invitationFixture) create(t *testing.T, db *pgxpool.Pool, ctx context.Context) (accountdomain.UserID, string, string) {
@@ -194,15 +205,15 @@ func checkInvitations(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 			case "version":
 				_, err = db.Exec(ctx, `UPDATE auth.users SET auth_version=auth_version+1 WHERE id=$1`, user)
 			case "blocked":
-				_, err = f.accounts.ChangeStatus(ctx, accountdomain.StatusChange{UserID: user, ActorID: f.input.ActorID, Status: accountdomain.StatusBlocked, ExpectedVersion: 1})
+				_, err = f.accounts.ChangeStatus(ctx, accountdomain.StatusChange{UserID: user, ActorID: f.input.Actor.UserID, Status: accountdomain.StatusBlocked, ExpectedVersion: 1})
 			case "deleted":
-				_, err = f.accounts.DeleteAccount(ctx, accountdomain.AccountDeletion{UserID: user, ActorID: f.input.ActorID, ExpectedVersion: 1})
+				_, err = f.accounts.DeleteAccount(ctx, accountdomain.AccountDeletion{UserID: user, ActorID: f.input.Actor.UserID, ExpectedVersion: 1})
 			}
 			if err != nil {
 				t.Fatal(err)
 			}
 			if name == "blocked" {
-				_, err := f.accounts.ChangeStatus(ctx, accountdomain.StatusChange{UserID: user, ActorID: f.input.ActorID, Status: accountdomain.StatusActive, ExpectedVersion: 2})
+				_, err := f.accounts.ChangeStatus(ctx, accountdomain.StatusChange{UserID: user, ActorID: f.input.Actor.UserID, Status: accountdomain.StatusActive, ExpectedVersion: 2})
 				if !errors.Is(err, accountdomain.ErrAccountConflict) {
 					t.Fatal("unblock bypassed activation", err)
 				}
@@ -235,7 +246,7 @@ func checkInvitations(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	t.Run("pending-cannot-unblock", func(t *testing.T) {
 		f := newInvitationFixture(t, db, ctx, "bypass")
 		user, _, _ := f.create(t, db, ctx)
-		_, err := f.accounts.ChangeStatus(ctx, accountdomain.StatusChange{UserID: user, ActorID: f.input.ActorID, Status: accountdomain.StatusActive, ExpectedVersion: 1})
+		_, err := f.accounts.ChangeStatus(ctx, accountdomain.StatusChange{UserID: user, ActorID: f.input.Actor.UserID, Status: accountdomain.StatusActive, ExpectedVersion: 1})
 		if !errors.Is(err, accountdomain.ErrAccountConflict) {
 			t.Fatal("status bypassed activation", err)
 		}

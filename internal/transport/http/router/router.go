@@ -24,6 +24,8 @@ import (
 )
 
 type Handlers struct {
+	Provisioning      *accounthttp.ProvisioningHandler
+	TemporaryAdmin    *passwordhttp.TemporaryAdminHandler
 	Access            *accesshttp.Handler
 	Setup             *accounthttp.SetupHandler
 	MFA               *mfahttp.Handler
@@ -83,6 +85,7 @@ func New(h Handlers) *chi.Mux {
 
 	r.Route("/api/v1/", func(r chi.Router) {
 		accessRoutes(r, h)
+		provisioningRoutes(r, h)
 		setupRoutes(r, h)
 		emailBindingRoutes(r, h)
 		r.Route("/auth", func(r chi.Router) {

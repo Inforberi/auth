@@ -4,19 +4,20 @@ import (
 	"context"
 	"time"
 
+	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 )
 
 type TemporaryProvisionInput struct {
-	ActorID        accountdomain.UserID
+	Actor          accessservice.Principal
 	IdempotencyKey string
 	Email          string
 }
 
 type TemporaryReissueInput struct {
-	ActorID        accountdomain.UserID
+	Actor          accessservice.Principal
 	UserID         accountdomain.UserID
 	IdempotencyKey string
 }
@@ -32,7 +33,7 @@ func (s *TemporaryPasswordService) Provision(ctx context.Context, input Temporar
 	if !s.cfg.Enabled {
 		return nil, domain.ErrTemporaryPasswordDisabled
 	}
-	if !accountdomain.ValidUserID(input.ActorID) || !accountdomain.ValidUserID(accountdomain.UserID(input.IdempotencyKey)) {
+	if input.Actor.Validate() != nil || !accountdomain.ValidUserID(accountdomain.UserID(input.IdempotencyKey)) {
 		return nil, accountdomain.ErrProvisionConflict
 	}
 	email, err := accountdomain.NewEmail(input.Email)
@@ -41,11 +42,11 @@ func (s *TemporaryPasswordService) Provision(ctx context.Context, input Temporar
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	if err := s.limitIssue(ctx, input.ActorID); err != nil {
+	if err := s.limitIssue(ctx, input.Actor.UserID); err != nil {
 		return nil, err
 	}
 	command := accountservice.ProvisionCommand{
-		Input:       accountservice.ProvisionInput{ActorID: input.ActorID, IdempotencyKey: input.IdempotencyKey, Email: email.String()},
+		Input:       accountservice.ProvisionInput{Actor: input.Actor, IdempotencyKey: input.IdempotencyKey, Email: email.String()},
 		Fingerprint: s.digest("temporary-password-provision:v1:" + email.String()),
 	}
 	// A committed retry needs no Argon2; the mutation still serializes racing first attempts.
@@ -70,12 +71,12 @@ func (s *TemporaryPasswordService) Reissue(ctx context.Context, input TemporaryR
 	if !s.cfg.Enabled {
 		return nil, domain.ErrTemporaryPasswordDisabled
 	}
-	if !accountdomain.ValidUserID(input.ActorID) || !accountdomain.ValidUserID(input.UserID) || input.ActorID == input.UserID || !accountdomain.ValidUserID(accountdomain.UserID(input.IdempotencyKey)) {
+	if input.Actor.Validate() != nil || !accountdomain.ValidUserID(input.UserID) || input.Actor.UserID == input.UserID || !accountdomain.ValidUserID(accountdomain.UserID(input.IdempotencyKey)) {
 		return nil, accountdomain.ErrProvisionConflict
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	if err := s.limitIssue(ctx, input.ActorID); err != nil {
+	if err := s.limitIssue(ctx, input.Actor.UserID); err != nil {
 		return nil, err
 	}
 	if previous, err := s.repo.FindTemporaryReissue(ctx, input); err != nil || previous != nil {

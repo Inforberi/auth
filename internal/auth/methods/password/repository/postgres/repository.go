@@ -26,7 +26,7 @@ func New(db *pgxpool.Pool) *PasswordRepo {
 func (r *PasswordRepo) transaction(ctx context.Context, fn func(context.Context, pgx.Tx) error) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	tx, err := r.db.Begin(ctx)
+	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		return err
 	}

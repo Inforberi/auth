@@ -14,7 +14,7 @@ func TestInvitationReissuePreparation(t *testing.T) {
 	account, _, limits, _, _ := fixture(t)
 	repo := &provisionRepo{}
 	s := service.NewProvisioning(repo, account, service.InvitationConfig{Enabled: true, URL: "https://example.com/activate", TTL: time.Hour})
-	input := service.InvitationReissueInput{ActorID: "00000000-0000-4000-8000-000000000001", UserID: "00000000-0000-4000-8000-000000000002", IdempotencyKey: "00000000-0000-4000-8000-000000000003"}
+	input := service.InvitationReissueInput{Actor: provisionActor(), UserID: "00000000-0000-4000-8000-000000000002", IdempotencyKey: "00000000-0000-4000-8000-000000000003"}
 	result, err := s.ReissueInvitation(context.Background(), input)
 	if err != nil || result.UserID != input.UserID || repo.calls != 1 || len(limits.keys) != 2 {
 		t.Fatalf("reissue: %v %v", result, err)

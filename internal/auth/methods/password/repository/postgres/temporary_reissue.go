@@ -7,6 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
+	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
@@ -15,19 +17,11 @@ import (
 func (r *TemporaryPasswordRepo) ReissueTemporary(ctx context.Context, input service.TemporaryReissueInput, credential domain.TemporaryCredential, ttl, cooldown time.Duration) (*service.TemporaryIssueResult, error) {
 	result := &service.TemporaryIssueResult{UserID: input.UserID}
 	err := r.transaction(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		var actor accountdomain.UserID
-		err := tx.QueryRow(ctx, `SELECT id FROM auth.users WHERE id=$1 AND status='active' AND deleted_at IS NULL FOR SHARE`, input.ActorID).Scan(&actor)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return accountdomain.ErrProvisionConflict
-		}
-		if err != nil {
-			return err
-		}
-		if err := lockTemporaryUser(ctx, tx, input.UserID); err != nil {
+		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, input.Actor, string(input.UserID), settings.UsersManage); err != nil {
 			return err
 		}
 		var previous accountdomain.UserID
-		err = tx.QueryRow(ctx, `SELECT user_id,expires_at FROM auth.temporary_password_reissues WHERE actor_id=$1 AND request_key=$2`, actor, input.IdempotencyKey).Scan(&previous, &result.ExpiresAt)
+		err := tx.QueryRow(ctx, `SELECT user_id,expires_at FROM auth.temporary_password_reissues WHERE actor_id=$1 AND request_key=$2`, input.Actor.UserID, input.IdempotencyKey).Scan(&previous, &result.ExpiresAt)
 		if err == nil {
 			if previous != input.UserID {
 				return accountdomain.ErrProvisionConflict
@@ -54,7 +48,7 @@ func (r *TemporaryPasswordRepo) ReissueTemporary(ctx context.Context, input serv
 		}
 		var stored accountdomain.UserID
 		err = tx.QueryRow(ctx, `INSERT INTO auth.temporary_password_reissues(actor_id,request_key,user_id,expires_at)
-			VALUES($1,$2,$3,clock_timestamp()+$4::double precision*interval '1 second') ON CONFLICT(actor_id,request_key) DO NOTHING RETURNING user_id,expires_at`, actor, input.IdempotencyKey, input.UserID, ttl.Seconds()).Scan(&stored, &result.ExpiresAt)
+			VALUES($1,$2,$3,clock_timestamp()+$4::double precision*interval '1 second') ON CONFLICT(actor_id,request_key) DO NOTHING RETURNING user_id,expires_at`, input.Actor.UserID, input.IdempotencyKey, input.UserID, ttl.Seconds()).Scan(&stored, &result.ExpiresAt)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return accountdomain.ErrProvisionConflict
 		}
@@ -81,7 +75,7 @@ func (r *TemporaryPasswordRepo) ReissueTemporary(ctx context.Context, input serv
 		if _, err := tx.Exec(ctx, `UPDATE auth.account_provisions SET temporary_password_issued_at=clock_timestamp() WHERE user_id=$1`, input.UserID); err != nil {
 			return err
 		}
-		_, err = tx.Exec(ctx, `INSERT INTO auth.password_audit(user_id,actor_id,event,auth_version) VALUES($1,$2,'temporary_password_reissued',$3)`, input.UserID, actor, version)
+		_, err = tx.Exec(ctx, `INSERT INTO auth.password_audit(user_id,actor_id,event,auth_version) VALUES($1,$2,'temporary_password_reissued',$3)`, input.UserID, input.Actor.UserID, version)
 		return err
 	})
 	if err != nil {

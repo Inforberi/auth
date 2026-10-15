@@ -42,10 +42,7 @@ type temporaryFixture struct {
 
 func newTemporaryFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, name string) temporaryFixture {
 	t.Helper()
-	actor, err := New(db).CreateUser(ctx, "temporary-actor-"+name+"@example.com", "actor-hash")
-	if err != nil {
-		t.Fatal(err)
-	}
+	actor := provisioningPrincipal(t, db, ctx)
 	cipher, err := secretbox.NewScoped("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "password-reset:v1")
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +53,7 @@ func newTemporaryFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, na
 	cfg := passwordservice.TemporaryPasswordConfig{Enabled: true, TTL: time.Hour, SetupTTL: 5 * time.Minute, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}
 	return temporaryFixture{
 		service: passwordservice.NewTemporaryPassword(repo, temporaryFixtureHash{}, verificationLimits{}, cipher.Digest, limit, cfg), repo: repo, accounts: accounts,
-		input: passwordservice.TemporaryProvisionInput{ActorID: actor, IdempotencyKey: temporaryRequestKey(t, db, ctx), Email: "temporary-" + name + "@example.com"},
+		input: passwordservice.TemporaryProvisionInput{Actor: actor, IdempotencyKey: temporaryRequestKey(t, db, ctx), Email: "temporary-" + name + "@example.com"},
 	}
 }
 

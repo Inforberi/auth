@@ -76,6 +76,8 @@ func readAPI(t *testing.T) apiDocument {
 func contractHandlers(env string) Handlers {
 	log := zap.NewNop()
 	return Handlers{
+		Provisioning:      accounthttp.NewProvisioning(&contractProvisioning{}, log),
+		TemporaryAdmin:    passwordhttp.NewTemporaryAdmin(&contractTemporaryAdmin{}, log),
 		Access:            accesshttp.New(&contractAccess{}, log),
 		Setup:             accounthttp.NewSetup(&contractSetup{}, log),
 		EmailBinding:      accounthttp.NewEmailBinding(&contractEmailBinding{}, log),
@@ -93,14 +95,16 @@ func contractHandlers(env string) Handlers {
 		Google:            googlehttp.New(&contractTelegram{}, log),
 		EmailOTP:          otphttp.New(&contractEmailOTP{}, log),
 		Config: &config.Config{
-			InitialSetup: accountservice.SetupConfig{Enabled: true},
-			EmailBinding: accountservice.EmailBindingConfig{Enabled: true},
-			MFA:          mfaservice.Config{Enabled: true, RecoveryEnabled: true},
-			EmailOTP:     otpservice.Config{Enabled: true, ReauthenticationEnabled: true},
-			Telegram:     telegramservice.Config{Enabled: true},
-			Google:       googleservice.Config{Enabled: true},
-			Logger:       logger.Config{Env: env},
-			Browser:      requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}},
+			Invitation:        accountservice.InvitationConfig{Enabled: true},
+			TemporaryPassword: passwordservice.TemporaryPasswordConfig{Enabled: true},
+			InitialSetup:      accountservice.SetupConfig{Enabled: true},
+			EmailBinding:      accountservice.EmailBindingConfig{Enabled: true},
+			MFA:               mfaservice.Config{Enabled: true, RecoveryEnabled: true},
+			EmailOTP:          otpservice.Config{Enabled: true, ReauthenticationEnabled: true},
+			Telegram:          telegramservice.Config{Enabled: true},
+			Google:            googleservice.Config{Enabled: true},
+			Logger:            logger.Config{Env: env},
+			Browser:           requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}},
 		},
 		PasswordHandler: passwordhttp.New(contractPasswords{}, log),
 		Middleware:      sessionhttp.New(contractSessions{}, log),

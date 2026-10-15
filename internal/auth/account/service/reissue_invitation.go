@@ -4,11 +4,12 @@ import (
 	"context"
 	"time"
 
+	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 )
 
 type InvitationReissueInput struct {
-	ActorID        domain.UserID
+	Actor          accessservice.Principal
 	UserID         domain.UserID
 	IdempotencyKey string
 }
@@ -25,18 +26,15 @@ func (s *ProvisionService) ReissueInvitation(ctx context.Context, input Invitati
 	if !s.cfg.Enabled {
 		return nil, domain.ErrProvisionDisabled
 	}
-	if !domain.ValidUserID(input.ActorID) || !domain.ValidUserID(input.UserID) || !domain.ValidUserID(domain.UserID(input.IdempotencyKey)) || input.ActorID == input.UserID {
+	if input.Actor.Validate() != nil || !domain.ValidUserID(input.UserID) || !domain.ValidUserID(domain.UserID(input.IdempotencyKey)) || input.Actor.UserID == input.UserID {
 		return nil, domain.ErrProvisionConflict
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	if err := s.account.limit(ctx, "invitation-reissue-actor:"+string(input.ActorID), s.cfg.ReissueActorAttemptsPerMinute, time.Minute); err != nil {
+	if err := s.limitIssue(ctx, input.Actor.UserID); err != nil {
 		return nil, err
 	}
-	if err := s.account.limit(ctx, "invitation-reissue-project", s.cfg.ReissueProjectAttemptsPerMinute, time.Minute); err != nil {
-		return nil, err
-	}
-	email, err := s.repo.InvitationAddress(ctx, input.UserID)
+	email, err := s.repo.InvitationAddress(ctx, input.Actor, input.UserID)
 	if err != nil {
 		return nil, err
 	}

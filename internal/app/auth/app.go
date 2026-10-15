@@ -106,14 +106,18 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	var activation *passwordhttp.ActivationHandler
 	var temporary *passwordservice.TemporaryPasswordService
 	var temporaryHandler *passwordhttp.TemporaryPasswordHandler
+	var temporaryAdmin *passwordhttp.TemporaryAdminHandler
 	if cfg.TemporaryPassword.Enabled {
 		temporaryRepo := passwordpostgres.NewTemporaryPassword(pool, accountRepo.ProvisionInTransaction)
 		temporary = passwordservice.NewTemporaryPassword(temporaryRepo, argonHash, passwordLimits, resetCipher.Digest, loginLimit, cfg.TemporaryPassword)
 		temporaryHandler = passwordhttp.NewTemporaryPassword(temporary, log)
+		temporaryAdmin = passwordhttp.NewTemporaryAdmin(temporary, log)
 	}
 	var provisioning *accountservice.ProvisionService
+	var provisioningHandler *accounthttp.ProvisioningHandler
 	if cfg.Invitation.Enabled {
 		provisioning = accountservice.NewProvisioning(accountRepo, accountSvc, cfg.Invitation)
+		provisioningHandler = accounthttp.NewProvisioning(provisioning, log)
 		activation = passwordhttp.NewActivation(passwordservice.NewActivation(accountRepo, recoverySvc, cfg.Invitation), log)
 	}
 	if cfg.EmailChange.Enabled {
@@ -127,6 +131,8 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		mailTest = dev.NewMailTest(mail, log)
 	}
 	handler := router.New(router.Handlers{
+		Provisioning:      provisioningHandler,
+		TemporaryAdmin:    temporaryAdmin,
 		Access:            accesshttp.New(access.Service, log),
 		Setup:             setup,
 		EmailBinding:      emailBinding,

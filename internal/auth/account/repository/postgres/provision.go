@@ -7,6 +7,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
+	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 )
@@ -23,6 +25,9 @@ func (r *Repository) ProvisionAccount(ctx context.Context, command service.Provi
 
 // ProvisionInTransaction lets credential provisioning share the account creation transaction.
 func (r *Repository) ProvisionInTransaction(ctx context.Context, tx pgx.Tx, command service.ProvisionCommand) (*service.ProvisionResult, error) {
+	if _, err := accesspostgres.AuthorizeMutation(ctx, tx, command.Input.Actor, "", settings.UsersManage); err != nil {
+		return nil, err
+	}
 	result := &service.ProvisionResult{}
 	err := provisionAccount(ctx, tx, command, result)
 	var sqlErr *pgconn.PgError
@@ -37,19 +42,11 @@ func (r *Repository) ProvisionInTransaction(ctx context.Context, tx pgx.Tx, comm
 
 func provisionAccount(ctx context.Context, tx pgx.Tx, command service.ProvisionCommand, result *service.ProvisionResult) error {
 	input := command.Input
-	var actor domain.UserID
-	err := tx.QueryRow(ctx, `SELECT id FROM auth.users WHERE id=$1 AND status='active' AND deleted_at IS NULL FOR SHARE`, input.ActorID).Scan(&actor)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return domain.ErrProvisionConflict
-	}
-	if err != nil {
-		return err
-	}
-	err = tx.QueryRow(ctx, `INSERT INTO auth.account_provisions(actor_id,request_key,fingerprint)
-		VALUES($1,$2,$3) ON CONFLICT(actor_id,request_key) DO NOTHING RETURNING user_id`, input.ActorID, input.IdempotencyKey, command.Fingerprint).Scan(&result.UserID)
+	err := tx.QueryRow(ctx, `INSERT INTO auth.account_provisions(actor_id,request_key,fingerprint)
+		VALUES($1,$2,$3) ON CONFLICT(actor_id,request_key) DO NOTHING RETURNING user_id`, input.Actor.UserID, input.IdempotencyKey, command.Fingerprint).Scan(&result.UserID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		var fingerprint string
-		if err := tx.QueryRow(ctx, `SELECT user_id,fingerprint FROM auth.account_provisions WHERE actor_id=$1 AND request_key=$2`, input.ActorID, input.IdempotencyKey).Scan(&result.UserID, &fingerprint); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT user_id,fingerprint FROM auth.account_provisions WHERE actor_id=$1 AND request_key=$2`, input.Actor.UserID, input.IdempotencyKey).Scan(&result.UserID, &fingerprint); err != nil {
 			return err
 		}
 		if fingerprint != command.Fingerprint {
@@ -89,6 +86,6 @@ func provisionAccount(ctx context.Context, tx pgx.Tx, command service.ProvisionC
 			return err
 		}
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO auth.invitation_audit(user_id,actor_id,action,auth_version) VALUES($1,$2,'provisioned',1)`, result.UserID, input.ActorID)
+	_, err = tx.Exec(ctx, `INSERT INTO auth.invitation_audit(user_id,actor_id,action,auth_version) VALUES($1,$2,'provisioned',1)`, result.UserID, input.Actor.UserID)
 	return err
 }

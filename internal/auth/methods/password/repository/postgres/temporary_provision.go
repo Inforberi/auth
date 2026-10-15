@@ -31,7 +31,7 @@ func (r *TemporaryPasswordRepo) ProvisionTemporary(ctx context.Context, command 
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec(ctx, `INSERT INTO auth.password_audit(user_id,actor_id,event,auth_version) VALUES($1,$2,'temporary_password_issued',1)`, result.UserID, command.Input.ActorID)
+		_, err = tx.Exec(ctx, `INSERT INTO auth.password_audit(user_id,actor_id,event,auth_version) VALUES($1,$2,'temporary_password_issued',1)`, result.UserID, command.Input.Actor.UserID)
 		return err
 	})
 	if err != nil {

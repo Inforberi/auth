@@ -75,7 +75,7 @@ func TestManagementQueries(t *testing.T) {
 		t.Fatal("invalid target reached storage", err)
 	}
 	target := accountdomain.UserID(role)
-	if _, err := svc.AssignmentAccess(context.Background(), actor, target); err != nil || repo.actor != actor || repo.target != target || len(repo.knownKeys) != 3 {
+	if _, err := svc.AssignmentAccess(context.Background(), actor, target); err != nil || repo.actor != actor || repo.target != target || len(repo.knownKeys) != 4 {
 		t.Fatal("assignment query lost authority, target or catalog", err)
 	}
 	repo.err = errors.New("SQL unavailable")

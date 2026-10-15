@@ -80,11 +80,6 @@ func TestInvitationHTTPContract(t *testing.T) {
 	if w.Code != 404 {
 		t.Fatal("disabled invitation published", w.Code)
 	}
-	w = httptest.NewRecorder()
-	New(h).ServeHTTP(w, httptest.NewRequest("POST", "/api/v1/admin/users", strings.NewReader(`{}`)))
-	if w.Code != 404 {
-		t.Fatal("unprotected provisioning route published")
-	}
 	doc := readAPI(t)
 	if len(doc.Paths[path]["post"].Responses) == 0 {
 		t.Fatal("missing activation API contract")

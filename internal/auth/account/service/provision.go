@@ -5,11 +5,12 @@ import (
 	"strconv"
 	"time"
 
+	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 )
 
 type ProvisionInput struct {
-	ActorID        domain.UserID
+	Actor          accessservice.Principal
 	IdempotencyKey string
 	Email          string
 	Invite         bool
@@ -29,7 +30,7 @@ type ProvisionCommand struct {
 
 type provisionRepository interface {
 	ProvisionAccount(context.Context, ProvisionCommand) (*ProvisionResult, error)
-	InvitationAddress(context.Context, domain.UserID) (string, error)
+	InvitationAddress(context.Context, accessservice.Principal, domain.UserID) (string, error)
 	ReissueInvitation(context.Context, InvitationReissueCommand) (*ProvisionResult, error)
 }
 
@@ -43,11 +44,11 @@ func NewProvisioning(repo provisionRepository, account *Service, cfg InvitationC
 	if cfg.ReissueCooldown == 0 {
 		cfg.ReissueCooldown = time.Minute
 	}
-	if cfg.ReissueActorAttemptsPerMinute == 0 {
-		cfg.ReissueActorAttemptsPerMinute = 30
+	if cfg.IssueActorAttemptsPerMinute == 0 {
+		cfg.IssueActorAttemptsPerMinute = 30
 	}
-	if cfg.ReissueProjectAttemptsPerMinute == 0 {
-		cfg.ReissueProjectAttemptsPerMinute = 100
+	if cfg.IssueProjectAttemptsPerMinute == 0 {
+		cfg.IssueProjectAttemptsPerMinute = 100
 	}
 	return &ProvisionService{repo: repo, account: account, cfg: cfg}
 }
@@ -56,7 +57,7 @@ func (s *ProvisionService) Provision(ctx context.Context, input ProvisionInput) 
 	if !s.cfg.Enabled {
 		return nil, domain.ErrProvisionDisabled
 	}
-	if !domain.ValidUserID(input.ActorID) || !domain.ValidUserID(domain.UserID(input.IdempotencyKey)) {
+	if input.Actor.Validate() != nil || !domain.ValidUserID(domain.UserID(input.IdempotencyKey)) {
 		return nil, domain.ErrProvisionConflict
 	}
 	if input.Email != "" || input.Invite {
@@ -65,6 +66,11 @@ func (s *ProvisionService) Provision(ctx context.Context, input ProvisionInput) 
 			return nil, err
 		}
 		input.Email = email.String()
+	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := s.limitIssue(ctx, input.Actor.UserID); err != nil {
+		return nil, err
 	}
 	command := ProvisionCommand{
 		Input: input, TTL: s.cfg.TTL,
@@ -77,7 +83,12 @@ func (s *ProvisionService) Provision(ctx context.Context, input ProvisionInput) 
 		}
 		command.Invitation = prepared
 	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
 	return s.repo.ProvisionAccount(ctx, command)
+}
+
+func (s *ProvisionService) limitIssue(ctx context.Context, actor domain.UserID) error {
+	if err := s.account.limit(ctx, "invitation-reissue-actor:"+string(actor), s.cfg.IssueActorAttemptsPerMinute, time.Minute); err != nil {
+		return err
+	}
+	return s.account.limit(ctx, "invitation-reissue-project", s.cfg.IssueProjectAttemptsPerMinute, time.Minute)
 }

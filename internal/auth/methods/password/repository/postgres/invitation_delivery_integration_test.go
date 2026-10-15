@@ -78,7 +78,7 @@ func checkProvisionRollback(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 	}
 	var intact bool
 	if err := db.QueryRow(ctx, `SELECT NOT EXISTS(SELECT 1 FROM auth.account_provisions WHERE actor_id=$1 AND request_key=$2)
-		AND NOT EXISTS(SELECT 1 FROM auth.user_emails WHERE email=$3)`, f.input.ActorID, f.input.IdempotencyKey, f.input.Email).Scan(&intact); err != nil || !intact {
+		AND NOT EXISTS(SELECT 1 FROM auth.user_emails WHERE email=$3)`, f.input.Actor.UserID, f.input.IdempotencyKey, f.input.Email).Scan(&intact); err != nil || !intact {
 		t.Fatal("partial creation", err)
 	}
 }

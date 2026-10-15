@@ -44,7 +44,7 @@ func checkTemporaryFailures(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 			t.Fatal("expired hash not cleaned", err)
 		}
 		allowTemporaryReissue(t, db, ctx, created.UserID)
-		if _, err := f.service.Reissue(ctx, passwordservice.TemporaryReissueInput{ActorID: f.input.ActorID, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}); err != nil {
+		if _, err := f.service.Reissue(ctx, passwordservice.TemporaryReissueInput{Actor: f.input.Actor, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}); err != nil {
 			t.Fatal("cleanup lost durable reissue state", err)
 		}
 	})
@@ -59,9 +59,9 @@ func checkTemporaryFailures(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 			setup := f.login(t, ctx, created.Password)
 			var err error
 			if deleting {
-				_, err = f.accounts.DeleteAccount(ctx, accountdomain.AccountDeletion{UserID: created.UserID, ActorID: f.input.ActorID, ExpectedVersion: 1})
+				_, err = f.accounts.DeleteAccount(ctx, accountdomain.AccountDeletion{UserID: created.UserID, ActorID: f.input.Actor.UserID, ExpectedVersion: 1})
 			} else {
-				_, err = f.accounts.ChangeStatus(ctx, accountdomain.StatusChange{UserID: created.UserID, ActorID: f.input.ActorID, Status: accountdomain.StatusBlocked, ExpectedVersion: 1})
+				_, err = f.accounts.ChangeStatus(ctx, accountdomain.StatusChange{UserID: created.UserID, ActorID: f.input.Actor.UserID, Status: accountdomain.StatusBlocked, ExpectedVersion: 1})
 			}
 			if err != nil {
 				t.Fatal(err)
@@ -72,7 +72,7 @@ func checkTemporaryFailures(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 			if err := f.service.Complete(ctx, setup.Token, "PermanentExamplePass123", "PermanentExamplePass123", "ip"); !errors.Is(err, passworddomain.ErrInvalidTemporaryPassword) {
 				t.Fatal("blocked/deleted authority valid", err)
 			}
-			if _, err := f.accounts.ChangeStatus(ctx, accountdomain.StatusChange{UserID: created.UserID, ActorID: f.input.ActorID, Status: accountdomain.StatusActive, ExpectedVersion: 2}); err == nil {
+			if _, err := f.accounts.ChangeStatus(ctx, accountdomain.StatusChange{UserID: created.UserID, ActorID: f.input.Actor.UserID, Status: accountdomain.StatusActive, ExpectedVersion: 2}); err == nil {
 				t.Fatal("unblock bypassed password setup")
 			}
 		}
@@ -115,7 +115,7 @@ func checkTemporaryFailures(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 		created := f.create(t, ctx)
 		setup := f.login(t, ctx, created.Password)
 		allowTemporaryReissue(t, db, ctx, created.UserID)
-		input := passwordservice.TemporaryReissueInput{ActorID: f.input.ActorID, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}
+		input := passwordservice.TemporaryReissueInput{Actor: f.input.Actor, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}
 		var reissueErr, completeErr error
 		var wg sync.WaitGroup
 		wg.Go(func() { _, reissueErr = f.service.Reissue(ctx, input) })

@@ -167,7 +167,7 @@ func reissueInput(t *testing.T, db *pgxpool.Pool, ctx context.Context, f invitat
 	if err := db.QueryRow(ctx, `SELECT gen_random_uuid()::text`).Scan(&key); err != nil {
 		t.Fatal(err)
 	}
-	return accountservice.InvitationReissueInput{ActorID: f.input.ActorID, UserID: user, IdempotencyKey: key}
+	return accountservice.InvitationReissueInput{Actor: f.input.Actor, UserID: user, IdempotencyKey: key}
 }
 
 func allowInvitationReissue(t *testing.T, db *pgxpool.Pool, ctx context.Context, user accountdomain.UserID) {

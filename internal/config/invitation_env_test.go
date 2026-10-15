@@ -15,8 +15,8 @@ func TestInvitationConfiguration(t *testing.T) {
 	t.Setenv("INVITATION_TTL", "48h")
 	t.Setenv("ACTIVATION_GLOBAL_LIMIT", "250")
 	t.Setenv("INVITATION_REISSUE_COOLDOWN", "2m")
-	t.Setenv("INVITATION_REISSUE_ACTOR_ATTEMPTS_PER_MINUTE", "40")
-	t.Setenv("INVITATION_REISSUE_PROJECT_ATTEMPTS_PER_MINUTE", "200")
+	t.Setenv("INVITATION_ISSUE_ACTOR_ATTEMPTS_PER_MINUTE", "40")
+	t.Setenv("INVITATION_ISSUE_PROJECT_ATTEMPTS_PER_MINUTE", "200")
 	var cfg accountservice.InvitationConfig
 	if err := cleanenv.ReadEnv(&cfg); err != nil {
 		t.Fatal(err)
@@ -27,13 +27,13 @@ func TestInvitationConfiguration(t *testing.T) {
 	if err := cfg.Validate(true); err != nil {
 		t.Fatal(err)
 	}
-	if cfg.ReissueCooldown != 2*time.Minute || cfg.ReissueActorAttemptsPerMinute != 40 || cfg.ReissueProjectAttemptsPerMinute != 200 {
+	if cfg.ReissueCooldown != 2*time.Minute || cfg.IssueActorAttemptsPerMinute != 40 || cfg.IssueProjectAttemptsPerMinute != 200 {
 		t.Fatal("invalid reissue settings")
 	}
 	for _, mutate := range []func(*accountservice.InvitationConfig){
 		func(c *accountservice.InvitationConfig) { c.ReissueCooldown = 0 },
-		func(c *accountservice.InvitationConfig) { c.ReissueActorAttemptsPerMinute = 0 },
-		func(c *accountservice.InvitationConfig) { c.ReissueProjectAttemptsPerMinute = 0 },
+		func(c *accountservice.InvitationConfig) { c.IssueActorAttemptsPerMinute = 0 },
+		func(c *accountservice.InvitationConfig) { c.IssueProjectAttemptsPerMinute = 0 },
 	} {
 		bad := cfg
 		mutate(&bad)

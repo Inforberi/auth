@@ -86,7 +86,7 @@ func checkTemporaryConcurrency(t *testing.T, db *pgxpool.Pool, ctx context.Conte
 		f := newTemporaryFixture(t, db, ctx, "concurrent-reissue")
 		created := f.create(t, ctx)
 		allowTemporaryReissue(t, db, ctx, created.UserID)
-		input := passwordservice.TemporaryReissueInput{ActorID: f.input.ActorID, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}
+		input := passwordservice.TemporaryReissueInput{Actor: f.input.Actor, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}
 		var wg sync.WaitGroup
 		results := make(chan *passwordservice.TemporaryIssueResult, 16)
 		errs := make(chan error, 16)
