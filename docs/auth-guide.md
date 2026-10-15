@@ -474,7 +474,9 @@ GET `/api/v1/admin/users` принимает limit 1..100, exclusive before curs
 
 POST `/api/v1/admin/users/{id}/status` с `{status,expectedAuthVersion}` блокирует или разблокирует аккаунт; DELETE `/api/v1/admin/users/{id}` с `{expectedAuthVersion}` необратимо удаляет его. Нужны отдельные `accounts.users.status.manage` / `accounts.users.delete`, свежие password/MFA proofs и разрешённый Origin. SQL проверяет authority в транзакции вместе с version/last-admin, отзывает сессии и пишет аудит. Разблокировка не активирует приглашение и не восстанавливает удалённого пользователя. [Полный контракт и ограничения](features/account-deletion.md#административный-api--106b-local).
 
-Пока нет обычного управления system role, принудительного обхода последнего способа входа или общего settings/secrets UI. Предварительная backend-приёмка обязательна перед UI, затем повторная сквозная приёмка с UI перед выпуском.
+POST/DELETE `/api/v1/admin/users/{id}/administrator` назначают/снимают super_admin только по запросу существующего супер-администратора со свежими password/MFA proofs и текущими target auth/access + role versions. Custom management role этого права не даёт. Для назначения нужен готовый permanent password + verified login email + TOTP; снять/заблокировать/удалить последнего такого владельца нельзя. [Контракт и примеры](features/roles-permissions.md#управление-супер-администраторами--103c-local).
+
+Редактирования самой system role через обычный API, принудительного обхода последнего способа входа и общего settings/secrets UI пока нет. При настройках A6 отдельно защищаем последний вход от отключения методов. Предварительная backend-приёмка обязательна перед UI, затем повторная сквозная приёмка с UI перед выпуском.
 
 <a id="http-reference"></a>
 ## 8. Справочник HTTP-методов

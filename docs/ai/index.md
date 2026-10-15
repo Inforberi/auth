@@ -8,7 +8,7 @@
 | Структура и зависимости | [architecture](../architecture.md), нужный [ADR](../adr/) | `internal/app/auth`, `internal/config`, `internal/server/http` |
 | Следующий этап | [implementation](../planning/implementation.md), при необходимости [roadmap](../planning/roadmap.md) | Статусы задач, затем код соответствующей фичи |
 | Первый супер-администратор | [initial-setup](../features/initial-setup.md) | Account setup start/complete; singleton marker, operator proof + email/TOTP; не lost-admin recovery |
-| Роли и permissions | [roles-permissions](../features/roles-permissions.md) | `internal/access` — каталог, роли, назначения, SQL guards; users.manage для issuance, users.read для directory, отдельные users.status.manage/users.delete для lifecycle |
+| Роли и permissions | [roles-permissions](../features/roles-permissions.md) | `internal/access` — каталог, custom и отдельные system assignments, shared usable-admin SQL guard; users.manage для issuance, users.read для directory, отдельные users.status.manage/users.delete для lifecycle |
 | Список/карточка пользователей | [user-directory](../features/user-directory.md) | Account service/repository/transport `user_directory`, `list_users`, `read_user`; одно SQL authority/read, keyset/индексы/32 relation bounds |
 | Импорт каталога | [access-catalog](../features/access-catalog.md) | `internal/access/settings`, `cmd/access-catalog`, `internal/app/access`; operator file/preview, не runtime HTTP импорт |
 | HTTP/ошибки/Swagger | [contract](../api/contract.md) | `internal/transport/http/router`, feature `transport/http`, `internal/transport/http/httpx` |
