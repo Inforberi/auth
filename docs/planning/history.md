@@ -2,6 +2,18 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат 10.6a-local — 15 октября 2026
+
+Реализация зафиксирована в `820258e` — `feat(auth): добавил список и карточку пользователей`; документация и план фиксируются отдельно. Ниже описан рабочий заход до коммита.
+
+Опубликованы GET /api/v1/admin/users и /{id}, отдельный accounts.users.read, NoRefreshAuth/no-store/Origin/mapper/Swagger. Один SQL statement проверяет current actor/status/auth_version/session/permission и читает список или карточку, включая authorized empty result; role management/issuance permissions не заменяют read. Новый первый admin получает пятый core permission, existing roles автоматически не меняются. Read не требует fresh password/MFA, не продлевает session и не выдаёт mutation authority. Общий accountActor helper переименован/перенесён с reference-aware Serena rename вместо нового дубликата.
+
+Список newest created_at/id, keyset cursor до 192 символов, limit 1..100 + один lookahead; only exact normalized email/status, без OFFSET/count/substring search. Строка — минимальные metadata/display contact; card — версии/status/retained deletion, bounded contacts, публичные issuers без subject, role metadata без permissions, passwordConfigured/temporary-required/MFA-enrolled, но не доказательство usable login. SQL limits 33 выявляют relation overflow >32; ошибка вместо silent truncation. Auth actor и user data не кешируются. Добавлены только два partial indexes в initial 000001 up source; новых migration files/schema tables/ENV/dependencies/pools/workers нет. Рабочие ENV/БД/secrets не читались и не менялись.
+
+Formatter, task check (все Go tests, lint 0 issues), Swagger generation/drift, targeted account/router/App + directory SQL Go race прошли; race SQL package 7.025s. Disposable PostgreSQL 18.6 TestUserDirectorySchema — PASS 4.64s, full TestInitialSetupSchema + TestPostgresSchema up/down/up — PASS 9.131s. Restricted runtime role, separate read/manage, current authority/revoke/auth_version, отсутствие fresh-proof dependency/refresh, unknown/empty/deleted metadata, timestamp tie-break/cursor, exact email normalization, secret/subject omission и contacts/providers/roles overflow проверены. EXPLAIN ANALYZE фактических captured queries на 100000 synthetic users + contacts: users_directory_page, users_directory_status_page, tuple Index Cond и exact unique email + users PK; candidate rows <=51 для page50. Это не HTTP RPS или полная нагрузочная/GC приёмка. Context7 PostgreSQL 18 index ordering/partial/multicolumn и pgx v5.10.0 QueryTracer сверены; tracer только в integration test, не новый runtime logging.
+
+Подготовительный прогон исправил один unused test import и прежние ожидания GET/disabled POST: после появления read на том же пути отсутствующий mutation method отвечает 405, а GET temporary-password-root попадает в UUID read validation, не issuance. Семантика защиты mutations не ослаблена. До UI добавлен обязательный pre-ui-backend synthetic/fault/SMTP/authenticator/provider gate; A8 end-to-end UI/mixed-load/GC и 13.1d.4 остаются открытыми. Далее protected status/delete 10.6b, не реализация UI или системных grant bypass. Временный PostgreSQL-контейнер удалён вместе с тестовым volume и синтетическими данными; рабочие данные не затронуты. Коммит не выполнялся.
+
 ### Результат 13.2a.2-local — 15 октября 2026
 
 Реализация зафиксирована в `86f6f07` — `feat(auth): добавил API создания пользователей`; документация и статусы плана фиксируются отдельно. Ниже описан рабочий заход до коммита.
