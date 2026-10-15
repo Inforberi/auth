@@ -1,5 +1,118 @@
 basePath: /
 definitions:
+  access_http.AccessResponse:
+    properties:
+      accessVersion:
+        type: integer
+      permissions:
+        items:
+          type: string
+        type: array
+      roleIds:
+        items:
+          type: string
+        type: array
+    type: object
+  access_http.AssignmentRequest:
+    properties:
+      expectedAccessVersion:
+        type: integer
+      expectedRoleVersion:
+        type: integer
+    required:
+    - expectedAccessVersion
+    - expectedRoleVersion
+    type: object
+  access_http.AssignmentResponse:
+    properties:
+      accessVersion:
+        type: integer
+    type: object
+  access_http.CreateRoleRequest:
+    properties:
+      description:
+        type: string
+      key:
+        type: string
+      name:
+        type: string
+      permissions:
+        items:
+          type: string
+        type: array
+    required:
+    - key
+    - name
+    type: object
+  access_http.PermissionCatalogResponse:
+    properties:
+      permissions:
+        items:
+          $ref: '#/definitions/settings.Permission'
+        type: array
+    type: object
+  access_http.RolePageResponse:
+    properties:
+      nextAfter:
+        type: string
+      roles:
+        items:
+          $ref: '#/definitions/access_http.RoleSummaryResponse'
+        type: array
+    type: object
+  access_http.RoleResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      key:
+        type: string
+      name:
+        type: string
+      permissions:
+        items:
+          type: string
+        type: array
+      system:
+        type: boolean
+      version:
+        type: integer
+    type: object
+  access_http.RoleSummaryResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      key:
+        type: string
+      name:
+        type: string
+      system:
+        type: boolean
+      version:
+        type: integer
+    type: object
+  access_http.UpdateRoleRequest:
+    properties:
+      description:
+        type: string
+      expectedVersion:
+        type: integer
+      key:
+        type: string
+      name:
+        type: string
+      permissions:
+        items:
+          type: string
+        type: array
+    required:
+    - expectedVersion
+    - key
+    - name
+    type: object
   account_http.ConfirmRequest:
     properties:
       token:
@@ -442,6 +555,17 @@ definitions:
       status:
         type: string
     type: object
+  settings.Permission:
+    properties:
+      description:
+        type: string
+      group:
+        type: string
+      key:
+        type: string
+      name:
+        type: string
+    type: object
 info:
   contact: {}
   description: Reusable authentication service. Cookie sessions require HTTPS. All
@@ -450,6 +574,264 @@ info:
   title: Auth API
   version: "1.0"
 paths:
+  /api/v1/admin/permissions:
+    get:
+      description: Requires current access.roles.manage or access.assignments.manage.
+        Returns declared keys, not an ability to create arbitrary permissions through
+        HTTP.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/access_http.PermissionCatalogResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read the project's permission catalog
+      tags:
+      - Admin Access
+  /api/v1/admin/roles:
+    get:
+      description: Requires current roles.manage or assignments.manage. Keyset pagination,
+        no count or per-role permission queries. A full page returns its last key
+        as nextAfter; a final empty page may be necessary. Use role detail for permissions.
+      parameters:
+      - description: Exclusive last role key
+        in: query
+        name: after
+        type: string
+      - default: 50
+        description: Page size, 1..100, default 50
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/access_http.RolePageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: List role metadata
+      tags:
+      - Admin Access
+    post:
+      consumes:
+      - application/json
+      description: Requires access.roles.manage, all delegated permissions and fresh
+        password plus MFA in the mutation transaction. No system role or wildcard
+        bypass. Duplicate key returns conflict; no automatic assignments.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Custom role
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/access_http.CreateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/access_http.RoleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Create a custom role
+      tags:
+      - Admin Access
+  /api/v1/admin/roles/{id}:
+    get:
+      description: Requires current access.roles.manage or access.assignments.manage.
+        Includes version for a subsequent explicit edit or assignment. Reads do not
+        renew session or authentication freshness.
+      parameters:
+      - description: Role UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/access_http.RoleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read a role and its permissions
+      tags:
+      - Admin Access
+    post:
+      consumes:
+      - application/json
+      description: Full definition, not a patch. Requires access.roles.manage, old
+        and new delegated permissions, fresh password plus MFA and current role version
+        in one transaction. A no-op preserves the version; system roles cannot be
+        changed.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Role UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Definition and expected version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/access_http.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/access_http.RoleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Replace a custom role's definition
+      tags:
+      - Admin Access
+  /api/v1/admin/users/{id}/access:
+    get:
+      description: Requires current access.assignments.manage. UUID lookup only, no
+        user enumeration. One SQL statement checks actor session/permission and reads
+        the target. Unknown/deleted target and unauthorized actor share forbidden.
+        Pending/blocked targets may have assignments but cannot exercise permissions.
+        accessVersion is for assignment concurrency, not permission caching.
+      parameters:
+      - description: Target user UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/access_http.AccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read a user's role assignments and permission union
+      tags:
+      - Admin Access
   /api/v1/admin/users/{id}/email-binding:
     post:
       consumes:
@@ -510,6 +892,165 @@ paths:
       summary: Approve a user's initial email binding
       tags:
       - Admin Users
+  /api/v1/admin/users/{id}/roles/{roleId}:
+    delete:
+      consumes:
+      - application/json
+      description: JSON body is required also for DELETE. Same permission/delegation/version/password/MFA
+        transaction guard as grant. Self-revoke of a custom role is allowed; system
+        role cannot be revoked. Subsequent authorization uses current SQL assignments.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Target user UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role UUID
+        in: path
+        name: roleId
+        required: true
+        type: string
+      - description: Expected role and user assignment versions
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/access_http.AssignmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/access_http.AssignmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Revoke a custom role from a user
+      tags:
+      - Admin Access
+    post:
+      consumes:
+      - application/json
+      description: Requires access.assignments.manage, all delegated role permissions,
+        current role/access versions and fresh password plus MFA in one transaction.
+        No self-grant or system-role assignment. Pending users receive access only
+        after activation. Retry with stale versions returns conflict; a current no-op
+        preserves the version.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Target user UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role UUID
+        in: path
+        name: roleId
+        required: true
+        type: string
+      - description: Expected role and user assignment versions
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/access_http.AssignmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/access_http.AssignmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Assign a custom role to a user
+      tags:
+      - Admin Access
+  /api/v1/auth/access:
+    get:
+      description: Current SQL role IDs, known permissions and assignment version,
+        for this authenticated user only. The version is not a cache key for role
+        contents. This response helps UI presentation; the backend must authorize
+        every protected operation itself.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/access_http.AccessResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read my effective permissions
+      tags:
+      - Access
   /api/v1/auth/change-password:
     post:
       consumes:

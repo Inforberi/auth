@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Inforberi/financial-intelligence/docs/api/generated"
+	accesshttp "github.com/Inforberi/financial-intelligence/internal/access/transport/http"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
@@ -75,6 +76,7 @@ func readAPI(t *testing.T) apiDocument {
 func contractHandlers(env string) Handlers {
 	log := zap.NewNop()
 	return Handlers{
+		Access:            accesshttp.New(&contractAccess{}, log),
 		Setup:             accounthttp.NewSetup(&contractSetup{}, log),
 		EmailBinding:      accounthttp.NewEmailBinding(&contractEmailBinding{}, log),
 		MFA:               mfahttp.NewWithRecovery(&contractMFA{}, &contractMFA{}, &contractMFARecovery{}, log),

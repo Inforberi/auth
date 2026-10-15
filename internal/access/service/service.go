@@ -28,6 +28,7 @@ type Repository interface {
 	UpdateRole(context.Context, UpdateRoleInput) (domain.Role, error)
 	ChangeAssignment(context.Context, AssignmentInput) (int64, error)
 	ReadAccess(context.Context, Principal, []domain.PermissionKey) (domain.UserAccess, error)
+	ReadAssignments(context.Context, Principal, accountdomain.UserID, []domain.PermissionKey) (domain.UserAccess, error)
 }
 
 type Service struct {

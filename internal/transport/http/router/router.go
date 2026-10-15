@@ -10,6 +10,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"go.uber.org/zap"
 
+	accesshttp "github.com/Inforberi/financial-intelligence/internal/access/transport/http"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
@@ -23,6 +24,7 @@ import (
 )
 
 type Handlers struct {
+	Access            *accesshttp.Handler
 	Setup             *accounthttp.SetupHandler
 	MFA               *mfahttp.Handler
 	Session           *sessionhttp.Handler
@@ -80,6 +82,7 @@ func New(h Handlers) *chi.Mux {
 	}
 
 	r.Route("/api/v1/", func(r chi.Router) {
+		accessRoutes(r, h)
 		setupRoutes(r, h)
 		emailBindingRoutes(r, h)
 		r.Route("/auth", func(r chi.Router) {

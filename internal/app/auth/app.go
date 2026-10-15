@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
+	accesshttp "github.com/Inforberi/financial-intelligence/internal/access/transport/http"
 	accessapp "github.com/Inforberi/financial-intelligence/internal/app/access"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
@@ -126,6 +127,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		mailTest = dev.NewMailTest(mail, log)
 	}
 	handler := router.New(router.Handlers{
+		Access:            accesshttp.New(access.Service, log),
 		Setup:             setup,
 		EmailBinding:      emailBinding,
 		MFA:               mfaHandler,
