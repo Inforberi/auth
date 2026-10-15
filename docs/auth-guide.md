@@ -472,7 +472,9 @@ Setup token разрешает только установку пароля. О�
 
 GET `/api/v1/admin/users` принимает limit 1..100, exclusive before cursor, status и точный email. GET `/api/v1/admin/users/{id}` показывает хранимое состояние, контакты, настроенные методы и роли без hashes/tokens/subject/MFA secrets. Обе ручки требуют отдельный accounts.users.read, не продлевают session и не меняют пользователя. Read permission не равен users.manage, а DTO не заменяет проверку доступа backend.
 
-Пока нет публичных admin mutations блокировки/разблокировки/удаления, обычного управления system role, принудительного обхода последнего способа входа или общего settings/secrets UI. Для status/delete внутренние ActorID-only сценарии ещё должны получить transaction-owned permission/password/MFA guards с сохранением last-admin защиты. Предварительная backend-приёмка обязательна перед UI, затем повторная сквозная приёмка с UI перед выпуском.
+POST `/api/v1/admin/users/{id}/status` с `{status,expectedAuthVersion}` блокирует или разблокирует аккаунт; DELETE `/api/v1/admin/users/{id}` с `{expectedAuthVersion}` необратимо удаляет его. Нужны отдельные `accounts.users.status.manage` / `accounts.users.delete`, свежие password/MFA proofs и разрешённый Origin. SQL проверяет authority в транзакции вместе с version/last-admin, отзывает сессии и пишет аудит. Разблокировка не активирует приглашение и не восстанавливает удалённого пользователя. [Полный контракт и ограничения](features/account-deletion.md#административный-api--106b-local).
+
+Пока нет обычного управления system role, принудительного обхода последнего способа входа или общего settings/secrets UI. Предварительная backend-приёмка обязательна перед UI, затем повторная сквозная приёмка с UI перед выпуском.
 
 <a id="http-reference"></a>
 ## 8. Справочник HTTP-методов

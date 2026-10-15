@@ -15,6 +15,8 @@ Backend access отделён от способов входа. Пользова
 | `accounts.email.bind` | Одобрение первичного контакта external-only пользователя |
 | `accounts.users.manage` | Создание pending пользователей, выдача/перевыпуск приглашений и временных паролей |
 | `accounts.users.read` | Список и карточка пользователей без права изменять их |
+| `accounts.users.status.manage` | Административная блокировка и разблокировка |
+| `accounts.users.delete` | Необратимое удаление аккаунта с сохранением tombstone |
 
 Продукт не может подменить эти записи. Каталог ограничен 512 permissions, одна роль — 128 permissions; повторные ключи и wildcard отклоняются. Ключ — lowercase ASCII с сегментами через точку, максимум 96 байт. Название и описание поддерживают UTF-8 и имеют ограничения размера.
 
@@ -63,7 +65,7 @@ Principal содержит user UUID и hash session token, не клиентс�
 
 Защитный report уже подтверждённой смены email — намеренное исключение: он блокирует даже последнего супер-админа, иначе украденный аккаунт нельзя было бы обезопасить. Назначение сохраняется, сессии отзываются, existing protected recovery возвращает доступ без повышения роли и создания сессии. После security block нельзя административным повторным block/delete уничтожить последнее восстановление. Обычный password reset сохраняет роль и не снимает административную блокировку.
 
-Это гарантия сохранения active системного владельца и recoverable последнего назначения, не проверка доступности SMTP/провайдера или наличия всех будущих MFA факторов. Первичный setup выполнен в 10.3a-local, operator password/lost-factor recovery — локально в 10.3b/13.1d; их внешняя приёмка открыта. System assignment management и политики usable admin login/MFA остаются 10.3/A5/A6. Status/delete пока trusted-caller backend: ActorID нужен для audit, не заменяет авторизацию. Эти публичные admin mutations запрещено подключать до permission/fresh-auth/MFA guards. Прямое изменение SQL оператором не защищается этими use cases.
+Это гарантия сохранения active системного владельца и recoverable последнего назначения, не проверка доступности SMTP/провайдера или наличия всех будущих MFA факторов. Первичный setup выполнен в 10.3a-local, operator password/lost-factor recovery — локально в 10.3b/13.1d; их внешняя приёмка открыта. System assignment management и политики usable admin login/MFA остаются 10.3/A5/A6. [Status/delete HTTP](account-deletion.md#административный-api--106b-local) использует transaction-owned permissions/password/MFA guards; прежние внутренние ActorID-only операции не опубликованы. Прямое изменение SQL оператором не защищается этими use cases.
 
 Реализованы operator JSON-каталог/preview и сборка `App.Access`: [использование](access-catalog.md). Шаблоны доступны для явного выбора, не создают и не меняют SQL-роли автоматически. MFA login/management и SQL guard реализованы в [A5.2b](mfa.md); удаление роли, runtime/browser импорт, UI и межсервисная передача прав ещё не реализованы. Trusted API — при конкретной интеграции по 10.5b. Для внешнего backend Auth управляет назначениями, а backend данных применяет ограничения действий/строк/полей, включая read/write/filter/sort/export. Импорт каталога не аутентифицирует этот backend.
 
@@ -109,7 +111,7 @@ Admin target read проверяет actor/session/permission и читает ta
 
 Users create/invite/temporary-password transport опубликован в 13.2a.2-local с `accounts.users.manage`, verified principal и transaction-owned password/MFA guard: [создание/приглашения](invitations.md#admin-api-132a2-local), [временные пароли](temporary-passwords.md#admin-api-132a2-local). Permission не даёт права назначать роли, блокировать/удалять или сбрасывать пароль active аккаунта. Владельцу этого management permission отключение MFA запрещено. Браузерная сквозная приёмка с синтетическими пользователями, реальными MFA/SMTP и UI обязательна в A8-admin-e2e; локальные тесты её не заменяют.
 
-Новая чистая установка через initial setup получает пять core permissions. Уже сохранённые роли/назначения автоматически не меняются: при обновлении старого тестового развёртывания новые `accounts.users.manage` / `accounts.users.read` требуют отдельного контролируемого DBA upgrade существующей системной роли с audit/incident; не direct SQL из UI и не self-promotion через обычный API. Read permission не заменяет manage, и наоборот. [Список/карточка](user-directory.md) не требуют нового password/MFA proof, не продлевают session и не дают административных mutations. Нового bootstrap bypass, автоматического wildcard grant или reset БД для этого нет.
+Новая чистая установка через initial setup получает семь core permissions. Уже сохранённые роли/назначения автоматически не меняются: при обновлении старого тестового развёртывания новые `accounts.users.manage` / `accounts.users.read` / `accounts.users.status.manage` / `accounts.users.delete` требуют отдельного контролируемого DBA upgrade существующей системной роли с audit/incident; не direct SQL из UI и не self-promotion через обычный API. Read, issuance, status и delete permissions независимы. [Список/карточка](user-directory.md) не требуют нового password/MFA proof, не продлевают session и не дают административных mutations. Нового bootstrap bypass, автоматического wildcard grant или reset БД для этого нет.
 
 ## Хранение
 

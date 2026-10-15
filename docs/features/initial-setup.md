@@ -56,7 +56,7 @@ MFA_ENABLED=true
 2. Проверяет intent/operator binding, TTL и число попыток.
 3. Проверяет email/TOTP и сохраняет потреблённый TOTP step для защиты от replay.
 4. Создаёт active пользователя, профиль, verified email, password credentials, TOTP и 10 recovery code digests.
-5. Создаёт `super_admin` и выдаёт пять core permissions: `access.roles.manage`, `access.assignments.manage`, `accounts.email.bind`, `accounts.users.manage`, `accounts.users.read`. Это только новая установка; сохранённые системные назначения при обновлении автоматически не расширяются.
+5. Создаёт `super_admin` и выдаёт семь core permissions: `access.roles.manage`, `access.assignments.manage`, `accounts.email.bind`, `accounts.users.manage`, `accounts.users.read`, `accounts.users.status.manage`, `accounts.users.delete`. Это только новая установка; сохранённые системные назначения при обновлении автоматически не расширяются.
 6. Сохраняет role grant audit и MFA audit, initialized timestamp/UUID первого администратора; удаляет pending secrets/operator/request hashes.
 
 Ответ 200:

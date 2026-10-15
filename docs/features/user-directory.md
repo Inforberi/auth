@@ -11,7 +11,7 @@
 
 Чтения работают независимо от INVITATIONS_ENABLED/TEMPORARY_PASSWORD_ENABLED/MFA_ENABLED. Новый password/MFA step-up для просмотра не требуется; применённая к входу MFA policy этим не отменяется. NoRefreshAuth не продлевает сессию или freshness, Set-Cookie не выдаётся. Ответы no-store. GET без Origin допустим для CLI; переданный Origin должен быть разрешён. Авторизация и чтение выполняются одним SQL statement после session middleware; следующий запрос после committed revoke видит актуальные права. Уже начавшееся чтение не отменяется автоматически последующим отзывом.
 
-Новая чистая установка получает пять core permissions, включая users.read. Existing roles не расширяются автоматически; upgrade прежней установки требует отдельного контролируемого назначения и применения индексов. Нет автоматического self-promotion или повторного setup.
+Новая чистая установка получает семь core permissions, включая users.read и отдельные status/delete permissions. Existing roles не расширяются автоматически; upgrade прежней установки требует отдельного контролируемого назначения и применения индексов. Нет автоматического self-promotion или повторного setup. Изменения пользователя описаны в [административном lifecycle API](account-deletion.md#административный-api--106b-local).
 
 ## Список
 

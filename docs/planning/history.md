@@ -2,6 +2,18 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Результат 10.6b-local — 15 октября 2026
+
+Реализация зафиксирована в `f1616f4` — `feat(auth): добавил блокировку и удаление пользователей`; документация и план фиксируются отдельно. Ниже описан рабочий заход до коммита.
+
+Добавлены POST /api/v1/admin/users/{id}/status и DELETE /api/v1/admin/users/{id}, отдельные accounts.users.status.manage / accounts.users.delete, NoRefreshAuth/Origin/no-store/strict JSON/feature mapper/Swagger. Actor берётся из session, не JSON; service один раз проверяет domain command, deadline 5s. Existing status/deletion SQL выделен в общие transaction helpers: внутренние trusted-caller операции сохранены, HTTP использует только новые guarded repository methods. Текущие session/auth_version/status/password/MFA/factor/permissions проверяются внутри того же Read Committed commit под Access lock и ordered actor/target locks. Не добавлен отдельный Authorize → trusted write. Version/no-op/pending activation/immediate session revoke/protected recovery/audit rollback/retention и запрет восстановления tombstone сохранены.
+
+Новая первая установка получает семь core permissions; existing assignments автоматически не меняются. Оба mutation permissions запрещают отключение MFA; users.read сам по себе такого запрета не добавляет. Каталог остаётся <=512: семь core + до 505 продуктовых. Новых ENV/secrets/dependencies/pools/workers/schema/migrations нет, рабочие БД и ENV не читались и не менялись. Административные операции используют существующие индексируемые проверки; advisory lock не добавлен в login/read, новых Redis/сетевых вызовов под row locks нет. RPS в этом заходе не измерялся.
+
+Formatter, task check (все Go tests + lint), task check:api и targeted Go race account service/router/App/SQL прошли. TestUserLifecycleSchema на отдельной PostgreSQL 18.6 проверил реальный HTTP/service/SQL под restricted runtime role: раздельные permissions, no-refresh/no-cookie/no-store, свежесть password/MFA, version/no-op/replay с повторной авторизацией, 403 вместо target lookup при отсутствии permission, invalid UUID/version, deletion/no-restore, сохранение pending guard, attribution/no duplicate audit и rollback при audit failure. Одновременные block/block, delete/delete, block/delete сохраняют одного active системного владельца. Ожидающий Access lock запрос после committed permission revoke, proof expiry, auth_version change или session revoke отклоняется без записи. Race package PASS 1.910s; full TestInitialSetupSchema + TestPostgresSchema up/down/up/MFA/status/deletion/recovery regression PASS 9.599s. Подготовительные сбои были в тестовом стенде (не указан allowed Origin, несогласованные synthetic proof timestamps, невалидный fingerprint) и lint assertion; исправлены без ослабления SQL constraints или runtime guards. Временный контейнер и volume с synthetic data удалены.
+
+Далее protected system assignments и usable-admin policy; обычные role routes не дают system assignment. pre-ui-backend обязателен до A7, A8 UI/SMTP/provider/mixed-load/GC и 13.1d.4 остаются открытыми. Коммит не выполнялся.
+
 ### Результат 10.6a-local — 15 октября 2026
 
 Реализация зафиксирована в `820258e` — `feat(auth): добавил список и карточку пользователей`; документация и план фиксируются отдельно. Ниже описан рабочий заход до коммита.
