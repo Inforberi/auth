@@ -128,8 +128,11 @@ func checkMFAManagement(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 			accessExec(t, db, ctx, `DELETE FROM auth.user_roles WHERE user_id=$1 AND role_id IN (SELECT id FROM auth.roles WHERE key='mfa_guard_admin')`, f.user)
 			accessExec(t, db, ctx, `DELETE FROM auth.roles WHERE key='mfa_guard_admin'`)
 		}()
-		if err := svc.Disable(ctx, proof); !errors.Is(err, mfadomain.ErrRequiredByPolicy) {
-			t.Fatal("administrator disabled MFA", err)
+		for _, permission := range []string{"access.roles.manage", "accounts.users.status.manage", "accounts.users.delete"} {
+			accessExec(t, db, ctx, `UPDATE auth.role_permissions SET permission_key=$1 WHERE role_id IN (SELECT id FROM auth.roles WHERE key='mfa_guard_admin')`, permission)
+			if err := svc.Disable(ctx, proof); !errors.Is(err, mfadomain.ErrRequiredByPolicy) {
+				t.Fatal("administrator disabled MFA", permission, err)
+			}
 		}
 		if err := mfapostgres.New(db).CheckDisabled(ctx); err == nil {
 			t.Fatal("disabled operational MFA accepts enrolled factors")

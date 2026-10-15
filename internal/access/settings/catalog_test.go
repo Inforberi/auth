@@ -14,7 +14,7 @@ func TestCatalog(t *testing.T) {
 		t.Fatal(err)
 	}
 	input[0].Key = "changed"
-	if !catalog.Contains("reports.read") || !catalog.Contains(RolesManage) || !catalog.Contains(EmailBindingManage) || !catalog.Contains(UsersManage) || !catalog.Contains(UsersRead) || catalog.Contains("unknown") {
+	if !catalog.Contains("reports.read") || !catalog.Contains(RolesManage) || !catalog.Contains(EmailBindingManage) || !catalog.Contains(UsersManage) || !catalog.Contains(UsersRead) || !catalog.Contains(UsersStatusManage) || !catalog.Contains(UsersDelete) || catalog.Contains("unknown") {
 		t.Fatal("catalog ownership or core permissions")
 	}
 	result := catalog.Permissions()
@@ -26,6 +26,8 @@ func TestCatalog(t *testing.T) {
 		{{Key: RolesManage, Name: "Overwrite"}},
 		{{Key: UsersManage, Name: "Overwrite"}},
 		{{Key: UsersRead, Name: "Overwrite"}},
+		{{Key: UsersStatusManage, Name: "Overwrite"}},
+		{{Key: UsersDelete, Name: "Overwrite"}},
 		{{Key: "reports.read", Name: "Read"}, {Key: "reports.read", Name: "Duplicate"}},
 		{{Key: "reports.*", Name: "Wildcard"}},
 		{{Key: "reports.read", Name: ""}},

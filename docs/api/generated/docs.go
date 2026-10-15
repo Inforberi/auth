@@ -631,6 +631,88 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "delete": {
+                "description": "Requires MFA_ENABLED, accounts.users.delete and fresh password plus MFA in the deletion transaction. Actor comes only from the session. Current authVersion is mandatory; stale retries conflict, a retry with the current tombstone version is a no-op but still requires authorization. Uses existing atomic credential cleanup, session revocation, audit and email reservation policy. This is a retained tombstone, not complete PII erasure. No account restoration. Last system administrator is protected.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Irreversibly delete an account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Current authVersion; deletion is irreversible",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/account_http.DeleteUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/account_http.UserLifecycleResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/admin/users/{id}/access": {
@@ -999,6 +1081,90 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/access_http.AssignmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/{id}/status": {
+            "post": {
+                "description": "Requires MFA_ENABLED, accounts.users.status.manage and fresh password plus MFA checked in the mutation transaction. Actor is derived from the current session. Requires current authVersion; changes revoke sessions and outstanding activation/recovery proofs. Unblocking does not activate pending users, restore deleted accounts or revive old sessions. Last system administrator is protected. Read/create permissions do not authorize this operation.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Users"
+                ],
+                "summary": "Block or unblock a user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Desired status and current authVersion",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/account_http.ChangeUserStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/account_http.UserLifecycleResponse"
                         }
                     },
                     "400": {
@@ -4389,6 +4555,21 @@ const docTemplate = `{
                 }
             }
         },
+        "account_http.ChangeUserStatusRequest": {
+            "type": "object",
+            "properties": {
+                "expectedAuthVersion": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "blocked"
+                    ]
+                }
+            }
+        },
         "account_http.ConfirmRequest": {
             "type": "object",
             "required": [
@@ -4397,6 +4578,14 @@ const docTemplate = `{
             "properties": {
                 "token": {
                     "type": "string"
+                }
+            }
+        },
+        "account_http.DeleteUserRequest": {
+            "type": "object",
+            "properties": {
+                "expectedAuthVersion": {
+                    "type": "integer"
                 }
             }
         },
@@ -4545,6 +4734,14 @@ const docTemplate = `{
                 },
                 "temporaryPasswordRequired": {
                     "type": "boolean"
+                }
+            }
+        },
+        "account_http.UserLifecycleResponse": {
+            "type": "object",
+            "properties": {
+                "authVersion": {
+                    "type": "integer"
                 }
             }
         },

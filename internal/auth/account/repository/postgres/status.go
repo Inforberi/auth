@@ -8,6 +8,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
+	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
+	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 )
 
@@ -17,47 +19,73 @@ func (r *Repository) ChangeStatus(ctx context.Context, change domain.StatusChang
 		if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
 			return err
 		}
-		var status domain.Status
-		var deleted *time.Time
-		err := tx.QueryRow(ctx, `SELECT status,auth_version,deleted_at FROM auth.users WHERE id=$1 FOR UPDATE`, change.UserID).Scan(&status, &version, &deleted)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.ErrAccountNotFound
-		}
-		if err != nil {
-			return err
-		}
-		if deleted != nil {
-			return domain.ErrAccountDeleted
-		}
-		if version != change.ExpectedVersion {
-			return domain.ErrAccountConflict
-		}
-		if change.Status == domain.StatusActive && status != domain.StatusActive {
-			if err := requireAccountActivation(ctx, tx, change.UserID, status); err != nil {
-				return err
-			}
-		}
-		if change.Status == domain.StatusBlocked {
-			if err := accesspostgres.RequireAdministratorRemains(ctx, tx, change.UserID); err != nil {
-				return err
-			}
-		}
-		if err := cancelProtectedRecovery(ctx, tx, change.UserID); err != nil {
-			return err
-		}
-		if status == change.Status {
-			return nil
-		}
-		if err := tx.QueryRow(ctx, `UPDATE auth.users SET status=$2,auth_version=auth_version+1 WHERE id=$1 RETURNING auth_version`, change.UserID, change.Status).Scan(&version); err != nil {
-			return err
-		}
-		if err := revokeStatusAccess(ctx, tx, change.UserID); err != nil {
-			return err
-		}
-		_, err = tx.Exec(ctx, `INSERT INTO auth.account_status_audit(user_id,actor_id,previous_status,new_status,auth_version) VALUES ($1,$2,$3,$4,$5)`, change.UserID, change.ActorID, status, change.Status, version)
+		var err error
+		version, err = changeStatus(ctx, tx, change)
 		return err
 	})
 	if err != nil {
+		return 0, err
+	}
+	return version, err
+}
+
+func (r *Repository) ChangeUserStatus(ctx context.Context, actor accessservice.Principal, change domain.StatusChange) (domain.AuthVersion, error) {
+	var version domain.AuthVersion
+	err := r.transaction(ctx, func(tx pgx.Tx) error {
+		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, actor, string(change.UserID), settings.UsersStatusManage); err != nil {
+			return err
+		}
+		change.ActorID = actor.UserID
+		var err error
+		version, err = changeStatus(ctx, tx, change)
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	return version, err
+}
+
+func changeStatus(ctx context.Context, tx pgx.Tx, change domain.StatusChange) (domain.AuthVersion, error) {
+	var version domain.AuthVersion
+	var status domain.Status
+	var deleted *time.Time
+	err := tx.QueryRow(ctx, `SELECT status,auth_version,deleted_at FROM auth.users WHERE id=$1 FOR UPDATE`, change.UserID).Scan(&status, &version, &deleted)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, domain.ErrAccountNotFound
+	}
+	if err != nil {
+		return 0, err
+	}
+	if deleted != nil {
+		return 0, domain.ErrAccountDeleted
+	}
+	if version != change.ExpectedVersion {
+		return 0, domain.ErrAccountConflict
+	}
+	if change.Status == domain.StatusActive && status != domain.StatusActive {
+		if err := requireAccountActivation(ctx, tx, change.UserID, status); err != nil {
+			return 0, err
+		}
+	}
+	if change.Status == domain.StatusBlocked {
+		if err := accesspostgres.RequireAdministratorRemains(ctx, tx, change.UserID); err != nil {
+			return 0, err
+		}
+	}
+	if err := cancelProtectedRecovery(ctx, tx, change.UserID); err != nil {
+		return 0, err
+	}
+	if status == change.Status {
+		return version, nil
+	}
+	if err := tx.QueryRow(ctx, `UPDATE auth.users SET status=$2,auth_version=auth_version+1 WHERE id=$1 RETURNING auth_version`, change.UserID, change.Status).Scan(&version); err != nil {
+		return 0, err
+	}
+	if err := revokeStatusAccess(ctx, tx, change.UserID); err != nil {
+		return 0, err
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO auth.account_status_audit(user_id,actor_id,previous_status,new_status,auth_version) VALUES ($1,$2,$3,$4,$5)`, change.UserID, change.ActorID, status, change.Status, version); err != nil {
 		return 0, err
 	}
 	return version, nil
