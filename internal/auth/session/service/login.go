@@ -22,13 +22,21 @@ func NewLogin(sessions *SessionService, mfa mfaLogin) *Login {
 }
 
 func (s *SessionService) BeginLogin(ctx context.Context, proof mfaservice.PrimaryProof, agent, ip string) (*CreatedSession, error) {
+	if proof.Administrative {
+		return nil, domain.ErrMFARequired
+	}
 	return s.CreateSessionAtVersion(ctx, proof.UserID, agent, ip, proof.AuthVersion)
 }
 
 func (s *Login) BeginLogin(ctx context.Context, proof mfaservice.PrimaryProof, agent, ip string) (*CreatedSession, error) {
-	result, err := s.CreateSessionAtVersion(ctx, proof.UserID, agent, ip, proof.AuthVersion)
-	if !errors.Is(err, domain.ErrMFARequired) || s.mfa == nil {
-		return result, err
+	if !proof.Administrative {
+		result, err := s.CreateSessionAtVersion(ctx, proof.UserID, agent, ip, proof.AuthVersion)
+		if !errors.Is(err, domain.ErrMFARequired) || s.mfa == nil {
+			return result, err
+		}
+	}
+	if s.mfa == nil {
+		return nil, domain.ErrMFARequired
 	}
 	challenge, err := s.mfa.Start(ctx, proof, ip)
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 
 type PasswordService interface {
 	Login(ctx context.Context, input passwordservice.LoginInput) (*passwordservice.LoginResult, error)
+	LoginAdministrator(ctx context.Context, input passwordservice.LoginInput) (*passwordservice.LoginResult, error)
 	Register(
 		ctx context.Context,
 		email,

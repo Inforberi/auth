@@ -743,6 +743,58 @@ info:
   title: Auth API
   version: "1.0"
 paths:
+  /api/v1/admin/auth/login/email:
+    post:
+      consumes:
+      - application/json
+      description: Requires a permanent password, verified email, enrolled MFA and
+        current administrative authority. Always returns an MFA challenge, never a
+        session. Complete with /api/v1/auth/mfa/login/complete. Independent of public
+        login method settings; does not create an account or assign roles. Uses the
+        public password login rate budget.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/password_http.LoginByEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/mfa_http.ChallengeResponse'
+        "400":
+          description: 'codes: invalid_json, email_required, password_required, invalid_email,
+            invalid_credentials'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: 'code: invalid_origin'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: 'code: rate_limited'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: 'code: internal_error'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: 'code: temporarily_unavailable'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Start administrative password and MFA login
+      tags:
+      - Administration
   /api/v1/admin/permissions:
     get:
       description: Requires current access.roles.manage or access.assignments.manage.

@@ -2,6 +2,13 @@ package router
 
 import "github.com/go-chi/chi/v5"
 
+func administrativeLoginRoutes(r chi.Router, h Handlers) {
+	if h.Config == nil || !h.Config.MFA.Enabled || h.PasswordHandler == nil || h.MFA == nil {
+		return
+	}
+	r.With(browserProtection(h)).Post("/admin/auth/login/email", h.PasswordHandler.LoginAdministrator)
+}
+
 func mfaRoutes(r chi.Router, h Handlers) {
 	if h.MFA == nil || h.Config == nil || !h.Config.MFA.Enabled {
 		return

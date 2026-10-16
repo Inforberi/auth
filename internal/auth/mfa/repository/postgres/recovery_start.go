@@ -17,11 +17,11 @@ func (r *Repository) SaveRecoveryRequest(ctx context.Context, input service.Reco
 		if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
 			return err
 		}
-		proof, err := lockLoginChallenge(ctx, tx, input.Digest, input.BindingHash)
+		proof, err := lockLoginChallenge(ctx, tx, input.Digest, input.BindingHash, true)
 		if err != nil {
 			return err
 		}
-		if proof.UserID != input.UserID || input.AllowPrimary == nil || !input.AllowPrimary(proof.Method, proof.Issuer) {
+		if proof.UserID != input.UserID || (!proof.Administrative && (input.AllowPrimary == nil || !input.AllowPrimary(proof.Method, proof.Issuer))) {
 			return domain.ErrInvalidCode
 		}
 		if err := requireLoginPrimary(ctx, tx, *proof); err != nil {

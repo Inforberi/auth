@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
@@ -15,6 +16,11 @@ import (
 func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.PrimaryProof, digest, binding string, ttl time.Duration) (time.Time, error) {
 	var expires time.Time
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
+		if proof.Administrative {
+			if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
+				return err
+			}
+		}
 		var version int64
 		var fresh bool
 		// Bounded backend/DB clock skew must not turn into a future authentication time.
@@ -42,13 +48,13 @@ func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.Prima
 			return err
 		}
 		err = tx.QueryRow(ctx, `INSERT INTO auth.mfa_login_challenges
-			(user_id,digest,binding_hash,auth_version,primary_method,primary_reference,primary_issuer,primary_verified_at,expires_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,LEAST($8::timestamptz,statement_timestamp()),statement_timestamp()+$9::double precision*interval '1 second')
+			(user_id,digest,binding_hash,auth_version,primary_method,primary_reference,primary_issuer,primary_verified_at,expires_at,administrative)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,LEAST($8::timestamptz,statement_timestamp()),statement_timestamp()+$9::double precision*interval '1 second',$10)
 			ON CONFLICT(user_id) DO UPDATE SET digest=EXCLUDED.digest,binding_hash=EXCLUDED.binding_hash,
 			auth_version=EXCLUDED.auth_version,primary_method=EXCLUDED.primary_method,primary_reference=EXCLUDED.primary_reference,
-			primary_issuer=EXCLUDED.primary_issuer,primary_verified_at=EXCLUDED.primary_verified_at,attempts=0,
+			primary_issuer=EXCLUDED.primary_issuer,primary_verified_at=EXCLUDED.primary_verified_at,administrative=EXCLUDED.administrative,attempts=0,
 			created_at=statement_timestamp(),expires_at=EXCLUDED.expires_at RETURNING expires_at`,
-			proof.UserID, digest, binding, proof.AuthVersion, proof.Method, proof.Reference, proof.Issuer, proof.VerifiedAt, ttl.Seconds()).Scan(&expires)
+			proof.UserID, digest, binding, proof.AuthVersion, proof.Method, proof.Reference, proof.Issuer, proof.VerifiedAt, ttl.Seconds(), proof.Administrative).Scan(&expires)
 		if err != nil {
 			return err
 		}
@@ -60,6 +66,19 @@ func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.Prima
 func requireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof) error {
 	var valid bool
 	var err error
+	if p.Administrative {
+		if p.Method != "password" {
+			return domain.ErrProofRequired
+		}
+		valid, err = accesspostgres.AdministrativePasswordAllowed(ctx, tx, p.UserID, p.Reference)
+		if err != nil {
+			return err
+		}
+		if !valid {
+			return domain.ErrProofRequired
+		}
+		return nil
+	}
 	switch p.Method {
 	case "password":
 		err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.password_credentials

@@ -69,6 +69,9 @@ func TestLoginLimitBeforeSQLAndHash(t *testing.T) {
 	if _, err := service.Login(t.Context(), LoginInput{Email: "user@example.com", Password: "ExamplePass1", IP: "192.0.2.1"}); !errors.Is(err, domain.ErrLoginLimited) {
 		t.Fatal(err)
 	}
+	if _, err := service.LoginAdministrator(t.Context(), LoginInput{Email: "user@example.com", Password: "ExamplePass1", IP: "192.0.2.1"}); !errors.Is(err, domain.ErrLoginLimited) {
+		t.Fatal("administrative limit bypass", err)
+	}
 }
 
 func TestMissingLoginLimiterFailsClosed(t *testing.T) {

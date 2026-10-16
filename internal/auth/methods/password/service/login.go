@@ -8,6 +8,7 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 )
@@ -27,6 +28,14 @@ type LoginResult struct {
 }
 
 func (l *PasswordService) Login(ctx context.Context, input LoginInput) (*LoginResult, error) {
+	return l.login(ctx, input, false)
+}
+
+func (l *PasswordService) LoginAdministrator(ctx context.Context, input LoginInput) (*LoginResult, error) {
+	return l.login(ctx, input, true)
+}
+
+func (l *PasswordService) login(ctx context.Context, input LoginInput, administrative bool) (*LoginResult, error) {
 	email, err := parseCredentials(input.Email, input.Password)
 	if err != nil {
 		return nil, fmt.Errorf("service login: %w", err)
@@ -63,10 +72,14 @@ func (l *PasswordService) Login(ctx context.Context, input LoginInput) (*LoginRe
 		return nil, err
 	}
 	session, err := l.session.BeginLogin(ctx, mfaservice.PrimaryProof{
-		UserID:      authData.UserID,
-		AuthVersion: authData.AuthVersion, Method: "password", Reference: authData.PasswordHash, VerifiedAt: time.Now().UTC(),
+		Administrative: administrative,
+		UserID:         authData.UserID,
+		AuthVersion:    authData.AuthVersion, Method: "password", Reference: authData.PasswordHash, VerifiedAt: time.Now().UTC(),
 	}, input.UserAgent, input.IP)
 	if err != nil {
+		if administrative && (errors.Is(err, mfadomain.ErrProofRequired) || errors.Is(err, mfadomain.ErrConflict) || errors.Is(err, sessiondomain.ErrMFARequired)) {
+			return nil, passworddomain.ErrInvalidEmailOrPassword
+		}
 		if errors.Is(err, sessiondomain.ErrSessionNotFound) || errors.Is(err, sessiondomain.ErrSessionExpired) {
 			return nil, passworddomain.ErrInvalidEmailOrPassword
 		}

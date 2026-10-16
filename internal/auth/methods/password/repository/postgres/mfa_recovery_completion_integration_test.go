@@ -185,5 +185,8 @@ func TestMFARecoveryCompletionSchema(t *testing.T) {
 	})
 	checkMFARecoveryHTTP(t, db, operatorPool(t, ctx, db, "auth_mfa_completion_runtime"), ctx, op)
 	checkMFARecoveryRaces(t, db, ctx, op)
+	t.Run("administrative-intent", func(t *testing.T) {
+		checkAdministrativeRecoveryCompletion(t, db, operatorPool(t, ctx, db, "auth_mfa_completion_runtime"), ctx, op)
+	})
 	checkMFARecoveryCompletionGuards(t, db, ctx, op)
 }

@@ -86,6 +86,7 @@ func New(h Handlers) *chi.Mux {
 	}
 
 	r.Route("/api/v1/", func(r chi.Router) {
+		administrativeLoginRoutes(r, h)
 		accessRoutes(r, h)
 		userDirectoryRoutes(r, h)
 		userLifecycleRoutes(r, h)

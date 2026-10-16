@@ -8,7 +8,7 @@ import (
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 )
 
-// LockAccessChanges must precede user/session row locks. Reads and login never acquire it.
+// LockAccessChanges precedes user/session locks. Public login and ordinary reads do not acquire it.
 func LockAccessChanges(ctx context.Context, tx pgx.Tx) error {
 	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(734013981)`)
 	return err

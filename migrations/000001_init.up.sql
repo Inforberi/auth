@@ -248,6 +248,7 @@ CREATE TABLE auth.mfa_login_challenges (
   binding_hash TEXT NOT NULL CHECK (binding_hash ~ '^[a-f0-9]{64}$'),
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
   primary_method TEXT NOT NULL CHECK (primary_method IN ('password','oidc','emailotp')),
+  administrative BOOLEAN NOT NULL DEFAULT false CHECK (NOT administrative OR primary_method='password'),
   primary_reference TEXT NOT NULL CHECK (octet_length(primary_reference) BETWEEN 1 AND 1024),
   primary_issuer TEXT NOT NULL CHECK (octet_length(primary_issuer)<=512),
   primary_verified_at TIMESTAMPTZ NOT NULL,

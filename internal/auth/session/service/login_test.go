@@ -46,3 +46,20 @@ func TestPrimaryLoginDispatch(t *testing.T) {
 		}
 	}
 }
+
+func TestAdministrativeLoginAlwaysRequiresMFA(t *testing.T) {
+	proof := mfaservice.PrimaryProof{Administrative: true, Method: "password"}
+	// Nil technical dependencies make any attempt to issue a password-only session fail the test.
+	sessions := &SessionService{}
+	if result, err := sessions.BeginLogin(context.Background(), proof, "", ""); result != nil || !errors.Is(err, domain.ErrMFARequired) {
+		t.Fatal("plain session service allowed administrative login", result, err)
+	}
+	if result, err := NewLogin(sessions, nil).BeginLogin(context.Background(), proof, "", ""); result != nil || !errors.Is(err, domain.ErrMFARequired) {
+		t.Fatal("missing MFA allowed administrative login", result, err)
+	}
+	mfa := &mfaStarterStub{}
+	result, err := NewLogin(sessions, mfa).BeginLogin(context.Background(), proof, "agent", "ip")
+	if err != nil || result.Challenge == nil || result.RawToken != "" || mfa.proof != proof || mfa.calls != 1 {
+		t.Fatal("administrative login did not require factor", result, err)
+	}
+}

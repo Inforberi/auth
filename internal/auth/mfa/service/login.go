@@ -13,12 +13,13 @@ import (
 
 // PrimaryProof comes from a verified method adapter, never from an HTTP request.
 type PrimaryProof struct {
-	UserID      accountdomain.UserID
-	AuthVersion int64
-	Method      string
-	Reference   string
-	Issuer      string
-	VerifiedAt  time.Time
+	Administrative bool
+	UserID         accountdomain.UserID
+	AuthVersion    int64
+	Method         string
+	Reference      string
+	Issuer         string
+	VerifiedAt     time.Time
 }
 
 type LoginConfig struct {
@@ -73,7 +74,7 @@ func (s *Login) Start(ctx context.Context, proof PrimaryProof, ip string) (*Logi
 	if !validPrimary(proof) || len(ip) > 64 {
 		return nil, domain.ErrProofRequired
 	}
-	if s.cfg.AllowPrimary != nil && !s.cfg.AllowPrimary(proof.Method, proof.Issuer) {
+	if !proof.Administrative && s.cfg.AllowPrimary != nil && !s.cfg.AllowPrimary(proof.Method, proof.Issuer) {
 		return nil, domain.ErrProofRequired
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -98,6 +99,9 @@ func (s *Login) Start(ctx context.Context, proof PrimaryProof, ip string) (*Logi
 }
 
 func validPrimary(p PrimaryProof) bool {
+	if p.Administrative && p.Method != "password" {
+		return false
+	}
 	if !accountdomain.ValidUserID(p.UserID) || p.AuthVersion < 1 || p.VerifiedAt.IsZero() {
 		return false
 	}

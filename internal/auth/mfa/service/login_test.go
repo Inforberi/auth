@@ -53,6 +53,32 @@ func loginTestConfig() LoginConfig {
 	}
 }
 
+func TestAdministrativePrimaryIntent(t *testing.T) {
+	cipher, err := secretbox.NewScoped(base64.StdEncoding.EncodeToString(make([]byte, 32)), "mfa:v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := loginTestConfig()
+	cfg.AllowPrimary = func(string, string) bool { return false }
+	repo := &loginRepoStub{}
+	svc, err := NewLogin(repo, cipher, totp.Authenticator{}, &limitStub{allowed: true}, tokengenerate.New(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proof := PrimaryProof{UserID: "11111111-1111-4111-8111-111111111111", AuthVersion: 1, Method: "password", Reference: "hash", VerifiedAt: time.Now()}
+	if _, err := svc.Start(context.Background(), proof, ""); !errors.Is(err, domain.ErrProofRequired) || repo.calls != 0 {
+		t.Fatal("public method bypass", err)
+	}
+	proof.Administrative = true
+	if _, err := svc.Start(context.Background(), proof, ""); err != nil || !repo.proof.Administrative {
+		t.Fatal("private intent lost", err)
+	}
+	proof.Method, proof.Reference = "emailotp", "22222222-2222-4222-8222-222222222222"
+	if _, err := svc.Start(context.Background(), proof, ""); !errors.Is(err, domain.ErrProofRequired) || repo.calls != 1 {
+		t.Fatal("non-password administrative proof", err)
+	}
+}
+
 func TestLoginBoundaries(t *testing.T) {
 	cipher, err := secretbox.NewScoped(base64.StdEncoding.EncodeToString(make([]byte, 32)), "mfa:v1")
 	if err != nil {

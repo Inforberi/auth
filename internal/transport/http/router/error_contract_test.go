@@ -47,6 +47,10 @@ func (f sessionFault) ValidateSession(context.Context, string) (*sessionservice.
 
 type passwordFault struct{ err error }
 
+func (f passwordFault) LoginAdministrator(context.Context, passwordservice.LoginInput) (*passwordservice.LoginResult, error) {
+	return nil, f.err
+}
+
 func (f passwordFault) Register(context.Context, string, string, string, string) (*passwordservice.RegisterResult, error) {
 	return nil, f.err
 }

@@ -17,6 +17,7 @@ import (
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	googleservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/service"
 	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
+	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
@@ -119,6 +120,10 @@ type contractPasswords struct{}
 
 func (contractPasswords) Register(context.Context, string, string, string, string) (*passwordservice.RegisterResult, error) {
 	return &passwordservice.RegisterResult{UserID: "user-1", Token: "contract-token", ExpiresAt: time.Now().Add(time.Hour)}, nil
+}
+
+func (contractPasswords) LoginAdministrator(context.Context, passwordservice.LoginInput) (*passwordservice.LoginResult, error) {
+	return nil, passworddomain.ErrInvalidEmailOrPassword
 }
 
 func (contractPasswords) Login(context.Context, passwordservice.LoginInput) (*passwordservice.LoginResult, error) {

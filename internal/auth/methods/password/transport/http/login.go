@@ -36,6 +36,10 @@ type LoginByEmailResponse struct {
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
 // @Router /api/v1/auth/login/email [post]
 func (h *PasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
+	h.login(w, r, false)
+}
+
+func (h *PasswordHandler) login(w http.ResponseWriter, r *http.Request, administrative bool) {
 	var input LoginByEmailRequest
 	if err := httpx.DecodeJSON(w, r, &input); err != nil {
 		httpx.Error(
@@ -47,12 +51,17 @@ func (h *PasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	login, err := h.service.Login(r.Context(), passwordservice.LoginInput{
+	inputService := passwordservice.LoginInput{
 		Email:     input.Email,
 		Password:  input.Password,
 		UserAgent: httpx.UserAgent(r),
 		IP:        httpx.IP(r),
-	})
+	}
+	authenticate := h.service.Login
+	if administrative {
+		authenticate = h.service.LoginAdministrator
+	}
+	login, err := authenticate(r.Context(), inputService)
 	if err != nil {
 		if mfahttp.RespondLoginError(w, r, h.log, err) {
 			return
