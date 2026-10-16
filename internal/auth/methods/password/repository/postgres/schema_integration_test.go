@@ -18,6 +18,7 @@ func TestPostgresSchema(t *testing.T) {
 		t.Fatal("down did not remove auth schema")
 	}
 	migrateFixture(t, db, ctx, "up")
+	t.Cleanup(func() { migrateFixture(t, db, ctx, "down") })
 	repo := New(db)
 	t.Run("MFA foundation", func(t *testing.T) { checkMFAFoundation(t, db, ctx) })
 	t.Run("MFA login", func(t *testing.T) { checkMFALogin(t, db, ctx) })
