@@ -140,7 +140,7 @@ func New(h Handlers) *chi.Mux {
 			})
 
 			r.Group(func(r chi.Router) {
-				r.Use(h.Middleware.Auth)
+				r.Use(h.Middleware.NoRefreshAuth)
 				if h.Account != nil {
 					r.Use(h.Account.RequireVerified)
 				}
@@ -185,7 +185,7 @@ func sessionRoutes(r chi.Router, h Handlers) {
 	reads := r.With(h.Middleware.Auth)
 	reads.Get("/me", h.Session.Me)
 	reads.Get("/sessions", h.Session.List)
-	mutations := r.With(h.Middleware.Auth)
+	mutations := r.With(h.Middleware.NoRefreshAuth)
 	mutations.Post("/logout-all", h.Session.LogoutAll)
 	mutations.Delete("/sessions/{id}", func(w http.ResponseWriter, r *http.Request) {
 		h.Session.Revoke(w, r, chi.URLParam(r, "id"))
@@ -202,7 +202,7 @@ func browserProtection(h Handlers) func(http.Handler) http.Handler {
 }
 
 func emailChangeRoutes(r chi.Router, h Handlers) {
-	r.With(h.Middleware.Auth).Post("/email/change", h.EmailChange.Request)
+	r.With(h.Middleware.NoRefreshAuth).Post("/email/change", h.EmailChange.Request)
 	r.Post("/email/change/confirm", h.EmailChange.Confirm)
 	r.Post("/email/change/report", h.EmailChange.Report)
 	if h.ProtectedRecovery != nil {

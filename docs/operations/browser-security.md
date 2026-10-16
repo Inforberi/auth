@@ -10,6 +10,10 @@ Cookie остаётся `__Host-session`, Secure/HttpOnly/Path=/, без Domain,
 
 Swagger UI того же HTTPS origin продолжает работать: браузер сам формирует Origin для POST, Swagger-параметр документирует контракт для CLI, но не позволяет JavaScript подменить этот заголовок. Добавьте origin Swagger в allowlist. Basic Auth Swagger не даёт бизнес-права, cookie для защищённых операций получают отдельным login. Generated spec проверяется автоматически; настоящая browser-приёмка ещё открыта.
 
+## Cookie и конкурентные ответы
+
+Session hardening AS1–AS4-local: Cookie headers разбираются строгим `http.ParseCookie`; malformed пары и несколько `__Host-session` дают 401 до SQL. Это относится ко всему Cookie header, поэтому некорректная сторонняя cookie тоже не игнорируется. Несколько корректных Cookie строк с одним session name разрешены. Logout-all/revoke/change-password/email-change request используют NoRefreshAuth; они не выполняют sliding UPDATE и не добавляют старый refresh Set-Cookie. GET me/sessions сохраняют refresh. Поздний ответ ранее начатого read всё ещё может заменить cookie после rotation/logout, но старый verifier не становится действительным; coordination/lost response/реальный browser остаются [открытой приёмкой](../planning/auth-security.md#результат-первого-блока-as1as4-local).
+
 ## HTTPS
 
 Обычный режим — TLS на доверенном ingress, внутренний HTTP-порт не доступен извне. Redirect HTTP→HTTPS, HSTS, сертификаты, connection limits и исключение secrets из edge access logs настраиваются на ingress. Приложение не определяет HTTPS по произвольному X-Forwarded-Proto и не включает HSTS на localhost автоматически.

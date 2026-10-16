@@ -27,12 +27,25 @@ func SetSessionCookie(w http.ResponseWriter, token string, expiresAt time.Time) 
 }
 
 func GetSessionCookie(r *http.Request) (string, error) {
-	token, err := r.Cookie(SessionCookieName)
-	if err != nil {
-		if errors.Is(err, http.ErrNoCookie) {
-			return "", fmt.Errorf("cookie not found %w", err)
+	var token *http.Cookie
+	for _, header := range r.Header.Values("Cookie") {
+		// Request.Cookie silently skips malformed pairs and selects one duplicate.
+		cookies, err := http.ParseCookie(header)
+		if err != nil {
+			return "", errors.New("invalid session cookie header")
 		}
-		return "", fmt.Errorf("get session cookie %w", err)
+		for _, cookie := range cookies {
+			if cookie.Name != SessionCookieName {
+				continue
+			}
+			if token != nil {
+				return "", errors.New("ambiguous session cookie")
+			}
+			token = cookie
+		}
+	}
+	if token == nil {
+		return "", fmt.Errorf("cookie not found: %w", http.ErrNoCookie)
 	}
 
 	if len(token.Value) != 43 {
