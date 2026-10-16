@@ -35,7 +35,7 @@ func TestAuthSettingsSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(runtime.Close)
-	repo := settingspostgres.New(runtime)
+	repo := settingspostgres.NewWithRuntime(runtime, settingsdomain.PublicMethods{Password: true, EmailOTP: true, Google: true, Telegram: true})
 	svc := settingsservice.New(repo)
 	if _, err := repo.Load(ctx); !errors.Is(err, settingsdomain.ErrNotInitialized) {
 		t.Fatal("missing row is not a default profile", err)
@@ -73,6 +73,7 @@ func TestAuthSettingsSchema(t *testing.T) {
 	if result, err := svc.Read(ctx, actor); err != nil || result != a {
 		t.Fatal(result, err)
 	}
+	checkSettingsRuntimeHTTP(t, runtime, ctx, actor, a)
 	ordinary := accessPrincipal(t, db, ctx)
 	accessExec(t, db, ctx, `WITH r AS(INSERT INTO auth.roles(key,name) VALUES('settings_custom','Settings custom') RETURNING id),
 		p AS(INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,'auth.settings.manage' FROM r)

@@ -25,6 +25,12 @@ func (r *Repository) Update(ctx context.Context, input service.UpdateInput) (dom
 		if before.Version != input.ExpectedVersion {
 			return domain.ErrPolicyConflict
 		}
+		if !r.runtimeConfigured {
+			return domain.ErrMethodNotReady
+		}
+		if err := input.Policy.RequireAvailable(r.available); err != nil {
+			return err
+		}
 		if before.Policy == input.Policy {
 			result = before
 			return nil

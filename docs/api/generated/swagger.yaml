@@ -292,6 +292,104 @@ definitions:
         example: ok
         type: string
     type: object
+  auth_settings_http.MethodsRequest:
+    properties:
+      emailOtp:
+        type: boolean
+      google:
+        type: boolean
+      password:
+        type: boolean
+      telegram:
+        type: boolean
+    required:
+    - emailOtp
+    - google
+    - password
+    - telegram
+    type: object
+  auth_settings_http.MethodsResponse:
+    properties:
+      emailOtp:
+        type: boolean
+      google:
+        type: boolean
+      password:
+        type: boolean
+      telegram:
+        type: boolean
+    type: object
+  auth_settings_http.PolicyRequest:
+    properties:
+      methods:
+        $ref: '#/definitions/auth_settings_http.MethodsRequest'
+      passwordEmailVerification:
+        enum:
+        - disabled
+        - optional
+        - required
+        type: string
+      registration:
+        $ref: '#/definitions/auth_settings_http.RegistrationRequest'
+    required:
+    - methods
+    - passwordEmailVerification
+    - registration
+    type: object
+  auth_settings_http.PolicyResponse:
+    properties:
+      methods:
+        $ref: '#/definitions/auth_settings_http.MethodsResponse'
+      passwordEmailVerification:
+        enum:
+        - disabled
+        - optional
+        - required
+        type: string
+      registration:
+        $ref: '#/definitions/auth_settings_http.RegistrationResponse'
+    type: object
+  auth_settings_http.RegistrationRequest:
+    properties:
+      enabled:
+        type: boolean
+      google:
+        type: boolean
+      telegram:
+        type: boolean
+    required:
+    - enabled
+    - google
+    - telegram
+    type: object
+  auth_settings_http.RegistrationResponse:
+    properties:
+      enabled:
+        type: boolean
+      google:
+        type: boolean
+      telegram:
+        type: boolean
+    type: object
+  auth_settings_http.SettingsResponse:
+    properties:
+      availableMethods:
+        $ref: '#/definitions/auth_settings_http.MethodsResponse'
+      policy:
+        $ref: '#/definitions/auth_settings_http.PolicyResponse'
+      version:
+        type: integer
+    type: object
+  auth_settings_http.UpdateRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/auth_settings_http.PolicyRequest'
+    required:
+    - expectedVersion
+    - policy
+    type: object
   dev.SendMailRequest:
     properties:
       body:
@@ -799,6 +897,88 @@ paths:
       summary: Start administrative password and MFA login
       tags:
       - Administration
+  /api/v1/admin/auth/settings:
+    get:
+      description: Requires a live session and auth.settings.manage. availableMethods
+        describes adapters on this instance only. No secrets are returned; does not
+        refresh the session.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth_settings_http.SettingsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read authentication settings
+      tags:
+      - Auth settings
+    post:
+      consumes:
+      - application/json
+      description: Full non-secret policy replacement. Every boolean is required,
+        including false. Requires auth.settings.manage, fresh password and MFA. expectedVersion
+        prevents lost updates; adapters must be ready locally and identically configured
+        on every instance. Existing sessions are not revoked.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: complete policy and current version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth_settings_http.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth_settings_http.SettingsResponse'
+        "400":
+          description: invalid_json, invalid_auth_policy
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: forbidden, fresh_auth_required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: auth_policy_conflict, auth_method_not_ready
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Replace authentication settings
+      tags:
+      - Auth settings
   /api/v1/admin/permissions:
     get:
       description: Requires current access.roles.manage or access.assignments.manage.

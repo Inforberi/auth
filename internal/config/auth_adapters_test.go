@@ -37,4 +37,7 @@ func TestSavedPolicyAdapterReadiness(t *testing.T) {
 	if err := cfg.ConfigureAuthAdapters(policy); err != nil || !cfg.EmailOTP.Enabled {
 		t.Fatal(err)
 	}
+	if got := cfg.AvailableAuthMethods(); got != (settingsdomain.PublicMethods{Password: true, EmailOTP: true, Google: true}) {
+		t.Fatal("runtime availability confused with saved switches", got)
+	}
 }

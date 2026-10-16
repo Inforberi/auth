@@ -14,6 +14,7 @@ var (
 	ErrInvalidPolicy  = errors.New("invalid auth policy")
 	ErrPolicyConflict = errors.New("auth policy version conflict")
 	ErrNotInitialized = errors.New("auth policy not initialized")
+	ErrMethodNotReady = errors.New("auth method is not ready on this instance")
 )
 
 type PublicMethods struct {
@@ -48,4 +49,12 @@ func (p Policy) Validate() error {
 	default:
 		return ErrInvalidPolicy
 	}
+}
+
+func (p Policy) RequireAvailable(available PublicMethods) error {
+	if p.Methods.Password && !available.Password || p.Methods.EmailOTP && !available.EmailOTP ||
+		p.Methods.Google && !available.Google || p.Methods.Telegram && !available.Telegram {
+		return ErrMethodNotReady
+	}
+	return nil
 }

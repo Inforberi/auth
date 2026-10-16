@@ -39,3 +39,8 @@ func (cfg *Config) ConfigureAuthAdapters(policy domain.Policy) error {
 	cfg.EmailOTP.Enabled = otpErr == nil
 	return nil
 }
+
+// Called after ConfigureAuthAdapters; switches here describe constructed adapters, not public policy.
+func (cfg Config) AvailableAuthMethods() domain.PublicMethods {
+	return domain.PublicMethods{Password: true, EmailOTP: cfg.EmailOTP.Enabled, Google: cfg.Google.Enabled, Telegram: cfg.Telegram.Enabled}
+}

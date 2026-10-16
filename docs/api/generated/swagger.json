@@ -83,6 +83,122 @@
                 }
             }
         },
+        "/api/v1/admin/auth/settings": {
+            "get": {
+                "description": "Requires a live session and auth.settings.manage. availableMethods describes adapters on this instance only. No secrets are returned; does not refresh the session.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth settings"
+                ],
+                "summary": "Read authentication settings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth_settings_http.SettingsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Full non-secret policy replacement. Every boolean is required, including false. Requires auth.settings.manage, fresh password and MFA. expectedVersion prevents lost updates; adapters must be ready locally and identically configured on every instance. Existing sessions are not revoked.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth settings"
+                ],
+                "summary": "Replace authentication settings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "complete policy and current version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth_settings_http.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth_settings_http.SettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid_json, invalid_auth_policy",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "forbidden, fresh_auth_required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "auth_policy_conflict, auth_method_not_ready",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/permissions": {
             "get": {
                 "description": "Requires current access.roles.manage or access.assignments.manage. Returns declared keys, not an ability to create arbitrary permissions through HTTP.",
@@ -5127,6 +5243,151 @@
                 "status": {
                     "type": "string",
                     "example": "ok"
+                }
+            }
+        },
+        "auth_settings_http.MethodsRequest": {
+            "type": "object",
+            "required": [
+                "emailOtp",
+                "google",
+                "password",
+                "telegram"
+            ],
+            "properties": {
+                "emailOtp": {
+                    "type": "boolean"
+                },
+                "google": {
+                    "type": "boolean"
+                },
+                "password": {
+                    "type": "boolean"
+                },
+                "telegram": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "auth_settings_http.MethodsResponse": {
+            "type": "object",
+            "properties": {
+                "emailOtp": {
+                    "type": "boolean"
+                },
+                "google": {
+                    "type": "boolean"
+                },
+                "password": {
+                    "type": "boolean"
+                },
+                "telegram": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "auth_settings_http.PolicyRequest": {
+            "type": "object",
+            "required": [
+                "methods",
+                "passwordEmailVerification",
+                "registration"
+            ],
+            "properties": {
+                "methods": {
+                    "$ref": "#/definitions/auth_settings_http.MethodsRequest"
+                },
+                "passwordEmailVerification": {
+                    "type": "string",
+                    "enum": [
+                        "disabled",
+                        "optional",
+                        "required"
+                    ]
+                },
+                "registration": {
+                    "$ref": "#/definitions/auth_settings_http.RegistrationRequest"
+                }
+            }
+        },
+        "auth_settings_http.PolicyResponse": {
+            "type": "object",
+            "properties": {
+                "methods": {
+                    "$ref": "#/definitions/auth_settings_http.MethodsResponse"
+                },
+                "passwordEmailVerification": {
+                    "type": "string",
+                    "enum": [
+                        "disabled",
+                        "optional",
+                        "required"
+                    ]
+                },
+                "registration": {
+                    "$ref": "#/definitions/auth_settings_http.RegistrationResponse"
+                }
+            }
+        },
+        "auth_settings_http.RegistrationRequest": {
+            "type": "object",
+            "required": [
+                "enabled",
+                "google",
+                "telegram"
+            ],
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "google": {
+                    "type": "boolean"
+                },
+                "telegram": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "auth_settings_http.RegistrationResponse": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "google": {
+                    "type": "boolean"
+                },
+                "telegram": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "auth_settings_http.SettingsResponse": {
+            "type": "object",
+            "properties": {
+                "availableMethods": {
+                    "$ref": "#/definitions/auth_settings_http.MethodsResponse"
+                },
+                "policy": {
+                    "$ref": "#/definitions/auth_settings_http.PolicyResponse"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "auth_settings_http.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "expectedVersion",
+                "policy"
+            ],
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/auth_settings_http.PolicyRequest"
                 }
             }
         },

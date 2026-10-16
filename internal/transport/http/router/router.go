@@ -18,6 +18,7 @@ import (
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
+	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
@@ -29,6 +30,7 @@ type Handlers struct {
 	Provisioning      *accounthttp.ProvisioningHandler
 	TemporaryAdmin    *passwordhttp.TemporaryAdminHandler
 	Access            *accesshttp.Handler
+	AuthSettings      *settingshttp.Handler
 	Setup             *accounthttp.SetupHandler
 	MFA               *mfahttp.Handler
 	Session           *sessionhttp.Handler
@@ -88,6 +90,7 @@ func New(h Handlers) *chi.Mux {
 	r.Route("/api/v1/", func(r chi.Router) {
 		administrativeLoginRoutes(r, h)
 		accessRoutes(r, h)
+		authSettingsRoutes(r, h)
 		userDirectoryRoutes(r, h)
 		userLifecycleRoutes(r, h)
 		provisioningRoutes(r, h)

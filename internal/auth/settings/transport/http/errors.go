@@ -5,10 +5,24 @@ import (
 
 	"go.uber.org/zap"
 
+	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
+
+var settingsErrors = []httpx.ErrorRule{
+	httpx.MatchError(domain.ErrInvalidPolicy, 400, "invalid_auth_policy", "invalid authentication policy"),
+	httpx.MatchError(domain.ErrPolicyConflict, 409, "auth_policy_conflict", "authentication policy changed; reload and retry"),
+	httpx.MatchError(domain.ErrMethodNotReady, 409, "auth_method_not_ready", "login adapter not ready on this instance"),
+	httpx.MatchError(accessdomain.ErrFreshAuthRequired, 403, "fresh_auth_required", "fresh password and MFA required"),
+	httpx.MatchError(accessdomain.ErrForbidden, 403, "forbidden", "forbidden"),
+}
+
+func (h *Handler) respondError(w http.ResponseWriter, r *http.Request, err error) {
+	httpx.RespondError(w, r, h.log, "auth_settings", err, settingsErrors,
+		httpx.Failure{Status: 503, Code: "temporarily_unavailable", Message: "temporarily unavailable"})
+}
 
 var policyErrors = []httpx.ErrorRule{
 	httpx.MatchError(domain.ErrMethodDisabled, 404, "method_disabled", "login method disabled"),

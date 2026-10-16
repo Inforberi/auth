@@ -24,6 +24,7 @@ func assembleAccessPolicy(ctx context.Context, pool *pgxpool.Pool, cfg *config.C
 	if err := cfg.ConfigureAuthAdapters(snapshot.Policy); err != nil {
 		return nil, nil, err
 	}
+	service = settingsservice.New(settingspostgres.NewWithRuntime(pool, cfg.AvailableAuthMethods()))
 	cfg.EmailOTP.CheckPolicy = func(ctx context.Context) error { return service.CheckPublic(ctx, "emailotp", false) }
 	return access, service, nil
 }

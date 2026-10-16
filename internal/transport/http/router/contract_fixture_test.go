@@ -27,6 +27,7 @@ import (
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
+	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
@@ -82,6 +83,7 @@ func contractHandlers(env string) Handlers {
 		Provisioning:      accounthttp.NewProvisioning(&contractProvisioning{}, log),
 		TemporaryAdmin:    passwordhttp.NewTemporaryAdmin(&contractTemporaryAdmin{}, log),
 		Access:            accesshttp.New(&contractAccess{}, log),
+		AuthSettings:      settingshttp.New(&contractAuthSettings{}, availableSettingsMethods, log),
 		Setup:             accounthttp.NewSetup(&contractSetup{}, log),
 		EmailBinding:      accounthttp.NewEmailBinding(&contractEmailBinding{}, log),
 		MFA:               mfahttp.NewWithRecovery(&contractMFA{}, &contractMFA{}, &contractMFARecovery{}, log),

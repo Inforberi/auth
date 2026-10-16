@@ -11,9 +11,17 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
-type Repository struct{ db *pgxpool.Pool }
+type Repository struct {
+	db                *pgxpool.Pool
+	available         domain.PublicMethods
+	runtimeConfigured bool
+}
 
 func New(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
+
+func NewWithRuntime(db *pgxpool.Pool, available domain.PublicMethods) *Repository {
+	return &Repository{db: db, available: available, runtimeConfigured: true}
+}
 
 const policyColumns = `version,password_enabled,email_otp_enabled,google_enabled,telegram_enabled,
 	registration_enabled,google_registration_enabled,telegram_registration_enabled,password_email_verification`

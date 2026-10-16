@@ -23,3 +23,19 @@ func TestPolicyVerificationModes(t *testing.T) {
 		}
 	}
 }
+
+func TestPolicyRequiresAvailableAdapters(t *testing.T) {
+	for _, methods := range []PublicMethods{{Password: true}, {EmailOTP: true}, {Google: true}, {Telegram: true}} {
+		policy := Policy{Methods: methods}
+		if err := policy.RequireAvailable(PublicMethods{}); !errors.Is(err, ErrMethodNotReady) {
+			t.Fatal("unavailable adapter admitted", methods, err)
+		}
+		if err := policy.RequireAvailable(methods); err != nil {
+			t.Fatal("ready adapter rejected", methods, err)
+		}
+	}
+	policy := Policy{Registration: PublicRegistration{Enabled: true, Google: true, Telegram: true}}
+	if err := policy.RequireAvailable(PublicMethods{}); err != nil {
+		t.Fatal("disabled methods must preserve registration preferences", err)
+	}
+}
