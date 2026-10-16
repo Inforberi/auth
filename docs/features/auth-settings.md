@@ -2,9 +2,37 @@
 
 ## Текущий статус
 
-A6.1-local реализует domain/service/PostgreSQL store и first-install seed. A6.2a-local добавляет независимый административный password+MFA login. A6.2b-local подключает startup и runtime enforcement сохраняемой публичной политики. **Settings API и UI ещё не опубликованы**: менять профиль через HTTP можно будет после A6.2c. ENV-флаги методов используются только при первой инициализации, credentials/operational параметры пока остаются в ENV.
+A6.1-local реализует domain/service/PostgreSQL store и first-install seed. A6.2a-local добавляет независимый административный password+MFA login. A6.2b-local подключает startup и runtime enforcement сохраняемой публичной политики. A6.2c-local публикует protected settings API ниже. UI ещё нет. ENV-флаги методов используются только при первой инициализации, credentials/operational параметры пока остаются в ENV.
 
-Далее A6.2c — protected read/update API с проверкой готовности включаемых adapters. A6.3 — MFA policy по ролям, SMTP/provider secrets и retention settings. Их поля и пустые adapters сейчас не создаются.
+Далее A6.3 — MFA policy по ролям, SMTP/provider secrets и retention settings. Их поля и пустые adapters сейчас не создаются. Внешняя pre-ui-backend приёмка остаётся обязательной.
+
+## API настроек — A6.2c-local
+
+Обе ручки используют текущую `__Host-session` и разрешённый HTTPS Origin, возвращают `Cache-Control: no-store`, не продлевают session/cookie. Actor берётся только из trusted session context; UUID/hash оператора из JSON не принимаются. Требуется актуальное `auth.settings.manage`, в том числе для чтения.
+
+- `GET /api/v1/admin/auth/settings`: `200` с `version`, полной `policy` и `availableMethods`. Повторный fresh proof для чтения не нужен. `401` — нет действующей сессии, `403 forbidden` — нет права, `503 temporarily_unavailable` — зависимость недоступна.
+- `POST /api/v1/admin/auth/settings`: полная замена, не patch. Дополнительно нужны fresh password + MFA и enrolled factor; они проверяются в write transaction. При выключенном deployment MFA POST не регистрируется (обычно `405`, поскольку GET существует). Все публичные методы разрешено выключить: независимый административный password+TOTP вход остаётся.
+
+Пример тела POST (сначала получить текущую версию через GET):
+
+```json
+{
+  "expectedVersion": 1,
+  "policy": {
+    "methods": {"password": true, "emailOtp": false, "google": false, "telegram": false},
+    "registration": {"enabled": true, "google": false, "telegram": false},
+    "passwordEmailVerification": "required"
+  }
+}
+```
+
+Все семь boolean-полей обязательны, включая явное `false`. Пропуск/null объекта или boolean, неизвестное поле, неверный JSON-тип или второе JSON-значение дают `400 invalid_json`. Версия должна быть положительной, verification — `disabled`, `optional` или `required`; service/domain возвращают `400 invalid_auth_policy`. HTTP не повторяет предметную валидацию. Тело ограничено общим decoder до 1 MiB.
+
+Успех — `200 {"version":2,"policy":{...},"availableMethods":{...}}`, где policy — реально закоммиченный профиль. No-op с текущей версией возвращает прежнюю version без audit. `409 auth_policy_conflict` — перечитать и осознанно повторить, без автоматического overwrite. `403 fresh_auth_required` — повторить password/MFA proof; `403 forbidden` — утрачены права. Не настроенный включаемый метод даёт `409 auth_method_not_ready`. Остальные ошибки зависимости — `503 temporarily_unavailable` без внутренних деталей. Ошибки Origin/session обрабатываются прежними общими middleware.
+
+`availableMethods` — immutable возможности **того экземпляра, который ответил**, а не сохранённые публичные flags и не health-check SMTP/provider. Проверка происходит после SQL authority/version, до no-op/UPDATE, без сетевых запросов, дополнительных SQL/Redis вызовов и фонового реестра. Непривязанный к runtime repository не разрешает Update. Предпочтение provider registration при выключенном методе можно сохранить без credentials.
+
+До A6.3 отсутствующие credentials задаются через ENV и restart. Перед включением provider необходимо согласованно развернуть одинаковую operational конфигурацию на **всех** обслуживающих login экземплярах. API одного узла не доказывает readiness остальных; GET через балансировщик также этого не доказывает. Это обязательная deployment/pre-ui-backend проверка, не реализованный распределённый readiness consensus. Live provider/SMTP/browser/fleet проверки остаются открытыми. Secrets/client credentials/root keys через этот API не читаются и не обновляются.
 
 ## Публичная политика в работе — A6.2b-local
 
@@ -24,9 +52,9 @@ Password registration:
 
 Выключение метода или включение required verification **не являются logout-all для уже выданных сессий**. Новые входы существующих пользователей следуют новой политике, а действующие sessions сохраняют прежние expiry/status/auth_version/revoke и sensitive email/MFA guards. Session validation/refresh/rotation не добавляют policy read на каждый запрос. Для немедленного прекращения доступа используются существующие logout-all/block/revoke механизмы. Новые plain login sessions сохраняют primary method/time; provider/email OTP не превращаются в password intent.
 
-Configured Google/Telegram adapters собираются независимо от текущего публичного switch и проверяют live policy: их можно выключать/включать без перезапуска, не удаляя identities. Не настроенный и выключенный provider не требует secrets и не получает handler; включённый сохранённый provider с неполной конфигурацией останавливает startup. Для включения отсутствовавших credentials по-прежнему нужны ENV + restart до A6.3; settings API A6.2c обязан проверять runtime readiness и согласованность конфигурации экземпляров. Email OTP с валидными operational параметрами тоже готов к включению; используются существующие bounded outbox runner/SMTP, не отдельный polling политики. ENV задаёт его бюджеты, не новое значение сохранённого switch.
+Configured Google/Telegram adapters собираются независимо от текущего публичного switch и проверяют live policy: их можно выключать/включать без перезапуска, не удаляя identities. Не настроенный и выключенный provider не требует secrets и не получает handler; включённый сохранённый provider с неполной конфигурацией останавливает startup. Для включения отсутствовавших credentials по-прежнему нужны ENV + restart до A6.3; settings API проверяет local runtime readiness, согласованность конфигурации всех экземпляров обеспечивает deployment-процесс (границы выше). Email OTP с валидными operational параметрами тоже готов к включению; используются существующие bounded outbox runner/SMTP, не отдельный polling политики. ENV задаёт его бюджеты, не новое значение сохранённого switch.
 
-Settings read/update HTTP routes пока отсутствуют. Локально проверены modes, прямые SQL/HTTP отказы, текущая authority, provider registration preference, plain primary context, pending MFA/OTP и shared/exclusive commit ordering. Настоящие provider credentials, SMTP/browser/operator drill и load/GC этим этапом не проверялись.
+Settings read/update HTTP реализованы в A6.2c-local выше. Локально проверены modes, прямые SQL/HTTP отказы, текущая authority, provider registration preference, plain primary context, pending MFA/OTP и shared/exclusive commit ordering. Настоящие provider credentials, SMTP/browser/operator drill и load/GC этим этапом не проверялись.
 
 ## Административный вход — A6.2a-local
 
@@ -59,7 +87,7 @@ Registration.Enabled — общий запрет создания аккаунт
 
 Verification задаётся одним enum вместо двух bool: состояние «required, но verification отключена» невозможно выразить. Disabled не отправляет автоматическое registration письмо и не подделывает verified_at; optional сохраняет доступ без обязательного подтверждения; required не выдаёт новую полноценную password session до email proof. Proof владения почтой в recovery/change/binding и административном setup независим от публичной registration policy. Правила переключения для существующих пользователей/сессий описаны выше; UI не заменяет SQL enforcement.
 
-Все публичные методы можно выключить, оставив закрытую админку, либо выключить публичный password для OAuth-only сайта. Административный password+TOTP профиль не представлен изменяемыми флагами. Admin intent реализован в A6.2a-local, enforcement публичных переключателей — в A6.2b-local выше. Settings API остаётся A6.2c.
+Все публичные методы можно выключить, оставив закрытую админку, либо выключить публичный password для OAuth-only сайта. Административный password+TOTP профиль не представлен изменяемыми флагами. Admin intent реализован в A6.2a-local, enforcement публичных переключателей — в A6.2b-local выше. Settings API — A6.2c-local.
 
 ## Источник и инициализация
 
@@ -69,7 +97,7 @@ Verification задаётся одним enum вместо двух bool: сос
 
 Если durable initial_setup marker уже initialized, а settings row потеряна, Initialize отказывает. Это повреждение/несогласованный upgrade, а не повод молча сбросить настройки в ENV. Первоначальная запись не получает выдуманного actor или change audit; последующие изменения требуют подтверждённого оператора. Конфигурационная строка не очищается retention.
 
-Ранее изменены исходные 000001 up/down для новой установки, без нового migration file и без сброса рабочей БД; A6.2b схему не меняет. Уже установленному экземпляру нужны отдельно согласованные schema/seed/permission upgrade. Нельзя запустить новую retention/startup логику на старой схеме без settings/audit tables или молча восстановить потерянную policy после setup из ENV.
+Ранее изменены исходные 000001 up/down для новой установки, без нового migration file и без сброса рабочей БД; A6.2b/c схему не меняют. Уже установленному экземпляру нужны отдельно согласованные schema/seed/permission upgrade. Нельзя запустить новую retention/startup логику на старой схеме без settings/audit tables или молча восстановить потерянную policy после setup из ENV.
 
 ## Права и транзакция
 

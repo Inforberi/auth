@@ -4,7 +4,7 @@
 
 Для знакомства и подключения — [подробное руководство по Auth](docs/auth-guide.md): сценарии, карточки методов, примеры запросов, ENV и ограничения. Реализованное отделено от запланированного.
 
-Рабочая основа Go Auth, **ещё не готовый production auth продукт**. Парольные сценарии, [email verification](docs/features/email-verification.md), [password recovery](docs/features/password-recovery.md), SQL-сессии, Google/Telegram/email OTP, роли и MFA реализованы в backend с описанными ограничениями. A6.2b подключил [сохраняемую публичную политику](docs/features/auth-settings.md); settings HTTP, секреты и UI ещё впереди, оплата вне текущего релиза. Внешняя и финальная приёмка открыты: [текущий план](docs/planning/implementation.md). Результат переноса инфраструктуры: [template-adoption](docs/template-adoption.md).
+Рабочая основа Go Auth, **ещё не готовый production auth продукт**. Парольные сценарии, [email verification](docs/features/email-verification.md), [password recovery](docs/features/password-recovery.md), SQL-сессии, Google/Telegram/email OTP, роли и MFA реализованы в backend с описанными ограничениями. A6.2b/c подключили [сохраняемую публичную политику и protected settings HTTP](docs/features/auth-settings.md); секреты и UI ещё впереди, оплата вне текущего релиза. Внешняя и финальная приёмка открыты: [текущий план](docs/planning/implementation.md). Результат переноса инфраструктуры: [template-adoption](docs/template-adoption.md).
 
 ## Локальный запуск
 

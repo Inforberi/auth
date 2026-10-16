@@ -1,10 +1,12 @@
 # Текущий шаг
 
-Реализация A6.2b-local зафиксирована в `eab0c7e` — `feat(auth): подключил политику публичного входа`.
+Выполнен A6.2c-local: protected GET/POST `/api/v1/admin/auth/settings`, full replacement/required booleans, live SQL permission/fresh password/MFA/version/no-op/audit, local adapter readiness без новых SQL/network calls. [Контракт](../features/auth-settings.md#api-настроек--a62c-local). Проверка одинаковой fleet operational конфигурации — deployment prerequisite и открытая pre-ui-backend приёмка, не гарантия API одного узла. Далее A6.3 (MFA roles/enrollment, затем secrets/SMTP/retention), до UI обязательны прежние external gates. Коммит не выполнялся; рабочие ENV/secrets/БД/schema/dependencies не менялись. Результаты проверок — history.
+
+Предыдущая реализация A6.2b-local зафиксирована в `eab0c7e` — `feat(auth): подключил политику публичного входа`.
 
 Реализация A6.2a-local зафиксирована в `6360b87` — `feat(auth): добавил административный вход с MFA`.
 
-Выполнен A6.2b-local: App seed/load, live public method/registration/verification policy и final SQL FOR SHARE guards, согласованные с Update FOR UPDATE; admin intent независим. Required registration — 201 verificationRequired без cookie. [Контракт](../features/auth-settings.md#публичная-политика-в-работе--a62b-local). **Settings HTTP ещё не опубликован; ENV switches — только initial seed, credentials/operational limits ещё ENV.** Далее A6.2c protected policy API + adapter readiness, затем A6.3 MFA roles/secrets/retention. Pre-ui-backend, A8 и 13.1d.4 открыты; реальный стенд/SMTP/providers/load/GC этим заходом не проверены. Проверки — history. Коммит только по запросу; рабочие БД/ENV/secrets не трогались. Schema/dependencies/permissions не менялись.
+Предыдущий A6.2b-local: App seed/load, live public method/registration/verification policy и final SQL FOR SHARE guards, согласованные с Update FOR UPDATE; admin intent независим. Required registration — 201 verificationRequired без cookie. ENV switches — initial seed, credentials/operational limits ещё ENV. Settings HTTP теперь подключён в A6.2c-local выше. Pre-ui-backend, A8 и 13.1d.4 открыты; реальный стенд/SMTP/providers/load/GC этим заходом не проверены.
 
 - Source 000001 дополнен administrative flag в MFA challenge; рабочая БД не мигрировалась. ENV/secrets не менялись; новых dependencies/pools/workers/permissions нет. Public login не получает Access advisory lock. A6.1 store/seed/version/audit гарантии сохранены. Предыдущий этап 10.3c зафиксирован в 8521b8a.
 
