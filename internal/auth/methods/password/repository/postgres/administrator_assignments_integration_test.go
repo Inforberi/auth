@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -76,7 +77,11 @@ func TestAdministratorAssignmentsSchema(t *testing.T) {
 	sessions := sessionservice.New(clock.UTCClock{}, sessionpostgres.New(runtime), tokens, sessionservice.Config{SessionTTL: 2 * time.Hour, SessionRefreshThreshold: 2 * time.Hour, AbsoluteSessionTTL: 24 * time.Hour})
 	h := router.New(router.Handlers{Access: accesshttp.New(svc, zap.NewNop()), Middleware: sessionhttp.New(sessions, zap.NewNop()), Config: &config.Config{MFA: mfaservice.Config{Enabled: true}, Browser: requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}}}})
 	send := func(method string, id accountdomain.UserID, version string) *httptest.ResponseRecorder {
-		r := httptest.NewRequest(method, "https://localhost:8443/api/v1/admin/users/"+string(id)+"/administrator", strings.NewReader(`{"expectedAuthVersion":1,"expectedRoleVersion":1,"expectedAccessVersion":`+version+`}`))
+		var authVersion int64
+		if err := db.QueryRow(ctx, `SELECT auth_version FROM auth.users WHERE id=$1`, id).Scan(&authVersion); err != nil {
+			t.Fatal(err)
+		}
+		r := httptest.NewRequest(method, "https://localhost:8443/api/v1/admin/users/"+string(id)+"/administrator", strings.NewReader(fmt.Sprintf(`{"expectedAuthVersion":%d,"expectedRoleVersion":1,"expectedAccessVersion":%s}`, authVersion, version)))
 		r.Header.Set("Origin", "https://localhost:8443")
 		r.Header.Set("Content-Type", "application/json")
 		r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: raw})
@@ -102,6 +107,10 @@ func TestAdministratorAssignmentsSchema(t *testing.T) {
 	check(send("POST", target.UserID, "1"), 200)
 	check(send("POST", target.UserID, "1"), 409)
 	check(send("POST", target.UserID, "2"), 200)
+	if err := svc.Authorize(ctx, target, settings.AssignmentsManage); !errors.Is(err, accessdomain.ErrForbidden) {
+		t.Fatal("old session inherited administrator authority", err)
+	}
+	target = renewAccessPrincipal(t, db, ctx, target.UserID)
 	if err := svc.Authorize(ctx, target, settings.AssignmentsManage); err != nil {
 		t.Fatal("grant not effective", err)
 	}
@@ -127,8 +136,9 @@ func TestAdministratorAssignmentsSchema(t *testing.T) {
 		t.Fatal("ordinary assignment changed system role", err)
 	}
 	command = administratorCommand(actor, target.UserID, true)
+	command.ExpectedAuthVersion = 2
 	command.ExpectedAccessVersion = 3
-	for _, mutate := range []func(*accessservice.AdministratorInput){func(i *accessservice.AdministratorInput) { i.ExpectedAuthVersion = 2 }, func(i *accessservice.AdministratorInput) { i.ExpectedAccessVersion = 4 }, func(i *accessservice.AdministratorInput) { i.ExpectedRoleVersion = 2 }} {
+	for _, mutate := range []func(*accessservice.AdministratorInput){func(i *accessservice.AdministratorInput) { i.ExpectedAuthVersion = 3 }, func(i *accessservice.AdministratorInput) { i.ExpectedAccessVersion = 4 }, func(i *accessservice.AdministratorInput) { i.ExpectedRoleVersion = 2 }} {
 		bad := command
 		mutate(&bad)
 		if _, err := svc.ChangeAdministrator(ctx, bad); !errors.Is(err, accessdomain.ErrConflict) {
@@ -142,12 +152,14 @@ func TestAdministratorAssignmentsSchema(t *testing.T) {
 	checkAdministratorRevocationWait(t, db, ctx, svc, actor, role)
 	// Promote a ready backup, then self-revoke. The former owner immediately loses this API.
 	check(send("POST", target.UserID, "3"), 200)
+	target = renewAccessPrincipal(t, db, ctx, target.UserID)
 	check(send("DELETE", actor.UserID, "1"), 200)
 	check(send("POST", ordinary.UserID, "1"), 403)
-	if _, err := svc.ChangeAdministrator(ctx, administratorCommand(target, target.UserID, false)); !errors.Is(err, accessdomain.ErrConflict) {
+	last := administratorCommand(target, target.UserID, false)
+	last.ExpectedAuthVersion = 3
+	if _, err := svc.ChangeAdministrator(ctx, last); !errors.Is(err, accessdomain.ErrConflict) {
 		t.Fatal("target version guard lost", err)
 	}
-	last := administratorCommand(target, target.UserID, false)
 	last.ExpectedAccessVersion = 4
 	if _, err := svc.ChangeAdministrator(ctx, last); !errors.Is(err, accountdomain.ErrLastAdministrator) {
 		t.Fatal("last usable administrator removed", err)
@@ -197,12 +209,13 @@ func checkAdministratorAssignmentRollback(t *testing.T, db *pgxpool.Pool, ctx co
 	accessExec(t, db, ctx, `CREATE FUNCTION auth.reject_administrator_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic audit failure'; END $$;
 		CREATE TRIGGER reject_administrator_audit BEFORE INSERT ON auth.access_audit FOR EACH ROW EXECUTE FUNCTION auth.reject_administrator_audit()`)
 	input := administratorCommand(actor, target, true)
+	input.ExpectedAuthVersion = 2
 	input.ExpectedAccessVersion = version
 	if _, err := svc.ChangeAdministrator(ctx, input); err == nil {
 		t.Fatal("audit failure committed")
 	}
 	var intact bool
-	if err := db.QueryRow(ctx, `SELECT access_version=$2 AND NOT EXISTS(SELECT 1 FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id WHERE ur.user_id=$1 AND r.system) FROM auth.users WHERE id=$1`, target, version).Scan(&intact); err != nil || !intact {
+	if err := db.QueryRow(ctx, `SELECT access_version=$2 AND auth_version=2 AND NOT EXISTS(SELECT 1 FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id WHERE ur.user_id=$1 AND r.system) FROM auth.users WHERE id=$1`, target, version).Scan(&intact); err != nil || !intact {
 		t.Fatal("partial role assignment", err)
 	}
 	accessExec(t, db, ctx, `DROP TRIGGER reject_administrator_audit ON auth.access_audit; DROP FUNCTION auth.reject_administrator_audit()`)
@@ -221,6 +234,7 @@ func checkAdministratorConcurrentGrant(t *testing.T, db *pgxpool.Pool, ctx conte
 		t.Fatal("concurrent grant must have one winner", a, b)
 	}
 	input.Grant = false
+	input.ExpectedAuthVersion = 2
 	input.ExpectedAccessVersion = 2
 	if _, err := svc.ChangeAdministrator(ctx, input); err != nil {
 		t.Fatal(err)

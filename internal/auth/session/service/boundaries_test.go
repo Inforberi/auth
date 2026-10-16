@@ -76,3 +76,37 @@ func TestValidationWithoutRefreshDoesNotWrite(t *testing.T) {
 	}
 	repo.AssertNotCalled(t, "RefreshSession", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
+
+func TestSessionRefreshUsesPersistedAbsoluteDeadline(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		config   Config
+		expected time.Time
+	}{
+		{"shorter defaults do not expire an issued session", Config{SessionTTL: 30 * time.Minute, AbsoluteSessionTTL: time.Hour, SessionRefreshThreshold: 10 * time.Minute}, now.Add(30 * time.Minute)},
+		{"longer defaults do not extend its absolute deadline", Config{SessionTTL: 24 * time.Hour, AbsoluteSessionTTL: 48 * time.Hour, SessionRefreshThreshold: time.Hour}, now.Add(2 * time.Hour)},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			repo, token, clock := &mockRepo{}, &mockTokenHash{}, &mockClock{}
+			proof := now.Add(-10 * time.Minute)
+			session := &sessiondomain.Session{
+				UserID: "user", CreatedAt: now.Add(-2 * time.Hour), ExpiresAt: now.Add(time.Minute),
+				AbsoluteExpiresAt: now.Add(2 * time.Hour), PrimaryMethod: "password",
+				PrimaryVerifiedAt: &proof, MFAVerifiedAt: &proof,
+			}
+			repo.On("FindSession", mock.Anything, "hash").Return(session, nil)
+			repo.On("RefreshSession", mock.Anything, "hash", mock.MatchedBy(func(s *sessiondomain.Session) bool {
+				return s.ExpiresAt.Equal(test.expected) && s.AbsoluteExpiresAt.Equal(now.Add(2*time.Hour)) &&
+					s.PrimaryVerifiedAt.Equal(proof) && s.MFAVerifiedAt.Equal(proof)
+			}), session.ExpiresAt).Return(true, nil)
+			token.On("Hash", "raw").Return("hash")
+			clock.On("NowUTC").Return(now)
+			result, err := New(clock, repo, token, test.config).ValidateSession(t.Context(), "raw")
+			if err != nil || !result.Extended || !result.ExpiresAt.Equal(test.expected) ||
+				!result.PrimaryVerifiedAt.Equal(proof) || !result.MFAVerifiedAt.Equal(proof) {
+				t.Fatal("refresh changed lifetime or authentication proof", result, err)
+			}
+			repo.AssertExpectations(t)
+		})
+	}
+}

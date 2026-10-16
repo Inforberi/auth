@@ -14,6 +14,8 @@ Single logout отзывает SQL session; logout-all/password reset/change/blo
 
 Authentication context фиксирует серверно подтверждённые методы/время входа, fresh-auth и MFA; данные provider/client не становятся административными permissions. MFA/fresh-auth проверяются backend для чувствительных действий, отдельно от sliding TTL.
 
+Уточнение AS6a, 16 октября 2026: фактическое новое назначение обычной или системной роли активному пользователю атомарно повышает auth_version цели вместе с access_version/assignment/audit. Старые sessions и version-bound in-flight login/challenges не наследуют новый grant; требуется новый обычный вход с действующим MFA. SQL user lock согласует это с session creation/refresh. Pending не может иметь действующую session и сохраняет auth_version для приглашения/активации; после активации действует обычная проверка версии. No-op grant не меняет версии, revoke убирает текущие permissions без обязательного отзыва session. Используется существующая version boundary, без UPDATE всех session rows, дополнительных hot-path запросов или Redis invalidation. Изменение permissions уже назначенной роли требует отдельного AS6b решения без массового fan-out UPDATE; этим уточнением оно не объявлено защищённым.
+
 ## Challenges, audit и доставка
 
 Verify/reset/OTP/link challenges связаны с purpose/owner/intent, ограничены сроком и попытками; хранят verifier, не raw secret. Conditional consume и изменение аккаунта/credentials/auth version/security audit происходят одной SQL-транзакцией. Два concurrent consume дают ровно один успех. Недоставленное письмо не подтверждает identity. Повторная доставка использует outbox с ограниченными retry, сроком и dedup; resend policy явно инвалидирует прежний challenge.

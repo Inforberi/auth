@@ -100,6 +100,13 @@ func TestAccessHTTPSchema(t *testing.T) {
 	check(send("GET", targetPath, "", targetRaw), 403)
 	check(send("GET", "admin/users/00000000-0000-4000-8000-000000000000/access", "", actorRaw), 403)
 	check(send("POST", assignmentPath, `{"expectedRoleVersion":1,"expectedAccessVersion":1}`, actorRaw), 200)
+	check(send("GET", "auth/access", "", targetRaw), 401)
+	fresh := renewAccessPrincipal(t, db, ctx, target.UserID)
+	targetRaw, err = tokens.GenerateToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	accessExec(t, db, ctx, `UPDATE auth.sessions SET token_hash=$2 WHERE token_hash=$1`, fresh.TokenHash, tokens.Hash(targetRaw))
 	access := send("GET", "auth/access", "", targetRaw)
 	check(access, 200)
 	if !strings.Contains(access.Body.String(), "reports.read") || !strings.Contains(access.Body.String(), `"accessVersion":2`) {

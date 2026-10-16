@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -16,6 +17,9 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
+	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
+	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
 func checkAccessRoles(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
@@ -65,10 +69,29 @@ func checkAccessRoles(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		t.Fatalf("missing management: %v", err)
 	}
 	assignment := accessservice.AssignmentInput{Actor: actor, UserID: target.UserID, RoleID: role.ID, ExpectedRoleVersion: 1, ExpectedAccessVersion: 1, Grant: true}
+	parallelSession := renewAccessPrincipal(t, db, ctx, target.UserID)
+	prior, err := sessionpostgres.New(db).FindSession(ctx, target.TokenHash)
+	if err != nil {
+		t.Fatal(err)
+	}
 	version, err := svc.ChangeAssignment(ctx, assignment)
 	if err != nil || version != 2 {
 		t.Fatalf("grant: %d %v", version, err)
 	}
+	for _, credential := range []string{target.TokenHash, parallelSession.TokenHash} {
+		if _, err := sessionpostgres.New(db).FindSession(ctx, credential); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
+			t.Fatalf("pre-grant session retained authority: %v", err)
+		}
+	}
+	expectedExpiry := prior.ExpiresAt
+	prior.ExpiresAt = prior.ExpiresAt.Add(time.Minute)
+	if _, err := sessionpostgres.New(db).RefreshSession(ctx, target.TokenHash, prior, expectedExpiry); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
+		t.Fatalf("pre-grant refresh restored authority: %v", err)
+	}
+	if err := svc.Authorize(ctx, target, "reports.read"); !errors.Is(err, accessdomain.ErrForbidden) {
+		t.Fatalf("pre-grant session inherited permission: %v", err)
+	}
+	target = renewAccessPrincipal(t, db, ctx, target.UserID)
 	if err := svc.Authorize(ctx, target, "reports.read"); err != nil {
 		t.Fatal(err)
 	}
@@ -83,12 +106,18 @@ func checkAccessRoles(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	if version, err := svc.ChangeAssignment(ctx, assignment); err != nil || version != 2 {
 		t.Fatalf("no-op grant: %d %v", version, err)
 	}
+	if _, err := sessionpostgres.New(db).FindSession(ctx, target.TokenHash); err != nil {
+		t.Fatalf("no-op grant invalidated current session: %v", err)
+	}
 	assignment.Grant = false
 	if version, err := svc.ChangeAssignment(ctx, assignment); err != nil || version != 3 {
 		t.Fatalf("revoke: %d %v", version, err)
 	}
 	if err := svc.Authorize(ctx, target, "reports.read"); !errors.Is(err, accessdomain.ErrForbidden) {
 		t.Fatalf("immediate revoke: %v", err)
+	}
+	if _, err := sessionpostgres.New(db).FindSession(ctx, target.TokenHash); err != nil {
+		t.Fatalf("revoke unnecessarily invalidated current session: %v", err)
 	}
 	assignment.RoleID = systemID
 	assignment.UserID = actor.UserID
@@ -111,10 +140,11 @@ func checkAccessRoles(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	if _, err := svc.UpdateRole(ctx, update); !errors.Is(err, accessdomain.ErrForbidden) {
 		t.Fatalf("system edit: %v", err)
 	}
-	checkAccessRaces(t, ctx, svc, actor, other, role)
+	checkAccessRaces(t, db, ctx, svc, actor, other, role)
 	checkAccessRoleLimit(t, db, ctx, svc, actor, role)
 	checkAccessCatalog(t, db, ctx, role)
-	checkAccessAuditRollback(t, db, ctx, svc, actor)
+	checkAccessAuditRollback(t, db, ctx, svc, actor, role.ID)
+	checkPendingAssignment(t, db, ctx, svc, actor)
 	checkAccessSessionGuards(t, db, ctx, svc, other, actor)
 	var count int
 	if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.access_audit WHERE role_id=$1`, role.ID).Scan(&count); err != nil || count != 6 {
@@ -122,7 +152,7 @@ func checkAccessRoles(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	}
 }
 
-func checkAccessRaces(t *testing.T, ctx context.Context, svc *accessservice.Service, actor, target accessservice.Principal, role accessdomain.Role) {
+func checkAccessRaces(t *testing.T, db *pgxpool.Pool, ctx context.Context, svc *accessservice.Service, actor, target accessservice.Principal, role accessdomain.Role) {
 	t.Helper()
 	var wg sync.WaitGroup
 	results := make(chan error, 16)
@@ -144,6 +174,10 @@ func checkAccessRaces(t *testing.T, ctx context.Context, svc *accessservice.Serv
 	}
 	if winners != 1 {
 		t.Fatalf("assignment winners: %d", winners)
+	}
+	var authVersion int64
+	if err := db.QueryRow(ctx, `SELECT auth_version FROM auth.users WHERE id=$1`, target.UserID).Scan(&authVersion); err != nil || authVersion != 2 {
+		t.Fatalf("concurrent grant invalidated more than once: %d %v", authVersion, err)
 	}
 	results = make(chan error, 16)
 	for i := range 16 {
@@ -181,18 +215,55 @@ func checkAccessRoleLimit(t *testing.T, db *pgxpool.Pool, ctx context.Context, s
 	}
 }
 
-func checkAccessAuditRollback(t *testing.T, db *pgxpool.Pool, ctx context.Context, svc *accessservice.Service, actor accessservice.Principal) {
+func checkAccessAuditRollback(t *testing.T, db *pgxpool.Pool, ctx context.Context, svc *accessservice.Service, actor accessservice.Principal, roleID accessdomain.RoleID) {
 	t.Helper()
+	role, err := svc.ReadRole(ctx, roleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := accessPrincipal(t, db, ctx)
 	accessExec(t, db, ctx, `CREATE FUNCTION auth.reject_access_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test audit failure'; END $$;
 		CREATE TRIGGER reject_access_audit BEFORE INSERT ON auth.access_audit FOR EACH ROW EXECUTE FUNCTION auth.reject_access_audit()`)
-	_, err := svc.CreateRole(ctx, accessservice.CreateRoleInput{Actor: actor, Key: "rollback_reader", Name: "Rollback reader", Permissions: []accessdomain.PermissionKey{"reports.read"}})
+	_, err = svc.CreateRole(ctx, accessservice.CreateRoleInput{Actor: actor, Key: "rollback_reader", Name: "Rollback reader", Permissions: []accessdomain.PermissionKey{"reports.read"}})
 	if err == nil {
 		t.Fatal("audit failure accepted")
+	}
+	_, err = svc.ChangeAssignment(ctx, accessservice.AssignmentInput{Actor: actor, UserID: target.UserID, RoleID: role.ID, ExpectedRoleVersion: role.Version, ExpectedAccessVersion: 1, Grant: true})
+	if err == nil {
+		t.Fatal("grant ignored audit failure")
+	}
+	var intact bool
+	if err := db.QueryRow(ctx, `SELECT auth_version=1 AND access_version=1 AND NOT EXISTS(
+		SELECT 1 FROM auth.user_roles WHERE user_id=$1 AND role_id=$2) FROM auth.users WHERE id=$1`, target.UserID, role.ID).Scan(&intact); err != nil || !intact {
+		t.Fatalf("grant/version rollback: %t %v", intact, err)
+	}
+	if _, err := sessionpostgres.New(db).FindSession(ctx, target.TokenHash); err != nil {
+		t.Fatalf("rolled-back grant invalidated session: %v", err)
 	}
 	accessExec(t, db, ctx, `DROP TRIGGER reject_access_audit ON auth.access_audit; DROP FUNCTION auth.reject_access_audit()`)
 	var present bool
 	if err := db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.roles WHERE key='rollback_reader')`).Scan(&present); err != nil || present {
 		t.Fatalf("audit rollback: %t %v", present, err)
+	}
+}
+
+func checkPendingAssignment(t *testing.T, db *pgxpool.Pool, ctx context.Context, svc *accessservice.Service, actor accessservice.Principal) {
+	t.Helper()
+	role, err := svc.CreateRole(ctx, accessservice.CreateRoleInput{Actor: actor, Key: "pending_reader", Name: "Pending reader", Permissions: []accessdomain.PermissionKey{"reports.read"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var target accountdomain.UserID
+	if err := db.QueryRow(ctx, `INSERT INTO auth.users(status) VALUES('pending') RETURNING id`).Scan(&target); err != nil {
+		t.Fatal(err)
+	}
+	version, err := svc.ChangeAssignment(ctx, accessservice.AssignmentInput{Actor: actor, UserID: target, RoleID: role.ID, ExpectedRoleVersion: 1, ExpectedAccessVersion: 1, Grant: true})
+	if err != nil || version != 2 {
+		t.Fatalf("pending grant: %d %v", version, err)
+	}
+	var authVersion int64
+	if err := db.QueryRow(ctx, `SELECT auth_version FROM auth.users WHERE id=$1`, target).Scan(&authVersion); err != nil || authVersion != 1 {
+		t.Fatalf("pending grant invalidated onboarding version: %d %v", authVersion, err)
 	}
 }
 
@@ -245,6 +316,22 @@ func accessPrincipal(t *testing.T, db *pgxpool.Pool, ctx context.Context) access
 	accessExec(t, db, ctx, `INSERT INTO auth.mfa_totp(user_id,secret,last_step) VALUES ($1,$2,0)`, id, make([]byte, 48))
 	accessExec(t, db, ctx, `UPDATE auth.sessions SET primary_method='password',primary_verified_at=password_verified_at,
 		mfa_verified_at=clock_timestamp() WHERE token_hash=$1`, principal.TokenHash)
+	return principal
+}
+
+// Synthetic new-login proof; never upgrade the pre-grant session in place.
+func renewAccessPrincipal(t *testing.T, db *pgxpool.Pool, ctx context.Context, id accountdomain.UserID) accessservice.Principal {
+	t.Helper()
+	tokens := tokengenerate.New()
+	raw, err := tokens.GenerateToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	principal := accessservice.Principal{UserID: id, TokenHash: tokens.Hash(raw)}
+	accessExec(t, db, ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,
+		password_verified_at,primary_method,primary_verified_at,mfa_verified_at,user_agent,ip_address)
+		SELECT $1,id,auth_version,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '1 day',
+		clock_timestamp(),'password',clock_timestamp(),clock_timestamp(),'','' FROM auth.users WHERE id=$2`, principal.TokenHash, id)
 	return principal
 }
 

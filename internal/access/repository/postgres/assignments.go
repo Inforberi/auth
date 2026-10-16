@@ -72,7 +72,11 @@ func applyAssignment(ctx context.Context, tx pgx.Tx, input service.AssignmentInp
 	if result.RowsAffected() == 0 {
 		return version, nil
 	}
-	if err := tx.QueryRow(ctx, `UPDATE auth.users SET access_version=access_version+1 WHERE id=$1 RETURNING access_version`, input.UserID).Scan(&version); err != nil {
+	// A new assignment must not elevate a session issued before this grant.
+	// Pending accounts have no live session; preserve their activation credentials.
+	if err := tx.QueryRow(ctx, `UPDATE auth.users SET access_version=access_version+1,
+		auth_version=auth_version+CASE WHEN $2 AND status='active' THEN 1 ELSE 0 END
+		WHERE id=$1 RETURNING access_version`, input.UserID, input.Grant).Scan(&version); err != nil {
 		return 0, err
 	}
 	if err := recordAudit(ctx, tx, input.Actor, role, event, string(input.UserID), &version); err != nil {
