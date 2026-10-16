@@ -4,6 +4,8 @@
 
 ## 1. Назначение и правила
 
+Дополнение 16 октября 2026: запланирован A6.4 — [JWT access profiles, безопасный middleware и приёмка](jwt-access.md). Cookie/session остаётся default; добавляются session-derived audience JWT и самостоятельный API JWT+opaque refresh профиль на общей authority. Строгий online отзыв — default, local-only verification требует отдельного ADR/явного допустимого окна. JWT не включён и не реализован этим изменением; SSO/multi-tenancy не добавляются. Порядок — после A6.3, до backend-приёмки/UI, нагрузочная проверка вместе с A8.
+
 Auth — переиспользуемый Go-шаблон, который можно скопировать или форкнуть, настроить и доработать под другой продукт. Текущий выпуск: аккаунты, email/password, email-код, Telegram, выбранный OAuth/OIDC-провайдер, сессии, роли/permissions, MFA администратора и UI. Оплата, тарифы и entitlements — отдельное будущее расширение, не обязательная часть этого выпуска.
 
 ### Согласованный scope — 11 октября 2026
@@ -236,6 +238,10 @@ Auth — переиспользуемый Go-шаблон, который мож
 Общий httpx mapper поддерживает wrapped sentinel и typed predicates (errors.As), явные fallback, headers и приоритет правил; запись ответа и безопасное логирование отделены от сопоставления. Применён к account/password/recovery/session и dev send-mail. Health отдельно. Проверено: task go:fmt, task check (tests + lint, 0 issues), task check:api (все три артефакта совпадают), git diff --check. Добавлены mapper/logging/header tests, session gate/context/cookie-refresh и 20 router error-contract сценариев. API/SQL/env/dependencies, Redis и security гарантии сохранены. DB/container/external SMTP/browser/load проверки не повторялись; production readiness не заявляется. Следующий шаг — 5.3.
 
 ### Этап 6. Безопасность текущего входа и сессий
+
+Дополнение 16 октября: приоритет — [Auth/session security AS1–AS12](auth-security.md), а не только новый JWT. Проверить cookie ambiguity/fixation, late Set-Cookie/rotation/revoke races, admin lifetime/role elevation, все методы/MFA/recovery/Origin/CORS, ingress/redaction/restore и атакующую нагрузку. Сохранять SQL authority; уже реализованное не переписывать без подтверждённого пробела. Ближайший A6.security блок — до JWT/UI, связанная MFA policy вместе с A6.3; load/GC/fault evidence — прежние pre-ui/A8/6.8, не отдельный раздутый framework.
+
+Первый AS1–AS4-local выполнен: strict cookie/actual-route guards, lifecycle NoRefreshAuth, targeted real SQL/HTTP late-response/race. [Карта гарантий и открытые проверки](auth-security.md#результат-первого-блока-as1as4-local). Поздняя cookie не оживляет серверный доступ, но реальная browser coordination и AS5/AS6 ещё открыты; нагрузка/GC/restore не измерены этим блоком.
 
 Согласовано 9 октября 2026: **PostgreSQL + Redis сохраняются**. Базовый профиль — строгий SQL отзыв, без принятия сессии по устаревшему кешу. Redis обслуживает распределённые limits и кеширование с явно допустимой устарелостью; не считается заменой enforcement. Предложенные 5 секунд задержки отзыва не утверждены. Оптимизировать измеренные узкие места, не добавлять cache-only validation заранее. Политика — [ADR 002](../adr/002-sessions-and-transactions.md).
 
