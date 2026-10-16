@@ -1,6 +1,6 @@
 # Текущий API-контракт
 
-Состояние на 14 октября 2026. Источник маршрутов — `internal/transport/http/router`; DTO и error mapping — transport каждой фичи. Спецификация — Swagger 2.0, не OpenAPI 3.
+Состояние на 16 октября 2026. Источник маршрутов — `internal/transport/http/router`; DTO и error mapping — transport каждой фичи. Спецификация — Swagger 2.0, не OpenAPI 3.
 
 | Метод и путь | Успех | Ошибки |
 | --- | --- | --- |
@@ -9,6 +9,7 @@
 | GET `/health/ready` | 200, `status` | 503 без деталей зависимости |
 | POST `/api/v1/auth/register/email` | 201, `userID`, Set-Cookie, queued verification | 400 validation, 409 email conflict, 429 limits, 503 limits/deadline, 500 internal_error; ошибка не доказывает rollback аккаунта |
 | POST `/api/v1/auth/login/email` | 200, `status`, Set-Cookie | 400 validation/invalid_credentials, 500 internal_error |
+| POST `/api/v1/admin/auth/login/email` | 202, MFA challenge + browser cookie, без session; завершение через `/api/v1/auth/mfa/login/complete` | Permanent password + verified credential email + current admin authority + enrolled MFA; Origin, общий password/MFA budget; 400 validation/invalid_credentials, 403 Origin, 429 limits, 503 dependency, 500 internal_error; без MFA route 404. [Контракт](../features/auth-settings.md#административный-вход--a62a-local) |
 | POST `/api/v1/auth/mfa/recovery/start` | 200, `status=operator_approval_required`, requestId/secret/uri/expiresAt, без session | Opt-in MFA_RECOVERY_ENABLED + MFA_ENABLED; existing primary challenge/browser cookie, Origin/no-store; 400 invalid_json/invalid_mfa, 403 Origin, 429 limits, 503 dependency, disabled route 404 |
 | POST `/api/v1/auth/mfa/recovery/complete` | 200, codes один раз, очистка старых cookies, без session | JSON requestId/challenge/code + browser cookie/current operator approval/new TOTP; atomic factor/codes/version/revoke/audit/notice. 400 invalid_json/invalid_mfa, 403 Origin, 429 limits, 503 dependency, disabled route 404 |
 | POST `/api/v1/auth/email-otp/request` | 202, status accepted и browser-bound flow cookie, optional profile | 400 invalid_json/invalid_email, 403 Origin, 429 limits, 503 dependency; только существующий active verified password email |

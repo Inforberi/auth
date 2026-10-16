@@ -4,6 +4,8 @@
 
 ## Текущее состояние
 
+A6.2a-local: [отдельный административный password+MFA вход](auth-settings.md#административный-вход--a62a-local) всегда требует второй фактор и текущую административную authority, переиспользует эти challenge/completion/recovery и общие SQL-сессии. Обычный публичный вход и его optional MFA поведение не заменяются.
+
 A5.2b-local подключает MFA к password, Google/Telegram OIDC и email OTP, App, HTTP и Swagger. A5.2c-local добавляет opt-in email proof для external-only с verified owned contact; A5.2d-local — [первичную привязку через администратора](email-binding.md). Для password-account по-прежнему нужен password proof: email не снижает его защиту. Без verified contact сначала выполняется binding; самостоятельного добавления доверенной почты одной session cookie нет. Полный A5 и release acceptance не закрыты.
 
 Без подключённого фактора обычный login сохраняется. При enabled TOTP основной вход возвращает HTTP 202, `status=mfa_required`, `challenge`, `expiresAt` и HttpOnly browser cookie, но не новую session cookie. Старую cookie этого браузера очищаем; это не глобальный logout других сессий. После второго фактора создаётся общая SQL-сессия. MFA не заменяет email verification, permissions или основной вход. Factor state нельзя включать/выключать прямым SQL вместо protected flow.

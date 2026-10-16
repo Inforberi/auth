@@ -1,8 +1,10 @@
 # Текущий шаг
 
-Реализация A6.1-local зафиксирована в `a806c4f`: не-секретные Auth settings model/service/SQL store, version/audit/first-install seed. **App/runtime/HTTP ещё не подключены; действует ENV.** Далее A6.2 — административный login intent и полное enforcement перед settings API, затем A6.3 MFA roles/secrets/retention.
+Реализация A6.2a-local зафиксирована в `6360b87` — `feat(auth): добавил административный вход с MFA`.
 
-- Settings.Initialize не перезаписывает сохранённую строку ENV и отказывает при потере строки после initialized setup marker; Read с current permission/session, Update с transaction-owned auth.settings.manage/password/MFA и optimistic version, audit rollback/no-op. Permission можно делегировать custom ролью; system membership не добавлена как лишняя проверка. Новая первая установка получает восемь core permissions, existing grants не расширяются. Новые settings/audit tables только в source 000001 up/down; audit включён в bounded retention. Public flags не выключают admin-защиту: отдельный admin password+TOTP intent ещё надо реализовать в A6.2. Unit/lint/race и full disposable SQL regression прошли, RPS не измерялся. [Контракт](../features/auth-settings.md). Реальные ENV/БД не менялись; secrets не сохраняются, новых dependencies/pools/workers нет. **До A7 обязателен pre-ui-backend**, затем A8 и 13.1d.4. Предыдущий этап 10.3c зафиксирован в 8521b8a.
+Выполнен A6.2a-local: отдельный administrative password+MFA login, существующие MFA completion/recovery и SQL-сессии; current authority/readiness на start/commit, intent из trusted service и в challenge. [Контракт](../features/auth-settings.md#административный-вход--a62a-local). **Settings startup/runtime/HTTP всё ещё не подключены; публичный профиль задаёт ENV.** Далее A6.2b — полное enforcement перед A6.2c settings API, затем A6.3 MFA roles/secrets/retention. Pre-ui-backend, A8 и 13.1d.4 открыты; реальный стенд/SMTP/providers/load/GC этим заходом не проверены. История проверок — implementation/history. Коммит только по запросу. A6.1 зафиксирован в `a806c4f` / `3dba04c`.
+
+- Source 000001 дополнен administrative flag в MFA challenge; рабочая БД не мигрировалась. ENV/secrets не менялись; новых dependencies/pools/workers/permissions нет. Public login не получает Access advisory lock. A6.1 store/seed/version/audit гарантии сохранены. Предыдущий этап 10.3c зафиксирован в 8521b8a.
 
 - Реализация 13.2a.2-local зафиксирована в `86f6f07`; далее 10.6 users list/detail и protected lifecycle. Внешние A8-admin-e2e/13.1d.4 остаются открытыми.
 
