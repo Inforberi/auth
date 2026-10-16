@@ -2,6 +2,16 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### Организация контекста и проверок — 16 октября 2026
+
+По согласованному анализу обновлены AGENTS, docs/ai/index и current-task. Карта теперь направляет к первоисточникам/каталогам без копирования feature-статусов; текущая заметка содержит последний результат, один следующий backend-блок и открытые gates. Старые результаты A1–A6/5.7c/session/MFA/setup/recovery/access уже отражены в соответствующих разделах этой истории, поэтому повторный архив не создавался. Сведения о статусе коммитов берутся из Git, а не из исторических «коммит не выполнялся». Implementation больше не предлагает завершённый provisioning или отложенную оплату как ближайший шаг; порядок A1–A8 и все внешние ограничения сохранены.
+
+Закреплены поиск по задаче/символам с проверкой SQL/динамических связей, ограниченный вывод без потери exit status/ошибок, отсутствие повторного чтения известного контекста, сверка внешних API и обновление заметки заменой, а не накоплением. Матрица проверок разделяет Markdown, Go, HTTP/API, SQL/concurrency, Redis, dependencies/deploy и внешнюю приёмку. Экономия не отменяет необходимых tests, SQL authority, fresh proofs, немедленного отзыва, роли Redis, hashing и fail-closed. OpenAI Docs использован для выбора коротких постоянных правил и контекста под задачу, не для изменения бизнес-архитектуры; источник — [официальные рекомендации](https://learn.chatgpt.com/guides/best-practices).
+
+Проверки: git diff --check PASS; разовая локальная проверка 132 Markdown-ссылок в AGENTS/index/current-task/implementation — существование целей и заголовков, 0 unresolved. Проверены соответствие команд Taskfile/CI, текущие commits и наличие history-разделов для убранных заметок. Это не browser link test и не исполнение примеров. Go/lint/race/SQL/Redis/Docker/Swagger/security/load/GC не запускались: изменён только Markdown, их прошлые результаты не объявляются новыми. Заметка уменьшена с 39709 до 4004 bytes; это размер файла, не измерение расхода токенов. Наблюдение на последующих сопоставимых задачах не требует нового harness.
+
+Новых файлов/scripts/dependencies/MCP/RAG/config нет; код приложения, реальные ENV/БД/secrets, staging и security defaults не менялись. Следующий backend-блок остаётся AS5–AS6/A6.3; pre-ui-backend, 13.1d.4, A6.security и A8 не закрыты этим изменением.
+
 ### Результат A6.security AS1–AS4-local — 16 октября 2026
 
 Сначала negative tests воспроизвели выбор одной duplicate session cookie и игнорирование malformed пар старым Request.Cookie. Helper использует строгий стандартный http.ParseCookie для всех Cookie строк, отказывает при malformed header и повторяющемся __Host-session до service/SQL; canonical base64url и quoted-valid value сохранены. Несколько корректных строк/чужие корректные cookies допустимы. Контракт ошибок 401/LogoutAuth cleanup прежний; добавлен strict reject даже для malformed сторонней cookie. Context7 Go 1.27.1 подтвердил silent discard Request.Cookie, local go doc установленного 1.27.2 подтвердил ParseCookie API. Skill повлиял на выбор стандартного parser вместо самописного raw scanner; новая dependency не нужна.
