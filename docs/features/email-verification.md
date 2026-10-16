@@ -1,12 +1,14 @@
 # Подтверждение email
 
+С A6.2b public password registration использует сохраняемый профиль `disabled/optional/required`: [контракт](auth-settings.md#публичная-политика-в-работе--a62b-local). Required registration возвращает verificationRequired=true без session cookie, а disabled не ставит автоматическое письмо и не подделывает verified_at. Само подтверждение по-прежнему не создаёт сессию. Описанные ниже ownership/sensitive guards не отключаются публичным switch.
+
 Реализация 5.1, 9 октября 2026. Владелец — `internal/auth/account`; registration composition — `internal/app/auth/app.go`. Password repository остаётся владельцем текущей регистрационной транзакции, callback связывает account adapter на том же `pgx.Tx`. Бизнес-сервисы не получают транзакцию или concrete repository.
 
 ## Сценарий
 
-Регистрация создаёт account/contact/credential/profile, verification challenge, зашифрованный outbox и audit одной транзакцией. Outbox/audit failure откатывает регистрацию. Сессия создаётся после commit; частичный сбой «account создан, SQL session не создан» остаётся задачей 6.6.
+В optional/required профиле регистрация создаёт account/contact/credential/profile, verification challenge, зашифрованный outbox и audit одной транзакцией. Outbox/audit failure откатывает регистрацию; disabled пропускает automatic verification. Сессия создаётся отдельно после commit, только если текущая policy это разрешает; ошибка не доказывает rollback аккаунта.
 
-Login/register разрешены без подтверждения. Из существующих чувствительных routes `change-password` требует verified login email активного, не удалённого пользователя: 403 `email_not_verified`, при недоступности SQL — 503. С этапа 5.2 session middleware использует SQL ledger и проверяет status/version; полная приёмка и управление блокировками остаются 5.4/6.2. Будущие продуктовые/roles/billing routes обязаны явно применять соответствующие политики.
+В optional/disabled профилях login разрешён без подтверждения, required блокирует выдачу новой password session до proof. Чувствительные routes, включая `change-password`, независимо требуют verified login email активного, не удалённого пользователя: 403 `email_not_verified`, при недоступности SQL — 503. Session middleware использует SQL ledger и проверяет status/version. Продуктовые backend routes обязаны явно применять собственные permissions/ownership policies.
 
 `POST /api/v1/auth/email/resend` с `{"email":"user@example.com"}` возвращает 202 `{"status":"accepted"}` для существующего/неизвестного/подтверждённого/заблокированного email и cooldown. Malformed email — 400, limit — 429, dependency failure — 503. Успешная постановка не обещает успешную доставку.
 

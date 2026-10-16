@@ -4,7 +4,7 @@
 
 Для знакомства и подключения — [подробное руководство по Auth](docs/auth-guide.md): сценарии, карточки методов, примеры запросов, ENV и ограничения. Реализованное отделено от запланированного.
 
-Рабочая основа Go Auth, **ещё не готовый production auth продукт**. Парольные сценарии, [email verification](docs/features/email-verification.md), [password recovery](docs/features/password-recovery.md), управление своими SQL-сессиями и опциональный [Telegram login/link/unlink](docs/features/telegram-login.md) реализованы в backend с описанными ограничениями. Роли, MFA, сохраняемые настройки и UI — следующие этапы; оплата вне текущего релиза. Внешняя и финальная приёмка остаются открытыми: [текущий план](docs/planning/implementation.md). Результат переноса инфраструктуры: [template-adoption](docs/template-adoption.md).
+Рабочая основа Go Auth, **ещё не готовый production auth продукт**. Парольные сценарии, [email verification](docs/features/email-verification.md), [password recovery](docs/features/password-recovery.md), SQL-сессии, Google/Telegram/email OTP, роли и MFA реализованы в backend с описанными ограничениями. A6.2b подключил [сохраняемую публичную политику](docs/features/auth-settings.md); settings HTTP, секреты и UI ещё впереди, оплата вне текущего релиза. Внешняя и финальная приёмка открыты: [текущий план](docs/planning/implementation.md). Результат переноса инфраструктуры: [template-adoption](docs/template-adoption.md).
 
 ## Локальный запуск
 
@@ -16,7 +16,7 @@ Dev запускает Air `v1.67.4` через `.air.toml`: пересборк�
 
 ## Проверки
 
-Существующий `.env` дополните verification-настройками из примера; secrets не перезаписывались. Production требует отдельного случайного `EMAIL_OUTBOX_KEY`, HTTPS verification URL и `SMTP_REQUIRE_TLS=true`. Применённая `000001` не обновит БД автоматически: нужен согласованный перенос, не reset. Login разрешён до подтверждения, change-password — после него. Reset/change-password отзывают все SQL-сессии; нужно войти заново. Письмо ведёт на frontend явного подтверждения, подключаемый проектом, а не на автоматический GET API.
+Существующий `.env` дополните verification-настройками из примера; secrets не перезаписывались. Production требует отдельного случайного `EMAIL_OUTBOX_KEY`, HTTPS verification URL и `SMTP_REQUIRE_TLS=true`. Применённая `000001` не обновит БД автоматически: нужен согласованный перенос, не reset. Начальный optional-профиль разрешает login до подтверждения; required блокирует новую password session до email proof. Change-password независимо требует подтверждённый адрес. Reset/change-password отзывают все SQL-сессии; нужно войти заново. Письмо ведёт на frontend явного подтверждения, подключаемый проектом, а не на автоматический GET API.
 
 [Смена login email](docs/features/email-change.md) реализована как opt-in `EMAIL_CHANGE_ENABLED=false`: request/confirm/«Это не я» и восстановление password-профиля через старый подтверждённый email с обязательной заменой пароля. При включении нужны три доверенные frontend URL из `.env.example`; сами страницы ещё не созданы. Backend 5.5a–d и локальная приёмка 5.5e проверены; внешняя SMTP/browser-приёмка и production release gates остаются открытыми. Recovery-схема включена в исходную миграцию 000001; настоящие `.env` и рабочая БД не изменялись.
 
@@ -33,6 +33,8 @@ Checks используют `.env.example`/`.env.prod.example`, не читаю�
 По умолчанию выполняйте только `task check` (tests + lint, включая API contract tests). `task check:api` проверяет generation drift после изменения API и в CI. Текущее поведение и security gaps — [API-контракт](docs/api/contract.md). `task check:security` и `task check:integration` нужны после обновления зависимостей либо перед релизом; не повторяйте их после каждой правки. В CI tests/lint, API drift, security и image build; race/integration не выполняются на каждый push. Осталось три shell-файла: backup, host restore и один acceptance runner.
 
 ## Конфигурация
+
+Публичные методы, registration и verification profile после первой инициализации берутся из SQL, ENV switches их не перезаписывают. Configured adapters можно повторно включать политикой; новый provider secret пока требует ENV + restart. Settings API ещё не опубликован — следующий A6.2c. Required registration возвращает verificationRequired=true без session; существующие сессии не отзываются неявно при переключении метода. Подробнее — [Auth settings](docs/features/auth-settings.md).
 
 Все auth mutations требуют `AUTH_ALLOWED_ORIGINS`: точные HTTPS origins через запятую, например `https://localhost:8443`, без завершающего `/`. Браузер отправляет `Origin`, CLI передаёт его явно, включая login/register/reset. CORS выключен по умолчанию; прямой HTTPS включается парой `HTTP_TLS_CERT_FILE`/`HTTP_TLS_KEY_FILE`, иначе нужен TLS ingress. Настройки и ограничения — [browser security](docs/operations/browser-security.md), контракт — [API](docs/api/contract.md). Настоящие env и БД не изменялись.
 

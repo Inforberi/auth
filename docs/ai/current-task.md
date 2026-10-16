@@ -1,10 +1,14 @@
 # Текущий шаг
 
+Реализация A6.2b-local зафиксирована в `eab0c7e` — `feat(auth): подключил политику публичного входа`.
+
 Реализация A6.2a-local зафиксирована в `6360b87` — `feat(auth): добавил административный вход с MFA`.
 
-Выполнен A6.2a-local: отдельный administrative password+MFA login, существующие MFA completion/recovery и SQL-сессии; current authority/readiness на start/commit, intent из trusted service и в challenge. [Контракт](../features/auth-settings.md#административный-вход--a62a-local). **Settings startup/runtime/HTTP всё ещё не подключены; публичный профиль задаёт ENV.** Далее A6.2b — полное enforcement перед A6.2c settings API, затем A6.3 MFA roles/secrets/retention. Pre-ui-backend, A8 и 13.1d.4 открыты; реальный стенд/SMTP/providers/load/GC этим заходом не проверены. История проверок — implementation/history. Коммит только по запросу. A6.1 зафиксирован в `a806c4f` / `3dba04c`.
+Выполнен A6.2b-local: App seed/load, live public method/registration/verification policy и final SQL FOR SHARE guards, согласованные с Update FOR UPDATE; admin intent независим. Required registration — 201 verificationRequired без cookie. [Контракт](../features/auth-settings.md#публичная-политика-в-работе--a62b-local). **Settings HTTP ещё не опубликован; ENV switches — только initial seed, credentials/operational limits ещё ENV.** Далее A6.2c protected policy API + adapter readiness, затем A6.3 MFA roles/secrets/retention. Pre-ui-backend, A8 и 13.1d.4 открыты; реальный стенд/SMTP/providers/load/GC этим заходом не проверены. Проверки — history. Коммит только по запросу; рабочие БД/ENV/secrets не трогались. Schema/dependencies/permissions не менялись.
 
 - Source 000001 дополнен administrative flag в MFA challenge; рабочая БД не мигрировалась. ENV/secrets не менялись; новых dependencies/pools/workers/permissions нет. Public login не получает Access advisory lock. A6.1 store/seed/version/audit гарантии сохранены. Предыдущий этап 10.3c зафиксирован в 8521b8a.
+
+- A6.2b: task check/lint/API drift, targeted race и disposable SQL regression PASS; подробности и исправленные fixture/Swagger assumptions — в history. Existing sessions намеренно не получают logout-all при смене policy. Settings HTTP/readiness API — следующий шаг. Тестовый контейнер/volume удалены, commit не выполнялся.
 
 - Реализация 13.2a.2-local зафиксирована в `86f6f07`; далее 10.6 users list/detail и protected lifecycle. Внешние A8-admin-e2e/13.1d.4 остаются открытыми.
 
