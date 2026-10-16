@@ -24,8 +24,8 @@ type CompleteRecoveryRequest struct {
 // @Param body body CompleteRecoveryRequest true "request, primary challenge and new TOTP"
 // @Success 200 {object} RecoveryCodesResponse
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, invalid_mfa"
-// @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
-// @Failure 404 {string} string "route absent when disabled"
+// @Failure 403 {object} httpx.ErrorResponse "codes: invalid_origin, email_not_verified"
+// @Failure 404 {object} httpx.ErrorResponse "method_disabled for public primary; route absent when recovery disabled"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
 // @Router /api/v1/auth/mfa/recovery/complete [post]

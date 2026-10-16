@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 )
 
 func schemaFixture(t *testing.T) (*pgxpool.Pool, context.Context) {
@@ -53,5 +56,14 @@ func migrateFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, directi
 	}
 	if _, err := db.Exec(ctx, string(sql)); err != nil {
 		t.Fatalf("%s migration: %v", direction, err)
+	}
+	if direction == "up" {
+		_, err := settingspostgres.New(db).Initialize(ctx, settingsdomain.Policy{
+			Methods:      settingsdomain.PublicMethods{Password: true, EmailOTP: true, Google: true, Telegram: true},
+			Registration: settingsdomain.PublicRegistration{Enabled: true, Google: true, Telegram: true}, PasswordEmailVerification: settingsdomain.VerificationOptional,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 }

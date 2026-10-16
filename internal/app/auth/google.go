@@ -7,28 +7,21 @@ import (
 	"go.uber.org/zap"
 
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
-	oidcredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/repository/redis"
-	oidcservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
+	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
-	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 	googleclient "github.com/Inforberi/financial-intelligence/internal/integrations/google"
 )
 
-func assembleGoogle(ctx context.Context, cfg *config.Config, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, log *zap.Logger) (*googlehttp.Handler, func(), error) {
+func assembleGoogle(ctx context.Context, cfg *config.Config, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, policy *settingsservice.Service, log *zap.Logger) (*googlehttp.Handler, func(), error) {
 	if !cfg.Google.Enabled {
 		return nil, nil, nil
 	}
-	cipher, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "google-login:v1")
+	client := googleclient.New(ctx, cfg.Google)
+	service, err := assembleOIDC(cfg, cfg.Google.FlowConfig(), client, accounts, rdb, sessions, policy)
 	if err != nil {
 		return nil, nil, err
 	}
-	client := googleclient.New(ctx, cfg.Google)
-	service := oidcservice.New(cfg.Google.FlowConfig(), oidcredis.New(rdb, cipher, "auth:google"), client,
-		accountservice.NewIdentityResolution(accounts), sessions, tokengenerate.New(),
-		accountservice.NewIdentityManagement(accounts, cfg.Session.FreshAuthTTL))
 	return googlehttp.New(service, log), client.Close, nil
 }

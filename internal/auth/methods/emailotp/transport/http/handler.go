@@ -14,6 +14,7 @@ import (
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
+	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -61,6 +62,9 @@ var errorRules = []httpx.ErrorRule{
 }
 
 func (h *Handler) respondError(w http.ResponseWriter, r *http.Request, err error) {
+	if settingshttp.RespondPolicyError(w, r, h.log, err) {
+		return
+	}
 	if mfahttp.RespondLoginError(w, r, h.log, err) {
 		return
 	}

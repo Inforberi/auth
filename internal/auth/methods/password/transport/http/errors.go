@@ -7,6 +7,7 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -88,6 +89,9 @@ var changePasswordErrors = []httpx.ErrorRule{
 }
 
 func (h *PasswordHandler) respondError(w http.ResponseWriter, r *http.Request, err error, operation string, rules []httpx.ErrorRule) {
+	if settingshttp.RespondPolicyError(w, r, h.log, err) {
+		return
+	}
 	if failure := httpx.MapError(err, capacityErrors, httpx.Failure{}); failure.Status != 0 {
 		httpx.RespondError(w, r, h.log, operation, err, nil, failure)
 		return

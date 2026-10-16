@@ -7,6 +7,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
+	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -30,5 +31,8 @@ func RespondLoginError(w http.ResponseWriter, r *http.Request, log *zap.Logger, 
 }
 
 func (h *Handler) respondError(w http.ResponseWriter, r *http.Request, err error) {
+	if settingshttp.RespondPolicyError(w, r, h.log, err) {
+		return
+	}
 	httpx.RespondError(w, r, h.log, "mfa", err, mfaErrors, httpx.Failure{Status: 503, Code: "temporarily_unavailable", Message: "temporarily unavailable"})
 }

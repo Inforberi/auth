@@ -8,6 +8,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 )
 
 func (r *Repository) RequireIdentityFreshAuth(ctx context.Context, user domain.UserID, token string, freshFor time.Duration) error {
@@ -66,16 +68,26 @@ func (r *Repository) LinkIdentity(ctx context.Context, user domain.UserID, token
 		var owner domain.UserID
 		err = tx.QueryRow(ctx, `INSERT INTO auth.linked_identities(issuer,subject,user_id) VALUES ($1,$2,$3)
 			ON CONFLICT DO NOTHING RETURNING user_id`, key.Issuer, key.Subject, user).Scan(&owner)
+		created := err == nil
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Both exact identity ownership and one identity per provider are protected by UNIQUE.
 			err = tx.QueryRow(ctx, `SELECT user_id FROM auth.linked_identities WHERE issuer=$1 AND subject=$2`, key.Issuer, key.Subject).Scan(&owner)
 			if errors.Is(err, pgx.ErrNoRows) || (err == nil && owner != user) {
 				return domain.ErrIdentityConflict
 			}
-			return err
 		}
 		if err != nil {
 			return err
+		}
+		policy, err := settingspostgres.LockPublicPolicy(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if err := policy.RequireMethod(settingsdomain.PrimaryMethod("oidc", key.Issuer), false); err != nil {
+			return err
+		}
+		if !created {
+			return nil
 		}
 		_, err = tx.Exec(ctx, `INSERT INTO auth.identity_audit(user_id,event,auth_version) VALUES ($1,'identity_linked',$2)`, user, version)
 		return err

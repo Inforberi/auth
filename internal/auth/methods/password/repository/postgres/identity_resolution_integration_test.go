@@ -12,12 +12,13 @@ import (
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
 func checkIdentityResolution(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	repo := accountpostgres.New(db)
 	resolver := accountservice.NewIdentityResolution(repo)
-	key := accountdomain.IdentityKey{Issuer: "https://identity.example", Subject: "External-Subject"}
+	key := accountdomain.IdentityKey{Issuer: "https://oauth.telegram.org", Subject: "External-Subject"}
 	if user, err := resolver.Resolve(ctx, key, false); user != nil || !errors.Is(err, accountdomain.ErrIdentityNotFound) {
 		t.Fatal("registration disabled created account", user, err)
 	}
@@ -68,12 +69,15 @@ func checkIdentityResolution(t *testing.T, db *pgxpool.Pool, ctx context.Context
 	}
 	for _, other := range []accountdomain.IdentityKey{
 		{Issuer: key.Issuer, Subject: "external-subject"},
-		{Issuer: "https://other-identity.example", Subject: key.Subject},
-		{Issuer: "https://IDENTITY.example", Subject: key.Subject},
+		{Issuer: "https://accounts.google.com", Subject: key.Subject},
+		{Issuer: key.Issuer, Subject: "other-subject"},
 	} {
 		if user, err := resolver.Resolve(ctx, other, true); err != nil || user.ID == owner {
 			t.Fatal("issuer/subject incorrectly merged", user, err)
 		}
+	}
+	if _, err := resolver.Resolve(ctx, accountdomain.IdentityKey{Issuer: "https://OAUTH.telegram.org", Subject: key.Subject}, true); !errors.Is(err, settingsdomain.ErrMethodDisabled) {
+		t.Fatal("unknown/case-folded issuer admitted", err)
 	}
 	if _, err := repo.ResolveIdentityAccount(ctx, accountdomain.IdentityKey{Issuer: key.Issuer, Subject: strings.Repeat("s", 256)}, true); err == nil {
 		t.Fatal("SQL bound bypassed")

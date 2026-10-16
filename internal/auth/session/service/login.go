@@ -25,12 +25,12 @@ func (s *SessionService) BeginLogin(ctx context.Context, proof mfaservice.Primar
 	if proof.Administrative {
 		return nil, domain.ErrMFARequired
 	}
-	return s.CreateSessionAtVersion(ctx, proof.UserID, agent, ip, proof.AuthVersion)
+	return s.createSession(ctx, proof.UserID, agent, ip, proof.AuthVersion, &proof)
 }
 
 func (s *Login) BeginLogin(ctx context.Context, proof mfaservice.PrimaryProof, agent, ip string) (*CreatedSession, error) {
 	if !proof.Administrative {
-		result, err := s.CreateSessionAtVersion(ctx, proof.UserID, agent, ip, proof.AuthVersion)
+		result, err := s.createSession(ctx, proof.UserID, agent, ip, proof.AuthVersion, &proof)
 		if !errors.Is(err, domain.ErrMFARequired) || s.mfa == nil {
 			return result, err
 		}

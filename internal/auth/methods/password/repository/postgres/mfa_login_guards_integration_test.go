@@ -73,7 +73,7 @@ func checkMFALoginGuards(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 			f := newMFALoginFixture(t, db, ctx, method)
 			f.proof.Method = method
 			if method == "oidc" {
-				f.proof.Issuer, f.proof.Reference = "https://mfa-test.example.com", "subject-"+string(f.user)
+				f.proof.Issuer, f.proof.Reference = "https://accounts.google.com", "subject-"+string(f.user)
 				accessExec(t, db, ctx, `INSERT INTO auth.linked_identities(issuer,subject,user_id) VALUES ($1,$2,$3)`, f.proof.Issuer, f.proof.Reference, f.user)
 			} else {
 				accessExec(t, db, ctx, `UPDATE auth.user_emails SET verified_at=clock_timestamp() WHERE user_id=$1`, f.user)

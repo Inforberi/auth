@@ -12,6 +12,7 @@ import (
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse
+// @Failure 404 {object} httpx.ErrorResponse "code: method_disabled"
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse

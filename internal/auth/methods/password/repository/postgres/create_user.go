@@ -5,13 +5,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 )
 
 func (r *PasswordRepo) CreateUser(ctx context.Context, email, passwordHash string) (accountdomain.UserID, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	tx, err := r.db.Begin(ctx)
+	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		return "", fmt.Errorf("error to start transaction %w", err)
 	}
@@ -65,7 +69,14 @@ func (r *PasswordRepo) CreateUser(ctx context.Context, email, passwordHash strin
 		return "", fmt.Errorf("insert user_profile: %w", err)
 	}
 
-	if r.registration != nil {
+	policy, err := settingspostgres.LockPublicPolicy(ctx, tx)
+	if err != nil {
+		return "", err
+	}
+	if err := policy.RequireMethod("password", true); err != nil {
+		return "", err
+	}
+	if r.registration != nil && policy.PasswordEmailVerification != settingsdomain.VerificationDisabled {
 		if err := r.registration(ctx, tx, userId, emailID, email); err != nil {
 			return "", fmt.Errorf("queue registration verification: %w", err)
 		}

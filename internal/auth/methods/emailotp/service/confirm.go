@@ -37,6 +37,11 @@ func (s *Service) Confirm(ctx context.Context, input ConfirmInput) (*sessionserv
 	if err := s.limit(ctx, "confirm:project", s.cfg.ConfirmGlobalLimit, time.Minute); err != nil {
 		return nil, err
 	}
+	if s.cfg.CheckPolicy != nil {
+		if err := s.cfg.CheckPolicy(ctx); err != nil {
+			return nil, err
+		}
+	}
 	consumeCtx, stop := context.WithTimeout(ctx, 5*time.Second)
 	user, err := s.repo.Consume(consumeCtx, s.cipher.Digest("binding:"+input.Binding), s.cipher.Digest("code:"+input.Binding+":"+input.Code))
 	stop()

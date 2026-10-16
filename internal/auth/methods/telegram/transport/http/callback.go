@@ -21,7 +21,8 @@ type (
 // @Success 200 {object} oidchttp.CallbackResponse
 // @Success 202 {object} MFAChallengeResponse "MFA required; browser binding cookie, no session issued"
 // @Failure 400 {object} httpx.ErrorResponse
-// @Failure 403 {object} httpx.ErrorResponse "fresh_auth_required"
+// @Failure 403 {object} httpx.ErrorResponse "codes: fresh_auth_required, registration_disabled"
+// @Failure 404 {object} httpx.ErrorResponse "code: method_disabled"
 // @Failure 409 {object} httpx.ErrorResponse "identity_conflict"
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse

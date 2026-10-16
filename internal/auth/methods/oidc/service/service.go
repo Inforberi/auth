@@ -65,6 +65,9 @@ func (s *Service) admit(ctx context.Context, ip string) error {
 	if !allowed {
 		return domain.ErrLimited
 	}
+	if s.cfg.CheckPolicy != nil {
+		return s.cfg.CheckPolicy(ctx)
+	}
 	return nil
 }
 

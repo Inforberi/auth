@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -10,9 +11,10 @@ import (
 )
 
 type RegisterResult struct {
-	UserID    accountdomain.UserID
-	Token     string
-	ExpiresAt time.Time
+	VerificationRequired bool
+	UserID               accountdomain.UserID
+	Token                string
+	ExpiresAt            time.Time
 }
 
 func (r *PasswordService) Register(
@@ -32,6 +34,11 @@ func (r *PasswordService) Register(
 		return nil, fmt.Errorf("error validate password %w", err)
 	}
 
+	if r.checkPolicy != nil {
+		if err := r.checkPolicy(ctx, true); err != nil {
+			return nil, err
+		}
+	}
 	found, err := r.repo.ExistsByEmail(ctx, emailValue.String())
 	if err != nil {
 		return nil, fmt.Errorf("check email exists %w", err)
@@ -51,6 +58,9 @@ func (r *PasswordService) Register(
 	}
 
 	session, err := r.session.CreateSessionAtVersion(ctx, userID, userAgent, ip, 1)
+	if errors.Is(err, accountdomain.ErrEmailUnverified) {
+		return &RegisterResult{UserID: userID, VerificationRequired: true}, nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("register by email create session %w", err)
 	}

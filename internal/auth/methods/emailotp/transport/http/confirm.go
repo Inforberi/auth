@@ -25,6 +25,7 @@ type ConfirmCodeRequest struct {
 // @Success 202 {object} mfahttp.ChallengeResponse "MFA required; browser binding cookie, no session issued"
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, invalid_email_login"
 // @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
+// @Failure 404 {object} httpx.ErrorResponse "code: method_disabled"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
 // @Router /api/v1/auth/email-otp/confirm [post]

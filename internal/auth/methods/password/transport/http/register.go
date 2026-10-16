@@ -16,16 +16,18 @@ type RegisterRequest struct {
 } // @name password_http.RegisterRequest
 
 type RegisterResponse struct {
-	UserID accountdomain.UserID `json:"userID" swaggertype:"string"`
+	VerificationRequired bool                 `json:"verificationRequired,omitempty"`
+	UserID               accountdomain.UserID `json:"userID" swaggertype:"string" binding:"required"`
 } // @name password_http.RegisterResponse
 
 // @Summary Register by email
-// @Description Creates an account and queues email verification atomically, then creates a session and sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie. A timeout or session error does not prove account rollback. Retrying an already committed registration returns 409 without a cookie; use normal login or password recovery, never automatic login on conflict. Unverified accounts can sign in but cannot change their password. HTTPS and an allowed Origin are required. Email is normalized and limited to 255 bytes; password is 8-128 bytes with a letter, digit and uppercase letter.
+// @Description Enforces current public method/registration policy. Required email verification returns 201 with verificationRequired=true and no session cookie. Optional queues verification and issues a session; disabled does not queue automatic verification or mark the address verified. Account and queued mail commit atomically; session issuance is separate, so an error does not prove account rollback. A committed retry returns 409, never automatic login. HTTPS and allowed Origin are required.
 // @Tags Auth
 // @Param Origin header string true "Exact allowed HTTPS origin"
 // @Accept json
 // @Produce json
-// @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
+// @Failure 403 {object} httpx.ErrorResponse "codes: invalid_origin, registration_disabled"
+// @Failure 404 {object} httpx.ErrorResponse "code: method_disabled"
 // @Param body body RegisterRequest true "Register payload"
 // @Success 201 {object} RegisterResponse
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
@@ -53,7 +55,9 @@ func (h *PasswordHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionhttp.SetSessionCookie(w, register.Token, register.ExpiresAt)
+	if register.Token != "" {
+		sessionhttp.SetSessionCookie(w, register.Token, register.ExpiresAt)
+	}
 	h.log.Info("user register in", zap.String("user_id", string(register.UserID)))
-	httpx.JSON(w, http.StatusCreated, RegisterResponse{UserID: register.UserID})
+	httpx.JSON(w, http.StatusCreated, RegisterResponse{UserID: register.UserID, VerificationRequired: register.VerificationRequired})
 }

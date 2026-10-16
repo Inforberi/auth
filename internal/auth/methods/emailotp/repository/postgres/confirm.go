@@ -9,6 +9,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 )
 
 func (r *Repository) Consume(ctx context.Context, digest, verifier string) (*service.AuthenticatedAccount, error) {
@@ -38,6 +39,9 @@ func (r *Repository) Consume(ctx context.Context, digest, verifier string) (*ser
 			return nil
 		}
 		if err != nil {
+			return err
+		}
+		if err := settingspostgres.RequirePublicLogin(ctx, tx, user.ID, "emailotp", ""); err != nil {
 			return err
 		}
 		if subtle.ConstantTimeCompare([]byte(expected), []byte(verifier)) != 1 {

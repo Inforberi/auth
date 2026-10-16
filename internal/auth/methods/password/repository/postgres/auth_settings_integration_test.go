@@ -21,6 +21,7 @@ import (
 func TestAuthSettingsSchema(t *testing.T) {
 	db, ctx := schemaFixture(t)
 	migrateFixture(t, db, ctx, "up")
+	accessExec(t, db, ctx, `DELETE FROM auth.auth_settings`)
 	accessExec(t, db, ctx, `CREATE ROLE auth_settings_runtime LOGIN PASSWORD 'synthetic-settings-runtime';
 		GRANT USAGE ON SCHEMA auth TO auth_settings_runtime;
 		GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA auth TO auth_settings_runtime`)

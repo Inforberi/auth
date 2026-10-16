@@ -1704,6 +1704,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "404": {
+                        "description": "code: method_disabled",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "429": {
                         "description": "code: rate_limited",
                         "schema": {
@@ -1765,6 +1771,12 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "code: invalid_origin",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "code: method_disabled",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -2380,7 +2392,13 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "fresh_auth_required",
+                        "description": "codes: fresh_auth_required, registration_disabled",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "code: method_disabled",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -2444,6 +2462,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "404": {
+                        "description": "code: method_disabled",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "429": {
                         "description": "Too Many Requests",
                         "schema": {
@@ -2491,6 +2515,12 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "code: method_disabled",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -2636,7 +2666,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/login/email": {
             "post": {
-                "description": "Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on success. Unverified users can sign in, but sensitive routes require a verified email. HTTPS and an allowed Origin are required. Invalid credentials return 400, not 401. SQL session issuance checks current account status and auth version.",
+                "description": "Sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie on success, or returns an MFA challenge. Current saved password policy is rechecked in the final SQL commit; required email verification refuses unverified credentials without a session. HTTPS and allowed Origin are required. Invalid credentials return 400, not 401. Disabling a method does not revoke already issued sessions.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2685,7 +2715,13 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "code: invalid_origin",
+                        "description": "codes: invalid_origin, email_not_verified",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "code: method_disabled",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -2876,7 +2912,13 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "code: invalid_origin",
+                        "description": "codes: invalid_origin, email_not_verified",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "code: method_disabled",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -2994,15 +3036,15 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "code: invalid_origin",
+                        "description": "codes: invalid_origin, email_not_verified",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "route absent when disabled",
+                        "description": "method_disabled for public primary; route absent when recovery disabled",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "429": {
@@ -3065,15 +3107,15 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "code: invalid_origin",
+                        "description": "codes: invalid_origin, email_not_verified",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "route absent when disabled",
+                        "description": "method_disabled for public primary; route absent when recovery disabled",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "429": {
@@ -3690,7 +3732,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/register/email": {
             "post": {
-                "description": "Creates an account and queues email verification atomically, then creates a session and sets the Secure, HttpOnly, SameSite=Lax __Host-session cookie. A timeout or session error does not prove account rollback. Retrying an already committed registration returns 409 without a cookie; use normal login or password recovery, never automatic login on conflict. Unverified accounts can sign in but cannot change their password. HTTPS and an allowed Origin are required. Email is normalized and limited to 255 bytes; password is 8-128 bytes with a letter, digit and uppercase letter.",
+                "description": "Enforces current public method/registration policy. Required email verification returns 201 with verificationRequired=true and no session cookie. Optional queues verification and issues a session; disabled does not queue automatic verification or mark the address verified. Account and queued mail commit atomically; session issuance is separate, so an error does not prove account rollback. A committed retry returns 409, never automatic login. HTTPS and allowed Origin are required.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3733,7 +3775,13 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "code: invalid_origin",
+                        "description": "codes: invalid_origin, registration_disabled",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "code: method_disabled",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -4023,7 +4071,13 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "fresh_auth_required",
+                        "description": "codes: fresh_auth_required, registration_disabled",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "code: method_disabled",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -4087,6 +4141,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "404": {
+                        "description": "code: method_disabled",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "429": {
                         "description": "Too Many Requests",
                         "schema": {
@@ -4134,6 +4194,12 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "code: method_disabled",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -5613,9 +5679,15 @@ const docTemplate = `{
         },
         "password_http.RegisterResponse": {
             "type": "object",
+            "required": [
+                "userID"
+            ],
             "properties": {
                 "userID": {
                     "type": "string"
+                },
+                "verificationRequired": {
+                    "type": "boolean"
                 }
             }
         },

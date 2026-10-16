@@ -53,7 +53,7 @@ func New() (*Config, error) {
 	if err := cleanenv.ReadEnv(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to read configuration (check required variables and types)")
 	}
-	if err := cfg.Validate(); err != nil {
+	if err := cfg.ValidateDeployment(); err != nil {
 		return nil, err
 	}
 

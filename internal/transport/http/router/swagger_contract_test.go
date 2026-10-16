@@ -75,7 +75,7 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 		{"account_http.EmailChangeConfirmRequest", accounthttp.EmailChangeConfirmRequest{}},
 		{"account_http.EmailChangeReportRequest", accounthttp.EmailChangeReportRequest{}},
 		{"password_http.RegisterRequest", passwordhttp.RegisterRequest{}},
-		{"password_http.RegisterResponse", passwordhttp.RegisterResponse{}},
+		{"password_http.RegisterResponse", passwordhttp.RegisterResponse{VerificationRequired: true}},
 		{"password_http.LoginByEmailRequest", passwordhttp.LoginByEmailRequest{}},
 		{"password_http.LoginByEmailResponse", passwordhttp.LoginByEmailResponse{}},
 		{"password_http.ChangePasswordRequest", passwordhttp.ChangePasswordRequest{}},
@@ -107,8 +107,12 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 			if len(fields) != len(schema.Properties) {
 				t.Fatal("JSON field count differs from schema")
 			}
-			for name := range fields {
-				if schema.Properties[name].Type != "string" {
+			for name, value := range fields {
+				expectedType := "string"
+				if _, ok := value.(bool); ok {
+					expectedType = "boolean"
+				}
+				if schema.Properties[name].Type != expectedType {
 					t.Errorf("missing/wrong JSON property %s", name)
 				}
 			}

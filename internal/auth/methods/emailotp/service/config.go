@@ -1,11 +1,13 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
 
 type Config struct {
+	CheckPolicy             func(context.Context) error
 	Enabled                 bool          `env:"EMAIL_OTP_ENABLED" env-default:"false"`
 	ReauthenticationEnabled bool          `env:"EMAIL_REAUTHENTICATION_ENABLED" env-default:"false"`
 	TTL                     time.Duration `env:"EMAIL_OTP_TTL" env-default:"5m"`

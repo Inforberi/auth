@@ -8,6 +8,7 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/domain"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 )
 
 func (r *Repository) Issue(ctx context.Context, email string, challenge domain.Challenge) error {
@@ -26,6 +27,9 @@ func (r *Repository) Issue(ctx context.Context, email string, challenge domain.C
 			return nil
 		}
 		if err != nil {
+			return err
+		}
+		if err := settingspostgres.RequirePublicLogin(ctx, tx, user, "emailotp", ""); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.email_login_challenges WHERE user_id=$1`, user); err != nil {

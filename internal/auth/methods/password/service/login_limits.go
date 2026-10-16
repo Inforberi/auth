@@ -16,6 +16,21 @@ type CapacityConfig struct {
 	LoginGlobalLimit int `env:"LOGIN_GLOBAL_LIMIT" env-default:"1000"`
 }
 
+func (s *PasswordService) admitLogin(ctx context.Context, email, ip string, administrative bool) error {
+	if s.loginLimit == nil {
+		return domain.ErrLoginUnavailable
+	}
+	if err := s.loginLimit.Allow(ctx, email, ip); err != nil {
+		return err
+	}
+	if !administrative && s.checkPolicy != nil {
+		if err := s.checkPolicy(ctx, false); err != nil {
+			return err
+		}
+	}
+	return ctx.Err()
+}
+
 func (c CapacityConfig) Validate() error {
 	if c.HashConcurrency < 1 || c.HashConcurrency > 32 {
 		return fmt.Errorf("PASSWORD_HASH_CONCURRENCY must be between 1 and 32")

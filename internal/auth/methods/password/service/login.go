@@ -43,13 +43,7 @@ func (l *PasswordService) login(ctx context.Context, input LoginInput, administr
 	if len(input.Password) > 1024 {
 		return nil, passworddomain.ErrInvalidEmailOrPassword
 	}
-	if l.loginLimit == nil {
-		return nil, passworddomain.ErrLoginUnavailable
-	}
-	if err := l.loginLimit.Allow(ctx, email.String(), input.IP); err != nil {
-		return nil, err
-	}
-	if err := ctx.Err(); err != nil {
+	if err := l.admitLogin(ctx, email.String(), input.IP, administrative); err != nil {
 		return nil, err
 	}
 

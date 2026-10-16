@@ -20,6 +20,7 @@ import (
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -88,6 +89,10 @@ func TestRouterErrorContracts(t *testing.T) {
 		{"password", "register/email", passwordBody, "", passworddomain.ErrEmailAlreadyExists, 409, "email_already_exists", "email already exists", ""},
 		{"password", "register/email", passwordBody, "", private, 500, "internal_error", "internal error", ""},
 		{"password", "login/email", passwordBody, "", passworddomain.ErrInvalidEmailOrPassword, 400, "invalid_credentials", "invalid email or password", ""},
+		{"password", "login/email", passwordBody, "", settingsdomain.ErrMethodDisabled, 404, "method_disabled", "login method disabled", ""},
+		{"password", "register/email", passwordBody, "", settingsdomain.ErrRegistrationDisabled, 403, "registration_disabled", "public registration disabled", ""},
+		{"password", "login/email", passwordBody, "", accountdomain.ErrEmailUnverified, 403, "email_not_verified", "email not verified", ""},
+		{"password", "login/email", passwordBody, "", settingsdomain.ErrPolicyUnavailable, 503, "temporarily_unavailable", "temporarily unavailable", ""},
 		{"password", "login/email", passwordBody, "", private, 500, "internal_error", "internal error", ""},
 		{"password", "login/email", passwordBody, "", passworddomain.ErrLoginLimited, 429, "rate_limited", "rate limited", "60"},
 		{"password", "login/email", passwordBody, "", passworddomain.ErrLoginUnavailable, 503, "temporarily_unavailable", "temporarily unavailable", ""},

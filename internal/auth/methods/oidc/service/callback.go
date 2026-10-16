@@ -61,7 +61,7 @@ func (s *Service) Callback(ctx context.Context, input CallbackInput) (*CallbackR
 		}
 		return &CallbackResult{Linked: true}, nil
 	}
-	user, err := s.identities.Resolve(ctx, key, s.cfg.RegistrationEnabled)
+	user, err := s.identities.Resolve(ctx, key, s.registrationAllowed())
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +73,11 @@ func (s *Service) Callback(ctx context.Context, input CallbackInput) (*CallbackR
 		return nil, err
 	}
 	return &CallbackResult{Session: session}, nil
+}
+
+func (s *Service) registrationAllowed() bool {
+	// SQL owns the live registration flag when a persisted policy is connected.
+	return s.cfg.CheckPolicy != nil || s.cfg.RegistrationEnabled
 }
 
 func validToken(value string) bool {

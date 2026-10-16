@@ -26,6 +26,11 @@ func (s *Service) Request(ctx context.Context, input, ip string) (*RequestedCode
 	if err := s.requestLimits(ctx, email.String(), ip); err != nil {
 		return nil, err
 	}
+	if s.cfg.CheckPolicy != nil {
+		if err := s.cfg.CheckPolicy(ctx); err != nil {
+			return nil, err
+		}
+	}
 	result, challenge, err := s.prepareCode(email.String(), "входа", "")
 	if err != nil {
 		return nil, err

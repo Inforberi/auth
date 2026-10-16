@@ -9,7 +9,6 @@ import (
 	"go.uber.org/zap"
 
 	accesshttp "github.com/Inforberi/financial-intelligence/internal/access/transport/http"
-	accessapp "github.com/Inforberi/financial-intelligence/internal/app/access"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
@@ -33,6 +32,8 @@ import (
 )
 
 func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
+	runtimeConfig := *cfg
+	cfg = &runtimeConfig
 	resources := &resources{}
 	defer func() {
 		if err != nil {
@@ -43,9 +44,9 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	if err != nil {
 		return nil, err
 	}
-	access, err := accessapp.New(ctx, pool, cfg.Access)
+	access, policy, err := assembleAccessPolicy(ctx, pool, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("assemble access: %w", err)
+		return nil, fmt.Errorf("assemble access and auth policy: %w", err)
 	}
 
 	now := clock.UTCClock{}
@@ -82,19 +83,21 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	}
 	passwordLimits := passwordredis.New(rdb)
 	loginLimit := passwordservice.NewLoginLimit(passwordLimits, resetCipher, cfg.Capacity)
-	passwordSvc := passwordservice.New(passwordRepo, loginSvc, argonHash, loginLimit)
+	passwordSvc := passwordservice.New(passwordRepo, loginSvc, argonHash, loginLimit).WithPublicPolicy(func(ctx context.Context, registration bool) error {
+		return policy.CheckPublic(ctx, "password", registration)
+	})
 	recoverySvc := passwordservice.NewRecovery(passwordRepo, resetCipher, passwordLimits, mail, argonHash, cfg.Password)
 	passwordHandler := passwordhttp.New(passwordSvc,
 		log.With(zap.String("feature", "password_auth"), zap.String("layer", "transport")))
 	middleware := sessionhttp.New(sessionSvc, log)
-	telegram, closeTelegram, err := assembleTelegram(ctx, cfg, accountRepo, rdb, loginSvc, log)
+	telegram, closeTelegram, err := assembleTelegram(ctx, cfg, accountRepo, rdb, loginSvc, policy, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble telegram: %w", err)
 	}
 	if closeTelegram != nil {
 		resources.add(closeTelegram)
 	}
-	google, closeGoogle, err := assembleGoogle(ctx, cfg, accountRepo, rdb, loginSvc, log)
+	google, closeGoogle, err := assembleGoogle(ctx, cfg, accountRepo, rdb, loginSvc, policy, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble Google: %w", err)
 	}

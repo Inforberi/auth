@@ -8,6 +8,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 )
 
 func (r *Repository) ResolveIdentityAccount(ctx context.Context, key domain.IdentityKey, allowRegistration bool) (*domain.User, error) {
@@ -30,7 +32,14 @@ func (r *Repository) ResolveIdentityAccount(ctx context.Context, key domain.Iden
 		if _, err := tx.Exec(ctx, `INSERT INTO auth.user_profile(user_id) VALUES ($1)`, user.ID); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `INSERT INTO auth.identity_audit(user_id,event,auth_version) VALUES ($1,'identity_created',$2)`, user.ID, user.AuthVersion)
+		policy, err := settingspostgres.LockPublicPolicy(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if err := policy.RequireMethod(settingsdomain.PrimaryMethod("oidc", key.Issuer), true); err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, `INSERT INTO auth.identity_audit(user_id,event,auth_version) VALUES ($1,'identity_created',$2)`, user.ID, user.AuthVersion)
 		return err
 	})
 	var conflict *pgconn.PgError

@@ -10,6 +10,7 @@ import (
 )
 
 type CreateSessionParams struct {
+	PrimaryProof      *mfaservice.PrimaryProof
 	AuthVersion       int64
 	AbsoluteExpiresAt time.Time
 	UserID            accountdomain.UserID
@@ -28,6 +29,10 @@ type CreatedSession struct {
 }
 
 func (s *SessionService) CreateSessionAtVersion(ctx context.Context, userID accountdomain.UserID, userAgent, ip string, version int64) (*CreatedSession, error) {
+	return s.createSession(ctx, userID, userAgent, ip, version, nil)
+}
+
+func (s *SessionService) createSession(ctx context.Context, userID accountdomain.UserID, userAgent, ip string, version int64, proof *mfaservice.PrimaryProof) (*CreatedSession, error) {
 	rawToken, err := s.token.GenerateToken()
 	if err != nil {
 		return nil, err
@@ -41,6 +46,7 @@ func (s *SessionService) CreateSessionAtVersion(ctx context.Context, userID acco
 	err = s.repo.CreateSession(
 		ctx,
 		CreateSessionParams{
+			PrimaryProof:      proof,
 			AuthVersion:       version,
 			AbsoluteExpiresAt: now.Add(s.cfg.AbsoluteSessionTTL),
 			UserID:            userID,

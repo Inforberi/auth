@@ -59,19 +59,25 @@ func TestHTTPResponsesMatchSwagger(t *testing.T) {
 				t.Fatal("response status absent from Swagger")
 			}
 			schema := doc.Definitions[strings.TrimPrefix(response.Schema.Ref, "#/definitions/")]
-			var fields map[string]string
+			var fields map[string]any
 			if err := json.Unmarshal(w.Body.Bytes(), &fields); err != nil {
 				t.Fatal(err)
 			}
-			if len(fields) != len(schema.Properties) {
+			if len(fields) == 0 || len(fields) > len(schema.Properties) {
 				t.Fatal("response differs from schema")
+			}
+			for _, name := range schema.Required {
+				if _, ok := fields[name]; !ok {
+					t.Fatalf("missing required field %s", name)
+				}
 			}
 			for name := range fields {
 				if _, ok := schema.Properties[name]; !ok {
 					t.Fatalf("undocumented JSON field %s", name)
 				}
 			}
-			if fields["code"] != tc.code {
+			code, _ := fields["code"].(string)
+			if code != tc.code {
 				t.Fatalf("unexpected error code: %v", fields)
 			}
 			cookies := w.Result().Cookies()

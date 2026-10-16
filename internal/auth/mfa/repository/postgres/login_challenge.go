@@ -11,6 +11,7 @@ import (
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 )
 
 func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.PrimaryProof, digest, binding string, ttl time.Duration) (time.Time, error) {
@@ -78,6 +79,9 @@ func requireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof)
 			return domain.ErrProofRequired
 		}
 		return nil
+	}
+	if err := settingspostgres.RequirePublicLogin(ctx, tx, p.UserID, p.Method, p.Issuer); err != nil {
+		return err
 	}
 	switch p.Method {
 	case "password":
