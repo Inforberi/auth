@@ -2,6 +2,10 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+### План совместимости настроек — 16 октября 2026
+
+В implementation добавлена матрица зависимостей и безопасных переходов для A6.3/A7: совместимые методы, неактивные предпочтения, readiness, обязательная MFA, последний защищённый административный доступ и последствия выключения метода. Зафиксированы атомарность, отсутствие автоматических каскадных переключений и единый backend-контракт для UI/API. Это план, не реализация новых проверок. Порядок AS5 → A6.3 сохранён; предыдущие AS6b изменения не откатывались. Проверка этого дополнения — документационный diff; Go/SQL тесты повторно не запускались.
+
 ### Результат AS6a-local и lifetime regression — 16 октября 2026
 
 После анализа AS5/AS6 выбран минимальный первый security diff: новое обычное/system назначение активному пользователю повышает auth_version в существующем UPDATE users внутри assignment transaction. No-op grant ничего не меняет; revoke уменьшает live permissions без обязательного logout-all. Pending сохраняет auth_version, потому что live session ему запрещена, а version-bound приглашение/активация должны переживать назначение роли до входа. Повторный login/MFA выдаёт новую session; role API не выдаёт token и не обновляет старую session. Переиспользуются ordered user locks, текущие permissions, audit и auth_version boundary. Нет schema/env/dependencies, fan-out UPDATE sessions/users, дополнительных SQL/Redis calls на protected read, cache или новых workers.
