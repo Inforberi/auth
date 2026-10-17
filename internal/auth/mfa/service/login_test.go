@@ -30,10 +30,18 @@ func (r *loginRepoStub) FindLoginOwner(context.Context, string, string) (account
 	return r.proof.UserID, r.err
 }
 
-func (r *loginRepoStub) SaveLoginChallenge(_ context.Context, proof PrimaryProof, digest, binding string, ttl time.Duration) (time.Time, error) {
+func (r *loginRepoStub) SaveLoginChallenge(_ context.Context, proof PrimaryProof, digest, binding string, ttl time.Duration) (*LoginChallengeState, error) {
 	r.calls++
 	r.proof, r.digest, r.binding = proof, digest, binding
-	return time.Now().Add(ttl), r.err
+	return &LoginChallengeState{ExpiresAt: time.Now().Add(ttl)}, r.err
+}
+
+func (r *loginRepoStub) SaveLoginEnrollment(context.Context, LoginEnrollmentParams) (time.Time, error) {
+	return time.Time{}, errors.New("unexpected enrollment call")
+}
+
+func (r *loginRepoStub) ConfirmLoginEnrollment(context.Context, LoginEnrollmentParams, Check, []string) error {
+	return domain.ErrUnavailable
 }
 
 func (r *loginRepoStub) CompleteLogin(_ context.Context, input LoginCompletion, factor LoginFactor) (*LoginCommit, error) {

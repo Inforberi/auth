@@ -23,6 +23,7 @@ type PrimaryProof struct {
 }
 
 type LoginConfig struct {
+	Issuer                string
 	AllowPrimary          func(method, issuer string) bool
 	ChallengeTTL          time.Duration
 	SessionTTL            time.Duration
@@ -37,8 +38,10 @@ type LoginConfig struct {
 
 type LoginRepository interface {
 	FindLoginOwner(context.Context, string, string) (accountdomain.UserID, error)
-	SaveLoginChallenge(context.Context, PrimaryProof, string, string, time.Duration) (time.Time, error)
+	SaveLoginChallenge(context.Context, PrimaryProof, string, string, time.Duration) (*LoginChallengeState, error)
 	CompleteLogin(context.Context, LoginCompletion, LoginFactor) (*LoginCommit, error)
+	SaveLoginEnrollment(context.Context, LoginEnrollmentParams) (time.Time, error)
+	ConfirmLoginEnrollment(context.Context, LoginEnrollmentParams, Check, []string) error
 }
 
 type LoginFactor func(accountdomain.UserID) (Check, string)
@@ -64,13 +67,22 @@ func NewLogin(repo LoginRepository, cipher Cipher, code Authenticator, limit Lim
 		cfg.IPLimitPerMinute < 2 || cfg.GlobalLimitPerMinute < 2 {
 		return nil, errors.New("invalid MFA login configuration")
 	}
+	if cfg.Issuer == "" {
+		cfg.Issuer = "Auth"
+	}
 	return &Login{repo: repo, cipher: cipher, code: code, limit: limit, tokens: tokens, cfg: cfg}, nil
 }
 
+type LoginChallengeState struct {
+	ExpiresAt          time.Time
+	EnrollmentRequired bool
+}
+
 type LoginChallenge struct {
-	Token     string `json:"-"`
-	Binding   string `json:"-"`
-	ExpiresAt time.Time
+	Token              string `json:"-"`
+	Binding            string `json:"-"`
+	ExpiresAt          time.Time
+	EnrollmentRequired bool
 }
 
 func (s *Login) Start(ctx context.Context, proof PrimaryProof, ip string) (*LoginChallenge, error) {
@@ -93,12 +105,12 @@ func (s *Login) Start(ctx context.Context, proof PrimaryProof, ip string) (*Logi
 	if err != nil {
 		return nil, err
 	}
-	expires, err := s.repo.SaveLoginChallenge(ctx, proof, s.cipher.Digest("login:"+token),
+	state, err := s.repo.SaveLoginChallenge(ctx, proof, s.cipher.Digest("login:"+token),
 		s.cipher.Digest("browser:"+binding), s.cfg.ChallengeTTL)
 	if err != nil {
 		return nil, err
 	}
-	return &LoginChallenge{Token: token, Binding: binding, ExpiresAt: expires}, nil
+	return &LoginChallenge{Token: token, Binding: binding, ExpiresAt: state.ExpiresAt, EnrollmentRequired: state.EnrollmentRequired}, nil
 }
 
 func validPrimary(p PrimaryProof) bool {

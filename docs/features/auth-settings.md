@@ -6,7 +6,7 @@ AS5-local (17 октября): session, выданная владельцу вс
 
 A6.1-local реализует domain/service/PostgreSQL store и first-install seed. A6.2a-local добавляет независимый административный password+MFA login. A6.2b-local подключает startup и runtime enforcement сохраняемой публичной политики. A6.2c-local публикует protected settings API ниже. UI ещё нет. ENV-флаги методов используются только при первой инициализации, credentials/operational параметры пока остаются в ENV.
 
-Далее A6.3 — MFA policy по ролям, SMTP/provider secrets и retention settings. Их поля и пустые adapters сейчас не создаются. Внешняя pre-ui-backend приёмка остаётся обязательной.
+A6.3a-local сохраняет MFA policy у custom role через roles API и добавляет ограниченный первичный TOTP enrollment, не новые поля singleton Auth settings. [Контракт и ограничения](mfa.md#обязательная-mfa-по-роли--a63a). Далее usable-admin transitions, SMTP/provider secrets и retention settings; их пустые поля/adapters не создаются. Внешняя pre-ui-backend приёмка остаётся обязательной.
 
 ## API настроек — A6.2c-local
 

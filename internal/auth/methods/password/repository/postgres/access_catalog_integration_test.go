@@ -16,7 +16,7 @@ import (
 
 func checkAccessCatalog(t *testing.T, db *pgxpool.Pool, ctx context.Context, existing accessdomain.Role) {
 	t.Helper()
-	if _, err := accessapp.New(ctx, db, settings.Config{}); !errors.Is(err, accessdomain.ErrConflict) {
+	if _, err := accessapp.New(ctx, db, settings.Config{}, false); !errors.Is(err, accessdomain.ErrConflict) {
 		t.Fatalf("undeclared existing permission accepted: %v", err)
 	}
 	path := filepath.Join(t.TempDir(), "catalog.json")
@@ -27,7 +27,7 @@ func checkAccessCatalog(t *testing.T, db *pgxpool.Pool, ctx context.Context, exi
 	if err := db.QueryRow(ctx, `SELECT (SELECT count(*) FROM auth.roles),(SELECT count(*) FROM auth.user_roles),(SELECT count(*) FROM auth.access_audit)`).Scan(&beforeRoles, &beforeAssignments, &beforeAudit); err != nil {
 		t.Fatal(err)
 	}
-	app, err := accessapp.New(ctx, db, settings.Config{CatalogFile: path})
+	app, err := accessapp.New(ctx, db, settings.Config{CatalogFile: path}, false)
 	if err != nil {
 		t.Fatal(err)
 	}

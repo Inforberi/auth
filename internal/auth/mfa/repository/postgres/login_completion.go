@@ -21,10 +21,13 @@ func (r *Repository) CompleteLogin(ctx context.Context, input service.LoginCompl
 		if err != nil {
 			return err
 		}
+		if proof.EnrollmentRequired {
+			return domain.ErrInvalidCode
+		}
 		if !proof.Administrative && input.AllowPrimary != nil && !input.AllowPrimary(proof.Method, proof.Issuer) {
 			return domain.ErrInvalidCode
 		}
-		if err := requireLoginPrimary(ctx, tx, *proof); err != nil {
+		if err := requireLoginPrimary(ctx, tx, proof.PrimaryProof); err != nil {
 			if errors.Is(err, domain.ErrProofRequired) {
 				return domain.ErrInvalidCode
 			}
@@ -72,7 +75,13 @@ func (r *Repository) CompleteLogin(ctx context.Context, input service.LoginCompl
 	return &result, nil
 }
 
-func lockLoginChallenge(ctx context.Context, tx pgx.Tx, digest, binding string, accessLocked bool) (*service.PrimaryProof, error) {
+type lockedLoginChallenge struct {
+	service.PrimaryProof
+	EnrollmentRequired bool
+	ExpiresAt          time.Time
+}
+
+func lockLoginChallenge(ctx context.Context, tx pgx.Tx, digest, binding string, accessLocked bool) (*lockedLoginChallenge, error) {
 	var user accountdomain.UserID
 	var administrative bool
 	// Inspect intent without locking; administrative flows take Access before user/challenge/factor locks.
@@ -98,11 +107,11 @@ func lockLoginChallenge(ctx context.Context, tx pgx.Tx, digest, binding string, 
 	if err != nil {
 		return nil, err
 	}
-	proof := service.PrimaryProof{UserID: user, AuthVersion: version, Administrative: administrative}
-	err = tx.QueryRow(ctx, `SELECT primary_method,primary_reference,primary_issuer,primary_verified_at
+	proof := lockedLoginChallenge{PrimaryProof: service.PrimaryProof{UserID: user, AuthVersion: version, Administrative: administrative}}
+	err = tx.QueryRow(ctx, `SELECT primary_method,primary_reference,primary_issuer,primary_verified_at,enrollment_required,expires_at
 		FROM auth.mfa_login_challenges WHERE user_id=$1 AND digest=$2 AND binding_hash=$3 AND auth_version=$4
 		AND administrative=$5 AND expires_at>clock_timestamp() AND attempts<5 FOR UPDATE`, user, digest, binding, version, administrative).
-		Scan(&proof.Method, &proof.Reference, &proof.Issuer, &proof.VerifiedAt)
+		Scan(&proof.Method, &proof.Reference, &proof.Issuer, &proof.VerifiedAt, &proof.EnrollmentRequired, &proof.ExpiresAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrInvalidCode
 	}

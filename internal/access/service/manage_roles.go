@@ -14,6 +14,7 @@ type CreateRoleInput struct {
 	Name        string
 	Description string
 	Permissions []domain.PermissionKey
+	MFARequired *bool
 }
 
 type UpdateRoleInput struct {

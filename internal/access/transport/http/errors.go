@@ -9,6 +9,7 @@ import (
 )
 
 var accessErrors = []httpx.ErrorRule{
+	httpx.MatchError(domain.ErrMFANotReady, 409, "mfa_not_ready", "MFA is not configured on this instance"),
 	httpx.MatchError(accountdomain.ErrLastAdministrator, 409, "last_administrator", "last usable administrator must remain"),
 	httpx.MatchError(domain.ErrInvalidRole, 400, "invalid_role", "invalid role"),
 	httpx.MatchError(domain.ErrInvalidPermission, 400, "invalid_permission", "invalid permission"),

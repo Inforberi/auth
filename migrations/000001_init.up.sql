@@ -50,6 +50,7 @@ CREATE TABLE auth.roles (
   system BOOLEAN NOT NULL DEFAULT false,
   version BIGINT NOT NULL DEFAULT 1 CHECK (version > 0),
   session_revision BIGINT NOT NULL DEFAULT 1 CHECK (session_revision > 0),
+  mfa_required BOOLEAN NOT NULL DEFAULT false,
   CHECK (system = (key = 'super_admin'))
 );
 
@@ -65,6 +66,12 @@ CREATE TABLE auth.user_roles (
   PRIMARY KEY (user_id, role_id)
 );
 CREATE INDEX user_roles_by_role ON auth.user_roles(role_id,user_id);
+CREATE INDEX roles_mfa_required ON auth.roles(id) WHERE mfa_required;
+
+CREATE FUNCTION auth.role_requires_mfa(owner_id UUID) RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
+  SELECT EXISTS(SELECT 1 FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id
+    WHERE ur.user_id=owner_id AND r.mfa_required);
+$$;
 
 CREATE TABLE auth.auth_settings (
   singleton BOOLEAN PRIMARY KEY CHECK (singleton),
@@ -234,7 +241,7 @@ CREATE TABLE auth.mfa_enrollments (
   digest TEXT NOT NULL UNIQUE CHECK (digest ~ '^[a-f0-9]{64}$'),
   auth_version BIGINT NOT NULL CHECK (auth_version > 0),
   session_hash TEXT NOT NULL CHECK (session_hash ~ '^[a-f0-9]{64}$'),
-  purpose TEXT NOT NULL DEFAULT 'enroll' CHECK (purpose IN ('enroll','replace')),
+  purpose TEXT NOT NULL DEFAULT 'enroll' CHECK (purpose IN ('enroll','replace','login')),
   secret BYTEA NOT NULL CHECK (octet_length(secret) BETWEEN 48 AND 512),
   attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
   created_at TIMESTAMPTZ NOT NULL DEFAULT statement_timestamp(),
@@ -250,6 +257,7 @@ CREATE TABLE auth.mfa_login_challenges (
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
   primary_method TEXT NOT NULL CHECK (primary_method IN ('password','oidc','emailotp')),
   administrative BOOLEAN NOT NULL DEFAULT false CHECK (NOT administrative OR primary_method='password'),
+  enrollment_required BOOLEAN NOT NULL DEFAULT false CHECK (NOT enrollment_required OR NOT administrative),
   primary_reference TEXT NOT NULL CHECK (octet_length(primary_reference) BETWEEN 1 AND 1024),
   primary_issuer TEXT NOT NULL CHECK (octet_length(primary_issuer)<=512),
   primary_verified_at TIMESTAMPTZ NOT NULL,
@@ -411,6 +419,7 @@ CREATE INDEX sessions_retention_due ON auth.sessions(LEAST(revoked_at,expires_at
 
 CREATE FUNCTION auth.bind_session_roles() RETURNS TRIGGER
 LANGUAGE plpgsql AS $$
+DECLARE required_mfa BOOLEAN;
 BEGIN
   IF TG_OP = 'UPDATE' THEN
     IF NEW.role_revisions IS DISTINCT FROM OLD.role_revisions THEN
@@ -421,10 +430,15 @@ BEGIN
       RAISE EXCEPTION 'session lifetime policy is immutable';
     END IF;
   ELSE
-    SELECT COALESCE(jsonb_object_agg(r.id::text,r.session_revision),'{}'::jsonb)
-      INTO NEW.role_revisions
+    -- Policy and its revision bindings must come from the same statement snapshot.
+    SELECT COALESCE(jsonb_object_agg(r.id::text,r.session_revision),'{}'::jsonb),COALESCE(bool_or(r.mfa_required),false)
+      INTO NEW.role_revisions,required_mfa
       FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id
       WHERE ur.user_id=NEW.user_id;
+    IF required_mfa AND (NEW.mfa_verified_at IS NULL
+      OR NEW.mfa_verified_at>clock_timestamp() OR NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=NEW.user_id)) THEN
+      RAISE EXCEPTION 'role requires MFA before session issuance';
+    END IF;
     -- Administrative permissions, not the login URL, choose the stricter profile.
     IF EXISTS (SELECT 1 FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id
       LEFT JOIN auth.role_permissions rp ON rp.role_id=ur.role_id

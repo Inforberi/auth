@@ -15,6 +15,7 @@ type RoleSummaryResponse struct {
 	Name        string        `json:"name"`
 	Description string        `json:"description"`
 	System      bool          `json:"system"`
+	MFARequired bool          `json:"mfaRequired"`
 	Version     int64         `json:"version"`
 } // @name access_http.RoleSummaryResponse
 
@@ -66,7 +67,7 @@ func (h *Handler) ListRoles(w http.ResponseWriter, r *http.Request) {
 	}
 	page := RolePageResponse{Roles: make([]RoleSummaryResponse, 0, len(roles))}
 	for _, role := range roles {
-		page.Roles = append(page.Roles, RoleSummaryResponse{ID: role.ID, Key: role.Key, Name: role.Name, Description: role.Description, System: role.System, Version: role.Version})
+		page.Roles = append(page.Roles, RoleSummaryResponse{ID: role.ID, Key: role.Key, Name: role.Name, Description: role.Description, System: role.System, Version: role.Version, MFARequired: role.MFARequired})
 	}
 	if len(roles) == limit {
 		page.NextAfter = roles[len(roles)-1].Key

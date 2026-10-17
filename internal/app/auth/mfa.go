@@ -54,6 +54,7 @@ func assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, ses
 	}
 	allowPrimary := mfaPrimaryPolicy(cfg)
 	login, err := mfaservice.NewLogin(repo, cipher, mfatotp.Authenticator{}, limits, tokens, mfaservice.LoginConfig{
+		Issuer:       cfg.MFA.Issuer,
 		AllowPrimary: allowPrimary,
 		ChallengeTTL: cfg.MFA.ChallengeTTL, SessionTTL: cfg.Session.SessionTTL, AbsoluteSessionTTL: cfg.Session.AbsoluteSessionTTL,
 		AdminIdleTimeout: cfg.Session.AdminIdleTimeout, AdminAbsoluteTTL: cfg.Session.AdminAbsoluteTTL, AdminActivityInterval: cfg.Session.AdminActivityInterval,

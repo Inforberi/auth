@@ -20,6 +20,7 @@ var (
 	ErrRoleNotFound      = errors.New("role not found")
 	ErrInvalidPermission = errors.New("invalid permission")
 	ErrConflict          = errors.New("access conflict")
+	ErrMFANotReady       = errors.New("MFA is not ready on this instance")
 	ErrFreshAuthRequired = errors.New("fresh authentication required")
 	ErrTargetUnavailable = errors.New("role assignment target unavailable")
 	keyPattern           = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$`)
@@ -31,6 +32,7 @@ type Role struct {
 	Name        string
 	Description string
 	System      bool
+	MFARequired bool
 	Version     int64
 	Permissions []PermissionKey
 }

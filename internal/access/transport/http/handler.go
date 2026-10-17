@@ -50,6 +50,7 @@ type RoleResponse struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
 	System      bool                   `json:"system"`
+	MFARequired bool                   `json:"mfaRequired"`
 	Version     int64                  `json:"version"`
 	Permissions []domain.PermissionKey `json:"permissions" swaggertype:"array,string"`
 } // @name access_http.RoleResponse
@@ -59,7 +60,7 @@ func roleResponse(role domain.Role) RoleResponse {
 	if permissions == nil {
 		permissions = []domain.PermissionKey{}
 	}
-	return RoleResponse{ID: role.ID, Key: role.Key, Name: role.Name, Description: role.Description, System: role.System, Version: role.Version, Permissions: permissions}
+	return RoleResponse{ID: role.ID, Key: role.Key, Name: role.Name, Description: role.Description, System: role.System, Version: role.Version, Permissions: permissions, MFARequired: role.MFARequired}
 }
 
 type AccessResponse struct {

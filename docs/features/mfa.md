@@ -4,11 +4,44 @@
 
 ## Текущее состояние
 
+A6.3a-local (17 октября): сохраняем `mfaRequired` у custom role через существующий roles API. Отсутствующее поле/null при update сохраняет прежнее значение; включение повышает session_revision, без массового UPDATE пользователей. Несколько ролей объединяются по OR. Фиксированные administrative guards не отключаются этим полем. Локальная готовность MFA обязательна для включения политики; при MFA_ENABLED=false startup отклоняет сохранённые required роли.
+
+Для отсутствующего фактора проверенный primary login выдаёт только browser-bound enrollment challenge. Две отдельные POST операции настраивают/подтверждают TOTP без полноценной session; переиспользуются MFA enrollment ledger, attempts и limiter. Purpose `login` отделён от owner enroll/replace; финальный commit повторяет current primary/method/status/version/policy checks. Подтверждение сохраняет factor/recovery codes, повышает auth_version и отзывает прежние sessions/challenges, возвращает recovery codes один раз, но не входит автоматически. Затем новый обычный primary + MFA login. Это минимальный ограниченный onboarding, не новый тип полноценной session. Secrets/SMTP/retention settings и UI — следующие части A6.3/A7.
+
 A6.2a-local: [отдельный административный password+MFA вход](auth-settings.md#административный-вход--a62a-local) всегда требует второй фактор и текущую административную authority, переиспользует эти challenge/completion/recovery и общие SQL-сессии. Обычный публичный вход и его optional MFA поведение не заменяются.
 
 A5.2b-local подключает MFA к password, Google/Telegram OIDC и email OTP, App, HTTP и Swagger. A5.2c-local добавляет opt-in email proof для external-only с verified owned contact; A5.2d-local — [первичную привязку через администратора](email-binding.md). Для password-account по-прежнему нужен password proof: email не снижает его защиту. Без verified contact сначала выполняется binding; самостоятельного добавления доверенной почты одной session cookie нет. Полный A5 и release acceptance не закрыты.
 
 Без подключённого фактора обычный login сохраняется. При enabled TOTP основной вход возвращает HTTP 202, `status=mfa_required`, `challenge`, `expiresAt` и HttpOnly browser cookie, но не новую session cookie. Старую cookie этого браузера очищаем; это не глобальный logout других сессий. После второго фактора создаётся общая SQL-сессия. MFA не заменяет email verification, permissions или основной вход. Factor state нельзя включать/выключать прямым SQL вместо protected flow.
+
+## Обязательная MFA по роли — A6.3a
+
+Управление — прежние protected POST `/api/v1/admin/roles` и `/api/v1/admin/roles/{id}`; list/detail возвращают `mfaRequired`. Create без поля/null создаёт optional policy. Update без поля/null сохраняет текущую; явные true/false меняют её с прежними version, delegation, fresh password/MFA и audit guards. System role не редактируется. Поле отражает политику всего входа custom role, не отключает обязательные proof guards административных операций. `409 mfa_not_ready` означает отсутствие настроенного MFA на обслуживающем экземпляре; не доказывает состояние остальных узлов.
+
+При false → true старая role-bound session требует нового login, даже если фактор уже подключён. Нет массового UPDATE users/sessions; issuance получает flag и revision bindings из одного SQL snapshot. SQL trigger не позволяет создать session без MFA для required role в обход coordinator. При true → false установленный factor/codes не удаляются и действующие MFA sessions не отзываются только из-за ослабления политики. Пока фактор установлен, вход продолжает требовать его. Disable по-прежнему требует текущие proofs; если хотя бы одна роль требует MFA, возвращается `403 mfa_required_by_policy`.
+
+### Первый фактор ещё не подключён
+
+Password, Google/Telegram identity и email OTP используют общий coordinator. После успешного primary proof и текущих SQL-проверок возвращается `202` с `status=mfa_enrollment_required`, challenge/expiresAt и отдельной HttpOnly browser binding cookie. Session cookie очищается, полноценная session не создаётся. Это не возможность зарегистрироваться заново или подтвердить пароль без его проверки. Private administrative password login сохраняет прежнее требование уже enrolled factor; первичный limited enrollment запускается через включённый public primary method.
+
+| Метод | Тело | Результат |
+| --- | --- | --- |
+| POST `/api/v1/auth/mfa/login/enrollment` | `{"challenge":"…"}` + прежняя binding cookie | `200 {token,secret,uri,expiresAt}`; TOTP ещё не включён |
+| POST `/api/v1/auth/mfa/login/enrollment/confirm` | `{"challenge":"…","token":"…","code":"123456"}` + та же cookie | `200 {codes:[…]}` один раз после commit; без session |
+
+Обязателен разрешённый Origin; нет UUID, auth_version, timestamps и флага «я уже прошёл MFA» от клиента. Нет binding/неверный или истёкший challenge/enrollment/code — `400 invalid_mfa`; неверный JSON — `400 invalid_json`; Origin — `403`; отключённый primary — `404 method_disabled`; limits — `429`; dependency failure — `503`. При MFA_ENABLED=false обе routes отсутствуют. Обычный MFA completion и lost-factor recovery не принимают enrollment-required challenge. Challenge нельзя использовать как session для `/me`, ролей и других защищённых API.
+
+Enrollment привязан к user/current auth_version, challenge digest, browser и purpose `login`. Срок не выходит за исходный login challenge (до 5m); повторный start заменяет pending secret/token, но не продлевает primary proof или deadline. Owner enrollment/replacement tokens другого purpose не подходят. SQL допускает максимум пять неверных codes; попытки commit даже при отказе. Тот же per-user guessing cap сохраняется при замене secret/primary challenge, используются общие IP/project budgets; failed dependency не становится «успешной» операцией. Отдельных pools/workers/tables для onboarding нет, старый bounded retention удаляет expired rows независимо от purpose.
+
+Confirm повторяет current primary/method/status/version/required-role/factor-absent checks и использует ту же активацию factor/codes/version/revoke/audit, что owner enrollment. Из двух параллельных подтверждений только одно успешно; ошибка audit откатывает весь commit. Секрет/codes не попадают в audit/logging и выдаются под no-store. При потере успешного ответа factor может быть уже подключён: начинать новый primary + MFA login с установленным TOTP, не запрашивать прежние codes повторно и не сбрасывать БД. После успешного confirm новый обычный вход возвращает `mfa_required`, затем TOTP/recovery completion создаёт session. Email ownership/OTP не объявляются сами по себе дополнительным фактором или административным fresh-password proof.
+
+### Границы и следующая приёмка
+
+Первый required enrollment доверяет принятому primary proof, но не объявляет обычный OIDC/SSO вход свежим локальным password/MFA-management proof. Это отдельный bootstrap только отсутствующего фактора; replacement/disable/regeneration сохраняют прежние независимые guards. Самостоятельно verified email не создаётся. External-only аккаунту без verified contact нужно сохранить recovery codes и подготовить контролируемую привязку почты после входа: существующее operator-assisted lost-factor recovery требует verified contact до создания recovery intent. Наличие MFA не означает, что все пути восстановления уже доступны; отобразить эту готовность в self-status/UI A6.3b/A7.
+
+При admin-only профиле без public methods новый пользователь должен подключить TOTP до закрытия подходящего primary. Этот блок не открывает public registration и не ослабляет private-admin preflight автоматически. Полная проверка достижимости onboarding/last usable admin при переключениях, self-status для UI и реальные workflows остаются A6.3b/pre-ui; обычному пользователю всё ещё можно запретить последний public method по политике проекта. Настройки подключения SMTP/providers/secrets/retention — следующие части A6.3, root/deployment keys остаются ENV.
+
+Чтение защищённой session не получает нового policy lookup: old tokens отсекает существующая revision view. Смена только MFA-флага/метаданных не переписывает permissions, настройка не сканирует пользователей. Массовое включение может вызвать burst повторных входов, а не SQL fan-out: сохраняются admission/guessing bounds. Capacity/GC не измерены. Local tests включают реальные SQL/HTTP/TOTP, но provider proofs в них synthetic, не живые Google/Telegram/SMTP flows. Browser/authenticator/fleet/fault/load/restore и rollout прежней БД — открытые gates. Изменён source 000001 без применения к рабочей БД; controlled upgrade и invalidation прежних sessions/challenges до трафика обязательны, прямое DBA изменение policy также должно корректно повысить role revision.
 
 ## Настройки и HTTP
 
@@ -79,7 +112,7 @@ Google/Telegram-only management доступен только с opt-in email pr
 
 `service.Login.Start` вызывается только адаптером, уже проверившим основной вход. `PrimaryProof` содержит UUID, auth_version, основной метод и его проверенную ссылку: актуальный password hash после Compare/CAS rehash, OIDC issuer/subject после provider validation либо ID текущего verified email после потребления email OTP. Эти ссылки не являются самостоятельным доказательством; контракт запрещено заполнять из JSON/query/headers. Session login coordinator подключён к method adapters: обычная SQL issuance либо challenge по `ErrMFARequired`, без обхода через другой метод.
 
-SQL проверяет active/nondeleted account и auth_version под user lock, затем сверяет current credentials/identity/email. Основное доказательство должно быть не старше минуты. Допускается до пяти секунд рассинхронизации backend/DB; при опережении backend сохранённое время ограничивается SQL statement timestamp, будущий authentication time не записывается. Часы должны синхронизироваться. Для email OTP сохраняются ограничения существующего метода: verified текущий email постоянных credentials, без pending provisioning/temporary password. Наличие enabled TOTP обязательно; Start не заменяет регистрацию или обычный вход.
+SQL проверяет active/nondeleted account и auth_version под user lock, затем сверяет current credentials/identity/email. Основное доказательство должно быть не старше минуты. Допускается до пяти секунд рассинхронизации backend/DB; при опережении backend сохранённое время ограничивается SQL statement timestamp, будущий authentication time не записывается. Часы должны синхронизироваться. Для email OTP сохраняются ограничения существующего метода: verified текущий email постоянных credentials, без pending provisioning/temporary password. На этапе A5.2a наличие enabled TOTP было обязательным; A6.3a добавляет ограниченный enrollment-required ответ при required role без фактора, не выдавая полноценную session.
 
 Создаются два независимых случайных значения по 256 бит: challenge token и browser binding. SQL хранит scoped keyed digests, не plaintext. Token передаётся в POST body, binding — в Secure/HttpOnly cookie. Один pending challenge/user с TTL до пяти минут. Новый проверенный primary login заменяет старый challenge, не создаёт сессию и не меняет фактор. В audit не попадают tokens, binding, password hash или OTP.
 
@@ -127,7 +160,7 @@ Password reset/change и защитное account recovery не удаляют �
 
 ## Открытые части A5
 
-- Required MFA по ролям, безопасный first-admin setup, отдельный lost-factor процесс и самостоятельный external-only onboarding без оператора.
+- Локальный backend required MFA по custom roles и первичный onboarding через включённый primary реализованы A6.3a. Usable-admin transitions, UI/self-status и настоящая first-admin/lost-factor/provider приёмка остаются открытыми.
 - Public admin users/roles transport с permissions/fresh-auth/MFA, runtime settings A6 и UI A7; internal SQL role mutations уже защищены.
 - Browser/live authenticator/provider, Redis/SQL faults и mixed load/restore acceptance; локальные HTTP/SQL/Redis checks не заменяют release gates A8.
 - SMS после выбора provider; passkeys вне текущего выпуска.

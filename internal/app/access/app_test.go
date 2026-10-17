@@ -14,7 +14,7 @@ func TestInvalidCatalogBeforeStorage(t *testing.T) {
 	if err := os.WriteFile(path, []byte(`{"version":2}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := New(context.Background(), nil, settings.Config{CatalogFile: path}); err == nil {
+	if _, err := New(context.Background(), nil, settings.Config{CatalogFile: path}, false); err == nil {
 		t.Fatal("invalid catalog reached storage")
 	}
 }

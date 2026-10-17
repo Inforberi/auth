@@ -13,6 +13,7 @@ type CreateRoleRequest struct {
 	Name        string                 `json:"name" binding:"required"`
 	Description string                 `json:"description"`
 	Permissions []domain.PermissionKey `json:"permissions" swaggertype:"array,string"`
+	MFARequired *bool                  `json:"mfaRequired" extensions:"x-nullable"`
 } // @name access_http.CreateRoleRequest
 
 // @Summary Create a custom role
@@ -40,7 +41,7 @@ func (h *Handler) CreateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	role, err := h.service.CreateRole(r.Context(), service.CreateRoleInput{
-		Actor: actor, Key: input.Key, Name: input.Name, Description: input.Description, Permissions: input.Permissions,
+		Actor: actor, Key: input.Key, Name: input.Name, Description: input.Description, Permissions: input.Permissions, MFARequired: input.MFARequired,
 	})
 	if err != nil {
 		h.respondError(w, r, err)

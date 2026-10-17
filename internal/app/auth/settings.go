@@ -12,7 +12,7 @@ import (
 )
 
 func assembleAccessPolicy(ctx context.Context, pool *pgxpool.Pool, cfg *config.Config) (*accessapp.App, *settingsservice.Service, error) {
-	access, err := accessapp.New(ctx, pool, cfg.Access)
+	access, err := accessapp.New(ctx, pool, cfg.Access, cfg.MFA.Enabled)
 	if err != nil {
 		return nil, nil, err
 	}

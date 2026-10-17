@@ -46,7 +46,11 @@ func TestAccessSwaggerDTOs(t *testing.T) {
 				field := typ.Field(i)
 				name := strings.Split(field.Tag.Get("json"), ",")[0]
 				wantType := "string"
-				switch field.Type.Kind() {
+				fieldType := field.Type
+				for fieldType.Kind() == reflect.Pointer {
+					fieldType = fieldType.Elem()
+				}
+				switch fieldType.Kind() {
 				case reflect.Int64:
 					wantType = "integer"
 				case reflect.Bool:

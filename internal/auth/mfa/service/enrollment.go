@@ -35,28 +35,36 @@ func (s *Service) startEnrollment(ctx context.Context, proof Proof, replace bool
 	if err := s.admit(ctx, proof.UserID); err != nil {
 		return nil, err
 	}
-	secret, uri, err := s.code.Generate(s.issuer, string(proof.UserID))
+	enrollment, encrypted, err := prepareEnrollment(s.code, s.cipher, s.issuer, proof.UserID)
 	if err != nil {
-		return nil, domain.ErrUnavailable
-	}
-	encrypted, err := s.cipher.Seal([]byte(string(proof.UserID) + "\x00" + secret))
-	if err != nil {
-		return nil, domain.ErrUnavailable
-	}
-	var entropy [32]byte
-	if _, err := rand.Read(entropy[:]); err != nil {
 		return nil, err
 	}
-	token := base64.RawURLEncoding.EncodeToString(entropy[:])
 	save := s.repo.SaveEnrollment
 	if replace {
 		save = s.repo.SaveReplacement
 	}
-	expires, err := save(ctx, proof, s.cipher.Digest("enrollment:"+token), encrypted)
+	expires, err := save(ctx, proof, s.cipher.Digest("enrollment:"+enrollment.Token), encrypted)
 	if err != nil {
 		return nil, err
 	}
-	return &Enrollment{Token: token, Secret: secret, URI: uri, ExpiresAt: expires}, nil
+	enrollment.ExpiresAt = expires
+	return enrollment, nil
+}
+
+func prepareEnrollment(code Authenticator, cipher Cipher, issuer string, user accountdomain.UserID) (*Enrollment, []byte, error) {
+	secret, uri, err := code.Generate(issuer, string(user))
+	if err != nil {
+		return nil, nil, domain.ErrUnavailable
+	}
+	encrypted, err := cipher.Seal([]byte(string(user) + "\x00" + secret))
+	if err != nil {
+		return nil, nil, domain.ErrUnavailable
+	}
+	token, err := randomLoginToken()
+	if err != nil {
+		return nil, nil, err
+	}
+	return &Enrollment{Token: token, Secret: secret, URI: uri}, encrypted, nil
 }
 
 type ConfirmInput struct {

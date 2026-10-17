@@ -28,7 +28,7 @@ func (r *Repository) CreateSession(ctx context.Context, p service.CreateSessionP
 		}
 		// A separate statement sees factor enrollment committed while waiting for the user lock.
 		var mfaRequired bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1)`, p.UserID).Scan(&mfaRequired); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1) OR auth.role_requires_mfa($1)`, p.UserID).Scan(&mfaRequired); err != nil {
 			return err
 		}
 		if mfaRequired {

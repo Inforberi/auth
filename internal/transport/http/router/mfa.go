@@ -14,6 +14,8 @@ func mfaRoutes(r chi.Router, h Handlers) {
 		return
 	}
 	r.Post("/mfa/login/complete", h.MFA.CompleteLogin)
+	r.Post("/mfa/login/enrollment", h.MFA.StartLoginEnrollment)
+	r.Post("/mfa/login/enrollment/confirm", h.MFA.ConfirmLoginEnrollment)
 	if h.Config.MFA.RecoveryEnabled {
 		r.Post("/mfa/recovery/start", h.MFA.StartRecovery)
 		r.Post("/mfa/recovery/complete", h.MFA.CompleteRecovery)

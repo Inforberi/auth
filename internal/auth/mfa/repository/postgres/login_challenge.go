@@ -14,8 +14,8 @@ import (
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 )
 
-func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.PrimaryProof, digest, binding string, ttl time.Duration) (time.Time, error) {
-	var expires time.Time
+func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.PrimaryProof, digest, binding string, ttl time.Duration) (*service.LoginChallengeState, error) {
+	var result service.LoginChallengeState
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		if proof.Administrative {
 			if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
@@ -37,31 +37,35 @@ func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.Prima
 		if err := requireLoginPrimary(ctx, tx, proof); err != nil {
 			return err
 		}
-		var enabled bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1)`, proof.UserID).Scan(&enabled); err != nil {
+		var enabled, required bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1),auth.role_requires_mfa($1)`, proof.UserID).Scan(&enabled, &required); err != nil {
 			return err
 		}
-		if !enabled {
+		if !enabled && (!required || proof.Administrative) {
 			return domain.ErrConflict
 		}
+		result.EnrollmentRequired = !enabled
 		// A new primary challenge never inherits approval for an older candidate/browser.
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_recovery_requests WHERE user_id=$1`, proof.UserID); err != nil {
 			return err
 		}
 		err = tx.QueryRow(ctx, `INSERT INTO auth.mfa_login_challenges
-			(user_id,digest,binding_hash,auth_version,primary_method,primary_reference,primary_issuer,primary_verified_at,expires_at,administrative)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,LEAST($8::timestamptz,statement_timestamp()),statement_timestamp()+$9::double precision*interval '1 second',$10)
+			(user_id,digest,binding_hash,auth_version,primary_method,primary_reference,primary_issuer,primary_verified_at,expires_at,administrative,enrollment_required)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,LEAST($8::timestamptz,statement_timestamp()),statement_timestamp()+$9::double precision*interval '1 second',$10,$11)
 			ON CONFLICT(user_id) DO UPDATE SET digest=EXCLUDED.digest,binding_hash=EXCLUDED.binding_hash,
 			auth_version=EXCLUDED.auth_version,primary_method=EXCLUDED.primary_method,primary_reference=EXCLUDED.primary_reference,
-			primary_issuer=EXCLUDED.primary_issuer,primary_verified_at=EXCLUDED.primary_verified_at,administrative=EXCLUDED.administrative,attempts=0,
+			primary_issuer=EXCLUDED.primary_issuer,primary_verified_at=EXCLUDED.primary_verified_at,administrative=EXCLUDED.administrative,enrollment_required=EXCLUDED.enrollment_required,attempts=0,
 			created_at=statement_timestamp(),expires_at=EXCLUDED.expires_at RETURNING expires_at`,
-			proof.UserID, digest, binding, proof.AuthVersion, proof.Method, proof.Reference, proof.Issuer, proof.VerifiedAt, ttl.Seconds(), proof.Administrative).Scan(&expires)
+			proof.UserID, digest, binding, proof.AuthVersion, proof.Method, proof.Reference, proof.Issuer, proof.VerifiedAt, ttl.Seconds(), proof.Administrative, result.EnrollmentRequired).Scan(&result.ExpiresAt)
 		if err != nil {
 			return err
 		}
 		return audit(ctx, tx, proof.UserID, "login_challenge_started")
 	})
-	return expires, err
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 func requireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof) error {

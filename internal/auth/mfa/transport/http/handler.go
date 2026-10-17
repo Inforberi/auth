@@ -23,6 +23,8 @@ type management interface {
 
 type login interface {
 	Complete(context.Context, service.CompleteLoginInput) (*service.LoginSession, error)
+	StartRequiredEnrollment(context.Context, service.LoginEnrollmentInput) (*service.Enrollment, error)
+	ConfirmRequiredEnrollment(context.Context, service.ConfirmLoginEnrollmentInput) (*service.RecoveryCodes, error)
 }
 
 type recovery interface {

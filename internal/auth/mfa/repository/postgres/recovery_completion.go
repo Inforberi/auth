@@ -48,10 +48,10 @@ func (r *Repository) CompleteRecovery(ctx context.Context, input service.Recover
 		if err != nil {
 			return err
 		}
-		if proof.UserID != input.UserID || (!proof.Administrative && (input.AllowPrimary == nil || !input.AllowPrimary(proof.Method, proof.Issuer))) {
+		if proof.EnrollmentRequired || proof.UserID != input.UserID || (!proof.Administrative && (input.AllowPrimary == nil || !input.AllowPrimary(proof.Method, proof.Issuer))) {
 			return domain.ErrInvalidCode
 		}
-		if err := requireLoginPrimary(ctx, tx, *proof); err != nil {
+		if err := requireLoginPrimary(ctx, tx, proof.PrimaryProof); err != nil {
 			if errors.Is(err, domain.ErrProofRequired) {
 				return domain.ErrInvalidCode
 			}
@@ -78,7 +78,7 @@ func (r *Repository) CompleteRecovery(ctx context.Context, input service.Recover
 		if err != nil {
 			return err
 		}
-		return commitRecoveredFactor(ctx, tx, *proof, input, intent, step)
+		return commitRecoveredFactor(ctx, tx, proof.PrimaryProof, input, intent, step)
 	})
 	if err != nil {
 		return err

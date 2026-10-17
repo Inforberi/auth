@@ -16,13 +16,13 @@ type App struct {
 	definition settings.Document
 }
 
-func New(ctx context.Context, pool *pgxpool.Pool, cfg settings.Config) (*App, error) {
+func New(ctx context.Context, pool *pgxpool.Pool, cfg settings.Config, mfaReady bool) (*App, error) {
 	definition, err := settings.LoadFile(cfg.CatalogFile)
 	if err != nil {
 		return nil, err
 	}
 	catalog := definition.Catalog()
-	repository := postgres.New(pool)
+	repository := postgres.NewWithMFA(pool, mfaReady)
 	permissions := catalog.Permissions()
 	keys := make([]string, 0, len(permissions))
 	for _, permission := range permissions {

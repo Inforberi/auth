@@ -1,5 +1,7 @@
 # Роли и разрешения
 
+A6.3a-local: role list/detail/create/update поддерживают `mfaRequired`. Отсутствие/null при create означает false, при update сохраняет прежнее значение; явное true требует готового MFA и повышает session_revision при усилении политики. Existing permissions/actor/version/delegation/fresh proof/audit guards сохранены; system role не редактируется. Это не выключатель защиты administrative actions. [Enrollment/ограничения и ответы](mfa.md#обязательная-mfa-по-роли--a63a). При изменении только policy/метаданных прежние permissions не переписываются.
+
 ## Что реализовано
 
 Backend access отделён от способов входа. Пользователь имеет один UUID и до 32 назначенных ролей; права — объединение permissions этих ролей. Название роли не участвует в проверке доступа. Пароль, Telegram, Google и email OTP используют одинаковые назначения. Регистрация сама по себе не выдаёт административные права.

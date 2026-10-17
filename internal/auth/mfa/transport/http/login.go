@@ -20,7 +20,11 @@ type ChallengeResponse struct {
 func RespondChallenge(w http.ResponseWriter, challenge *service.LoginChallenge) {
 	sessionhttp.ClearSessionCookie(w)
 	http.SetCookie(w, &http.Cookie{Name: LoginCookie, Value: challenge.Binding, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: challenge.ExpiresAt})
-	httpx.JSON(w, 202, ChallengeResponse{Status: "mfa_required", Challenge: challenge.Token, ExpiresAt: challenge.ExpiresAt})
+	status := "mfa_required"
+	if challenge.EnrollmentRequired {
+		status = "mfa_enrollment_required"
+	}
+	httpx.JSON(w, 202, ChallengeResponse{Status: status, Challenge: challenge.Token, ExpiresAt: challenge.ExpiresAt})
 }
 
 type CompleteLoginRequest struct {

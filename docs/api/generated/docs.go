@@ -427,7 +427,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Full definition, not a patch. Requires access.roles.manage, old and new delegated permissions, fresh password plus MFA and current role version in one transaction. A no-op preserves the version; system roles cannot be changed.",
+                "description": "Replaces the definition; omitted/null mfaRequired preserves its previous value for older clients. Requires access.roles.manage, old and new delegated permissions, fresh password plus MFA and current role version in one transaction. Enabling required MFA invalidates old role-bound sessions. A no-op preserves the version; system roles cannot be changed.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3054,6 +3054,148 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/auth/mfa/login/enrollment": {
+            "post": {
+                "description": "Accepts only an enrollment-required primary challenge with the same browser binding. No full session, account UUID or password is accepted. Secret expires with the existing login challenge; restarting does not extend its deadline.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Start mandatory TOTP enrollment during login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Primary login challenge",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/mfahttp.LoginEnrollmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfa_http.EnrollmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/mfa/login/enrollment/confirm": {
+            "post": {
+                "description": "Requires the primary challenge, browser binding, enrollment token and first TOTP. Commits the factor, recovery codes, auth_version and revocation atomically; returns codes once. Creates no session: sign in again with primary plus MFA.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Confirm mandatory TOTP enrollment during login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Challenge, enrollment token and first code",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/mfahttp.ConfirmLoginEnrollmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfa_http.RecoveryCodesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/mfa/recovery-codes/regenerate": {
             "post": {
                 "description": "Requires fresh primary and MFA proofs. Primary is password, or opt-in verified-email proof for an external-only account. Replaces all recovery codes, returns ten new codes once and revokes sessions/pending challenges atomically. TOTP remains enabled.",
@@ -4915,6 +5057,10 @@ const docTemplate = `{
                 "key": {
                     "type": "string"
                 },
+                "mfaRequired": {
+                    "type": "boolean",
+                    "x-nullable": true
+                },
                 "name": {
                     "type": "string"
                 },
@@ -4963,6 +5109,9 @@ const docTemplate = `{
                 "key": {
                     "type": "string"
                 },
+                "mfaRequired": {
+                    "type": "boolean"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -4992,6 +5141,9 @@ const docTemplate = `{
                 "key": {
                     "type": "string"
                 },
+                "mfaRequired": {
+                    "type": "boolean"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -5019,6 +5171,10 @@ const docTemplate = `{
                 },
                 "key": {
                     "type": "string"
+                },
+                "mfaRequired": {
+                    "type": "boolean",
+                    "x-nullable": true
                 },
                 "name": {
                     "type": "string"
@@ -5826,6 +5982,28 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "verifiedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "mfahttp.ConfirmLoginEnrollmentRequest": {
+            "type": "object",
+            "properties": {
+                "challenge": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "mfahttp.LoginEnrollmentRequest": {
+            "type": "object",
+            "properties": {
+                "challenge": {
                     "type": "string"
                 }
             }

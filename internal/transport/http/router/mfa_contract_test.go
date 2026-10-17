@@ -75,6 +75,22 @@ func (f *contractMFA) Complete(_ context.Context, p mfaservice.CompleteLoginInpu
 	return &mfaservice.LoginSession{Token: mfaBrowser, ExpiresAt: time.Now().Add(time.Hour)}, nil
 }
 
+func (f *contractMFA) StartRequiredEnrollment(_ context.Context, p mfaservice.LoginEnrollmentInput) (*mfaservice.Enrollment, error) {
+	f.calls++
+	if p.Binding != mfaBrowser {
+		return nil, mfadomain.ErrInvalidCode
+	}
+	return &mfaservice.Enrollment{Token: mfaBrowser, Secret: "enrollment-secret", URI: "otpauth://test", ExpiresAt: time.Now().Add(time.Minute)}, f.err
+}
+
+func (f *contractMFA) ConfirmRequiredEnrollment(_ context.Context, p mfaservice.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error) {
+	f.calls++
+	if p.Binding != mfaBrowser {
+		return nil, mfadomain.ErrInvalidCode
+	}
+	return &mfaservice.RecoveryCodes{Codes: []string{"synthetic-recovery-code"}}, f.err
+}
+
 func TestMFAOwnerRoutesAndOrigin(t *testing.T) {
 	for _, path := range []string{"/mfa/totp/enrollment", "/mfa/totp/enrollment/confirm", "/mfa/totp/replacement", "/mfa/totp/replacement/confirm", "/mfa/step-up", "/mfa/recovery-codes/regenerate", "/mfa/totp"} {
 		method := "POST"

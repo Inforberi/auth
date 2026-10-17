@@ -21,7 +21,11 @@ func (r *Repository) CreateRole(ctx context.Context, input service.CreateRoleInp
 			return err
 		}
 		role = domain.Role{Key: input.Key, Name: input.Name, Description: input.Description, Version: 1, Permissions: slices.Clone(input.Permissions)}
-		if err := tx.QueryRow(ctx, `INSERT INTO auth.roles(key,name,description) VALUES ($1,$2,$3) RETURNING id`, role.Key, role.Name, role.Description).Scan(&role.ID); err != nil {
+		role.MFARequired = input.MFARequired != nil && *input.MFARequired
+		if role.MFARequired && !r.mfaReady {
+			return domain.ErrMFANotReady
+		}
+		if err := tx.QueryRow(ctx, `INSERT INTO auth.roles(key,name,description,mfa_required) VALUES ($1,$2,$3,$4) RETURNING id`, role.Key, role.Name, role.Description, role.MFARequired).Scan(&role.ID); err != nil {
 			return err
 		}
 		if err := replacePermissions(ctx, tx, role); err != nil {
@@ -56,21 +60,29 @@ func (r *Repository) UpdateRole(ctx context.Context, input service.UpdateRoleInp
 			return err
 		}
 		role = current
+		if input.MFARequired != nil {
+			role.MFARequired = *input.MFARequired
+		}
+		if role.MFARequired && !r.mfaReady {
+			return domain.ErrMFANotReady
+		}
 		requested := slices.Clone(input.Permissions)
 		slices.Sort(requested)
-		if current.Key == input.Key && current.Name == input.Name && current.Description == input.Description && slices.Equal(current.Permissions, requested) {
+		if current.Key == input.Key && current.Name == input.Name && current.Description == input.Description && current.MFARequired == role.MFARequired && slices.Equal(current.Permissions, requested) {
 			return nil
 		}
 		role.Key, role.Name, role.Description, role.Permissions = input.Key, input.Name, input.Description, requested
-		elevated := slices.ContainsFunc(requested, func(key domain.PermissionKey) bool {
+		elevated := (!current.MFARequired && role.MFARequired) || slices.ContainsFunc(requested, func(key domain.PermissionKey) bool {
 			return !slices.Contains(current.Permissions, key)
 		})
-		if err := tx.QueryRow(ctx, `UPDATE auth.roles SET key=$2,name=$3,description=$4,version=version+1,
-			session_revision=session_revision+CASE WHEN $5 THEN 1 ELSE 0 END WHERE id=$1 RETURNING version`, role.ID, role.Key, role.Name, role.Description, elevated).Scan(&role.Version); err != nil {
+		if err := tx.QueryRow(ctx, `UPDATE auth.roles SET key=$2,name=$3,description=$4,version=version+1,mfa_required=$6,
+			session_revision=session_revision+CASE WHEN $5 THEN 1 ELSE 0 END WHERE id=$1 RETURNING version`, role.ID, role.Key, role.Name, role.Description, elevated, role.MFARequired).Scan(&role.Version); err != nil {
 			return err
 		}
-		if err := replacePermissions(ctx, tx, role); err != nil {
-			return err
+		if !slices.Equal(current.Permissions, requested) {
+			if err := replacePermissions(ctx, tx, role); err != nil {
+				return err
+			}
 		}
 		return recordAudit(ctx, tx, input.Actor, role, "role_updated", "", nil)
 	})

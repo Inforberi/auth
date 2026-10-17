@@ -16,10 +16,11 @@ type UpdateRoleRequest struct {
 	Description     string                 `json:"description"`
 	Permissions     []domain.PermissionKey `json:"permissions" swaggertype:"array,string"`
 	ExpectedVersion int64                  `json:"expectedVersion" binding:"required"`
+	MFARequired     *bool                  `json:"mfaRequired" extensions:"x-nullable"`
 } // @name access_http.UpdateRoleRequest
 
 // @Summary Replace a custom role's definition
-// @Description Full definition, not a patch. Requires access.roles.manage, old and new delegated permissions, fresh password plus MFA and current role version in one transaction. A no-op preserves the version; system roles cannot be changed.
+// @Description Replaces the definition; omitted/null mfaRequired preserves its previous value for older clients. Requires access.roles.manage, old and new delegated permissions, fresh password plus MFA and current role version in one transaction. Enabling required MFA invalidates old role-bound sessions. A no-op preserves the version; system roles cannot be changed.
 // @Tags Admin Access
 // @Accept json
 // @Produce json
@@ -45,7 +46,7 @@ func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	role, err := h.service.UpdateRole(r.Context(), service.UpdateRoleInput{
-		CreateRoleInput: service.CreateRoleInput{Actor: actor, Key: input.Key, Name: input.Name, Description: input.Description, Permissions: input.Permissions},
+		CreateRoleInput: service.CreateRoleInput{Actor: actor, Key: input.Key, Name: input.Name, Description: input.Description, Permissions: input.Permissions, MFARequired: input.MFARequired},
 		RoleID:          domain.RoleID(chi.URLParam(r, "id")), ExpectedVersion: input.ExpectedVersion,
 	})
 	if err != nil {

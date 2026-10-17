@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
@@ -89,27 +90,7 @@ func (r *Repository) confirmEnrollment(ctx context.Context, proof service.Proof,
 		if err != nil {
 			return err
 		}
-		if purpose == "replace" {
-			if _, err := tx.Exec(ctx, `UPDATE auth.mfa_totp SET secret=$2,last_step=$3,enabled_at=clock_timestamp() WHERE user_id=$1`, proof.UserID, secret, step); err != nil {
-				return err
-			}
-			if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_recovery_codes WHERE user_id=$1`, proof.UserID); err != nil {
-				return err
-			}
-		} else if _, err := tx.Exec(ctx, `INSERT INTO auth.mfa_totp(user_id,secret,last_step) VALUES ($1,$2,$3)`, proof.UserID, secret, step); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `INSERT INTO auth.mfa_recovery_codes(user_id,digest) SELECT $1,unnest($2::text[])`, proof.UserID, recovery); err != nil {
-			return err
-		}
-		if err := invalidateFactors(ctx, tx, proof.UserID); err != nil {
-			return err
-		}
-		event := "totp_enabled"
-		if purpose == "replace" {
-			event = "totp_replaced"
-		}
-		return audit(ctx, tx, proof.UserID, event)
+		return activateEnrollment(ctx, tx, proof.UserID, purpose, secret, step, recovery)
 	})
 	if err != nil {
 		return err
@@ -118,4 +99,28 @@ func (r *Repository) confirmEnrollment(ctx context.Context, proof service.Proof,
 		return domain.ErrInvalidCode
 	}
 	return nil
+}
+
+func activateEnrollment(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, purpose string, secret []byte, step int64, recovery []string) error {
+	if purpose == "replace" {
+		if _, err := tx.Exec(ctx, `UPDATE auth.mfa_totp SET secret=$2,last_step=$3,enabled_at=clock_timestamp() WHERE user_id=$1`, user, secret, step); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_recovery_codes WHERE user_id=$1`, user); err != nil {
+			return err
+		}
+	} else if _, err := tx.Exec(ctx, `INSERT INTO auth.mfa_totp(user_id,secret,last_step) VALUES ($1,$2,$3)`, user, secret, step); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO auth.mfa_recovery_codes(user_id,digest) SELECT $1,unnest($2::text[])`, user, recovery); err != nil {
+		return err
+	}
+	if err := invalidateFactors(ctx, tx, user); err != nil {
+		return err
+	}
+	event := "totp_enabled"
+	if purpose == "replace" {
+		event = "totp_replaced"
+	}
+	return audit(ctx, tx, user, event)
 }
