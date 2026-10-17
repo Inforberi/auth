@@ -1,6 +1,6 @@
 # Email-код для JWT-входа — J4b.2b.2-local
 
-17 октября 2026: внутренний email OTP подключён к общей API issuance и [native MFA](native-mfa.md). **App/HTTP/ENV не подключены.** `JWT_ENABLED` не публикует эти операции. Код — основной способ входа, не email verification и не второй фактор.
+17 октября 2026: email OTP подключён к общей API issuance и [native MFA](native-mfa.md). J4b.2c.3 добавляет [App/native HTTP](native-http.md): одного JWT_ENABLED для публикации недостаточно, отдельный native-профиль выключен по умолчанию. Код — основной способ входа, не email verification и не второй фактор.
 
 ## Операции и владельцы
 
@@ -40,4 +40,4 @@ Claims содержат `emailotp`, реальное auth_time и разрешё
 
 Unit/real SQL/race проверяют encrypted mail→code→issuance→refresh, один concurrent winner, committed five-guess cap, profile/namespace isolation, immutable target/purpose, replacement, current block/version/email/grants, consume audit rollback и невозможность повторить код после signing failure. Email→required enrollment→fresh code→MFA completion проверен с реальными TOTP/recovery primitives и финальным email recheck.
 
-Далее J4b.2c: App/native config и HTTP request/confirm/MFA/enrollment/login/refresh/logout. Общий legacy browser/native MFA admission/cardinality локально закрыт в [J4b.2c.1](mfa.md#атомарный-admission--j4b2c1-local). До публикации остаются deployment ceilings, retention scan/backlog/drain/storage, API negative/concurrency и strict consumer J5. HTTPS/native client/SMTP/providers/fleet/lost-commit-reply/load/GC/restore этим блоком не проверены; capacity не установлена.
+[App/native HTTP](native-http.md) request/confirm/MFA/enrollment/login/refresh/logout подключён с deployment guard и negative/concurrent API tests. Общий legacy browser/native MFA admission/cardinality локально закрыт в [J4b.2c.1](mfa.md#атомарный-admission--j4b2c1-local). Strict consumer J5, measured backlog/drain/storage и внешние HTTPS/native client/SMTP/providers/fleet/lost-commit-reply/load/GC/restore не закрыты; capacity не установлена.

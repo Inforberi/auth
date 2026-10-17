@@ -1,6 +1,6 @@
 # JWT из действующей сессии
 
-J3a/J3b-local, 17 октября 2026: реализованы ядро выдачи, disabled-by-default App/ENV, cookie POST exchange и public-only JWKS. **Native login/refresh HTTP и online introspection ещё нет.** Внутренние [refresh](refresh-storage.md) и [первая password API issuance](native-issuance.md) реализованы без native MFA/email OTP/маршрутов. Strict online consumer требует J5; криптографическая проверка сама не проверяет актуальные права. External/fleet/load gates остаются открытыми до rollout.
+J3a/J3b-local, 17 октября 2026: реализованы ядро выдачи, disabled-by-default App/ENV, cookie POST exchange и public-only JWKS. J4b.2c.3 добавляет отдельный [native password/email/MFA/refresh/logout HTTP](native-http.md), выключенный по умолчанию. **Online introspection ещё нет:** strict consumer требует J5, криптографическая проверка сама не проверяет актуальные права. External/fleet/load gates остаются открытыми до rollout.
 
 ## Включение и API
 

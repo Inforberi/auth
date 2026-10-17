@@ -69,15 +69,19 @@ func (h *Handler) Exchange(w http.ResponseWriter, r *http.Request) {
 		h.respondError(w, r, err)
 		return
 	}
+	httpx.JSON(w, 200, exchangeResponse(result))
+}
+
+func exchangeResponse(result *service.ExchangeResult) ExchangeResponse {
 	keys := make([]string, len(result.Scope))
 	for i, key := range result.Scope {
 		keys[i] = string(key)
 	}
 	remaining := max(int64(0), result.ExpiresAt.Unix()-time.Now().Unix())
-	httpx.JSON(w, 200, ExchangeResponse{
+	return ExchangeResponse{
 		AccessToken: result.Raw, TokenType: "Bearer", ExpiresIn: remaining,
 		ExpiresAt: result.ExpiresAt, Audience: result.Audience, Scope: strings.Join(keys, " "),
-	})
+	}
 }
 
 func decodeExchange(w http.ResponseWriter, r *http.Request) (ExchangeRequest, error) {

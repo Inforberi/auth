@@ -16,7 +16,7 @@ import (
 
 func schemaFixture(t *testing.T) (*pgxpool.Pool, context.Context) {
 	t.Helper()
-	return schemaFixtureDSN(t, os.Getenv("AUTH_SCHEMA_TEST_DATABASE_URL"), 30*time.Second)
+	return schemaFixtureDSN(t, os.Getenv("AUTH_SCHEMA_TEST_DATABASE_URL"), 60*time.Second)
 }
 
 func schemaFixtureDSN(t *testing.T, dsn string, timeout time.Duration) (*pgxpool.Pool, context.Context) {

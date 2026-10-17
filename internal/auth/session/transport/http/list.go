@@ -8,6 +8,7 @@ import (
 )
 
 type SessionResponse struct {
+	CredentialProfile string    `json:"credentialProfile" example:"api" enums:"browser,api"`
 	ID                string    `json:"id"`
 	Current           bool      `json:"current"`
 	UserAgent         string    `json:"userAgent"`
@@ -45,7 +46,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	response := SessionsResponse{Sessions: make([]SessionResponse, 0, len(page.Sessions)), NextCursor: page.NextCursor}
 	for _, session := range page.Sessions {
 		response.Sessions = append(response.Sessions, SessionResponse{
-			ID: session.ID, Current: session.ID == auth.SessionID, UserAgent: session.UserAgent,
+			ID: session.ID, CredentialProfile: session.CredentialProfile, Current: session.ID == auth.SessionID, UserAgent: session.UserAgent,
 			IPAddress: session.IPAddress, CreatedAt: session.CreatedAt, ExpiresAt: session.ExpiresAt, AbsoluteExpiresAt: session.AbsoluteExpiresAt,
 		})
 	}

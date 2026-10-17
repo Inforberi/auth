@@ -26,6 +26,7 @@ import (
 )
 
 type Handlers struct {
+	NativeTokens      *tokenhttp.NativeHandler
 	Tokens            *tokenhttp.Handler
 	UserLifecycle     *accounthttp.UserLifecycleHandler
 	UserDirectory     *accounthttp.UserDirectoryHandler
@@ -103,6 +104,7 @@ func New(h Handlers) *chi.Mux {
 		provisioningRoutes(r, h)
 		setupRoutes(r, h)
 		emailBindingRoutes(r, h)
+		nativeTokenRoutes(r, h)
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(browserProtection(h))
 			tokenExchangeRoutes(r, h)

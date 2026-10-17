@@ -16,15 +16,21 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
-func assembleEmailOTP(pool *pgxpool.Pool, redis *redis.Client, mail *mailer.Mailer, sessions *sessionservice.Login, tokens *tokengenerate.TokenManager, cfg *config.Config, log *zap.Logger) (*otphttp.Handler, *otpservice.Delivery, error) {
+type emailOTPApp struct {
+	service  *otpservice.Service
+	handler  *otphttp.Handler
+	delivery *otpservice.Delivery
+}
+
+func assembleEmailOTP(pool *pgxpool.Pool, redis *redis.Client, mail *mailer.Mailer, sessions *sessionservice.Login, tokens *tokengenerate.TokenManager, cfg *config.Config, log *zap.Logger) (*emailOTPApp, error) {
 	if !cfg.EmailOTP.Enabled && !cfg.EmailOTP.ReauthenticationEnabled {
-		return nil, nil, nil
+		return &emailOTPApp{}, nil
 	}
 	cipher, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "email-login:v1")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	repo := otppostgres.New(pool)
 	service := otpservice.New(repo, cipher, passwordredis.New(redis), sessions, tokens, cfg.EmailOTP)
-	return otphttp.New(service, log), otpservice.NewDelivery(repo, cipher, mail), nil
+	return &emailOTPApp{service: service, handler: otphttp.New(service, log), delivery: otpservice.NewDelivery(repo, cipher, mail)}, nil
 }

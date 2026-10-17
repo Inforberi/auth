@@ -21,6 +21,10 @@ import (
 	"go.uber.org/zap"
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
+	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
@@ -29,11 +33,11 @@ import (
 func TestDisabledTokensDoNotOpenResources(t *testing.T) {
 	owned := &resources{}
 	handler, err := assembleTokens(context.Background(), nil, nil, &config.Config{JWT: settings.Config{PrivateKeyFile: "/not-readable", KeySetFile: "/not-readable", ResourceFile: "/not-readable"}},
-		accesssettings.Catalog{}, "", owned, zap.NewNop())
-	if err != nil || handler != nil || len(owned.closers) != 0 {
+		nativeLoginDependencies{}, accesssettings.Catalog{}, "", owned, zap.NewNop())
+	if err != nil || (handler.handler != nil || handler.service != nil || handler.native != nil) || len(owned.closers) != 0 {
 		t.Fatal("disabled JWT opened resources", err)
 	}
-	if _, err := assembleTokens(context.Background(), nil, nil, &config.Config{JWT: settings.Config{Enabled: true}}, accesssettings.Catalog{}, "", owned, zap.NewNop()); err == nil {
+	if _, err := assembleTokens(context.Background(), nil, nil, &config.Config{JWT: settings.Config{Enabled: true}}, nativeLoginDependencies{}, accesssettings.Catalog{}, "", owned, zap.NewNop()); err == nil {
 		t.Fatal("enabled invalid profile accepted")
 	}
 }
@@ -52,8 +56,8 @@ func TestNativeTokenAssemblyRejectsDeploymentBeforeResources(t *testing.T) {
 			want = "JWT_ENABLED"
 		}
 		owned := &resources{}
-		handler, err := assembleTokens(t.Context(), nil, nil, &cfg, accesssettings.Catalog{}, "", owned, zap.NewNop())
-		if handler != nil || err == nil || !strings.Contains(err.Error(), want) || len(owned.closers) != 0 {
+		handler, err := assembleTokens(t.Context(), nil, nil, &cfg, nativeLoginDependencies{}, accesssettings.Catalog{}, "", owned, zap.NewNop())
+		if (handler.handler != nil || handler.service != nil || handler.native != nil) || err == nil || !strings.Contains(err.Error(), want) || len(owned.closers) != 0 {
 			t.Fatal("invalid native deployment reached JWT files/Redis", handler, err)
 		}
 	}
@@ -97,16 +101,32 @@ func TestTokenAssemblyRedis(t *testing.T) {
 		Enabled: true, Issuer: "https://auth.example", SigningKeyID: "synthetic", PrivateKeyFile: privateFile, KeySetFile: publicFile, ResourceFile: resourceFile,
 		AccessTTL: 2 * time.Minute, ActorPerMinute: 30, SessionPerMinute: 10, IPPerMinute: 30, ProjectPerMinute: 3000,
 	}
+	cfg.NativeEnabled, cfg.RefreshIdleTTL, cfg.RefreshAbsoluteTTL, cfg.ProjectPerMinute = true, time.Hour, 2*time.Hour, 60
+	deployment := &config.Config{
+		JWT:       cfg,
+		MFA:       mfaservice.Config{Enabled: true},
+		Session:   sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, AdminIdleTimeout: 30 * time.Minute, AdminAbsoluteTTL: 12 * time.Hour, AdminActivityInterval: time.Minute},
+		Retention: accountservice.RetentionConfig{EmailReservationDays: 30, SessionDays: 30, SecurityAuditDays: 180, BatchSize: 130, Interval: time.Minute},
+	}
 	owned := &resources{}
 	t.Cleanup(owned.close)
-	handler, err := assembleTokens(t.Context(), nil, base, &config.Config{JWT: cfg}, catalog, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", owned, zap.NewNop())
-	if err != nil || handler == nil || len(owned.closers) != 1 {
+	handler, err := assembleTokens(t.Context(), nil, base, deployment, nativeLoginDependencies{password: &passwordservice.PasswordService{}, mfa: &mfaApp{login: &mfaservice.Login{}}, email: &emailOTPApp{}}, catalog, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", owned, zap.NewNop())
+	if err != nil || handler.handler == nil || handler.native == nil || len(owned.closers) != 1 {
 		t.Fatal("JWT assembly failed", err)
 	}
 	w := httptest.NewRecorder()
-	handler.JWKS(w, httptest.NewRequest("GET", "https://auth.example/.well-known/jwks.json", nil))
+	handler.handler.JWKS(w, httptest.NewRequest("GET", "https://auth.example/.well-known/jwks.json", nil))
 	if _, err := authjwt.ParsePublicKeys(w.Body.Bytes()); err != nil {
 		t.Fatal("non-public or malformed JWKS", err)
+	}
+	// Construction only: runtime primary/MFA/SQL behavior is exercised by the disposable SQL suite.
+	native, err := assembleNativeTokens(&handler, &passwordservice.PasswordService{}, &mfaApp{login: &mfaservice.Login{}}, &emailOTPApp{}, deployment, zap.NewNop())
+	if err != nil || native == nil || len(owned.closers) != 1 {
+		t.Fatal("native did not reuse token owner", err)
+	}
+	deployment.EmailOTP.Enabled = true
+	if _, err := assembleNativeTokens(&handler, &passwordservice.PasswordService{}, &mfaApp{login: &mfaservice.Login{}}, &emailOTPApp{}, deployment, zap.NewNop()); err == nil {
+		t.Fatal("native email enabled without adapter")
 	}
 	owned.close()
 	owned.close()

@@ -28,6 +28,10 @@ type exchangeRepo struct {
 	mode  string
 }
 
+func (r *exchangeRepo) LogoutRefresh(_ context.Context, _ RefreshBinding, _ string) error {
+	return r.err
+}
+
 func (r *exchangeRepo) Exchange(ctx context.Context, input ExchangeInput, mode string, sign func(context.Context, SessionProof) (*signing.SignedToken, error)) (*signing.SignedToken, error) {
 	r.calls++
 	r.input, r.mode = input, mode

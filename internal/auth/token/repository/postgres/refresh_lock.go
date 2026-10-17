@@ -35,7 +35,7 @@ func lockRefresh(ctx context.Context, tx pgx.Tx, verifier string) (refreshState,
 	if err := tx.QueryRow(ctx, `SELECT token_hash,credential_profile='api' AND auth_version=$2 AND revoked_at IS NULL
 		AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()
 		AND EXISTS(SELECT 1 FROM auth.role_bound_sessions b WHERE b.id=s.id)
-		FROM auth.sessions s WHERE id=$1 FOR UPDATE OF s`, id, state.AuthVersion).Scan(&state.LedgerHash, &state.Live); err != nil {
+		FROM auth.sessions s WHERE id=$1 AND credential_profile='api' FOR UPDATE OF s`, id, state.AuthVersion).Scan(&state.LedgerHash, &state.Live); err != nil {
 		return state, refreshLookupError(err)
 	}
 	family := &state.Family

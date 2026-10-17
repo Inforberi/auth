@@ -14,6 +14,7 @@ import (
 type Repository interface {
 	Exchange(context.Context, ExchangeInput, string, func(context.Context, SessionProof) (*signing.SignedToken, error)) (*signing.SignedToken, error)
 	ResolveRefresh(context.Context, string) (RefreshBinding, error)
+	LogoutRefresh(context.Context, RefreshBinding, string) error
 	Refresh(context.Context, RefreshParams, func(context.Context, RefreshProof) (*ExchangeResult, error)) (*RefreshResult, error)
 	IssueNative(context.Context, NativeParams, NativeSigner) (*RefreshResult, error)
 	CompleteNativeMFA(context.Context, NativeMFAParams, func(mfaservice.NativeTarget) (string, error), NativeSigner) (*RefreshResult, error)

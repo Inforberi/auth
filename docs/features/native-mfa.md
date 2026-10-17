@@ -1,6 +1,6 @@
 # Native MFA — J4b.2b.1-local
 
-17 октября 2026: реализовано внутреннее завершение password + TOTP/recovery-code входа в API-профиль и обязательная настройка TOTP. J4b.2b.2 подключает [email OTP primary](native-email-otp.md) к тому же workflow. **App/HTTP/ENV не подключены.** Direct native Google/Telegram — J4c. `JWT_ENABLED` пока публикует только существующий cookie exchange/JWKS.
+17 октября 2026: реализовано завершение password + TOTP/recovery-code входа в API-профиль и обязательная настройка TOTP. J4b.2b.2 подключает [email OTP primary](native-email-otp.md) к тому же workflow. J4b.2c.3 добавляет [App/native HTTP](native-http.md), выключенный по умолчанию отдельным deployment flag. Direct native Google/Telegram — J4c; strict online consumer — J5.
 
 ## Операции и владельцы
 
@@ -43,4 +43,4 @@ Recovery code поддержан как MFA factor. Восстановление
 
 Изменена только source000001 up/down; отдельной миграции нет. Новый binary ожидает challenge profile/target columns и trigger **даже при выключенном native профиле**, поскольку browser SQL также использует profile filters. Перед deployment нужен controlled schema/grants upgrade; рабочая БД не менялась и не сбрасывалась. Existing retention очищает native challenge/enrollment по тем же indexed expiry batches; новых tables/workers/pools/dependencies нет.
 
-Далее: App/native configuration и HTTP login/MFA/enrollment/refresh/logout, explicit cookie/Authorization conflict rejection/no-store/safe errors, management profile label и API negative tests. J4b.2c.1 добавляет общий [atomic MFA admission](mfa.md#атомарный-admission--j4b2c1-local), работающий и при JWT disabled: budget denial не выделяет random subject/IP keys и не расходует batch частично. Native token prelookup дополнительно сохранён; стадийный accounting описан явно. До публикации остаются strict consumer J5, retention/drain/storage/deployment, HTTPS/browser/provider/SMTP/fleet/restore/load/GC gates. SQL/unit/race PASS не означает измеренную capacity или production sign-off.
+[Native HTTP](native-http.md) подключён с cookie/Authorization conflict rejection/no-store/safe errors, profile label и negative/concurrent tests. J4b.2c.1 сохраняет общий [atomic MFA admission](mfa.md#атомарный-admission--j4b2c1-local), работающий и при JWT disabled: budget denial не выделяет random subject/IP keys и не расходует batch частично. Native token prelookup дополнительно сохранён; стадийный accounting явный. Strict consumer J5, measured retention/drain/storage/deployment, HTTPS/browser/provider/SMTP/fleet/restore/load/GC gates остаются открытыми. SQL/unit/race PASS не означает capacity или production sign-off.

@@ -51,7 +51,7 @@ func (r *Repository) ListOwnSessions(ctx context.Context, user accountdomain.Use
 			}
 			cursorTime = created
 		}
-		rows, err := tx.Query(ctx, `SELECT id,user_agent,ip_address,created_at,expires_at,absolute_expires_at
+		rows, err := tx.Query(ctx, `SELECT id,user_agent,ip_address,created_at,expires_at,absolute_expires_at,credential_profile
    FROM auth.role_bound_sessions WHERE user_id=$1 AND auth_version=$2 AND revoked_at IS NULL
    AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()
    AND ($3::timestamptz IS NULL OR (created_at,id)<($3::timestamptz,$4::uuid))
@@ -63,7 +63,7 @@ func (r *Repository) ListOwnSessions(ctx context.Context, user accountdomain.Use
 		for rows.Next() {
 			var session domain.Session
 			session.UserID = user
-			if err := rows.Scan(&session.ID, &session.UserAgent, &session.IPAddress, &session.CreatedAt, &session.ExpiresAt, &session.AbsoluteExpiresAt); err != nil {
+			if err := rows.Scan(&session.ID, &session.UserAgent, &session.IPAddress, &session.CreatedAt, &session.ExpiresAt, &session.AbsoluteExpiresAt, &session.CredentialProfile); err != nil {
 				return err
 			}
 			sessions = append(sessions, session)

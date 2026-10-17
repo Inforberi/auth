@@ -47,11 +47,6 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("assemble access and auth policy: %w", err)
 	}
-	tokens, err := assembleTokens(ctx, pool, rdb, cfg, access.Catalog(), cfg.Account.EncryptionKey, resources, log)
-	if err != nil {
-		return nil, fmt.Errorf("assemble JWT: %w", err)
-	}
-
 	now := clock.UTCClock{}
 	tokenGen := tokengenerate.New()
 	mail, smtpSettings, err := assembleSMTP(ctx, pool, rdb, cfg, log)
@@ -79,11 +74,12 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	}
 	sessionRepo := sessionpostgres.New(pool)
 	sessionSvc := sessionservice.New(now, sessionRepo, tokenGen, cfg.Session)
-	loginSvc, mfaHandler, mfaDelivery, err := assembleMFA(ctx, pool, rdb, sessionSvc, tokenGen, mail, cfg, log)
+	mfa, err := assembleMFA(ctx, pool, rdb, sessionSvc, tokenGen, mail, cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble MFA: %w", err)
 	}
-	emailOTP, emailOTPDelivery, err := assembleEmailOTP(pool, rdb, mail, loginSvc, tokenGen, cfg, log)
+	loginSvc := mfa.sessions
+	emailOTP, err := assembleEmailOTP(pool, rdb, mail, loginSvc, tokenGen, cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble email OTP: %w", err)
 	}
@@ -97,6 +93,10 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		return policy.CheckPublic(ctx, "password", registration)
 	})
 	recoverySvc := passwordservice.NewRecovery(passwordRepo, resetCipher, passwordLimits, mail, argonHash, cfg.Password)
+	tokens, err := assembleTokens(ctx, pool, rdb, cfg, nativeLoginDependencies{password: passwordSvc, mfa: mfa, email: emailOTP}, access.Catalog(), cfg.Account.EncryptionKey, resources, log)
+	if err != nil {
+		return nil, fmt.Errorf("assemble JWT: %w", err)
+	}
 	passwordHandler := passwordhttp.New(passwordSvc,
 		log.With(zap.String("feature", "password_auth"), zap.String("layer", "transport")))
 	middleware := sessionhttp.New(sessionSvc, log)
@@ -140,7 +140,8 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		mailTest = dev.NewMailTest(mail, log)
 	}
 	handler := router.New(router.Handlers{
-		Tokens:            tokens,
+		Tokens:            tokens.handler,
+		NativeTokens:      tokens.native,
 		UserDirectory:     accounthttp.NewUserDirectory(accountservice.NewUserDirectory(accountRepo), log),
 		UserLifecycle:     accounthttp.NewUserLifecycle(accountservice.NewUserLifecycle(accountRepo), log),
 		Provisioning:      provisioningHandler,
@@ -152,7 +153,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		RetentionSettings: settingshttp.NewRetention(retentionSettings, log),
 		Setup:             setup,
 		EmailBinding:      emailBinding,
-		MFA:               mfaHandler,
+		MFA:               mfa.handler,
 		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
 		Activity:          sessionhttp.NewActivity(sessionservice.NewActivity(sessionRepo), log),
 		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessionRepo, tokenGen), log),
@@ -165,7 +166,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		TemporaryPassword: temporaryHandler,
 		Telegram:          telegram,
 		Google:            google,
-		EmailOTP:          emailOTP,
+		EmailOTP:          emailOTP.handler,
 		PasswordHandler:   passwordHandler,
 		Middleware:        middleware,
 		MailTest:          mailTest,
@@ -183,7 +184,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		Provisioning:       provisioning,
 		TemporaryPasswords: temporary,
 		resources:          resources,
-		serve:              serveAuth(log, cfg.Server, handler, retentionSvc, recoverySvc, accountSvc, mfaDelivery, emailOTPDelivery),
+		serve:              serveAuth(log, cfg.Server, handler, retentionSvc, recoverySvc, accountSvc, mfa.delivery, emailOTP.delivery),
 	}, nil
 }
 

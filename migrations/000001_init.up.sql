@@ -609,7 +609,7 @@ CREATE TABLE auth.refresh_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
   session_id UUID NOT NULL,
-  event TEXT NOT NULL CHECK (event IN ('family_created','rotated','reuse_detected')),
+  event TEXT NOT NULL CHECK (event IN ('family_created','rotated','reuse_detected','logged_out')),
   generation INTEGER NOT NULL CHECK (generation BETWEEN 0 AND 4095),
   created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );

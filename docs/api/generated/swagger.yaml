@@ -475,6 +475,12 @@ definitions:
         type: string
       createdAt:
         type: string
+      credentialProfile:
+        enum:
+        - browser
+        - api
+        example: api
+        type: string
       current:
         type: boolean
       expiresAt:
@@ -1047,6 +1053,150 @@ definitions:
           $ref: '#/definitions/token_http.PublicKey'
         type: array
     type: object
+  token_http.NativeChallengeResponse:
+    properties:
+      binding:
+        type: string
+      challenge:
+        type: string
+      expiresAt:
+        type: string
+      nextStep:
+        enum:
+        - mfa
+        - enrollment
+        type: string
+    type: object
+  token_http.NativeEmailConfirmRequest:
+    properties:
+      binding:
+        type: string
+      code:
+        type: string
+    required:
+    - binding
+    - code
+    type: object
+  token_http.NativeEmailRequest:
+    properties:
+      audience:
+        type: string
+      email:
+        type: string
+      scope:
+        items:
+          type: string
+        type: array
+    required:
+    - audience
+    - email
+    - scope
+    type: object
+  token_http.NativeEmailResponse:
+    properties:
+      binding:
+        type: string
+      expiresAt:
+        type: string
+      status:
+        type: string
+    type: object
+  token_http.NativeEnrollmentConfirmRequest:
+    properties:
+      binding:
+        type: string
+      challenge:
+        type: string
+      code:
+        type: string
+      token:
+        type: string
+    required:
+    - binding
+    - challenge
+    - code
+    - token
+    type: object
+  token_http.NativeEnrollmentRequest:
+    properties:
+      binding:
+        type: string
+      challenge:
+        type: string
+    required:
+    - binding
+    - challenge
+    type: object
+  token_http.NativeEnrollmentResponse:
+    properties:
+      expiresAt:
+        type: string
+      secret:
+        type: string
+      token:
+        type: string
+      uri:
+        type: string
+    type: object
+  token_http.NativeMFARequest:
+    properties:
+      binding:
+        type: string
+      challenge:
+        type: string
+      code:
+        type: string
+      recovery:
+        type: boolean
+    required:
+    - binding
+    - challenge
+    - code
+    type: object
+  token_http.NativePasswordRequest:
+    properties:
+      audience:
+        type: string
+      email:
+        type: string
+      password:
+        type: string
+      scope:
+        items:
+          type: string
+        type: array
+    required:
+    - audience
+    - email
+    - password
+    - scope
+    type: object
+  token_http.NativeRecoveryCodesResponse:
+    properties:
+      codes:
+        items:
+          type: string
+        type: array
+    type: object
+  token_http.NativeResponse:
+    properties:
+      accessToken:
+        type: string
+      audience:
+        type: string
+      expiresAt:
+        type: string
+      expiresIn:
+        type: integer
+      refreshExpiresAt:
+        type: string
+      refreshToken:
+        type: string
+      scope:
+        type: string
+      tokenType:
+        type: string
+    type: object
   token_http.PublicKey:
     properties:
       alg:
@@ -1067,6 +1217,13 @@ definitions:
         type: string
       "y":
         type: string
+    type: object
+  token_http.RefreshRequest:
+    properties:
+      refreshToken:
+        type: string
+    required:
+    - refreshToken
     type: object
 info:
   contact: {}
@@ -4154,6 +4311,302 @@ paths:
       summary: Confirm protected TOTP replacement
       tags:
       - MFA
+  /api/v1/auth/native/email/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Native client only. One-use binding/code, not a browser challenge.
+        Audience/scope come only from stored request. Email code is the primary method,
+        not MFA. If issuance fails after code consumption, request a new code; no
+        retry/grace or intermediate cookie session.
+      parameters:
+      - description: Native binding and email code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/token_http.NativeEmailConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/token_http.NativeResponse'
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/token_http.NativeChallengeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Sign in with a native email code
+      tags:
+      - Native tokens
+  /api/v1/auth/native/email/request:
+    post:
+      consumes:
+      - application/json
+      description: Native client only, no Origin/Cookie/Authorization/query. Neutral
+        accepted response for unknown or ineligible accounts; code only for eligible
+        existing accounts. Store the returned binding in protected client memory.
+        Audience/scope are bound server-side. No browser flow cookie.
+      parameters:
+      - description: Email and resource scope
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/token_http.NativeEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/token_http.NativeEmailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Request a native email login code
+      tags:
+      - Native tokens
+  /api/v1/auth/native/mfa/complete:
+    post:
+      consumes:
+      - application/json
+      description: Cookie-free native challenge only, never browser/private-admin
+        proof. Recovery defaults to false (TOTP); true selects one recovery code.
+        Factor consumption, session/family issuance and audit commit atomically. Parallel/replayed
+        attempts cannot create independent successors. No Origin/Cookie/Authorization/query.
+      parameters:
+      - description: Native challenge, binding and factor
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/token_http.NativeMFARequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/token_http.NativeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Complete native MFA login
+      tags:
+      - Native tokens
+  /api/v1/auth/native/mfa/enrollment:
+    post:
+      consumes:
+      - application/json
+      description: Only a native enrollment-required primary challenge and its binding.
+        No Origin/Cookie/Authorization/query. Returns the enrollment secret once for
+        setup, no access or refresh credentials. Repeating start does not extend the
+        primary challenge deadline.
+      parameters:
+      - description: Native enrollment-required challenge
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/token_http.NativeEnrollmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/token_http.NativeEnrollmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Start required native TOTP enrollment
+      tags:
+      - Native tokens
+  /api/v1/auth/native/mfa/enrollment/confirm:
+    post:
+      consumes:
+      - application/json
+      description: 'Commits TOTP, recovery codes, version bump and revocation together.
+        Codes returned once. Does not issue tokens: perform a fresh primary login
+        then MFA. Native challenge/binding only; no Origin/Cookie/Authorization/query
+        or cookie mutations.'
+      parameters:
+      - description: Primary challenge, native binding, enrollment token and first
+          TOTP
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/token_http.NativeEnrollmentConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/token_http.NativeRecoveryCodesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Confirm required native TOTP enrollment
+      tags:
+      - Native tokens
+  /api/v1/auth/native/password/login:
+    post:
+      consumes:
+      - application/json
+      description: 'Cookie-free native client only: Origin, Cookie, Authorization
+        and query parameters are rejected. JSON <=8 KiB. Uses current password policy
+        and primary checks. Required MFA/enrollment returns only a bound restricted
+        challenge. No browser session is created. Strict JWT use requires an online
+        authority check at the consumer.'
+      parameters:
+      - description: Credentials and resource scope
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/token_http.NativePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/token_http.NativeResponse'
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/token_http.NativeChallengeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Sign in to the native API with a password
+      tags:
+      - Native tokens
   /api/v1/auth/reauthenticate/email/confirm:
     post:
       consumes:
@@ -4864,6 +5317,94 @@ paths:
       summary: Issue an access JWT from the current cookie session
       tags:
       - Tokens
+  /api/v1/auth/token/logout:
+    post:
+      consumes:
+      - application/json
+      description: Native JSON credential only; no Origin/Cookie/Authorization/query.
+        Repeated or unknown well-formed refresh returns 204. A known current or spent
+        credential revokes only its own family; never logout-all. Does not remove
+        reuse history. Local JWTs remain valid until their published expiry window;
+        strict consumers require online authority.
+      parameters:
+      - description: Opaque refresh credential
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/token_http.RefreshRequest'
+      responses:
+        "204":
+          description: Logged out
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Revoke the native refresh family and its API session
+      tags:
+      - Native tokens
+  /api/v1/auth/token/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Native JSON credential only; no Origin/Cookie/Authorization/query.
+        Single-flight required. Replay of a known spent credential commits family/session
+        revocation before 401. No retry/grace on lost responses. First rotation can
+        be immediate, later >=30s; 4096 credentials/family, then sign in again. Does
+        not extend absolute lifetime, scope or assurance.
+      parameters:
+      - description: Current opaque refresh credential
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/token_http.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/token_http.NativeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Rotate native refresh and issue an access token
+      tags:
+      - Native tokens
   /api/v1/dev/send-mail:
     post:
       consumes:

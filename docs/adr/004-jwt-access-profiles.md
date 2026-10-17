@@ -1,6 +1,6 @@
 # ADR 004: JWT-профили и границы доверия
 
-Статус: проектное решение J1, 17 октября 2026. Пользователь согласовал стандартный Bearer JWT, отдельный native/API профиль и настраиваемую локальную проверку для дополнительных backend. J2/J3a/J3b-local реализованы: disabled-by-default session exchange/публичный JWKS с SQL authority и Redis budgets. J4a/J4b.1-local реализуют storage и transaction-owned refresh core. **Native login/refresh HTTP и online middleware пока нет.** Остальные пункты — обязательный контракт следующих этапов, не действующий API. [Порядок реализации](../planning/jwt-access.md), [базовая authority](002-sessions-and-transactions.md).
+Статус: проектное решение J1, 17 октября 2026. Пользователь согласовал стандартный Bearer JWT, отдельный native/API профиль и настраиваемую локальную проверку для дополнительных backend. J2/J3a/J3b-local реализуют optional session exchange/JWKS; J4b.2c.3-local подключает [native password/email/MFA/enrollment/refresh/logout HTTP](../features/native-http.md) с SQL authority и Redis budgets, disabled-by-default. **Online consumer/middleware ещё нет (J5); внешняя приёмка не закрыта.** Неотмеченные как реализованные пункты ниже — контракт следующих этапов. [Порядок реализации](../planning/jwt-access.md), [базовая authority](002-sessions-and-transactions.md).
 
 ## 1. Профили
 
@@ -56,7 +56,7 @@ Deployment audience allowlist ≤32 entries, ID ≤128 ASCII bytes. У audience 
 
 ## 4. Выдача, renew и refresh family
 
-J4a-local реализует [storage/profile foundation](../features/refresh-storage.md), J4b.1-local — refresh core, J4b.2a-local — [первую password API issuance](../features/native-issuance.md), J4b.2b.1-local — [native MFA/enrollment](../features/native-mfa.md), J4b.2b.2-local — [email OTP binding](../features/native-email-otp.md). NativeLogin.Begin возвращает credentials либо purpose-bound challenge; factor consume и API issuance коммитятся вместе, без повышения primary/private-admin assurance. Email primary consume — отдельный одноразовый workflow до Begin, его успех не откатывается последующим issuance failure. Первый refresh поколения0 может rotate сразу, затем между rotations≥30s. Owner коммитит reuse/ошибочную MFA попытку до отказа; dependency/signing failure не маскируется под успешное security mutation. Неопределённый сетевой commit не гарантирует rollback, raw не выдаётся и нужен новый вход. Native App/HTTP остаются до публикации.
+J4a-local реализует [storage/profile foundation](../features/refresh-storage.md), J4b.1-local — refresh core, J4b.2a-local — [первую password API issuance](../features/native-issuance.md), J4b.2b.1-local — [native MFA/enrollment](../features/native-mfa.md), J4b.2b.2-local — [email OTP binding](../features/native-email-otp.md). NativeLogin.Begin возвращает credentials либо purpose-bound challenge; factor consume и API issuance коммитятся вместе, без повышения primary/private-admin assurance. Email primary consume — отдельный одноразовый workflow до Begin, его успех не откатывается последующим issuance failure. Первый refresh поколения0 может rotate сразу, затем между rotations≥30s. Owner коммитит reuse/ошибочную MFA попытку до отказа; dependency/signing failure не маскируется под успешное security mutation. Неопределённый сетевой commit не гарантирует rollback, raw не выдаётся и нужен новый вход. Native App/HTTP и собственный atomic logout подключены J4b.2c.3-local, выключены по умолчанию; strict online consumer и внешняя приёмка остаются J5/J7.
 
 J3a/J3b-local реализуют [session exchange](../features/jwt-exchange.md) с SQL guards/commit audit/Redis budgets и optional HTTP/App/config/JWKS. Required password email verification проверяется по current SQL policy; отключение primary method само по себе не logout. Proof clarification: существующий ledger хранит общий факт MFA, поэтому exchange использует factor `amr=mfa`, не заявляя неизвестный TOTP/recovery mechanism. Более конкретные otp/recovery допустимы только при известном механизме.
 
@@ -108,6 +108,8 @@ Restore: traffic закрыт; восстановленные sessions/challenge
 | POST `/api/v1/auth/native/email/request` | Primary input | `{email,audience,scope}` → нейтральный accepted, existing code/outbox/limits |
 | POST `/api/v1/auth/native/email/confirm` | Bound primary challenge | Restricted challenge либо native result |
 | POST `/api/v1/auth/native/mfa/complete` | Bound native challenge | После текущих MFA checks → native result |
+| POST `/api/v1/auth/native/mfa/enrollment` | Native enrollment-required challenge + binding | Enrollment token/secret/URI без access/refresh |
+| POST `/api/v1/auth/native/mfa/enrollment/confirm` | Native challenge/binding/enrollment token + TOTP | Recovery codes один раз, затем новый primary login |
 | POST `/api/v1/auth/token/refresh` | Native opaque refresh в JSON | `{refreshToken}` → один successor + access result |
 | POST `/api/v1/auth/token/logout` | Native opaque refresh в JSON | Revoke собственной family/session; нейтральный repeat, без чужого logout-all |
 | POST `/api/v1/internal/auth/token/introspect` | Consumer HTTP Basic | `{token}` → inactive или связанный active decision |

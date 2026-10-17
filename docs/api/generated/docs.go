@@ -4319,6 +4319,426 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/auth/native/email/confirm": {
+            "post": {
+                "description": "Native client only. One-use binding/code, not a browser challenge. Audience/scope come only from stored request. Email code is the primary method, not MFA. If issuance fails after code consumption, request a new code; no retry/grace or intermediate cookie session.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Native tokens"
+                ],
+                "summary": "Sign in with a native email code",
+                "parameters": [
+                    {
+                        "description": "Native binding and email code",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativeEmailConfirmRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativeResponse"
+                        }
+                    },
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativeChallengeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/native/email/request": {
+            "post": {
+                "description": "Native client only, no Origin/Cookie/Authorization/query. Neutral accepted response for unknown or ineligible accounts; code only for eligible existing accounts. Store the returned binding in protected client memory. Audience/scope are bound server-side. No browser flow cookie.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Native tokens"
+                ],
+                "summary": "Request a native email login code",
+                "parameters": [
+                    {
+                        "description": "Email and resource scope",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativeEmailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativeEmailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/native/mfa/complete": {
+            "post": {
+                "description": "Cookie-free native challenge only, never browser/private-admin proof. Recovery defaults to false (TOTP); true selects one recovery code. Factor consumption, session/family issuance and audit commit atomically. Parallel/replayed attempts cannot create independent successors. No Origin/Cookie/Authorization/query.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Native tokens"
+                ],
+                "summary": "Complete native MFA login",
+                "parameters": [
+                    {
+                        "description": "Native challenge, binding and factor",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativeMFARequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/native/mfa/enrollment": {
+            "post": {
+                "description": "Only a native enrollment-required primary challenge and its binding. No Origin/Cookie/Authorization/query. Returns the enrollment secret once for setup, no access or refresh credentials. Repeating start does not extend the primary challenge deadline.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Native tokens"
+                ],
+                "summary": "Start required native TOTP enrollment",
+                "parameters": [
+                    {
+                        "description": "Native enrollment-required challenge",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativeEnrollmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativeEnrollmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/native/mfa/enrollment/confirm": {
+            "post": {
+                "description": "Commits TOTP, recovery codes, version bump and revocation together. Codes returned once. Does not issue tokens: perform a fresh primary login then MFA. Native challenge/binding only; no Origin/Cookie/Authorization/query or cookie mutations.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Native tokens"
+                ],
+                "summary": "Confirm required native TOTP enrollment",
+                "parameters": [
+                    {
+                        "description": "Primary challenge, native binding, enrollment token and first TOTP",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativeEnrollmentConfirmRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativeRecoveryCodesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/native/password/login": {
+            "post": {
+                "description": "Cookie-free native client only: Origin, Cookie, Authorization and query parameters are rejected. JSON \u003c=8 KiB. Uses current password policy and primary checks. Required MFA/enrollment returns only a bound restricted challenge. No browser session is created. Strict JWT use requires an online authority check at the consumer.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Native tokens"
+                ],
+                "summary": "Sign in to the native API with a password",
+                "parameters": [
+                    {
+                        "description": "Credentials and resource scope",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativeResponse"
+                        }
+                    },
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativeChallengeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/reauthenticate/email/confirm": {
             "post": {
                 "description": "Same owner/session/version and one-time flow cookie; rotates the existing session token atomically without extending lifetime. Grants a five-minute email proof, not password proof, MFA proof or administrative permissions. Existing MFA is still required to replace or disable a factor.",
@@ -5312,6 +5732,128 @@ const docTemplate = `{
                     },
                     "503": {
                         "description": "temporarily_unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/token/logout": {
+            "post": {
+                "description": "Native JSON credential only; no Origin/Cookie/Authorization/query. Repeated or unknown well-formed refresh returns 204. A known current or spent credential revokes only its own family; never logout-all. Does not remove reuse history. Local JWTs remain valid until their published expiry window; strict consumers require online authority.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Native tokens"
+                ],
+                "summary": "Revoke the native refresh family and its API session",
+                "parameters": [
+                    {
+                        "description": "Opaque refresh credential",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/token_http.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Logged out"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/token/refresh": {
+            "post": {
+                "description": "Native JSON credential only; no Origin/Cookie/Authorization/query. Single-flight required. Replay of a known spent credential commits family/session revocation before 401. No retry/grace on lost responses. First rotation can be immediate, later \u003e=30s; 4096 credentials/family, then sign in again. Does not extend absolute lifetime, scope or assurance.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Native tokens"
+                ],
+                "summary": "Rotate native refresh and issue an access token",
+                "parameters": [
+                    {
+                        "description": "Current opaque refresh credential",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/token_http.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/token_http.NativeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -6318,6 +6860,14 @@ const docTemplate = `{
                 "createdAt": {
                     "type": "string"
                 },
+                "credentialProfile": {
+                    "type": "string",
+                    "enum": [
+                        "browser",
+                        "api"
+                    ],
+                    "example": "api"
+                },
                 "current": {
                     "type": "boolean"
                 },
@@ -7193,6 +7743,221 @@ const docTemplate = `{
                 }
             }
         },
+        "token_http.NativeChallengeResponse": {
+            "type": "object",
+            "properties": {
+                "binding": {
+                    "type": "string"
+                },
+                "challenge": {
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "type": "string"
+                },
+                "nextStep": {
+                    "type": "string",
+                    "enum": [
+                        "mfa",
+                        "enrollment"
+                    ]
+                }
+            }
+        },
+        "token_http.NativeEmailConfirmRequest": {
+            "type": "object",
+            "required": [
+                "binding",
+                "code"
+            ],
+            "properties": {
+                "binding": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string"
+                }
+            }
+        },
+        "token_http.NativeEmailRequest": {
+            "type": "object",
+            "required": [
+                "audience",
+                "email",
+                "scope"
+            ],
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "scope": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "token_http.NativeEmailResponse": {
+            "type": "object",
+            "properties": {
+                "binding": {
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "token_http.NativeEnrollmentConfirmRequest": {
+            "type": "object",
+            "required": [
+                "binding",
+                "challenge",
+                "code",
+                "token"
+            ],
+            "properties": {
+                "binding": {
+                    "type": "string"
+                },
+                "challenge": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "token_http.NativeEnrollmentRequest": {
+            "type": "object",
+            "required": [
+                "binding",
+                "challenge"
+            ],
+            "properties": {
+                "binding": {
+                    "type": "string"
+                },
+                "challenge": {
+                    "type": "string"
+                }
+            }
+        },
+        "token_http.NativeEnrollmentResponse": {
+            "type": "object",
+            "properties": {
+                "expiresAt": {
+                    "type": "string"
+                },
+                "secret": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                },
+                "uri": {
+                    "type": "string"
+                }
+            }
+        },
+        "token_http.NativeMFARequest": {
+            "type": "object",
+            "required": [
+                "binding",
+                "challenge",
+                "code"
+            ],
+            "properties": {
+                "binding": {
+                    "type": "string"
+                },
+                "challenge": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "recovery": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "token_http.NativePasswordRequest": {
+            "type": "object",
+            "required": [
+                "audience",
+                "email",
+                "password",
+                "scope"
+            ],
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "scope": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "token_http.NativeRecoveryCodesResponse": {
+            "type": "object",
+            "properties": {
+                "codes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "token_http.NativeResponse": {
+            "type": "object",
+            "properties": {
+                "accessToken": {
+                    "type": "string"
+                },
+                "audience": {
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "type": "string"
+                },
+                "expiresIn": {
+                    "type": "integer"
+                },
+                "refreshExpiresAt": {
+                    "type": "string"
+                },
+                "refreshToken": {
+                    "type": "string"
+                },
+                "scope": {
+                    "type": "string"
+                },
+                "tokenType": {
+                    "type": "string"
+                }
+            }
+        },
         "token_http.PublicKey": {
             "type": "object",
             "properties": {
@@ -7221,6 +7986,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "y": {
+                    "type": "string"
+                }
+            }
+        },
+        "token_http.RefreshRequest": {
+            "type": "object",
+            "required": [
+                "refreshToken"
+            ],
+            "properties": {
+                "refreshToken": {
                     "type": "string"
                 }
             }

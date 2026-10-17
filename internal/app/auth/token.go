@@ -20,29 +20,35 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
-func assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client, deployment *config.Config, catalog accesssettings.Catalog, root string, owned *resources, log *zap.Logger) (*tokenhttp.Handler, error) {
+type tokenApp struct {
+	service *service.Service
+	handler *tokenhttp.Handler
+	native  *tokenhttp.NativeHandler
+}
+
+func assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client, deployment *config.Config, login nativeLoginDependencies, catalog accesssettings.Catalog, root string, owned *resources, log *zap.Logger) (tokenApp, error) {
 	native, err := deployment.NativeJWTPolicy()
 	if err != nil {
-		return nil, err
+		return tokenApp{}, err
 	}
 	cfg := deployment.JWT
 	if !cfg.Enabled {
-		return nil, nil
+		return tokenApp{}, nil
 	}
 	definitions, err := settings.LoadResources(cfg.ResourceFile)
 	if err != nil {
-		return nil, err
+		return tokenApp{}, err
 	}
 	signer, err := signing.Load(signing.KeyConfig{
 		Enabled: true, Issuer: cfg.Issuer, SigningKeyID: cfg.SigningKeyID,
 		PrivateKeyFile: cfg.PrivateKeyFile, KeySetFile: cfg.KeySetFile,
 	})
 	if err != nil {
-		return nil, err
+		return tokenApp{}, err
 	}
 	digest, err := secretbox.NewScoped(root, "jwt-issuance-limits:v1")
 	if err != nil {
-		return nil, err
+		return tokenApp{}, err
 	}
 	// Retry policy is client-global in go-redis. This bounded pool does not change existing Auth clients.
 	opts := *base.Options()
@@ -60,16 +66,21 @@ func assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client,
 		SessionPerMinute: cfg.SessionPerMinute, IPPerMinute: cfg.IPPerMinute, ProjectPerMinute: cfg.ProjectPerMinute,
 	})
 	if err != nil {
-		return nil, err
+		return tokenApp{}, err
 	}
 	svc, err := service.New(tokenpostgres.New(pool), signer, limiter, tokengenerate.New(), service.Config{AccessTTL: cfg.AccessTTL, Resources: definitions, Native: native}, catalog)
 	if err != nil {
-		return nil, err
+		return tokenApp{}, err
 	}
 	ready, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	if err := client.Ping(ready).Err(); err != nil {
-		return nil, err
+		return tokenApp{}, err
 	}
-	return tokenhttp.New(svc, signer.PublicJWKS(), log), nil
+	assembly := tokenApp{service: svc, handler: tokenhttp.New(svc, signer.PublicJWKS(), log)}
+	assembly.native, err = assembleNativeTokens(&assembly, login.password, login.mfa, login.email, deployment, log)
+	if err != nil {
+		return tokenApp{}, err
+	}
+	return assembly, nil
 }

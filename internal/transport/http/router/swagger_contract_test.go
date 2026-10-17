@@ -28,9 +28,14 @@ func TestSwaggerMatchesRoutes(t *testing.T) {
 		t.Run(env, func(t *testing.T) {
 			routes := map[string]bool{}
 			h := contractHandlers(env)
+			h.Config.JWT.NativeEnabled = true
+			h.NativeTokens = nativeContractHandlers(&nativeContract{}).NativeTokens
 			h.Config.JWT.Enabled = true
 			h.Tokens = tokenhttp.New(&contractExchange{}, []byte(`{"keys":[]}`), zap.NewNop())
 			err := chi.Walk(New(h), func(method, path string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+				if method == http.MethodOptions {
+					return nil
+				} // Transport preflight is rejected, not an application operation.
 				routes[strings.ToLower(method)+" "+path] = true
 				if _, ok := doc.Paths[path][strings.ToLower(method)]; !ok {
 					t.Errorf("undocumented route: %s %s", method, path)
@@ -66,6 +71,17 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 	}{
 		{"token_http.ExchangeRequest", tokenhttp.ExchangeRequest{Scope: []accessdomain.PermissionKey{}}},
 		{"token_http.ExchangeResponse", tokenhttp.ExchangeResponse{}},
+		{"token_http.NativePasswordRequest", tokenhttp.NativePasswordRequest{Scope: []accessdomain.PermissionKey{}}},
+		{"token_http.NativeEmailRequest", tokenhttp.NativeEmailRequest{Scope: []accessdomain.PermissionKey{}}},
+		{"token_http.NativeEmailConfirmRequest", tokenhttp.NativeEmailConfirmRequest{}},
+		{"token_http.NativeEmailResponse", tokenhttp.NativeEmailResponse{}},
+		{"token_http.NativeMFARequest", tokenhttp.NativeMFARequest{}},
+		{"token_http.NativeEnrollmentRequest", tokenhttp.NativeEnrollmentRequest{}},
+		{"token_http.NativeEnrollmentConfirmRequest", tokenhttp.NativeEnrollmentConfirmRequest{}},
+		{"token_http.NativeEnrollmentResponse", tokenhttp.NativeEnrollmentResponse{}},
+		{"token_http.NativeRecoveryCodesResponse", tokenhttp.NativeRecoveryCodesResponse{Codes: []string{}}},
+		{"token_http.NativeChallengeResponse", tokenhttp.NativeChallengeResponse{}},
+		{"token_http.RefreshRequest", tokenhttp.RefreshRequest{}},
 		{"token_http.JWKSResponse", tokenhttp.JWKSResponse{Keys: []tokenhttp.PublicKey{}}},
 		{"token_http.PublicKey", tokenhttp.PublicKey{Operations: []string{"verify"}}},
 		{"password_http.ForgotRequest", passwordhttp.ForgotRequest{}},

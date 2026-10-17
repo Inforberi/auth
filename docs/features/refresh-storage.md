@@ -1,6 +1,6 @@
 # Refresh storage — J4a-local
 
-17 октября 2026: J4a-local реализует storage/profile foundation, J4b.1-local — transaction-owned refresh, J4b.2a — [первую password API issuance](native-issuance.md), J4b.2b.1 — [native MFA/enrollment](native-mfa.md), J4b.2b.2 — [email OTP binding](native-email-otp.md). **Это ещё не публичный native login/refresh API.** App/HTTP admission/error/transport contract остаётся открытым. `JWT_ENABLED` по-прежнему публикует только существующий [cookie session exchange](jwt-exchange.md), не native-профиль.
+17 октября 2026: J4a-local реализует storage/profile foundation, J4b.1-local — transaction-owned refresh, J4b.2a — [первую password API issuance](native-issuance.md), J4b.2b.1 — [native MFA/enrollment](native-mfa.md), J4b.2b.2 — [email OTP binding](native-email-otp.md). J4b.2c.3 добавляет [native HTTP и logout](native-http.md), выключенные по умолчанию отдельным флагом. `JWT_ENABLED` без native enable публикует только [cookie session exchange/JWKS](jwt-exchange.md). Внешние gates/J5 остаются открытыми.
 
 ## Владельцы и границы
 
@@ -20,7 +20,7 @@ SQL primitives принимают `pgx.Tx` только внутри repository 
 
 ## Профиль ledger
 
-`auth.sessions.credential_profile` — immutable `browser` (default) либо `api`. API row требует primary_verified_at, но **наличие timestamp не заменяет реальную проверку primary/MFA coordinator**. Profile нельзя перевести UPDATE из browser в api или обратно. Существующие browser constructors неизменны; внутренний IssueNative создаёт API row только после текущих password/reference/policy/version guards, при MFA requirement отказывает. App/native HTTP ещё не подключены.
+`auth.sessions.credential_profile` — immutable `browser` (default) либо `api`. API row требует primary_verified_at, но **наличие timestamp не заменяет реальную проверку primary/MFA coordinator**. Profile нельзя перевести UPDATE из browser в api или обратно. Существующие browser constructors неизменны; IssueNative создаёт API row только после текущих password/reference/policy/version guards, при MFA requirement отказывает. App HTTP coordinator завершает MFA отдельным атомарным native workflow, не browser session exchange.
 
 Cookie lookup/renew/rotate/password reauthentication/activity/management-caller и cookie JWT exchange требуют browser profile. Даже знание API ledger verifier не даёт cookie authentication или activity renew. Browser owner может перечислять/отзывать собственные sessions разных профилей через общий ledger; API verifier не становится browser management principal. Reset/logout-all/block/delete/auth_version/role-binding invalidation остаются общими, не второй user/session store.
 
@@ -63,7 +63,7 @@ Owner использует Read Committed, bounded overall context и Access sha
 
 Генератор подключается через service port из App, без импорта concrete infra в service. Новых зависимостей/pools/workers/ENV/schema changes в J4b.1 нет. Lookup counters используют отдельный namespace и те же bounded IP/project настройки: это предварительный abuse budget, не двойной расход issuance counter. Existing actor/session/IP/project issuance counters общие с exchange. Два Redis Lua calls и один indexed hint lookup происходят вне SQL transaction; Redis outage fail-closed, auto-retry не добавлен. Новые ключи не выделяются при исчерпанном budget, TTL60s не продлевается.
 
-До публикации остаются App/config и HTTP login/MFA/enrollment/refresh/logout с cookie/Authorization conflict rejection/no-store/без Set-Cookie, safe mapper/Retry-After, отдельные negative API tests и management profile label. Внутренние [password issuance](native-issuance.md), [email OTP binding](native-email-otp.md) и [MFA completion](native-mfa.md) реализованы; ограничения cleanup/fleet/load ниже остаются обязательными, service-тесты не заменяют их.
+[HTTP login/MFA/enrollment/refresh/logout](native-http.md) подключён в J4b.2c.3 с conflict rejection/no-store/без Set-Cookie, safe mapper/Retry-After, negative/concurrent API tests и management profile label. Logout по известному current/spent verifier повторно связывает hint с locked API row, коммитит session/family revocation и `refresh_audit.logged_out` вместе. Повтор/неизвестный well-formed credential нейтрален; audit/commit failure откатывает отзыв, history не удаляется. Source000001 CHECK расширен без новой миграции/рабочей DB. Ограничения cleanup/fleet/load ниже и strict consumer J5 остаются обязательными.
 
 ## Очистка и rollout
 
@@ -95,7 +95,7 @@ J4b.2c.3-config связывает lifetime/issuance ceilings с batch/interval 
 
 ### Настройки native — J4b.2c.3-config
 
-`JWT_NATIVE_ENABLED=false` по умолчанию. При `true` обязательны `JWT_ENABLED=true` и `MFA_ENABLED=true`: требуется готовность MFA-компонента, а не принудительный второй фактор для каждого пользователя. Требования факторов определяет действующая SQL policy. Native HTTP ещё не опубликован; флаг подключает lifetime policy к единственному App token service, не создаёт дополнительные pools/workers и не меняет cookie exchange.
+`JWT_NATIVE_ENABLED=false` по умолчанию. При `true` обязательны `JWT_ENABLED=true` и `MFA_ENABLED=true`: требуется готовность MFA-компонента, а не принудительный второй фактор для каждого пользователя. Требования факторов определяет действующая SQL policy. Флаг подключает lifetime policy и [native HTTP](native-http.md) к единственному App token service, не создаёт дополнительные pools/workers и не меняет cookie exchange.
 
 `JWT_REFRESH_IDLE_TTL=168h`, `JWT_REFRESH_ABSOLUTE_TTL=336h`: целые секунды, idle≥1m, absolute≥idle, не выше `SESSION_TTL`/`ABSOLUTE_SESSION_TTL`. Более строгие admin bounds сохраняются. Конфигурация проверяется при deployment startup до SQL и повторно перед JWT key/resource loading и открытием JWT Redis client; выключенный native не требует его TTL/MFA/cleanup совместимости. Невалидный тип ENV всё равно является ошибкой общего загрузчика. Сохраняемые UI-переключатели — будущий J6, не обход deployment ceilings.
 

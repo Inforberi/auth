@@ -1,6 +1,6 @@
 # Первая API issuance — J4b.2a-local
 
-17 октября 2026: реализована атомарная выдача API session + access JWT + первой refresh family от проверенного пароля; J4b.2b.1 добавляет [native MFA coordinator](native-mfa.md), J4b.2b.2 — [email OTP primary](native-email-otp.md). **Это внутренние use cases, не опубликованный native login API.** J4b.2c.3-config подключает NativePolicy к App через проверяемую deployment-конфигурацию; HTTP ещё впереди. `JWT_ENABLED` по-прежнему публикует только cookie exchange/JWKS.
+17 октября 2026: реализована атомарная выдача API session + access JWT + первой refresh family от проверенного пароля; J4b.2b.1 добавляет [native MFA coordinator](native-mfa.md), J4b.2b.2 — [email OTP primary](native-email-otp.md). J4b.2c.3 подключает проверяемую NativePolicy и [native HTTP API](native-http.md) к App. Native выключен по умолчанию; одного JWT_ENABLED для его публикации недостаточно.
 
 ## Границы кода
 
@@ -31,7 +31,7 @@ Primary method — password либо emailotp; auth_time берётся из п�
 
 ## Сроки и конфигурация
 
-NativePolicy — optional server-only constructor config, не клиентский input. App задаёт её только при `JWT_NATIVE_ENABLED=true`, после [проверки deployment budgets](refresh-storage.md#настройки-native--j4b2c3-config). Без неё core возвращает ErrNativeDisabled. Policy копируется при construction, а не хранит изменяемый caller pointer. Сохраняемая/UI policy — будущий J6; новый ENV-флаг сам по себе ещё не публикует native HTTP.
+NativePolicy — optional server-only constructor config, не клиентский input. App задаёт её только при `JWT_NATIVE_ENABLED=true`, после [проверки deployment budgets](refresh-storage.md#настройки-native--j4b2c3-config). Без неё core возвращает ErrNativeDisabled. Policy копируется при construction, а не хранит изменяемый caller pointer. App публикует native HTTP только с готовыми общими primary/MFA компонентами. Сохраняемая/UI policy — будущий J6.
 
 - Idle TTL ≥1min и ≤ существующего SessionTTL; absolute ≥idle и ≤ AbsoluteSessionTTL; целые секунды.
 - Административные idle/absolute/activity bounds берутся из существующей session policy. Для API creation они дополнительно ограничены native idle/absolute; activity interval не превышает1/10 effective idle. SQL session trigger по текущим permissions выбирает строгий admin profile.
@@ -40,6 +40,6 @@ NativePolicy — optional server-only constructor config, не клиентск�
 
 ## Что осталось до native API
 
-Native purpose/transport/audience/scope-bound MFA/enrollment и одноразовая completion в общей issuance transaction реализованы [отдельным блоком](native-mfa.md); [email OTP request/consume binding](native-email-otp.md) также готов внутри backend. Остаются HTTP contracts/App publication. Browser challenge нельзя передать в native completion или наоборот. Direct provider handoff — отдельный J4c.
+Native purpose/transport/audience/scope-bound MFA/enrollment и одноразовая completion в общей issuance transaction реализованы [отдельным блоком](native-mfa.md); [email OTP request/consume binding](native-email-otp.md) использует тот же owner. [HTTP contracts/App publication](native-http.md) подключены disabled-by-default. Browser challenge нельзя передать в native completion или наоборот. Direct provider handoff — отдельный J4c; strict online consumer — J5, внешняя приёмка/load/GC/restore не закрыты.
 
 Затем refresh/logout HTTP: bounded JSON, cookie/Authorization conflict rejection, safe mapper/Retry-After/no-store/без Set-Cookie, management profile label и negative/concurrency API tests. Перед публикацией — deployment config/ceilings, retention candidate-scan/held-ledger backlog/drain/storage, strict consumer J5 и внешние security/load/restore gates. Внутренние SQL/unit tests не доказывают готовность native клиента, capacity или отсутствие GC/memory проблем.

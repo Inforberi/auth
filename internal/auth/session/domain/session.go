@@ -10,6 +10,7 @@ type Session struct {
 	AuthVersion        int64                `json:"-"`
 	IdleTimeoutSeconds int64                `json:"-"`
 	ID                 string               `json:"id"`
+	CredentialProfile  string               `json:"credentialProfile"`
 	AbsoluteExpiresAt  time.Time            `json:"absoluteExpiresAt"`
 	UserID             accountdomain.UserID `json:"userId"`
 	UserAgent          string               `json:"userAgent"`
