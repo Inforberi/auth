@@ -61,6 +61,7 @@ func migrateFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, directi
 		_, err := settingspostgres.New(db).Initialize(ctx, settingsdomain.Policy{
 			Methods:      settingsdomain.PublicMethods{Password: true, EmailOTP: true, Google: true, Telegram: true},
 			Registration: settingsdomain.PublicRegistration{Enabled: true, Google: true, Telegram: true}, PasswordEmailVerification: settingsdomain.VerificationOptional,
+			TokenIssuance: settingsdomain.TokenIssuance{SessionExchange: true, Native: true},
 		})
 		if err != nil {
 			t.Fatal(err)

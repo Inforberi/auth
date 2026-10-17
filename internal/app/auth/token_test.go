@@ -120,6 +120,9 @@ func TestTokenAssemblyRedis(t *testing.T) {
 	if err != nil || handler.handler == nil || handler.native == nil || handler.introspection == nil || len(owned.closers) != 1 {
 		t.Fatal("JWT assembly failed", err)
 	}
+	if !handler.deployment.Enabled || !handler.deployment.NativeEnabled || !handler.deployment.IntrospectionEnabled || handler.deployment.Resources[0].Mode != "strict" {
+		t.Fatal("assembled deployment view", handler.deployment)
+	}
 	w := httptest.NewRecorder()
 	handler.handler.JWKS(w, httptest.NewRequest("GET", "https://auth.example/.well-known/jwks.json", nil))
 	if _, err := authjwt.ParsePublicKeys(w.Body.Bytes()); err != nil {

@@ -35,7 +35,7 @@ func TestAuthSettingsSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(runtime.Close)
-	repo := settingspostgres.NewWithRuntime(runtime, settingsdomain.PublicMethods{Password: true, EmailOTP: true, Google: true, Telegram: true})
+	repo := settingspostgres.NewWithRuntime(runtime, settingsdomain.PublicMethods{Password: true, EmailOTP: true, Google: true, Telegram: true}, settingsdomain.TokenIssuance{})
 	svc := settingsservice.New(repo)
 	if _, err := repo.Load(ctx); !errors.Is(err, settingsdomain.ErrNotInitialized) {
 		t.Fatal("missing row is not a default profile", err)
@@ -147,6 +147,7 @@ func TestAuthSettingsSchema(t *testing.T) {
 		t.Fatal("retention changed current settings", result, err)
 	}
 	// A lost row after setup is not permission to reset the saved configuration from ENV.
+	checkSavedTokenSwitches(t, db, ctx, actor)
 	accessExec(t, db, ctx, `DELETE FROM auth.auth_settings;
 		INSERT INTO auth.initial_setup(singleton,initialized_at,administrator_id) VALUES(true,clock_timestamp(),gen_random_uuid())`)
 	if _, err := svc.Initialize(ctx, seed); !errors.Is(err, settingsdomain.ErrNotInitialized) {

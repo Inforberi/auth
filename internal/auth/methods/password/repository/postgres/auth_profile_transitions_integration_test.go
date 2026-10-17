@@ -25,7 +25,7 @@ func TestAuthProfileTransitionsSchema(t *testing.T) {
 		GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA auth TO auth_profile_runtime`)
 	t.Cleanup(func() { accessExec(t, db, ctx, `DROP OWNED BY auth_profile_runtime; DROP ROLE auth_profile_runtime`) })
 	runtime := operatorPool(t, ctx, db, "auth_profile_runtime")
-	repo := settingspostgres.NewWithRuntime(runtime, settingsdomain.PublicMethods{Password: true, EmailOTP: true, Google: true, Telegram: true})
+	repo := settingspostgres.NewWithRuntime(runtime, settingsdomain.PublicMethods{Password: true, EmailOTP: true, Google: true, Telegram: true}, settingsdomain.TokenIssuance{SessionExchange: true, Native: true})
 	svc := settingsservice.New(repo)
 	before, err := repo.Load(ctx)
 	if err != nil {

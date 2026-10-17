@@ -76,7 +76,7 @@ func introspectionAuthority(ctx context.Context, tx pgx.Tx, claims authjwt.Claim
 			return err
 		}
 	}
-	proof, err := sessionProof(ctx, tx, input, profile, version)
+	proof, _, err := sessionProof(ctx, tx, input, profile, version)
 	if errors.Is(err, sessiondomain.ErrSessionNotFound) || errors.Is(err, sessiondomain.ErrMFARequired) || errors.Is(err, accountdomain.ErrEmailUnverified) {
 		return authjwt.ErrInvalidToken
 	}

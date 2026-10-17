@@ -26,7 +26,7 @@ func checkSettingsRuntimeHTTP(t *testing.T, db *pgxpool.Pool, ctx context.Contex
 		t.Fatal("unbound repository accepted mutation", err)
 	}
 	available := settingsdomain.PublicMethods{Password: true}
-	svc := settingsservice.New(settingspostgres.NewWithRuntime(db, available))
+	svc := settingsservice.New(settingspostgres.NewWithRuntime(db, available, settingsdomain.TokenIssuance{}))
 	h := settingshttp.New(svc, available, zap.NewNop())
 	request := httptest.NewRequest("GET", "/api/v1/admin/auth/settings", nil)
 	request = request.WithContext(sessionhttp.SetAuthContext(ctx, sessionhttp.Auth{UserID: actor.UserID, TokenHash: actor.TokenHash}))

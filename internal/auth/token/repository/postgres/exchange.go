@@ -10,6 +10,7 @@ import (
 
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/service"
@@ -36,7 +37,7 @@ func (r *Repository) Exchange(ctx context.Context, input service.ExchangeInput, 
 	if err := accesspostgres.LockAccessSnapshot(ctx, tx); err != nil {
 		return nil, err
 	}
-	proof, err := lockSession(ctx, tx, input, "browser")
+	proof, err := lockExchangeSession(ctx, tx, input)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func (r *Repository) Exchange(ctx context.Context, input service.ExchangeInput, 
 	return result, nil
 }
 
-func lockSession(ctx context.Context, tx pgx.Tx, input service.ExchangeInput, profile string) (service.SessionProof, error) {
+func lockExchangeSession(ctx context.Context, tx pgx.Tx, input service.ExchangeInput) (service.SessionProof, error) {
 	var proof service.SessionProof
 	err := tx.QueryRow(ctx, `SELECT auth_version FROM auth.users
 		WHERE id=$1 AND status='active' AND deleted_at IS NULL FOR SHARE`, input.Actor.UserID).Scan(&proof.AuthVersion)
@@ -66,23 +67,27 @@ func lockSession(ctx context.Context, tx pgx.Tx, input service.ExchangeInput, pr
 	if err != nil {
 		return proof, err
 	}
-	return sessionProof(ctx, tx, input, profile, proof.AuthVersion)
+	current, policy, err := sessionProof(ctx, tx, input, "browser", proof.AuthVersion)
+	if err == nil && !policy.TokenIssuance.SessionExchange {
+		err = domain.ErrForbidden
+	}
+	return current, err
 }
 
 // The caller holds the user lock and supplies its current auth_version.
-func sessionProof(ctx context.Context, tx pgx.Tx, input service.ExchangeInput, profile string, version int64) (service.SessionProof, error) {
+func sessionProof(ctx context.Context, tx pgx.Tx, input service.ExchangeInput, profile string, version int64) (service.SessionProof, settingsdomain.Policy, error) {
 	proof, err := sessionAuthority(ctx, tx, input, profile, version)
 	if err != nil {
-		return proof, err
+		return proof, settingsdomain.Policy{}, err
 	}
 	policy, err := settingspostgres.LockPublicPolicy(ctx, tx)
 	if err != nil {
-		return proof, err
+		return proof, policy, err
 	}
 	if err := settingspostgres.RequireSessionVerification(ctx, tx, input.Actor.UserID, proof.Method, policy); err != nil {
-		return proof, err
+		return proof, policy, err
 	}
-	return proof, nil
+	return proof, policy, nil
 }
 
 func sessionAuthority(ctx context.Context, tx pgx.Tx, input service.ExchangeInput, profile string, version int64) (service.SessionProof, error) {

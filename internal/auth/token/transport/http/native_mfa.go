@@ -24,6 +24,7 @@ type NativeMFARequest struct {
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse
+// @Failure 404 {object} httpx.ErrorResponse "method_disabled"
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
 // @Router /api/v1/auth/native/mfa/complete [post]

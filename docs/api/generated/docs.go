@@ -132,7 +132,7 @@ const docTemplate = `{
         },
         "/api/v1/admin/auth/settings": {
             "get": {
-                "description": "Requires a live session and auth.settings.manage. availableMethods describes adapters on this instance only. No secrets are returned; does not refresh the session.",
+                "description": "Requires a live cookie session, allowed Origin and auth.settings.manage. availableMethods and tokenProfiles describe this instance only, not fleet readiness. tokenProfiles is read-only deployment metadata; changing audience/mode requires coordinated rollout with consumers. No secrets/key paths/client IDs are returned; does not refresh the session.",
                 "produces": [
                     "application/json"
                 ],
@@ -177,7 +177,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Full non-secret policy replacement. Every boolean is required, including false. Requires auth.settings.manage, fresh password and MFA. expectedVersion prevents lost updates; adapters must be ready locally and identically configured on every instance. Existing sessions are not revoked.",
+                "description": "Full non-secret authentication policy replacement, including independent tokenIssuance.sessionExchange/native switches. tokenProfiles/deployment keys/mode are not writable. Every policy boolean is required, including false. Requires auth.settings.manage, fresh password and MFA. expectedVersion prevents lost updates; adapters must be ready locally and identically configured on every instance. Disabling issuance does not revoke existing tokens or close introspection/logout/browser administration.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4508,6 +4508,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "404": {
+                        "description": "method_disabled",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "429": {
                         "description": "Too Many Requests",
                         "schema": {
@@ -6716,7 +6722,8 @@ const docTemplate = `{
             "required": [
                 "methods",
                 "passwordEmailVerification",
-                "registration"
+                "registration",
+                "tokenIssuance"
             ],
             "properties": {
                 "methods": {
@@ -6732,6 +6739,9 @@ const docTemplate = `{
                 },
                 "registration": {
                     "$ref": "#/definitions/auth_settings_http.RegistrationRequest"
+                },
+                "tokenIssuance": {
+                    "$ref": "#/definitions/auth_settings_http.TokenIssuanceRequest"
                 }
             }
         },
@@ -6751,6 +6761,9 @@ const docTemplate = `{
                 },
                 "registration": {
                     "$ref": "#/definitions/auth_settings_http.RegistrationResponse"
+                },
+                "tokenIssuance": {
+                    "$ref": "#/definitions/auth_settings_http.TokenIssuanceResponse"
                 }
             }
         },
@@ -6796,8 +6809,115 @@ const docTemplate = `{
                 "policy": {
                     "$ref": "#/definitions/auth_settings_http.PolicyResponse"
                 },
+                "tokenProfiles": {
+                    "$ref": "#/definitions/auth_settings_http.TokenProfilesResponse"
+                },
                 "version": {
                     "type": "integer"
+                }
+            }
+        },
+        "auth_settings_http.TokenIssuanceRequest": {
+            "type": "object",
+            "required": [
+                "native",
+                "sessionExchange"
+            ],
+            "properties": {
+                "native": {
+                    "type": "boolean"
+                },
+                "sessionExchange": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "auth_settings_http.TokenIssuanceResponse": {
+            "type": "object",
+            "properties": {
+                "native": {
+                    "type": "boolean"
+                },
+                "sessionExchange": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "auth_settings_http.TokenProfilesResponse": {
+            "type": "object",
+            "properties": {
+                "accessTtlSeconds": {
+                    "type": "integer"
+                },
+                "browserAdminTransport": {
+                    "type": "string",
+                    "enum": [
+                        "cookie"
+                    ]
+                },
+                "changesRequireRollout": {
+                    "type": "boolean"
+                },
+                "introspectionEnabled": {
+                    "type": "boolean"
+                },
+                "issuer": {
+                    "type": "string"
+                },
+                "jwtEnabled": {
+                    "type": "boolean"
+                },
+                "managedBy": {
+                    "type": "string",
+                    "enum": [
+                        "deployment"
+                    ]
+                },
+                "nativeEnabled": {
+                    "type": "boolean"
+                },
+                "resources": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/auth_settings_http.TokenResourceResponse"
+                    }
+                },
+                "scope": {
+                    "type": "string",
+                    "enum": [
+                        "instance"
+                    ]
+                },
+                "sessionExchangeEnabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "auth_settings_http.TokenResourceResponse": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": [
+                        "strict",
+                        "local"
+                    ]
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "revocation": {
+                    "type": "string",
+                    "enum": [
+                        "online",
+                        "token_expiry"
+                    ]
                 }
             }
         },

@@ -83,7 +83,9 @@ CREATE TABLE auth.auth_settings (
   registration_enabled BOOLEAN NOT NULL,
   google_registration_enabled BOOLEAN NOT NULL,
   telegram_registration_enabled BOOLEAN NOT NULL,
-  password_email_verification TEXT NOT NULL CHECK (password_email_verification IN ('disabled','optional','required'))
+  password_email_verification TEXT NOT NULL CHECK (password_email_verification IN ('disabled','optional','required')),
+  token_session_exchange_enabled BOOLEAN NOT NULL DEFAULT false,
+  token_native_enabled BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE auth.auth_settings_audit (

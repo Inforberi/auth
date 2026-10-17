@@ -148,7 +148,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		Provisioning:      provisioningHandler,
 		TemporaryAdmin:    temporaryAdmin,
 		Access:            accesshttp.New(access.Service, log),
-		AuthSettings:      settingshttp.New(policy, cfg.AvailableAuthMethods(), log),
+		AuthSettings:      settingshttp.NewWithTokenDeployment(policy, cfg.AvailableAuthMethods(), tokens.deployment, log),
 		SMTPSettings:      smtpSettings,
 		ProviderSettings:  settingshttp.NewProviders(providers, log),
 		RetentionSettings: settingshttp.NewRetention(retentionSettings, log),

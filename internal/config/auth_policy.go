@@ -8,5 +8,6 @@ func (cfg Config) InitialAuthPolicy() domain.Policy {
 		Methods:                   domain.PublicMethods{Password: true, EmailOTP: cfg.EmailOTP.Enabled, Google: cfg.Google.Enabled, Telegram: cfg.Telegram.Enabled},
 		Registration:              domain.PublicRegistration{Enabled: true, Google: cfg.Google.RegistrationEnabled, Telegram: cfg.Telegram.RegistrationEnabled},
 		PasswordEmailVerification: domain.VerificationOptional,
+		TokenIssuance:             domain.TokenIssuance{SessionExchange: cfg.JWT.Enabled, Native: cfg.JWT.Enabled && cfg.JWT.NativeEnabled},
 	}
 }

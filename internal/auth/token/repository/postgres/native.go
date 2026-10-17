@@ -66,7 +66,7 @@ func issueNativeSession(ctx context.Context, tx pgx.Tx, p service.NativeParams, 
 		return nil, err
 	}
 	input := service.ExchangeInput{Actor: accessservice.Principal{UserID: proof.UserID, TokenHash: p.LedgerVerifier}, SessionID: id, Audience: p.Input.Audience, Scope: p.Input.Scope}
-	// RequireLoginPrimary already holds and checks the current public policy in this transaction.
+	// Native primary/MFA authorization holds the current issuance policy until commit.
 	current, err := sessionAuthority(ctx, tx, input, "api", version)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func authorizeNativePrimary(ctx context.Context, tx pgx.Tx, proof mfaservice.Pri
 	if err != nil {
 		return err
 	}
-	if err := mfapostgres.RequireLoginPrimary(ctx, tx, proof); err != nil {
+	if err := mfapostgres.RequireNativeLoginPrimary(ctx, tx, proof); err != nil {
 		return err
 	}
 	var required bool

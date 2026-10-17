@@ -31,7 +31,7 @@ func CompleteNativeFactor(ctx context.Context, tx pgx.Tx, attempt service.Native
 	if attempt.AllowPrimary != nil && !attempt.AllowPrimary(proof.Method, proof.Issuer) {
 		return result, domain.ErrInvalidCode
 	}
-	if err := RequireLoginPrimary(ctx, tx, proof.PrimaryProof); err != nil {
+	if err := RequireNativeLoginPrimary(ctx, tx, proof.PrimaryProof); err != nil {
 		if errors.Is(err, domain.ErrProofRequired) {
 			return result, domain.ErrInvalidCode
 		}

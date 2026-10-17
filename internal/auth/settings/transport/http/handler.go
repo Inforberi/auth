@@ -22,10 +22,15 @@ type Handler struct {
 	service   settingsService
 	available domain.PublicMethods
 	log       *zap.Logger
+	tokens    TokenProfilesResponse
 }
 
 func New(service settingsService, available domain.PublicMethods, log *zap.Logger) *Handler {
-	return &Handler{service: service, available: available, log: log}
+	return NewWithTokenDeployment(service, available, domain.TokenDeployment{}, log)
+}
+
+func NewWithTokenDeployment(service settingsService, available domain.PublicMethods, deployment domain.TokenDeployment, log *zap.Logger) *Handler {
+	return &Handler{service: service, available: available, log: log, tokens: tokenProfilesResponse(deployment)}
 }
 
 func principal(w http.ResponseWriter, r *http.Request) (accessservice.Principal, bool) {
@@ -54,12 +59,19 @@ type PolicyResponse struct {
 	Methods                   MethodsResponse          `json:"methods"`
 	Registration              RegistrationResponse     `json:"registration"`
 	PasswordEmailVerification domain.EmailVerification `json:"passwordEmailVerification" swaggertype:"string" enums:"disabled,optional,required"`
+	TokenIssuance             TokenIssuanceResponse    `json:"tokenIssuance"`
 } // @name auth_settings_http.PolicyResponse
 
+type TokenIssuanceResponse struct {
+	SessionExchange bool `json:"sessionExchange"`
+	Native          bool `json:"native"`
+} // @name auth_settings_http.TokenIssuanceResponse
+
 type SettingsResponse struct {
-	Version          int64           `json:"version"`
-	Policy           PolicyResponse  `json:"policy"`
-	AvailableMethods MethodsResponse `json:"availableMethods"`
+	Version          int64                 `json:"version"`
+	Policy           PolicyResponse        `json:"policy"`
+	AvailableMethods MethodsResponse       `json:"availableMethods"`
+	TokenProfiles    TokenProfilesResponse `json:"tokenProfiles"`
 } // @name auth_settings_http.SettingsResponse
 
 func methodsResponse(methods domain.PublicMethods) MethodsResponse {
@@ -75,7 +87,9 @@ func (h *Handler) respond(w http.ResponseWriter, snapshot domain.Snapshot) {
 			Methods:                   methodsResponse(policy.Methods),
 			Registration:              RegistrationResponse{Enabled: policy.Registration.Enabled, Google: policy.Registration.Google, Telegram: policy.Registration.Telegram},
 			PasswordEmailVerification: policy.PasswordEmailVerification,
+			TokenIssuance:             TokenIssuanceResponse{SessionExchange: policy.TokenIssuance.SessionExchange, Native: policy.TokenIssuance.Native},
 		},
 		AvailableMethods: methodsResponse(h.available),
+		TokenProfiles:    h.tokens,
 	})
 }

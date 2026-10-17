@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	tokenpostgres "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/postgres"
 	tokenredis "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/redis"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/service"
@@ -25,6 +26,7 @@ type tokenApp struct {
 	handler       *tokenhttp.Handler
 	native        *tokenhttp.NativeHandler
 	introspection *tokenhttp.IntrospectionHandler
+	deployment    settingsdomain.TokenDeployment
 }
 
 func assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client, deployment *config.Config, login nativeLoginDependencies, catalog accesssettings.Catalog, root string, owned *resources, log *zap.Logger) (tokenApp, error) {
@@ -87,5 +89,6 @@ func assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client,
 	if err != nil {
 		return tokenApp{}, err
 	}
+	assembly.deployment = tokenDeployment(cfg, definitions, assembly.native != nil, assembly.introspection != nil)
 	return assembly, nil
 }

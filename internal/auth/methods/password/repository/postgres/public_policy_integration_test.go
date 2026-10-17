@@ -27,7 +27,7 @@ func TestPublicPolicySchema(t *testing.T) {
 	db, ctx := schemaFixture(t)
 	migrateFixture(t, db, ctx, "up")
 	t.Cleanup(func() { migrateFixture(t, db, ctx, "down") })
-	repo := settingspostgres.NewWithRuntime(db, settingsdomain.PublicMethods{Password: true, EmailOTP: true, Google: true, Telegram: true})
+	repo := settingspostgres.NewWithRuntime(db, settingsdomain.PublicMethods{Password: true, EmailOTP: true, Google: true, Telegram: true}, settingsdomain.TokenIssuance{SessionExchange: true, Native: true})
 	service := settingsservice.New(repo)
 	baseline, err := repo.Load(ctx)
 	if err != nil {

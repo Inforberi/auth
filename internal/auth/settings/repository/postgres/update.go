@@ -31,6 +31,9 @@ func (r *Repository) Update(ctx context.Context, input service.UpdateInput) (dom
 		if err := input.Policy.RequireAvailable(r.available); err != nil {
 			return err
 		}
+		if input.Policy.TokenIssuance.SessionExchange && !r.tokens.SessionExchange || input.Policy.TokenIssuance.Native && !r.tokens.Native {
+			return domain.ErrMethodNotReady
+		}
 		if err := requireProviderSettings(ctx, tx, input.Policy); err != nil {
 			return err
 		}
@@ -45,7 +48,8 @@ func (r *Repository) Update(ctx context.Context, input service.UpdateInput) (dom
 		}
 		result, err = scanSnapshot(tx.QueryRow(ctx, `UPDATE auth.auth_settings SET version=version+1,
 			password_enabled=$1,email_otp_enabled=$2,google_enabled=$3,telegram_enabled=$4,
-			registration_enabled=$5,google_registration_enabled=$6,telegram_registration_enabled=$7,password_email_verification=$8
+			registration_enabled=$5,google_registration_enabled=$6,telegram_registration_enabled=$7,password_email_verification=$8,
+			token_session_exchange_enabled=$9,token_native_enabled=$10
 			WHERE singleton RETURNING `+policyColumns, policyValues(input.Policy)...))
 		if err != nil {
 			return err

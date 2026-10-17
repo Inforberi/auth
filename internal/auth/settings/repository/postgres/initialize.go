@@ -32,8 +32,8 @@ func (r *Repository) Initialize(ctx context.Context, initial domain.Policy) (dom
 			return domain.ErrNotInitialized
 		}
 		result, err = scanSnapshot(tx.QueryRow(ctx, `INSERT INTO auth.auth_settings(singleton,password_enabled,email_otp_enabled,google_enabled,telegram_enabled,
-			registration_enabled,google_registration_enabled,telegram_registration_enabled,password_email_verification)
-			VALUES(true,$1,$2,$3,$4,$5,$6,$7,$8) RETURNING `+policyColumns, policyValues(initial)...))
+			registration_enabled,google_registration_enabled,telegram_registration_enabled,password_email_verification,token_session_exchange_enabled,token_native_enabled)
+			VALUES(true,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING `+policyColumns, policyValues(initial)...))
 		return err
 	})
 	if err != nil {

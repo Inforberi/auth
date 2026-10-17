@@ -30,11 +30,17 @@ type PublicRegistration struct {
 	Telegram bool
 }
 
+type TokenIssuance struct {
+	SessionExchange bool
+	Native          bool
+}
+
 // Policy configures public authentication; administrative password and MFA are not switches here.
 type Policy struct {
 	Methods                   PublicMethods
 	Registration              PublicRegistration
 	PasswordEmailVerification EmailVerification
+	TokenIssuance             TokenIssuance
 }
 
 type Snapshot struct {

@@ -16,6 +16,13 @@ type Resource struct {
 	Permissions []accessdomain.PermissionKey `json:"permissions"`
 }
 
+func (r Resource) EffectiveMode() string {
+	if r.Mode == "" {
+		return authjwt.Strict
+	}
+	return r.Mode
+}
+
 type Config struct {
 	AccessTTL time.Duration
 	Resources []Resource
@@ -62,10 +69,7 @@ func audiencePolicies(resources []Resource, catalog settings.Catalog) (map[strin
 		return nil, err
 	}
 	for _, resource := range resources {
-		mode := resource.Mode
-		if mode == "" {
-			mode = authjwt.Strict
-		}
+		mode := resource.EffectiveMode()
 		if !authjwt.ValidAudience(resource.Audience) || mode != authjwt.Strict && mode != authjwt.Local ||
 			len(resource.Permissions) == 0 || len(resource.Permissions) > 256 {
 			return nil, authjwt.ErrConfiguration

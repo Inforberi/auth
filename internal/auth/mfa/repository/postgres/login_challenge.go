@@ -90,10 +90,18 @@ func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.Prima
 }
 
 func RequireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof) error {
+	return requireLoginPrimary(ctx, tx, p, false)
+}
+
+func RequireNativeLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof) error {
+	return requireLoginPrimary(ctx, tx, p, true)
+}
+
+func requireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof, native bool) error {
 	var valid bool
 	var err error
 	if p.Administrative {
-		if p.Method != "password" {
+		if p.Method != "password" || native {
 			return domain.ErrProofRequired
 		}
 		valid, err = accesspostgres.AdministrativePasswordAllowed(ctx, tx, p.UserID, p.Reference)
@@ -105,7 +113,11 @@ func RequireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof)
 		}
 		return nil
 	}
-	if err := settingspostgres.RequirePublicLogin(ctx, tx, p.UserID, p.Method, p.Issuer); err != nil {
+	checkPolicy := settingspostgres.RequirePublicLogin
+	if native {
+		checkPolicy = settingspostgres.RequireNativeLogin
+	}
+	if err := checkPolicy(ctx, tx, p.UserID, p.Method, p.Issuer); err != nil {
 		return err
 	}
 	if p.Method == "oidc" {

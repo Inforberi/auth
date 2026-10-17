@@ -3,7 +3,7 @@ package http
 import "net/http"
 
 // @Summary Read authentication settings
-// @Description Requires a live session and auth.settings.manage. availableMethods describes adapters on this instance only. No secrets are returned; does not refresh the session.
+// @Description Requires a live cookie session, allowed Origin and auth.settings.manage. availableMethods and tokenProfiles describe this instance only, not fleet readiness. tokenProfiles is read-only deployment metadata; changing audience/mode requires coordinated rollout with consumers. No secrets/key paths/client IDs are returned; does not refresh the session.
 // @Tags Auth settings
 // @Produce json
 // @Param Origin header string true "Exact allowed HTTPS origin"

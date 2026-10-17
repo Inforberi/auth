@@ -19,7 +19,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 )
 
-const completePolicy = `{"expectedVersion":3,"policy":{"methods":{"password":false,"emailOtp":false,"google":false,"telegram":false},"registration":{"enabled":false,"google":false,"telegram":false},"passwordEmailVerification":"required"}}`
+const completePolicy = `{"expectedVersion":3,"policy":{"methods":{"password":false,"emailOtp":false,"google":false,"telegram":false},"registration":{"enabled":false,"google":false,"telegram":false},"passwordEmailVerification":"required","tokenIssuance":{"sessionExchange":false,"native":false}}}`
 
 type captureSettings struct {
 	calls int
@@ -64,8 +64,31 @@ func TestSettingsFullReplacement(t *testing.T) {
 	}
 }
 
+func TestSettingsTokenSwitchesAreIndependent(t *testing.T) {
+	for _, field := range []string{"sessionExchange", "native"} {
+		svc := &captureSettings{}
+		h := New(svc, domain.PublicMethods{}, zap.NewNop())
+		body := strings.Replace(completePolicy, `"`+field+`":false`, `"`+field+`":true`, 1)
+		w := httptest.NewRecorder()
+		h.Update(w, settingsRequest(body))
+		var response SettingsResponse
+		if w.Code != 200 || svc.calls != 1 || json.Unmarshal(w.Body.Bytes(), &response) != nil {
+			t.Fatal(w.Code, w.Body.String())
+		}
+		want := domain.TokenIssuance{SessionExchange: field == "sessionExchange", Native: field == "native"}
+		if svc.input.Policy.TokenIssuance != want || response.Policy.TokenIssuance.SessionExchange != want.SessionExchange || response.Policy.TokenIssuance.Native != want.Native {
+			t.Fatal("switch mapping", svc.input, response)
+		}
+	}
+}
+
 func TestSettingsRejectsIncompleteAndUnknownFields(t *testing.T) {
-	bodies := []string{`{`, `{}`, `null`, `{"policy":null}`, `{"policy":{"methods":{},"registration":{}}}`, completePolicy + ` {}`, strings.Replace(completePolicy, `"password":false`, `"password":null`, 1), strings.Replace(completePolicy, `"password":false,`, ``, 1), strings.Replace(completePolicy, `"password":false`, `"password":"false"`, 1), strings.Replace(completePolicy, `"methods":{`, `"methods":{"clientSecret":"secret",`, 1), strings.Replace(completePolicy, `"expectedVersion":3`, `"actorId":"forged","expectedVersion":3`, 1)}
+	bodies := []string{
+		`{`, `{}`, `null`, `{"policy":null}`, `{"policy":{"methods":{},"registration":{}}}`, completePolicy + ` {}`, strings.Replace(completePolicy, `"password":false`, `"password":null`, 1), strings.Replace(completePolicy, `"password":false,`, ``, 1), strings.Replace(completePolicy, `"password":false`, `"password":"false"`, 1), strings.Replace(completePolicy, `"methods":{`, `"methods":{"clientSecret":"secret",`, 1), strings.Replace(completePolicy, `"expectedVersion":3`, `"actorId":"forged","expectedVersion":3`, 1),
+		strings.Replace(completePolicy, `,"tokenIssuance":{"sessionExchange":false,"native":false}`, ``, 1),
+		strings.Replace(completePolicy, `"sessionExchange":false,`, ``, 1),
+		strings.Replace(completePolicy, `"native":false`, `"native":null`, 1),
+	}
 	for _, body := range bodies {
 		svc := &captureSettings{}
 		w := httptest.NewRecorder()

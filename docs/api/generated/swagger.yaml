@@ -341,10 +341,13 @@ definitions:
         type: string
       registration:
         $ref: '#/definitions/auth_settings_http.RegistrationRequest'
+      tokenIssuance:
+        $ref: '#/definitions/auth_settings_http.TokenIssuanceRequest'
     required:
     - methods
     - passwordEmailVerification
     - registration
+    - tokenIssuance
     type: object
   auth_settings_http.PolicyResponse:
     properties:
@@ -358,6 +361,8 @@ definitions:
         type: string
       registration:
         $ref: '#/definitions/auth_settings_http.RegistrationResponse'
+      tokenIssuance:
+        $ref: '#/definitions/auth_settings_http.TokenIssuanceResponse'
     type: object
   auth_settings_http.RegistrationRequest:
     properties:
@@ -387,8 +392,79 @@ definitions:
         $ref: '#/definitions/auth_settings_http.MethodsResponse'
       policy:
         $ref: '#/definitions/auth_settings_http.PolicyResponse'
+      tokenProfiles:
+        $ref: '#/definitions/auth_settings_http.TokenProfilesResponse'
       version:
         type: integer
+    type: object
+  auth_settings_http.TokenIssuanceRequest:
+    properties:
+      native:
+        type: boolean
+      sessionExchange:
+        type: boolean
+    required:
+    - native
+    - sessionExchange
+    type: object
+  auth_settings_http.TokenIssuanceResponse:
+    properties:
+      native:
+        type: boolean
+      sessionExchange:
+        type: boolean
+    type: object
+  auth_settings_http.TokenProfilesResponse:
+    properties:
+      accessTtlSeconds:
+        type: integer
+      browserAdminTransport:
+        enum:
+        - cookie
+        type: string
+      changesRequireRollout:
+        type: boolean
+      introspectionEnabled:
+        type: boolean
+      issuer:
+        type: string
+      jwtEnabled:
+        type: boolean
+      managedBy:
+        enum:
+        - deployment
+        type: string
+      nativeEnabled:
+        type: boolean
+      resources:
+        items:
+          $ref: '#/definitions/auth_settings_http.TokenResourceResponse'
+        type: array
+      scope:
+        enum:
+        - instance
+        type: string
+      sessionExchangeEnabled:
+        type: boolean
+    type: object
+  auth_settings_http.TokenResourceResponse:
+    properties:
+      audience:
+        type: string
+      mode:
+        enum:
+        - strict
+        - local
+        type: string
+      permissions:
+        items:
+          type: string
+        type: array
+      revocation:
+        enum:
+        - online
+        - token_expiry
+        type: string
     type: object
   auth_settings_http.UpdateRequest:
     properties:
@@ -1344,9 +1420,11 @@ paths:
       - Administration
   /api/v1/admin/auth/settings:
     get:
-      description: Requires a live session and auth.settings.manage. availableMethods
-        describes adapters on this instance only. No secrets are returned; does not
-        refresh the session.
+      description: Requires a live cookie session, allowed Origin and auth.settings.manage.
+        availableMethods and tokenProfiles describe this instance only, not fleet
+        readiness. tokenProfiles is read-only deployment metadata; changing audience/mode
+        requires coordinated rollout with consumers. No secrets/key paths/client IDs
+        are returned; does not refresh the session.
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -1378,10 +1456,13 @@ paths:
     post:
       consumes:
       - application/json
-      description: Full non-secret policy replacement. Every boolean is required,
-        including false. Requires auth.settings.manage, fresh password and MFA. expectedVersion
-        prevents lost updates; adapters must be ready locally and identically configured
-        on every instance. Existing sessions are not revoked.
+      description: Full non-secret authentication policy replacement, including independent
+        tokenIssuance.sessionExchange/native switches. tokenProfiles/deployment keys/mode
+        are not writable. Every policy boolean is required, including false. Requires
+        auth.settings.manage, fresh password and MFA. expectedVersion prevents lost
+        updates; adapters must be ready locally and identically configured on every
+        instance. Disabling issuance does not revoke existing tokens or close introspection/logout/browser
+        administration.
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4465,6 +4546,10 @@ paths:
             $ref: '#/definitions/httpx.ErrorResponse'
         "403":
           description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: method_disabled
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "429":

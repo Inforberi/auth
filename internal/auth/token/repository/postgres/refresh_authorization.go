@@ -15,9 +15,12 @@ func refreshProof(ctx context.Context, tx pgx.Tx, binding service.RefreshBinding
 	proof.Family = family
 	input := service.ExchangeInput{Actor: binding.Actor, SessionID: binding.SessionID}
 	// Reuse the same current verification/MFA/provisioning guards as session exchange.
-	current, err := sessionProof(ctx, tx, input, "api", version)
+	current, policy, err := sessionProof(ctx, tx, input, "api", version)
 	if err != nil {
 		return proof, err
+	}
+	if !policy.TokenIssuance.Native {
+		return proof, domain.ErrForbidden
 	}
 	proof.SessionProof = current
 	err = tx.QueryRow(ctx, `SELECT ARRAY(SELECT needed.key FROM unnest($2::text[]) needed(key)

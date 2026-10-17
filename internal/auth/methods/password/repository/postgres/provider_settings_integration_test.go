@@ -154,7 +154,7 @@ func TestProviderSettingsSchema(t *testing.T) {
 	if _, err := svc.Update(ctx, settingsservice.ProviderUpdateInput{Actor: actor, Provider: "telegram", ClientID: "123", ExpectedVersion: 1, Secret: &empty}); err != nil {
 		t.Fatal("disabled provider secret could not be cleared", err)
 	}
-	policyRepo := settingspostgres.NewWithRuntime(runtime, settingsdomain.PublicMethods{Password: true, EmailOTP: true, Google: true, Telegram: true})
+	policyRepo := settingspostgres.NewWithRuntime(runtime, settingsdomain.PublicMethods{Password: true, EmailOTP: true, Google: true, Telegram: true}, settingsdomain.TokenIssuance{SessionExchange: true, Native: true})
 	snapshot, err := policyRepo.Load(ctx)
 	if err != nil {
 		t.Fatal(err)

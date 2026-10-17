@@ -25,7 +25,13 @@ type PolicyRequest struct {
 	Methods                   *MethodsRequest          `json:"methods" binding:"required"`
 	Registration              *RegistrationRequest     `json:"registration" binding:"required"`
 	PasswordEmailVerification domain.EmailVerification `json:"passwordEmailVerification" binding:"required" swaggertype:"string" enums:"disabled,optional,required"`
+	TokenIssuance             *TokenIssuanceRequest    `json:"tokenIssuance" binding:"required"`
 } // @name auth_settings_http.PolicyRequest
+
+type TokenIssuanceRequest struct {
+	SessionExchange *bool `json:"sessionExchange" binding:"required"`
+	Native          *bool `json:"native" binding:"required"`
+} // @name auth_settings_http.TokenIssuanceRequest
 
 type UpdateRequest struct {
 	ExpectedVersion int64          `json:"expectedVersion" binding:"required"`
@@ -33,23 +39,25 @@ type UpdateRequest struct {
 } // @name auth_settings_http.UpdateRequest
 
 func (input UpdateRequest) policy() (domain.Policy, bool) {
-	if input.Policy == nil || input.Policy.Methods == nil || input.Policy.Registration == nil {
+	if input.Policy == nil || input.Policy.Methods == nil || input.Policy.Registration == nil || input.Policy.TokenIssuance == nil {
 		return domain.Policy{}, false
 	}
 	methods, registration := input.Policy.Methods, input.Policy.Registration
 	if methods.Password == nil || methods.EmailOTP == nil || methods.Google == nil || methods.Telegram == nil ||
-		registration.Enabled == nil || registration.Google == nil || registration.Telegram == nil {
+		registration.Enabled == nil || registration.Google == nil || registration.Telegram == nil ||
+		input.Policy.TokenIssuance.SessionExchange == nil || input.Policy.TokenIssuance.Native == nil {
 		return domain.Policy{}, false
 	}
 	return domain.Policy{
 		Methods:                   domain.PublicMethods{Password: *methods.Password, EmailOTP: *methods.EmailOTP, Google: *methods.Google, Telegram: *methods.Telegram},
 		Registration:              domain.PublicRegistration{Enabled: *registration.Enabled, Google: *registration.Google, Telegram: *registration.Telegram},
 		PasswordEmailVerification: input.Policy.PasswordEmailVerification,
+		TokenIssuance:             domain.TokenIssuance{SessionExchange: *input.Policy.TokenIssuance.SessionExchange, Native: *input.Policy.TokenIssuance.Native},
 	}, true
 }
 
 // @Summary Replace authentication settings
-// @Description Full non-secret policy replacement. Every boolean is required, including false. Requires auth.settings.manage, fresh password and MFA. expectedVersion prevents lost updates; adapters must be ready locally and identically configured on every instance. Existing sessions are not revoked.
+// @Description Full non-secret authentication policy replacement, including independent tokenIssuance.sessionExchange/native switches. tokenProfiles/deployment keys/mode are not writable. Every policy boolean is required, including false. Requires auth.settings.manage, fresh password and MFA. expectedVersion prevents lost updates; adapters must be ready locally and identically configured on every instance. Disabling issuance does not revoke existing tokens or close introspection/logout/browser administration.
 // @Tags Auth settings
 // @Accept json
 // @Produce json

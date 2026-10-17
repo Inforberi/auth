@@ -21,12 +21,23 @@ func LockPublicPolicy(ctx context.Context, tx pgx.Tx) (domain.Policy, error) {
 }
 
 func RequirePublicLogin(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, method, issuer string) error {
+	return requirePublicLogin(ctx, tx, user, method, issuer, false)
+}
+
+func RequireNativeLogin(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, method, issuer string) error {
+	return requirePublicLogin(ctx, tx, user, method, issuer, true)
+}
+
+func requirePublicLogin(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, method, issuer string, native bool) error {
 	policy, err := LockPublicPolicy(ctx, tx)
 	if err != nil {
 		return err
 	}
 	if err := policy.RequireMethod(domain.PrimaryMethod(method, issuer), false); err != nil {
 		return err
+	}
+	if native && !policy.TokenIssuance.Native {
+		return domain.ErrMethodDisabled
 	}
 	return RequireSessionVerification(ctx, tx, user, method, policy)
 }
