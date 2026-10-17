@@ -1,6 +1,6 @@
 # Online-проверка access JWT
 
-J5.1: Auth проверяет полный подписанный токен и актуальную session authority. Это backend-to-backend API, не новый способ входа. Consumer middleware/JWKS cache — следующий блок J5.2; один `VerifySignature` не обеспечивает немедленный отзыв.
+J5.1: Auth проверяет полный подписанный токен и актуальную session authority. Это backend-to-backend API, не новый способ входа. [Consumer middleware/JWKS cache](jwt-consumer.md) реализован в J5.2-local; один `VerifySignature` не обеспечивает немедленный отзыв.
 
 ## Настройка
 
@@ -39,7 +39,7 @@ Content-Type: application/json
 
 Ровно один Authorization ≤256 байт; Cookie, любой Origin, query string и OPTIONS отклоняются. Не browser CORS endpoint. Body ≤8 KiB, только строковое поле `token`; aliases/duplicates/null/trailing запрещены. JWT ≤4096 байт. Service auth до JSON, admission/Redis до crypto и SQL. Нельзя прислать только UUID/claims/флаг «уже проверен».
 
-Активный ответ содержит `active:true`, `iss`, `sub`, `sid`, `jti`, `audience`, `expiresAt` (Unix seconds), `scope` (effective permissions через пробел). Consumer сопоставляет metadata с **тем же локально проверенным токеном**, scope — с его scope; mismatch/timeout/неоднозначный ответ означает отказ. Consumer-код — J5.2. Собственный JSON protocol, не RFC7662.
+Активный ответ содержит `active:true`, `iss`, `sub`, `sid`, `jti`, `audience`, `expiresAt` (Unix seconds), `scope` (effective permissions через пробел). Consumer сопоставляет metadata с **тем же локально проверенным токеном**, scope — с его scope; mismatch/timeout/неоднозначный ответ означает отказ. Consumer-код — `pkg/authjwt/introspection.go`. Собственный JSON protocol, не RFC7662.
 
 Невалидный/истёкший/неактивный токен: HTTP200 и только `{"active":false}`, без PII/причины отзыва. Все ответы no-store, без Set-Cookie; positive authority caching запрещён.
 
@@ -66,4 +66,4 @@ Content-Type: application/json
 
 Evidence — [history](../planning/history.md#результат-j51-local--17-октября-2026). SQL проверки: binding/proof/version/revoke/block/delete/MFA/grants, неизменность ledger, concurrent revoke и independent family revoke; HTTP проверяет service auth/transport/safe response. JWT выключен в ENV-примерах; working DB/ENV/secrets не меняются.
 
-J5 целиком открыт: следующий блок consumer middleware/JWKS lifecycle/strict response correlation/примеры. Real TLS ingress/credentials rotation/fleet/outage/load/GC/restore не заменяются fixtures и остаются release gates.
+Локальная реализация J5.1/J5.2 выполнена; real TLS ingress/credentials rotation/fleet/outage/load/GC/restore не заменяются fixtures и остаются release gates J7/pre-ui/A8.

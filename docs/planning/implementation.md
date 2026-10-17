@@ -4,7 +4,7 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
-Последний JWT-блок: J5.1-local — [Auth introspection](../features/jwt-introspection.md), service credentials/allowlists и актуальная SQL authority без обновления сессии. Проверки — [history](history.md#результат-j51-local--17-октября-2026). Далее J5.2 consumer middleware; J5/A6.4 целиком не закрыты.
+Последний JWT-блок: J5.2-local — [consumer middleware](../features/jwt-consumer.md), local/strict профили, bounded HTTPS/JWKS lifecycle и current authority через J5.1 без positive cache/fallback. Проверки — [history](history.md#результат-j52-local--17-октября-2026). Локальный J5 выполнен; далее J6 configuration/UI contract. A6.4/J7/pre-ui/A8 целиком не закрыты.
 
 Согласовано 11 октября: сейчас реализуем только авторизацию, управление пользователями/ролями, защиту админки и UI. Номера прежних задач сохраняем; следующие этапы выполняем в порядке ниже. Сделанное не переписываем и не удаляем автоматически.
 
