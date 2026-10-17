@@ -4,6 +4,8 @@
 GRANT CONNECT ON DATABASE auth TO auth_runtime;
 GRANT USAGE ON SCHEMA auth TO auth_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA auth TO auth_runtime;
+-- Only an offline database-owner restore may write this operational audit.
+REVOKE INSERT, UPDATE, DELETE ON auth.restore_audit FROM auth_runtime;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA auth TO auth_runtime;
 ALTER DEFAULT PRIVILEGES IN SCHEMA auth
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO auth_runtime;

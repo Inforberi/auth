@@ -18,18 +18,18 @@ lock_container="$app_name-restore-operation"
 docker create --name "$lock_container" --label auth.operation=restore postgres:18.6-bookworm true >/dev/null
 trap 'docker rm "$lock_container" >/dev/null' EXIT
 compose run --rm --no-deps backup verify "$RESTORE_FILE"
-was_running=false
-if compose ps --status running --services | grep -qx api; then was_running=true; fi
 backup_running=false
 if compose ps --status running --services | grep -qx backup; then backup_running=true; fi
-# Update this list before introducing email/billing workers (release stage 14).
+# Auth workers run inside api; keep it stopped until the recovery security gate is completed.
 compose stop api migrate backup
 compose run --rm --no-deps backup restore "$RESTORE_FILE"
 # Reconcile published migration versions after restoring an older archive.
 compose run --rm --no-deps migrate up
 # pg_dump/pg_restore deliberately omit privileges; reapply the reviewed role grants.
 compose exec -T postgres sh -c 'exec psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"' < "$project_root/deploy/runtime-grants.sql"
+compose exec -T postgres sh -c 'exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"' < "$project_root/deploy/restore-auth-state.sql"
 compose run --rm --no-deps backup healthcheck-unlocked-standalone
-if [[ "$was_running" == true ]]; then compose up -d --no-deps api; fi
 if [[ "$backup_running" == true ]]; then compose up -d --no-deps backup; fi
-echo "Restore verified for $app_name:$database"
+echo "Database restore verified for $app_name:$database; API remains stopped."
+echo 'Restored SQL credentials invalidated. Before reopening traffic: reconcile account changes and replace JWT trust across the fleet.'
+echo 'Follow docs/operations/jwt-recovery.md; database healthcheck is not authorization recovery acceptance.'

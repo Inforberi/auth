@@ -1,4 +1,5 @@
 DROP TABLE IF EXISTS auth.initial_setup;
+DROP TABLE IF EXISTS auth.restore_audit;
 DROP TABLE IF EXISTS auth.retention_settings_audit;
 DROP TABLE IF EXISTS auth.retention_checkpoints;
 DROP TABLE IF EXISTS auth.retention_settings;

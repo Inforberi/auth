@@ -24,6 +24,15 @@ CREATE INDEX users_email_release_due ON auth.users(deleted_at,id)
 CREATE INDEX users_directory_page ON auth.users(created_at DESC,id DESC) WHERE deleted_at IS NULL;
 CREATE INDEX users_directory_status_page ON auth.users(status,created_at DESC,id DESC) WHERE deleted_at IS NULL;
 
+CREATE TABLE auth.restore_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  operator_oid OID NOT NULL,
+  operator_name TEXT NOT NULL CHECK (octet_length(operator_name) BETWEEN 1 AND 63),
+  database_name TEXT NOT NULL CHECK (octet_length(database_name) BETWEEN 1 AND 63),
+  users_invalidated BIGINT NOT NULL CHECK (users_invalidated>=0),
+  executed_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+
 CREATE TABLE auth.initial_setup (
   singleton BOOLEAN PRIMARY KEY CHECK (singleton),
   initialized_at TIMESTAMPTZ,
