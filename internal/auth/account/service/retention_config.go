@@ -7,6 +7,8 @@ import (
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
+const RetentionBatchTimeout = 5 * time.Second
+
 type RetentionConfig struct {
 	EmailReservationDays int           `env:"ACCOUNT_EMAIL_RESERVATION_DAYS" env-default:"30"`
 	SessionDays          int           `env:"SESSION_RETENTION_DAYS" env-default:"30"`

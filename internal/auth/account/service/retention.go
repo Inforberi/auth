@@ -31,7 +31,7 @@ func (s *RetentionService) WithSettings(source RetentionSettings) *RetentionServ
 }
 
 func (s *RetentionService) Purge(ctx context.Context) (int64, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, RetentionBatchTimeout)
 	defer cancel()
 	cfg := s.cfg
 	if s.settings != nil {

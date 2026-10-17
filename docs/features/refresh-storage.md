@@ -89,6 +89,24 @@ Real SQL/race также проверяют batch1 progress через held ledg
 
 Для family с absolute lifetime L и минимальной rotation30s консервативный максимум credentials равен `min(4096, 2+floor(L/30s))`: initial и первая немедленная rotation учтены. При стабильных общих Redis counters/config и P project requests/min aggregate verifier writes за окно L ограничены примерно `P*(ceil(L/min)+1)`; нельзя одновременно умножать этот aggregate ceiling на4096 каждой family. Например L14d/P3000 даёт≈60.5млн writes/window, **не** гарантированный размер live таблицы: expired backlog без достаточного cleanup способен расти дальше. Redis reset, operator config changes и реальные нагрузки требуют отдельного учёта.
 
-До App/native HTTP в J4b.2c.3 связать lifetime/issuance ceilings с batch/interval и явной проверкой совместимости startup config. Не увеличивать batch или снижать security TTL автоматически. Сначала консервативно считать один worker; `N×B/I` — лишь идеальный верхний предел, не гарантированная мощность fleet под locks/deadline/ошибками. Нужны запас, cursor scan/drain budgets и storage оценка через реальные heap/index/bloat/backup размеры; metadata audits/session retention считаются отдельно. HTTP не публиковать с молчаливым storage mismatch.
+J4b.2c.3-config связывает lifetime/issuance ceilings с batch/interval явной startup-проверкой ниже. Batch и security TTL автоматически не меняются. Консервативно считается один worker; `N×B/I` — лишь идеальный верхний предел, не гарантированная мощность fleet под locks/deadline/ошибками. Cursor scan/drain budgets и storage оценка через реальные heap/index/bloat/backup размеры остаются операционной приёмкой; metadata audits/session retention считаются отдельно. HTTP не публиковать с молчаливым storage mismatch.
 
 Изменена только исходная 000001 up/down, новой миграции нет. **Новый binary ожидает profile/refresh tables и две seeded retention checkpoint rows даже без native HTTP**: controlled schema/grants upgrade обязателен, включая SELECT/UPDATE на checkpoints. Runtime не создаёт потерянное состояние автоматически. Рабочая БД не менялась и не сбрасывалась. Режимы backup/restore/key distrust и load/GC остаются J7/pre-ui/A8.
+
+### Настройки native — J4b.2c.3-config
+
+`JWT_NATIVE_ENABLED=false` по умолчанию. При `true` обязательны `JWT_ENABLED=true` и `MFA_ENABLED=true`: требуется готовность MFA-компонента, а не принудительный второй фактор для каждого пользователя. Требования факторов определяет действующая SQL policy. Native HTTP ещё не опубликован; флаг подключает lifetime policy к единственному App token service, не создаёт дополнительные pools/workers и не меняет cookie exchange.
+
+`JWT_REFRESH_IDLE_TTL=168h`, `JWT_REFRESH_ABSOLUTE_TTL=336h`: целые секунды, idle≥1m, absolute≥idle, не выше `SESSION_TTL`/`ABSOLUTE_SESSION_TTL`. Более строгие admin bounds сохраняются. Конфигурация проверяется при deployment startup до SQL и повторно перед JWT key/resource loading и открытием JWT Redis client; выключенный native не требует его TTL/MFA/cleanup совместимости. Невалидный тип ENV всё равно является ошибкой общего загрузчика. Сохраняемые UI-переключатели — будущий J6, не обход deployment ceilings.
+
+Пусть P — общий `JWT_ISSUANCE_PROJECT_LIMIT_PER_MINUTE`, B — `RETENTION_BATCH_SIZE`, I — `RETENTION_INTERVAL`, D — существующий batch deadline 5s. Проверка требует:
+
+```text
+2 × P × (I + D) <= B × 1m
+```
+
+Интервалы считаются без округления, с проверенными bounds до арифметики. Учтён один worker и время его партии; половина расчётного бюджета оставлена в резерве. Shared project counter ограничивает суммарную выдачу/rotation, поэтому для верхней оценки записей не складываются отдельные лимиты native и exchange. Проверка не меняет B/I/P/TTL, не умножает запас на число replicas и не требует нового storage setting.
+
+С B100/I1m допустим P≤46/min; P47/min уже отклоняется. При P3000/min арифметически проходит, например, B600/I1s — **пример проверки, не рекомендация без замеров и не применённая настройка**. Оператор выбирает budgets по результатам drain/storage/load приёмки. Все ENV-примеры остаются с native=false и прежними budgets; простое включение native при старых defaults намеренно останавливает запуск понятной ошибкой.
+
+Это necessary configuration guard, не доказательство стабильного backlog: batch может завершиться ошибкой, deadline или ожиданием locks; page visits и eligibility не равны deletes. Требуются measured successful drain, задержка полного sweep, запас места на L/history/audits/indexes/bloat/backup, наблюдение за lag и согласованный fleet rollout. При Redis reset/смене лимитов старые записи также не исчезают. Сокращать reuse window ради нехватки диска запрещено. End-to-end capacity/GC/fault/restore этим блоком не измерены.

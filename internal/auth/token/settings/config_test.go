@@ -16,6 +16,7 @@ import (
 func TestDeploymentConfig(t *testing.T) {
 	for _, key := range []string{
 		"JWT_ENABLED", "JWT_ISSUER", "JWT_SIGNING_KEY_ID", "JWT_PRIVATE_KEY_FILE", "JWT_KEYSET_FILE", "JWT_RESOURCE_CONFIG_FILE", "JWT_ACCESS_TTL",
+		"JWT_NATIVE_ENABLED", "JWT_REFRESH_IDLE_TTL", "JWT_REFRESH_ABSOLUTE_TTL",
 		"JWT_ISSUANCE_ACTOR_LIMIT_PER_MINUTE", "JWT_ISSUANCE_SESSION_LIMIT_PER_MINUTE", "JWT_ISSUANCE_IP_LIMIT_PER_MINUTE", "JWT_ISSUANCE_PROJECT_LIMIT_PER_MINUTE",
 	} {
 		t.Setenv(key, "synthetic")
@@ -29,6 +30,9 @@ func TestDeploymentConfig(t *testing.T) {
 	}
 	if cfg.JWT.Enabled || cfg.JWT.AccessTTL != 2*time.Minute || cfg.JWT.ActorPerMinute != 30 || cfg.JWT.SessionPerMinute != 10 || cfg.JWT.IPPerMinute != 30 || cfg.JWT.ProjectPerMinute != 3000 {
 		t.Fatal("wrong disabled defaults", cfg.JWT)
+	}
+	if cfg.JWT.NativeEnabled || cfg.JWT.RefreshIdleTTL != 168*time.Hour || cfg.JWT.RefreshAbsoluteTTL != 336*time.Hour {
+		t.Fatal("wrong native defaults", cfg.JWT)
 	}
 	if err := cfg.JWT.Validate(); err != nil {
 		t.Fatal(err)
@@ -55,6 +59,15 @@ func TestDeploymentConfig(t *testing.T) {
 		if err := candidate.Validate(); err != nil {
 			t.Fatal("disabled profile requires configuration", err)
 		}
+	}
+	t.Setenv("JWT_NATIVE_ENABLED", "true")
+	t.Setenv("JWT_REFRESH_IDLE_TTL", "2h")
+	t.Setenv("JWT_REFRESH_ABSOLUTE_TTL", "6h")
+	if err := cleanenv.ReadEnv(&cfg); err != nil || !cfg.JWT.NativeEnabled || cfg.JWT.RefreshIdleTTL != 2*time.Hour || cfg.JWT.RefreshAbsoluteTTL != 6*time.Hour {
+		t.Fatal("native env ignored", err)
+	}
+	if err := cfg.JWT.Validate(); !errors.Is(err, authjwt.ErrConfiguration) || !strings.Contains(err.Error(), "JWT_ENABLED") {
+		t.Fatal("native allowed without JWT", err)
 	}
 }
 

@@ -47,7 +47,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("assemble access and auth policy: %w", err)
 	}
-	tokens, err := assembleTokens(ctx, pool, rdb, cfg.JWT, access.Catalog(), cfg.Account.EncryptionKey, resources, log)
+	tokens, err := assembleTokens(ctx, pool, rdb, cfg, access.Catalog(), cfg.Account.EncryptionKey, resources, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble JWT: %w", err)
 	}

@@ -40,6 +40,7 @@ func (cfg Config) Validate() error {
 		cfg.MFA.Validate,
 		cfg.JWT.Validate,
 		cfg.Retention.Validate,
+		cfg.validateNativeJWT,
 		cfg.Capacity.Validate,
 		cfg.HTTP.Validate,
 		cfg.Server.Validate,

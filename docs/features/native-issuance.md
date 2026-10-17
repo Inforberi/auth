@@ -1,6 +1,6 @@
 # Первая API issuance — J4b.2a-local
 
-17 октября 2026: реализована атомарная выдача API session + access JWT + первой refresh family от проверенного пароля; J4b.2b.1 добавляет [native MFA coordinator](native-mfa.md), J4b.2b.2 — [email OTP primary](native-email-otp.md). **Это внутренние use cases, не опубликованный native login API.** App не передаёт NativePolicy, native HTTP/ENV нет. `JWT_ENABLED` по-прежнему включает только cookie exchange/JWKS. Transport ещё впереди.
+17 октября 2026: реализована атомарная выдача API session + access JWT + первой refresh family от проверенного пароля; J4b.2b.1 добавляет [native MFA coordinator](native-mfa.md), J4b.2b.2 — [email OTP primary](native-email-otp.md). **Это внутренние use cases, не опубликованный native login API.** J4b.2c.3-config подключает NativePolicy к App через проверяемую deployment-конфигурацию; HTTP ещё впереди. `JWT_ENABLED` по-прежнему публикует только cookie exchange/JWKS.
 
 ## Границы кода
 
@@ -31,7 +31,7 @@ Primary method — password либо emailotp; auth_time берётся из п�
 
 ## Сроки и конфигурация
 
-NativePolicy — optional server-only constructor config, не ENV/UI/API. Без неё core возвращает ErrNativeDisabled; нынешний App её не задаёт. Policy копируется при construction, а не хранит изменяемый caller pointer.
+NativePolicy — optional server-only constructor config, не клиентский input. App задаёт её только при `JWT_NATIVE_ENABLED=true`, после [проверки deployment budgets](refresh-storage.md#настройки-native--j4b2c3-config). Без неё core возвращает ErrNativeDisabled. Policy копируется при construction, а не хранит изменяемый caller pointer. Сохраняемая/UI policy — будущий J6; новый ENV-флаг сам по себе ещё не публикует native HTTP.
 
 - Idle TTL ≥1min и ≤ существующего SessionTTL; absolute ≥idle и ≤ AbsoluteSessionTTL; целые секунды.
 - Административные idle/absolute/activity bounds берутся из существующей session policy. Для API creation они дополнительно ограничены native idle/absolute; activity interval не превышает1/10 effective idle. SQL session trigger по текущим permissions выбирает строгий admin profile.

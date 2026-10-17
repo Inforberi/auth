@@ -15,16 +15,19 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/signing"
 	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
-func assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client, cfg settings.Config, catalog accesssettings.Catalog, root string, owned *resources, log *zap.Logger) (*tokenhttp.Handler, error) {
+func assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client, deployment *config.Config, catalog accesssettings.Catalog, root string, owned *resources, log *zap.Logger) (*tokenhttp.Handler, error) {
+	native, err := deployment.NativeJWTPolicy()
+	if err != nil {
+		return nil, err
+	}
+	cfg := deployment.JWT
 	if !cfg.Enabled {
 		return nil, nil
-	}
-	if err := cfg.Validate(); err != nil {
-		return nil, err
 	}
 	definitions, err := settings.LoadResources(cfg.ResourceFile)
 	if err != nil {
@@ -59,7 +62,7 @@ func assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client,
 	if err != nil {
 		return nil, err
 	}
-	svc, err := service.New(tokenpostgres.New(pool), signer, limiter, tokengenerate.New(), service.Config{AccessTTL: cfg.AccessTTL, Resources: definitions}, catalog)
+	svc, err := service.New(tokenpostgres.New(pool), signer, limiter, tokengenerate.New(), service.Config{AccessTTL: cfg.AccessTTL, Resources: definitions, Native: native}, catalog)
 	if err != nil {
 		return nil, err
 	}

@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,18 +22,40 @@ import (
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
+	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
 func TestDisabledTokensDoNotOpenResources(t *testing.T) {
 	owned := &resources{}
-	handler, err := assembleTokens(context.Background(), nil, nil, settings.Config{PrivateKeyFile: "/not-readable", KeySetFile: "/not-readable", ResourceFile: "/not-readable"},
+	handler, err := assembleTokens(context.Background(), nil, nil, &config.Config{JWT: settings.Config{PrivateKeyFile: "/not-readable", KeySetFile: "/not-readable", ResourceFile: "/not-readable"}},
 		accesssettings.Catalog{}, "", owned, zap.NewNop())
 	if err != nil || handler != nil || len(owned.closers) != 0 {
 		t.Fatal("disabled JWT opened resources", err)
 	}
-	if _, err := assembleTokens(context.Background(), nil, nil, settings.Config{Enabled: true}, accesssettings.Catalog{}, "", owned, zap.NewNop()); err == nil {
+	if _, err := assembleTokens(context.Background(), nil, nil, &config.Config{JWT: settings.Config{Enabled: true}}, accesssettings.Catalog{}, "", owned, zap.NewNop()); err == nil {
 		t.Fatal("enabled invalid profile accepted")
+	}
+}
+
+func TestNativeTokenAssemblyRejectsDeploymentBeforeResources(t *testing.T) {
+	base := config.Config{JWT: settings.Config{
+		Enabled: true, NativeEnabled: true, Issuer: "https://auth.example", SigningKeyID: "synthetic",
+		PrivateKeyFile: "/not-readable", KeySetFile: "/not-readable", ResourceFile: "/not-readable",
+		AccessTTL: time.Minute, ActorPerMinute: 30, SessionPerMinute: 10, IPPerMinute: 30, ProjectPerMinute: 3000,
+	}}
+	for _, enabled := range []bool{false, true} {
+		cfg := base
+		cfg.JWT.Enabled = enabled
+		want := "MFA_ENABLED"
+		if !enabled {
+			want = "JWT_ENABLED"
+		}
+		owned := &resources{}
+		handler, err := assembleTokens(t.Context(), nil, nil, &cfg, accesssettings.Catalog{}, "", owned, zap.NewNop())
+		if handler != nil || err == nil || !strings.Contains(err.Error(), want) || len(owned.closers) != 0 {
+			t.Fatal("invalid native deployment reached JWT files/Redis", handler, err)
+		}
 	}
 }
 
@@ -76,7 +99,7 @@ func TestTokenAssemblyRedis(t *testing.T) {
 	}
 	owned := &resources{}
 	t.Cleanup(owned.close)
-	handler, err := assembleTokens(t.Context(), nil, base, cfg, catalog, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", owned, zap.NewNop())
+	handler, err := assembleTokens(t.Context(), nil, base, &config.Config{JWT: cfg}, catalog, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", owned, zap.NewNop())
 	if err != nil || handler == nil || len(owned.closers) != 1 {
 		t.Fatal("JWT assembly failed", err)
 	}
