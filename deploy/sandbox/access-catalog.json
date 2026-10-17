@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "permissions": [
+    {"key": "sandbox.records.read", "name": "Чтение тестовых записей", "group": "Sandbox"},
+    {"key": "sandbox.records.write", "name": "Изменение тестовых записей", "group": "Sandbox"}
+  ]
+}

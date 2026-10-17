@@ -41,10 +41,10 @@ trustedAt — время успешно подтверждённого trusted f
 
 Admission: до 8 signatures/32 verifications на owner, без очереди; перегрузка ErrBusy. Context проверяется до/после операции; фиксированная crypto operation не прерывается посередине, но отменённый результат не возвращается успешным. Никаких SQL/Redis/network calls внутри primitives. Это лимиты, не measured RPS; budgets суммируются по owners/instances.
 
-Ошибки: ErrInvalidToken/ErrConfiguration/ErrKeysUnavailable/ErrBusy/context cancellation; HTTP mapper ещё не подключён. Пакеты не логируют credentials и не пишут audit на hostile input.
+Ошибки primitives: ErrInvalidToken/ErrConfiguration/ErrKeysUnavailable/ErrBusy/context cancellation. HTTP mapping подключён в token handlers/consumer middleware, не внутри signing/parser. Пакеты не логируют credentials и не пишут audit на hostile input.
 
 ## Приёмка
 
 Unit/race tests: sign→verify, issuer/audience/mode/MFA/times, malformed JSON/compact/JWK, private/mismatched/retired keys, corrupted points, loader/permissions/disabled, immutable buffers, cancellation/admission/concurrent rotation. Короткие fuzz JWT/JWKS не являются исчерпывающим аудитом; evidence — [history](../planning/history.md).
 
-Public issuance/introspection/HTTP middleware, remote resolver и browser/fleet/emergency/restore/load/GC acceptance ещё не реализованы/не выполнены. Старые Auth routes не начали принимать Bearer JWT.
+Issuance/native refresh/introspection реализованы в J3–J6, reusable consumer/remote JWKS/middleware — J5; локальная [матрица приёмки](../operations/jwt-security-acceptance.md) дополнена в J7.1. Auth cookie/admin routes по-прежнему не принимают Bearer вместо cookie. Real browser/fleet/emergency/restore/load/GC acceptance остаётся открытой; restore-wrapper держит API остановленным до [recovery gate](../operations/jwt-recovery.md).

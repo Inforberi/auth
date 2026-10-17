@@ -4,7 +4,9 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
-Последний JWT-блок: J6.2-local — [сохраняемые switches выдачи](../features/jwt-profile-settings.md) в existing settings policy/version/audit с deployment ceilings и final SQL guards. Session exchange/native независимы; introspection/logout/browser admin и committed refresh reuse revoke сохранены. SQL/race/task check/API/security evidence — [history](history.md#результат-j62-local--17-октября-2026). Далее J7 security/performance acceptance; J6 целиком/A6.4/J7/pre-ui/A8 не закрыты, external gates нельзя закрыть unit fixtures.
+J7.4-local: на существующем [HTTPS sandbox](../operations/local-sandbox.md#jwt-профили--j74-local) включены JWT/native и сохранённые issuance switches через защищённый settings API. 10 live сценариев PASS: JWKS/exchange/strict-local/scope/refresh/replay/logout/MFA/policy/transport, actual PostgreSQL/Redis faults+recovery и expiry. Ключи/credentials synthetic, SQL seed только тестовой роли, production Go/API/dependencies/schema не менялись. Стенд работает; полный [краткий отчёт](../operations/acceptance-summary.md) и [history](history.md#результат-j74-local--17-октября-2026). J7.3 Auth/email/first-admin baseline сохранён там же. Далее оставшиеся pre-ui/rotation/JWKS fault/load/GC gates; внешняя/fleet/production приёмка не закрыта.
+
+J7.2-local: [atomic auth-state invalidation и disposable pg_dump/pg_restore drill](../operations/jwt-recovery.md) выполнены; wrapper отзывает SQL credentials с owner audit, не запускает API и не заменяет key/fleet/reconciliation gates. Evidence — [history](history.md#результат-j72-local--17-октября-2026), [матрица](../operations/jwt-security-acceptance.md). J6 целиком/A6.4/J7/pre-ui/A8 не закрыты; production traffic без внешних подтверждений не открывать.
 
 Согласовано 11 октября: сейчас реализуем только авторизацию, управление пользователями/ролями, защиту админки и UI. Номера прежних задач сохраняем; следующие этапы выполняем в порядке ниже. Сделанное не переписываем и не удаляем автоматически.
 

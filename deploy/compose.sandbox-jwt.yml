@@ -1,0 +1,43 @@
+# Дополнение только для auth-sandbox; ключи создаёт task sandbox:jwt.
+services:
+  api:
+    environment:
+      JWT_ENABLED: 'true'
+      JWT_NATIVE_ENABLED: 'true'
+      JWT_ISSUER: https://localhost:18443
+      JWT_SIGNING_KEY_ID: sandbox-1
+      JWT_PRIVATE_KEY_FILE: /sandbox/jwt/private.pem
+      JWT_KEYSET_FILE: /sandbox/jwt/jwks.json
+      JWT_ACCESS_TTL: 1m
+      JWT_RESOURCE_CONFIG_FILE: /sandbox/jwt/resources.json
+      JWT_INTROSPECTION_CLIENT_CONFIG_FILE: /sandbox/jwt/clients.json
+      JWT_ISSUANCE_PROJECT_LIMIT_PER_MINUTE: '60'
+      JWT_ISSUANCE_IP_LIMIT_PER_MINUTE: '60'
+      JWT_INTROSPECTION_CONSUMER_LIMIT_PER_MINUTE: '600'
+      JWT_INTROSPECTION_PROJECT_LIMIT_PER_MINUTE: '1200'
+      RETENTION_BATCH_SIZE: '200'
+    volumes:
+      - type: bind
+        source: ./tmp/sandbox/jwt/private.pem
+        target: /sandbox/jwt/private.pem
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./tmp/sandbox/jwt/jwks.json
+        target: /sandbox/jwt/jwks.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./tmp/sandbox/jwt/resources.json
+        target: /sandbox/jwt/resources.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./tmp/sandbox/jwt/clients.json
+        target: /sandbox/jwt/clients.json
+        read_only: true
+        bind:
+          create_host_path: false

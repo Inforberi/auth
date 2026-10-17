@@ -8,12 +8,63 @@ vars:
     CONFIRM: ''
     DEV_COMPOSE: 'APP_ENV_FILE={{.DEV_ENV | shellQuote}} docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file {{.DEV_ENV | shellQuote}} -f deploy/compose.base.yml -f deploy/compose.dev.yml'
     PROD_COMPOSE: 'APP_ENV_FILE={{.PROD_ENV | shellQuote}} docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file {{.PROD_ENV | shellQuote}} -f deploy/compose.base.yml -f deploy/compose.prod.yml'
+    SANDBOX_COMPOSE: 'SANDBOX_UID=$(id -u) SANDBOX_GID=$(id -g) docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file .env.example -p auth-sandbox -f deploy/compose.base.yml -f deploy/compose.sandbox.yml'
 
 tasks:
     default:
         desc: Показать доступные команды
         cmds:
             - task --list
+
+    # Изолированный HTTPS-стенд — только тестовые данные, настоящие .env не читаются
+    sandbox:up:
+        desc: Запустить тестовый HTTPS API на localhost:18443 и Mailpit на localhost:18026
+        preconditions:
+            - sh: test "$(id -u)" -ne 0
+              msg: Запускайте sandbox от обычного пользователя с доступом к Docker, не от root
+        deps: [sandbox:tls]
+        cmds:
+            - '{{.SANDBOX_COMPOSE}} up -d --wait postgres redis mailpit'
+            - '{{.SANDBOX_COMPOSE}} run --rm migrate up'
+            - '{{.SANDBOX_COMPOSE}} exec -T postgres psql -X -v ON_ERROR_STOP=1 -U auth -d auth < deploy/sandbox-runtime.sql'
+            - '{{.SANDBOX_COMPOSE}} exec -T postgres psql -X -v ON_ERROR_STOP=1 -U auth -d auth < deploy/runtime-grants.sql'
+            - '{{.SANDBOX_COMPOSE}} up -d --build --no-deps api'
+            - >-
+                curl --silent --show-error --fail --retry 20 --retry-all-errors --retry-connrefused --retry-delay 1
+                --retry-max-time 45 --max-time 3 --cacert tmp/sandbox/tls.crt
+                https://localhost:18443/health/ready
+
+    sandbox:tls:
+        internal: true
+        status:
+            - test -f tmp/sandbox/tls.crt -a -f tmp/sandbox/tls.key
+        cmds:
+            - mkdir -p tmp/sandbox
+            - chmod 700 tmp/sandbox
+            - >-
+                sh -c 'umask 077 && exec openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256
+                -noenc -days 30 -subj /CN=localhost
+                -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+                -keyout tmp/sandbox/tls.key -out tmp/sandbox/tls.crt'
+
+    sandbox:down:
+        desc: Остановить HTTPS-стенд, сохранив его тестовые данные
+        cmds:
+            - '{{.SANDBOX_COMPOSE}} down'
+
+    sandbox:jwt:
+        desc: Включить JWT на работающем sandbox и проверить HTTPS выдачу, consumer, refresh и отзыв
+        preconditions:
+            - sh: test -f tmp/sandbox/admin-setup.json -a -f tmp/sandbox/tls.crt
+              msg: Сначала подготовьте sandbox и тестового администратора по docs/operations/local-sandbox.md
+        cmds:
+            - AUTH_SANDBOX_PREPARE=1 go test ./deploy/sandbox -run '^TestPrepareJWT$' -count=1
+            - '{{.SANDBOX_COMPOSE}} exec -T postgres psql -X -v ON_ERROR_STOP=1 -U auth -d auth < deploy/sandbox/jwt-fixture.sql'
+            - '{{.SANDBOX_COMPOSE}} -f deploy/compose.sandbox-jwt.yml up -d --no-deps api'
+            - >-
+                curl --silent --show-error --fail --retry 20 --retry-all-errors --retry-connrefused --retry-delay 1
+                --retry-max-time 45 --max-time 3 --cacert tmp/sandbox/tls.crt https://localhost:18443/health/ready
+            - AUTH_SANDBOX_ACCEPTANCE=1 go test ./deploy/sandbox -run '^TestJWTAcceptance$' -count=1 -v -timeout=3m
 
     # Разработка — API с Air, PostgreSQL, Redis и Mailpit
     dev:up:
@@ -140,7 +191,7 @@ tasks:
             - '{{.PROD_COMPOSE}} run --rm backup create'
 
     restore:
-        desc: Восстановить БД — нужны FILE и CONFIRM=project:database
+        desc: Восстановить БД без запуска API — FILE и CONFIRM=project:database; затем security recovery
         aliases: [db-restore]
         cmds:
             - >-

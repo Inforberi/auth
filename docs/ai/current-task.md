@@ -1,20 +1,24 @@
 # Текущий шаг
 
-Обновлено 17 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), evidence — [history](../planning/history.md#результат-j62-local--17-октября-2026). Commits/staging проверять через Git.
+Обновлено 17 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), evidence — [history](../planning/history.md#результат-j74-local--17-октября-2026), краткий [отчёт](../operations/acceptance-summary.md). Commits/staging проверять через Git.
 
-## Последний результат — J6.2-local
+## Последний результат — J7.4-local
 
-- [JWT settings](../features/jwt-profile-settings.md): обязательные независимые `policy.tokenIssuance.sessionExchange/native` в existing GET/POST/version/audit с permission/fresh password/MFA/deployment ceilings. First-install seed из ENV, рестарт сохраняет SQL policy. Read-only tokenProfiles — capability instance, не effective switch/fleet readiness; keys/mode/credentials остаются deployment.
-- Final exchange/native/MFA/refresh используют уже прочитанную locked policy, без лишнего SQL/Redis/новых pools. Disable не закрывает introspection/JWKS/logout/cookie admin и не отзывает существующие JWT. MFA recovery/challenge сохраняются после отказа; refresh rollback и committed reuse revoke проверены. Source000001 дополнен двумя safe-default boolean; рабочая DB не менялась, старой схеме нужен controlled upgrade, не reset.
-- Formatter, полный disposable SQL/race, targeted settings/token/MFA/App/config/router race, `task check`/lint0, Swagger/API reproducibility и security scan PASS. 0 reachable/0 imported-package findings,1 known module-only finding. NOT RUN: отдельный Redis integration и real ingress/fleet/browser/load/GC/restore; skips не считать PASS. Evidence — history. Коммит только по запросу.
+- На существующем [auth-sandbox](../operations/local-sandbox.md#jwt-профили--j74-local) включены JWT/native: отдельный ES256 key/public JWKS/resources/service identity, strict/local audience, access TTL1m, native P60/B200/I1m. Обычные ENV-примеры unchanged. Тестовая роль SQL fixture даёт Ивану только sandbox.records.read; существующие accounts/password/TOTP/volumes сохранены. Capability — JWT override, сохранённые switches включены через admin HTTPS + fresh password/TOTP.
+- `task sandbox:jwt`: 10 live сценариев PASS, 121.17s (ожидания TOTP/expiry, не benchmark). Cookie exchange, consumer/scope/mode/credentials, native password/MFA/refresh/replay/logout, settings switches, actual SQL/Redis stop→fail-closed503/live200→recovery и реальный expiry strict/local401. Consumer handler in-process, JWKS/introspection к actual production App по TLS с явным CA; не внешний data-backend/ingress. No runtime Go/API/dependency/schema changes в этом блоке.
+- Sandbox оставлен работающим с JWT/native и обоими issuance switches=true. Task sandbox:up возвращает базовый deployment без JWT override, не перезаписывая saved policy; sandbox:down сохраняет volumes. В API монтируются только нужные readonly TLS/JWT/catalog files, не raw consumer secret/admin TOTP/cookie artifacts. Реальные ENV/DB/secrets/чужие контейнеры не тронуты. Полный отчёт и команды — по ссылкам выше; коммит только по запросу.
 
-## Следующий блок — J7
+## Следующий блок — оставшиеся pre-ui gates
 
-По [JWT-плану](../planning/jwt-access.md#приёмка-безопасности-и-производительности): сверить S1–S10/security matrix с реализацией и существующими доказательствами, определить оставшиеся локально проверяемые пробелы, выполнить необходимые негативные/интеграционные проверки. Не перезапускать одинаковые suites формально и не закрывать external gates local fixtures. Не менять consumer mode, включать JWT или трогать реальные ENV/secrets/рабочую DB без разрешения.
+Продолжить на том же стенде без сброса данных: локальная приёмка key/JWKS outage/rotation/stale trust, остальные administrative/session pre-ui сценарии, затем измеряемые mixed load/storage/cleanup/память/GC по существующим планам. Выбрать конкретный риск и минимальный сценарий до следующей реализации; не добавлять новые рабочие механизмы ради тестов. Fleet/emergency distrust, реальные providers/SMTP/browser/operator и ingress остаются отдельными gates, если нет условий — NOT RUN. Capacity/production budgets пока не измерены.
+
+Постоянные тестовые зависимости уже работают — не создавать очередные ephemeral fixtures вместо этого стенда без конкретной нужды. Не повторять однообразные unit suites формально. Real browser/ingress/providers/external SMTP/human authenticator/operator/fleet/rotation/load/GC — отдельные NOT RUN gates, а не причина скрыто объявить local эквивалентом внешнего. Рабочие restore/secret rotation/ENV/DB только по отдельному разрешению.
+
+Traffic и ручной/orchestrator startup закрыты до SQL invalidation, reconciliation потерянных после backup постоянных passwords/status/roles/TOTP/identities/settings, Redis flow drain (OIDC TTL5min, writers остановлены), нового deployment key/kid/удаления old trust/подтверждения consumers. Wrapper выполняет только SQL часть и локальную остановку, не global fence/ротацию. Не FLUSHDB/FLUSHALL, не ослаблять strict на local. Hardware/profile/latency/error targets определить перед mixed/hostile/soak/load-rest/shutdown/GC; capacity не установлена.
 
 J6 целиком/J7/A6.4/pre-ui/A8 открыты. Real HTTPS/fleet/rotation/fault/load/GC/restore требуют разрешённого стенда/synthetic data и оператора; при отсутствии условий — NOT RUN, не выдуманная capacity. UI — после pre-ui backend gate.
 
-Direct native Google/Telegram handoff — отдельный J4c; пока browser provider flow → session exchange. Далее J7 → pre-ui-backend → UI A7 → A8.
+J7.1 SQL/HTTPS consumer и J7.2 restore SQL/drill выполнены локально, [recovery runbook](../operations/jwt-recovery.md) и [матрица](../operations/jwt-security-acceptance.md) остаются обязательными. Direct native Google/Telegram handoff — отдельный J4c. Далее local JWT acceptance → оставшиеся pre-ui/external gates → UI A7 → A8.
 
 ## Сохраняемые ограничения native и приёмки
 
