@@ -49,6 +49,8 @@ Readiness объединяет параллельные probes и использ
 
 ## Локальные результаты и оставшаяся приёмка
 
+J4b.2c.2: actual session/family retention SQL теперь использует сохраняемые keyset checkpoints и LIMIT кандидатов до anti-join/locks. На100000 held rows проверены начальная/средняя/eligible страницы и verifier DELETE; full SQL/race проверяет wrap/locks/rollback/4096 drain. [Алгоритм, результаты и необходимое согласование storage budgets](../features/refresh-storage.md#ограниченный-обход--j4b2c2-local). Current JWT3000/min и cleanup100/min не означают согласованную sustained native capacity; native HTTP остаётся закрытым до config/storage prerequisites. Это не замена mixed/fleet/GC/restore приёмки.
+
 На PostgreSQL 18.6 проверены конкурентный refresh (32 запроса, одна запись), отзыв/блокировка/reset/delete и ограниченная очистка. На 100000 синтетических live rows и 10000 молодых tombstones пустые candidate ranges sessions/audit/reservations/challenges/outbox/intents использовали Index Cond и 2–3 shared buffers. Это проверка candidate SQL, не полного mutation throughput.
 
 SQL-only session-read прогон: 2000 обращений, 32 читателя, pool 10; локальный результат около 10159 reads/s, p95 5.4ms, p99 20.4ms. Это короткий warm/local Docker PostgreSQL прогон, без HTTP/TLS/Redis/Argon2/SMTP; число нельзя выдавать за гарантированный API RPS. Общие admission/hash budgets проверены bursts по 1000 лишних операций и race detector. На Redis 8.2 из 200 попыток двух клиентов shared quota допускала ровно 10; TTL и отказ при недоступности проверены.

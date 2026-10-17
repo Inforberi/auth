@@ -141,6 +141,13 @@ CREATE TABLE auth.retention_settings (
   session_days INTEGER NOT NULL CHECK(session_days BETWEEN 1 AND 106751),
   security_audit_days INTEGER NOT NULL CHECK(security_audit_days BETWEEN 1 AND 106751)
 );
+CREATE TABLE auth.retention_checkpoints (
+  kind TEXT PRIMARY KEY CHECK (kind IN ('sessions','refresh_families')),
+  cursor_at TIMESTAMPTZ NOT NULL DEFAULT '-infinity',
+  cursor_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000'
+);
+INSERT INTO auth.retention_checkpoints(kind) VALUES ('sessions'),('refresh_families');
+
 CREATE TABLE auth.retention_settings_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id UUID NOT NULL REFERENCES auth.users(id),

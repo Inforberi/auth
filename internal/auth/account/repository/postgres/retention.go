@@ -41,19 +41,36 @@ func (r *Repository) PurgeRetention(ctx context.Context, cfg service.RetentionCo
 			return err
 		}
 		removed += contacts
-		result, err := tx.Exec(ctx, `WITH due AS MATERIALIZED (
-			SELECT id FROM auth.sessions
-			WHERE LEAST(revoked_at,expires_at,absolute_expires_at)
-				<= statement_timestamp()-$1::double precision*interval '24 hours'
-			AND NOT EXISTS(SELECT 1 FROM auth.refresh_families f WHERE f.session_id=auth.sessions.id)
-			ORDER BY LEAST(revoked_at,expires_at,absolute_expires_at),id
-			LIMIT $2 FOR UPDATE SKIP LOCKED
+		var sessions int64
+		if err := tx.QueryRow(ctx, `WITH checkpoint AS MATERIALIZED (
+			SELECT * FROM auth.retention_checkpoints WHERE kind='sessions' FOR UPDATE SKIP LOCKED
+		), candidates AS MATERIALIZED (
+			SELECT page.* FROM checkpoint p CROSS JOIN LATERAL (
+				SELECT id,LEAST(revoked_at,expires_at,absolute_expires_at) AS ended_at FROM auth.sessions
+				WHERE LEAST(revoked_at,expires_at,absolute_expires_at)<=statement_timestamp()-$1::double precision*interval '24 hours'
+				AND (LEAST(revoked_at,expires_at,absolute_expires_at),id)>(p.cursor_at,p.cursor_id)
+				ORDER BY LEAST(revoked_at,expires_at,absolute_expires_at),id LIMIT $2
+			) page
+		), due AS MATERIALIZED (
+			SELECT target.id FROM candidates c CROSS JOIN LATERAL (
+				SELECT s.id FROM auth.sessions s WHERE s.id=c.id
+				AND NOT EXISTS(SELECT 1 FROM auth.refresh_families f WHERE f.session_id=s.id)
+				FOR UPDATE OF s SKIP LOCKED
+			) target
+		), removed AS (
+			DELETE FROM auth.sessions s USING due WHERE s.id=due.id RETURNING s.id
+		), last_page AS (
+			SELECT ended_at,id FROM candidates ORDER BY ended_at DESC,id DESC LIMIT 1
+		), advanced AS (
+			UPDATE auth.retention_checkpoints r
+			SET cursor_at=COALESCE((SELECT ended_at FROM last_page),'-infinity'),
+			cursor_id=COALESCE((SELECT id FROM last_page),'00000000-0000-0000-0000-000000000000')
+			FROM checkpoint p WHERE r.kind=p.kind
 		)
-		DELETE FROM auth.sessions s USING due WHERE s.id=due.id`, cfg.SessionDays, batch)
-		if err != nil {
+		SELECT (SELECT count(*) FROM removed) FROM auth.retention_checkpoints WHERE kind='sessions'`, cfg.SessionDays, batch).Scan(&sessions); err != nil {
 			return err
 		}
-		removed += result.RowsAffected()
+		removed += sessions
 		for _, table := range []string{
 			"email_verification_audit", "password_audit", "account_status_audit",
 			"account_deletion_audit", "email_change_audit", "invitation_audit",

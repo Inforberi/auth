@@ -66,20 +66,42 @@ func (r *Repository) purgeTransientAuthData(ctx context.Context, batch int) (int
 		}
 	}
 	// Drain verifiers before their families; never cascade thousands of generations per batch item.
-	for _, query := range []string{
-		`WITH due AS (SELECT token_hash FROM auth.refresh_tokens WHERE expires_at<=statement_timestamp()
+	result, err := r.db.Exec(ctx, `WITH due AS (SELECT token_hash FROM auth.refresh_tokens WHERE expires_at<=statement_timestamp()
 		 ORDER BY expires_at,token_hash LIMIT $1 FOR UPDATE SKIP LOCKED)
-		 DELETE FROM auth.refresh_tokens t USING due WHERE t.token_hash=due.token_hash`,
-		`WITH due AS (SELECT session_id FROM auth.refresh_families f WHERE absolute_expires_at<=statement_timestamp()
-		 AND NOT EXISTS(SELECT 1 FROM auth.refresh_tokens t WHERE t.session_id=f.session_id)
-		 ORDER BY absolute_expires_at,session_id LIMIT $1 FOR UPDATE SKIP LOCKED)
-		 DELETE FROM auth.refresh_families f USING due WHERE f.session_id=due.session_id`,
-	} {
-		result, err := r.db.Exec(ctx, query, batch)
-		if err != nil {
-			return removed, err
-		}
-		removed += result.RowsAffected()
+		 DELETE FROM auth.refresh_tokens t USING due WHERE t.token_hash=due.token_hash`, batch)
+	if err != nil {
+		return removed, err
 	}
-	return removed, nil
+	removed += result.RowsAffected()
+	var families int64
+	err = r.db.QueryRow(ctx, `WITH checkpoint AS MATERIALIZED (
+			SELECT * FROM auth.retention_checkpoints WHERE kind='refresh_families' FOR UPDATE SKIP LOCKED
+		), candidates AS MATERIALIZED (
+			SELECT page.* FROM checkpoint p CROSS JOIN LATERAL (
+				SELECT session_id,absolute_expires_at FROM auth.refresh_families
+				WHERE absolute_expires_at<=statement_timestamp()
+				AND (absolute_expires_at,session_id)>(p.cursor_at,p.cursor_id)
+				ORDER BY absolute_expires_at,session_id LIMIT $1
+			) page
+		), due AS MATERIALIZED (
+			SELECT target.session_id FROM candidates c CROSS JOIN LATERAL (
+				SELECT f.session_id FROM auth.refresh_families f WHERE f.session_id=c.session_id
+				AND NOT EXISTS(SELECT 1 FROM auth.refresh_tokens t WHERE t.session_id=f.session_id)
+				FOR UPDATE OF f SKIP LOCKED
+			) target
+		), removed AS (
+			DELETE FROM auth.refresh_families f USING due WHERE f.session_id=due.session_id RETURNING f.session_id
+		), last_page AS (
+			SELECT absolute_expires_at,session_id FROM candidates ORDER BY absolute_expires_at DESC,session_id DESC LIMIT 1
+		), advanced AS (
+			UPDATE auth.retention_checkpoints r
+			SET cursor_at=COALESCE((SELECT absolute_expires_at FROM last_page),'-infinity'),
+			cursor_id=COALESCE((SELECT session_id FROM last_page),'00000000-0000-0000-0000-000000000000')
+			FROM checkpoint p WHERE r.kind=p.kind
+		)
+		SELECT (SELECT count(*) FROM removed) FROM auth.retention_checkpoints WHERE kind='refresh_families'`, batch).Scan(&families)
+	if err != nil {
+		return removed, err
+	}
+	return removed + families, nil
 }

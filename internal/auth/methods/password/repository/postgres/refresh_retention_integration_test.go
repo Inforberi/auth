@@ -11,6 +11,7 @@ import (
 )
 
 func checkRefreshRetention(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
+	t.Run("checkpoint pages", func(t *testing.T) { checkRetentionPages(t, db, ctx) })
 	t.Run("refresh audit failure rolls back consume", func(t *testing.T) {
 		input, current := refreshFixture(t, db, ctx)
 		accessExec(t, db, ctx, `CREATE FUNCTION auth.reject_refresh_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic refresh audit failure'; END $$;
@@ -65,10 +66,12 @@ func checkRefreshRetention(t *testing.T, db *pgxpool.Pool, ctx context.Context) 
 		if err := db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.refresh_families WHERE session_id=$1)`, expiredID).Scan(&familyPresent); err != nil || familyPresent {
 			t.Fatal("empty expired family not removed", err)
 		}
-		if _, err := repo.PurgeRetention(ctx, cfg); err != nil {
-			t.Fatal(err)
-		}
 		var present bool
+		for range 2 {
+			if _, err := repo.PurgeRetention(ctx, cfg); err != nil {
+				t.Fatal(err)
+			}
+		}
 		if err := db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.sessions WHERE id=$1)`, expiredID).Scan(&present); err != nil || present {
 			t.Fatal("ledger not purged after family drain", err)
 		}

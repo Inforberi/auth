@@ -8,6 +8,8 @@ J4a storage добавляет immutable browser/api profile в общем sessi
 
 Один независимый backend на проект, собственные PostgreSQL, Redis, SMTP и secrets. Браузер работает через cookie/BFF и HTTPS; native/API access требует отдельного контракта, не переиспользования browser cookie. Общий SSO, организации, multi-app и Telegram commerce — отдельные расширения. Не строим свой OAuth server или универсальный plugin framework.
 
+Physical cleanup принадлежит существующему account retention worker. J4b.2c.2 сохраняет две SQL keyset checkpoint rows для sessions/families: progress/deletes атомарны, no per-process authority state, bounded candidate page до eligibility/locks. Это не новая очередь или Auth settings; reuse window и текущая session authority не зависят от cursor. [Алгоритм/storage gates](features/refresh-storage.md#ограниченный-обход--j4b2c2-local).
+
 ## Согласованное решение — 7 октября 2026
 
 Целевая архитектура утверждена 7 октября; перенос существующего кода 4.5 выполнен 8 октября 2026. Реализованы app/auth, config, server/http, account/domain, methods/password, session и audit contract. Остальные модули в дереве — будущие, не пустые пакеты в checkout. API/SQL/dependencies сохранены; выполненные 4.0/4.1 остаются в истории, их правила структуры заменены этим решением. Legacy module rename остаётся задачей 14.4.
