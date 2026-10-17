@@ -35,7 +35,7 @@ func (t NativeTarget) Validate() error {
 }
 
 func (s *Login) StartNative(ctx context.Context, proof PrimaryProof, target NativeTarget, ip string) (*LoginChallenge, error) {
-	if proof.Administrative || proof.Method != "password" || len(target.Scope) > 64 {
+	if proof.Administrative || (proof.Method != "password" && proof.Method != "emailotp") || len(target.Scope) > 64 {
 		return nil, domain.ErrProofRequired
 	}
 	address, err := netip.ParseAddr(ip)

@@ -1,6 +1,6 @@
 # Refresh storage — J4a-local
 
-17 октября 2026: J4a-local реализует storage/profile foundation, J4b.1-local — transaction-owned refresh, J4b.2a — [первую password API issuance](native-issuance.md), J4b.2b.1 — [native MFA/enrollment](native-mfa.md). **Это ещё не публичный native login/refresh API.** Email OTP purpose binding и App/HTTP admission/error/transport contract остаются открытыми. `JWT_ENABLED` по-прежнему публикует только существующий [cookie session exchange](jwt-exchange.md), не native-профиль.
+17 октября 2026: J4a-local реализует storage/profile foundation, J4b.1-local — transaction-owned refresh, J4b.2a — [первую password API issuance](native-issuance.md), J4b.2b.1 — [native MFA/enrollment](native-mfa.md), J4b.2b.2 — [email OTP binding](native-email-otp.md). **Это ещё не публичный native login/refresh API.** App/HTTP admission/error/transport contract остаётся открытым. `JWT_ENABLED` по-прежнему публикует только существующий [cookie session exchange](jwt-exchange.md), не native-профиль.
 
 ## Владельцы и границы
 
@@ -16,7 +16,7 @@
 | `token/repository/postgres/refresh_rotate.go` | Consume/successor/reuse writes в той же transaction |
 | `account/repository/postgres/{retention,transient_cleanup}.go` | Existing bounded cleanup без нового worker |
 
-SQL primitives принимают `pgx.Tx` только внутри repository слоя. Их нельзя вызывать из HTTP или передавать transaction в business service. `Repository.Refresh` владеет refresh transaction; `Repository.IssueNative` создаёт первую API session/family от server-owned password proof без MFA requirement. Полный native primary/MFA transport ещё не подключён. Storage primitives сами не коммитят, не подписывают JWT и не возвращают raw secret.
+SQL primitives принимают `pgx.Tx` только внутри repository слоя. Их нельзя вызывать из HTTP или передавать transaction в business service. `Repository.Refresh` владеет refresh transaction; `Repository.IssueNative` создаёт первую API session/family от server-owned password/email OTP proof без MFA requirement. Полный native primary/MFA transport ещё не подключён. Storage primitives сами не коммитят, не подписывают JWT и не возвращают raw secret.
 
 ## Профиль ledger
 

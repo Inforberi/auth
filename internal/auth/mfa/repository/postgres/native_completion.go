@@ -25,7 +25,7 @@ func CompleteNativeFactor(ctx context.Context, tx pgx.Tx, attempt service.Native
 	if err != nil {
 		return result, err
 	}
-	if proof.UserID != attempt.UserID || proof.Administrative || proof.EnrollmentRequired || proof.Method != "password" || attempt.Factor == nil {
+	if proof.UserID != attempt.UserID || proof.Administrative || proof.EnrollmentRequired || (proof.Method != "password" && proof.Method != "emailotp") || attempt.Factor == nil {
 		return result, domain.ErrInvalidCode
 	}
 	if attempt.AllowPrimary != nil && !attempt.AllowPrimary(proof.Method, proof.Issuer) {

@@ -1,6 +1,6 @@
 # Первая API issuance — J4b.2a-local
 
-17 октября 2026: реализована атомарная выдача API session + access JWT + первой refresh family от проверенного пароля; J4b.2b.1 добавляет [native MFA coordinator](native-mfa.md). **Это внутренние use cases, не опубликованный native login API.** App не передаёт NativePolicy, native HTTP/ENV нет. `JWT_ENABLED` по-прежнему включает только cookie exchange/JWKS. Email OTP purpose binding и transport ещё впереди.
+17 октября 2026: реализована атомарная выдача API session + access JWT + первой refresh family от проверенного пароля; J4b.2b.1 добавляет [native MFA coordinator](native-mfa.md), J4b.2b.2 — [email OTP primary](native-email-otp.md). **Это внутренние use cases, не опубликованный native login API.** App не передаёт NativePolicy, native HTTP/ENV нет. `JWT_ENABLED` по-прежнему включает только cookie exchange/JWKS. Transport ещё впереди.
 
 ## Границы кода
 
@@ -18,7 +18,7 @@
 ## Последовательность
 
 1. Пароль проверяется существующим bounded hasher, login limits/early policy и rehash. Ни browser session, ни MFA approval при Authenticate не создаются. Нынешние browser/private-admin сценарии продолжают пользоваться прежними ответами и coordinator.
-2. `IssueNative` принимает только server-owned password proof и audience/scope/agent/trusted IP. Administrative intent, OIDC и email OTP пока отклоняются: native-purpose binding для них не готов. Неверные audience/duplicate/unknown scopes отклоняются общей с exchange проверкой; requested scope копируется и сортируется.
+2. `IssueNative` принимает server-owned password либо purpose-bound email OTP proof и audience/scope/agent/trusted IP. Administrative intent и OIDC пока отклоняются. Native email coordinator берёт target только из locked code consume, не из confirm request. Неверные audience/duplicate/unknown scopes отклоняются общей с exchange проверкой; requested scope копируется и сортируется.
 3. Общий instance admission8/deadline3s и атомарный Redis actor/IP/project budget применяются до issuance SQL. Counters общие с exchange, existing config/pool/no-retry semantics сохранены. **Family ещё нет:** пустой session ID не превращается в общий лимит10 для всех native logins и не создаёт empty-session key. Password hashing имеет собственные прежние admission/budgets; deadline3s относится к последующей issuance.
 4. Генерируются два независимых canonical256-bit секрета. Ledger secret нужен только для SQL verifier и не возвращается клиенту. Refresh verifier не совпадает с ledger verifier; наружу после commit выходит только refresh secret и signed access result.
 5. Read Committed transaction: Access shared snapshot → active user SHARE с проверкой версии и свежести proof → текущий primary reference/public policy → MFA/factor requirement. Возраст password proof <1min, допускается backend/DB skew до5s; future timestamp при записи clamp к SQL time. Password replace/reset/block/policy/grant races не дают использовать старое состояние. Redis/сеть/hasher не выполняются под этими locks.
@@ -27,7 +27,7 @@
 
 Потерянный ответ commit может оставить неизвестный клиенту **committed** результат: rollback нельзя обещать при любой сетевой ошибке. Raw credentials всё равно не возвращаются без подтверждённого commit, автоматического повтора нет. Требуется новый вход; недоступная клиенту session может остаться до expiry/retention или отзыва owner. Deferred SQL commit failure проверен, реальный lost-commit-reply/fleet drill остаётся внешним gate.
 
-Primary method — password; auth_time берётся из проверенного proof с SQL clamp. MFATime и password_verified_at отсутствуют: обычный primary login не становится MFA или fresh private-admin step-up. Initial access scope должен целиком входить в текущие grants и resource allowlist; family фиксирует этот максимум. Дальнейший [refresh](refresh-storage.md) пересекает максимум с актуальными grants и не расширяет его из-за новой роли.
+Primary method — password либо emailotp; auth_time берётся из проверенного proof с SQL clamp. Без второго фактора MFATime отсутствует; password_verified_at не устанавливается: обычный primary login не становится MFA или fresh private-admin step-up. Initial access scope должен целиком входить в текущие grants и resource allowlist; family фиксирует этот максимум. Дальнейший [refresh](refresh-storage.md) пересекает максимум с актуальными grants и не расширяет его из-за новой роли.
 
 ## Сроки и конфигурация
 
@@ -40,6 +40,6 @@ NativePolicy — optional server-only constructor config, не ENV/UI/API. Бе�
 
 ## Что осталось до native API
 
-Native purpose/transport/audience/scope-bound MFA/enrollment и одноразовая completion в общей issuance transaction реализованы [отдельным блоком](native-mfa.md). Остаются email OTP request/consume binding и HTTP contracts/App publication. Browser challenge нельзя передать в native completion или наоборот. Direct provider handoff — отдельный J4c.
+Native purpose/transport/audience/scope-bound MFA/enrollment и одноразовая completion в общей issuance transaction реализованы [отдельным блоком](native-mfa.md); [email OTP request/consume binding](native-email-otp.md) также готов внутри backend. Остаются HTTP contracts/App publication. Browser challenge нельзя передать в native completion или наоборот. Direct provider handoff — отдельный J4c.
 
 Затем refresh/logout HTTP: bounded JSON, cookie/Authorization conflict rejection, safe mapper/Retry-After/no-store/без Set-Cookie, management profile label и negative/concurrency API tests. Перед публикацией — deployment config/ceilings, retention candidate-scan/held-ledger backlog/drain/storage, strict consumer J5 и внешние security/load/restore gates. Внутренние SQL/unit tests не доказывают готовность native клиента, capacity или отсутствие GC/memory проблем.

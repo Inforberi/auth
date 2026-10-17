@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"time"
+
+	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 )
 
 var (
@@ -15,10 +17,12 @@ var (
 const MaxAttempts = 5
 
 type Challenge struct {
-	Digest    string
-	Verifier  string
-	Payload   []byte
-	ExpiresAt time.Time
+	Digest         string
+	Verifier       string
+	Payload        []byte
+	ExpiresAt      time.Time
+	NativeAudience string
+	NativeScope    []accessdomain.PermissionKey
 }
 
 type Delivery struct {

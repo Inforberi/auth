@@ -18,7 +18,7 @@ import (
 )
 
 func (r *Repository) IssueNative(ctx context.Context, p service.NativeParams, sign service.NativeSigner) (*service.RefreshResult, error) {
-	if p.Input.Proof.Administrative || p.Input.Proof.Method != "password" {
+	if p.Input.Proof.Administrative || (p.Input.Proof.Method != "password" && p.Input.Proof.Method != "emailotp") {
 		return nil, mfadomain.ErrProofRequired
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
@@ -57,11 +57,11 @@ func issueNativeSession(ctx context.Context, tx pgx.Tx, p service.NativeParams, 
 	err := tx.QueryRow(ctx, `INSERT INTO auth.sessions(credential_profile,token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,
 		primary_method,primary_verified_at,user_agent,ip_address,idle_timeout_seconds,activity_interval_seconds,admin_absolute_seconds,mfa_verified_at)
 		VALUES('api',$1,$2,$3,statement_timestamp(),statement_timestamp()+$4::bigint*interval '1 second',
-		statement_timestamp()+$5::bigint*interval '1 second','password',LEAST($6::timestamptz,statement_timestamp()),$7,$8,$9,$10,$11,$12) RETURNING id`,
+		statement_timestamp()+$5::bigint*interval '1 second',$13,LEAST($6::timestamptz,statement_timestamp()),$7,$8,$9,$10,$11,$12) RETURNING id`,
 		p.LedgerVerifier, proof.UserID, version, int64(policy.IdleTTL/time.Second), int64(policy.AbsoluteTTL/time.Second), proof.VerifiedAt, p.Input.UserAgent, p.Input.IP,
 		int64(min(policy.IdleTTL, policy.Sessions.AdminIdleTimeout)/time.Second),
 		int64(min(policy.Sessions.AdminActivityInterval, min(policy.IdleTTL, policy.Sessions.AdminIdleTimeout)/10)/time.Second),
-		int64(min(policy.AbsoluteTTL, policy.Sessions.AdminAbsoluteTTL)/time.Second), verified).Scan(&id)
+		int64(min(policy.AbsoluteTTL, policy.Sessions.AdminAbsoluteTTL)/time.Second), verified, proof.Method).Scan(&id)
 	if err != nil {
 		return nil, err
 	}

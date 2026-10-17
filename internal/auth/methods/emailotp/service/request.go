@@ -6,6 +6,7 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/domain"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
 type RequestedCode struct {
@@ -14,6 +15,10 @@ type RequestedCode struct {
 }
 
 func (s *Service) Request(ctx context.Context, input, ip string) (*RequestedCode, error) {
+	return s.request(ctx, input, ip, nil)
+}
+
+func (s *Service) request(ctx context.Context, input, ip string, target *mfaservice.NativeTarget) (*RequestedCode, error) {
 	if !s.cfg.Enabled {
 		return nil, domain.ErrDisabled
 	}
@@ -31,9 +36,16 @@ func (s *Service) Request(ctx context.Context, input, ip string) (*RequestedCode
 			return nil, err
 		}
 	}
-	result, challenge, err := s.prepareCode(email.String(), "входа", "")
+	purpose := ""
+	if target != nil {
+		purpose = "native:"
+	}
+	result, challenge, err := s.prepareCode(email.String(), "входа", purpose)
 	if err != nil {
 		return nil, err
+	}
+	if target != nil {
+		challenge.NativeAudience, challenge.NativeScope = target.Audience, target.Scope
 	}
 	if err := s.repo.Issue(ctx, email.String(), challenge); err != nil {
 		return nil, err

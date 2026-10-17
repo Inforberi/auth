@@ -12,6 +12,7 @@ import (
 type repository interface {
 	Issue(context.Context, string, domain.Challenge) error
 	Consume(context.Context, string, string) (*AuthenticatedAccount, error)
+	ConsumeNative(context.Context, string, string) (*NativeAuthentication, error)
 	IssueReauthentication(context.Context, mfaservice.Proof, string, domain.Challenge) error
 	ConfirmReauthentication(context.Context, mfaservice.Proof, string, string, string) (*ReauthenticatedSession, error)
 }

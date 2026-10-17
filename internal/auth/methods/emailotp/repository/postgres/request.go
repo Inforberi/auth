@@ -12,6 +12,11 @@ import (
 )
 
 func (r *Repository) Issue(ctx context.Context, email string, challenge domain.Challenge) error {
+	profile := "browser"
+	var audience *string
+	if challenge.NativeAudience != "" {
+		profile, audience = "api", &challenge.NativeAudience
+	}
 	return r.transaction(ctx, func(tx pgx.Tx) error {
 		var user accountdomain.UserID
 		var version int64
@@ -35,8 +40,8 @@ func (r *Repository) Issue(ctx context.Context, email string, challenge domain.C
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.email_login_challenges WHERE user_id=$1`, user); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO auth.email_login_challenges(digest,user_id,email_id,auth_version,verifier,expires_at)
-   VALUES ($1,$2,$3,$4,$5,$6)`, challenge.Digest, user, emailID, version, challenge.Verifier, challenge.ExpiresAt); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO auth.email_login_challenges(digest,user_id,email_id,auth_version,verifier,expires_at,credential_profile,native_audience,native_scope)
+   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, challenge.Digest, user, emailID, version, challenge.Verifier, challenge.ExpiresAt, profile, audience, challenge.NativeScope); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO auth.email_login_outbox(digest,payload,expires_at) VALUES ($1,$2,$3)`,

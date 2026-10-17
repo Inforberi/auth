@@ -24,7 +24,7 @@ func (r *Repository) ConfirmReauthentication(ctx context.Context, proof mfaservi
 		err := tx.QueryRow(ctx, `SELECT c.verifier,c.email_id FROM auth.email_login_challenges c
 			JOIN auth.user_emails e ON e.id=c.email_id AND e.user_id=c.user_id
 			WHERE c.digest=$1 AND c.user_id=$2 AND c.auth_version=$3 AND c.session_hash=$4
-			AND c.purpose='reauthenticate' AND c.attempts<5 AND c.expires_at>clock_timestamp()
+			AND c.purpose='reauthenticate' AND c.credential_profile='browser' AND c.attempts<5 AND c.expires_at>clock_timestamp()
 			AND e.verified_at IS NOT NULL FOR UPDATE OF c`, digest, proof.UserID, proof.AuthVersion, proof.TokenHash).
 			Scan(&expected, &emailID)
 		if errors.Is(err, pgx.ErrNoRows) {

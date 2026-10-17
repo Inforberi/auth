@@ -30,8 +30,7 @@ type NativeSigner func(context.Context, ExchangeInput, string, SessionProof) (*s
 
 type nativeCredentials struct{ ledgerVerifier, refresh, refreshVerifier string }
 
-// IssueNative consumes only a server-owned password proof. Required MFA remains fail-closed
-// until native-purpose challenges can complete issuance in the same transaction.
+// IssueNative accepts a server-owned primary proof; NativeLogin coordinates required MFA.
 func (s *Service) IssueNative(ctx context.Context, input NativeInput) (*RefreshResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
@@ -41,7 +40,7 @@ func (s *Service) IssueNative(ctx context.Context, input NativeInput) (*RefreshR
 	if s.native == nil {
 		return nil, domain.ErrNativeDisabled
 	}
-	if !mfaservice.ValidPrimary(input.Proof) || input.Proof.Administrative || input.Proof.Method != "password" || len(input.UserAgent) > 512 {
+	if !mfaservice.ValidPrimary(input.Proof) || input.Proof.Administrative || (input.Proof.Method != "password" && input.Proof.Method != "emailotp") || len(input.UserAgent) > 512 {
 		return nil, domain.ErrInvalidRequest
 	}
 	ip, err := netip.ParseAddr(input.IP)

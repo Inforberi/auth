@@ -33,7 +33,7 @@ func (r *nativeRepo) IssueNative(ctx context.Context, p NativeParams, sign Nativ
 		return nil, r.err
 	}
 	input := ExchangeInput{Actor: accessservice.Principal{UserID: p.Input.Proof.UserID, TokenHash: p.LedgerVerifier}, SessionID: "22222222-2222-4222-8222-222222222222", Audience: p.Input.Audience, Scope: p.Input.Scope}
-	proof := SessionProof{AuthVersion: p.Input.Proof.AuthVersion, VerifiedAt: p.Input.Proof.VerifiedAt, Method: "password", Now: time.Now().UTC(), Deadline: time.Now().Add(p.Policy.IdleTTL)}
+	proof := SessionProof{AuthVersion: p.Input.Proof.AuthVersion, VerifiedAt: p.Input.Proof.VerifiedAt, Method: p.Input.Proof.Method, Now: time.Now().UTC(), Deadline: time.Now().Add(p.Policy.IdleTTL)}
 	issued, err := sign(ctx, input, p.Mode, proof)
 	if err != nil {
 		return nil, err
@@ -74,9 +74,10 @@ func TestNativeAdmission(t *testing.T) {
 	}{
 		{"disabled", func(s *Service, _ *nativeRepo, _ *exchangeLimiter, _ *NativeInput) { s.native = nil }, domain.ErrNativeDisabled},
 		{"admin", func(_ *Service, _ *nativeRepo, _ *exchangeLimiter, i *NativeInput) { i.Proof.Administrative = true }, domain.ErrInvalidRequest},
-		{"email OTP not bound yet", func(_ *Service, _ *nativeRepo, _ *exchangeLimiter, i *NativeInput) {
-			i.Proof.Method = "emailotp"
-			i.Proof.Reference = "11111111-1111-4111-8111-111111111111"
+		{"OIDC not bound yet", func(_ *Service, _ *nativeRepo, _ *exchangeLimiter, i *NativeInput) {
+			i.Proof.Method = "oidc"
+			i.Proof.Issuer = "https://provider.example"
+			i.Proof.Reference = "subject"
 		}, domain.ErrInvalidRequest},
 		{"bad proof", func(_ *Service, _ *nativeRepo, _ *exchangeLimiter, i *NativeInput) { i.Proof.AuthVersion = 0 }, domain.ErrInvalidRequest},
 		{"bad IP", func(_ *Service, _ *nativeRepo, _ *exchangeLimiter, i *NativeInput) { i.IP = "fe80::1%en0" }, domain.ErrInvalidRequest},

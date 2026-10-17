@@ -2,6 +2,8 @@
 
 Реализован backend отдельного passwordless метода. Выключен по умолчанию через EMAIL_OTP_ENABLED=false. Это не email verification и не MFA. Внешний SMTP/browser/fault/load прогон не выполнен; UI будет позже.
 
+J4b.2b.2-local добавляет внутренний [email-код для JWT-входа](native-email-otp.md): общий mail/limits/consume pipeline с отдельным API profile/target и HMAC binding. App/native HTTP ещё не подключены; публичные ручки ниже остаются браузерными.
+
 A5.2c добавляет отдельный [email proof для управления MFA](mfa.md#подтверждение-управления-mfa-по-почте-a52c-local), включаемый EMAIL_REAUTHENTICATION_ENABLED независимо от login. Он требует live session и уже verified owned contact external-only аккаунта, не добавляет адрес и не создаёт сессию. Generator/encrypted outbox/delivery/лимиты переиспользуются, но purpose/verifiers/cookies и SQL операции различаются; код одного сценария не подходит другому. Worker запускается при любом из этих enabled профилей. Тема и тело письма явно различают вход и подтверждение MFA; старые queued login payloads без subject сохраняют прежнюю тему.
 
 ## Поддержанный профиль

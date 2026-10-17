@@ -50,6 +50,20 @@ func (f *loginFixture) Consume(_ context.Context, digest, verifier string) (*Aut
 	return &AuthenticatedAccount{User: accountdomain.User{ID: "00000000-0000-0000-0000-000000000001", AuthVersion: 7}, EmailID: "00000000-0000-0000-0000-000000000002"}, nil
 }
 
+func (f *loginFixture) ConsumeNative(ctx context.Context, digest, verifier string) (*NativeAuthentication, error) {
+	user, err := f.Consume(ctx, digest, verifier)
+	if err != nil {
+		return nil, err
+	}
+	return &NativeAuthentication{
+		Proof: mfaservice.PrimaryProof{
+			UserID: user.ID, AuthVersion: int64(user.AuthVersion),
+			Method: "emailotp", Reference: string(user.EmailID), VerifiedAt: time.Now().UTC(),
+		},
+		Target: mfaservice.NativeTarget{Audience: f.challenge.NativeAudience, Scope: f.challenge.NativeScope},
+	}, nil
+}
+
 func (f *loginFixture) BeginLogin(ctx context.Context, proof mfaservice.PrimaryProof, agent, ip string) (*sessionservice.CreatedSession, error) {
 	f.primary = proof
 	return f.CreateSessionAtVersion(ctx, proof.UserID, agent, ip, proof.AuthVersion)
