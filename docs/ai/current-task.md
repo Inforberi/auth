@@ -1,18 +1,18 @@
 # Текущий шаг
 
-Обновлено 17 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), проверки — [history](../planning/history.md#результат-a63c3-local--17-октября-2026). Это передача контекста, не архив; commits/staging проверять через Git.
+Обновлено 17 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), проверки — [history](../planning/history.md#результат-j1-local--17-октября-2026). Это передача контекста, не архив; commits/staging проверять через Git.
 
-## Последний результат — A6.3c.3-local
+## Последний результат — J1-local
 
-- [Retention settings](../features/retention-settings.md): три срока в SQL singleton/version; ENV только initial seed, protected GET/POST/current permission/fresh password+MFA/no-op/audit rollback, explicit confirmation сокращения. Значения в днях 1..106751; defaults 30/30/180.
-- Worker читает current SQL snapshot перед каждой партией, без cache/new timers/pools/workers. Read failure отменяет очистку без ENV fallback; общий deadline 5s включает read. In-flight партия может использовать прежние сроки до deadline. Batch/interval остаются deployment, действующие session deadlines не меняются. SQL/race проверяет seed/update races, rollback, authority и реальную очистку/сохранность активных sessions.
-- Formatter/Swagger/task check PASS/lint 0 issues; full PostgreSQL 18.6/race PASS 34.930s, targeted SQL/race PASS 1.783s и service/HTTP race PASS. Disposable PG на bounded tmpfs; рабочие DB/ENV/secrets не трогались. Source 000001 дополнен без рабочей migration, controlled schema/grants/seed rollout обязателен. Maintenance upgrade CLI не добавлен, mixed old/new fleet недопустим. Подробности проверок/cleanup — history. Коммит только по запросу.
+- Пользователь подтвердил standard Bearer JWT, session exchange и native/API профиль; [ADR 004](../adr/004-jwt-access-profiles.md) фиксирует J1-контракт S1–S10. Strict online default; per-audience local opt-in с default TTL 2m/ceiling 5m/без exp grace, maximum local revocation delay 5m30s при clock difference ≤30s. JWKS freshness ≤60s означает bounded периодический I/O, не полную offline-автономность. Cookie/admin authority не ослаблена.
+- Выбран ES256/existing go-jose/v4; patch v4.1.4→v4.1.6 по опубликованному RSA JWK DoS advisory. Context7 docs + установленный source проверены. Изменены только dependency pin/checksums и документы; JWT runtime/routes/schema/ENV/packages/Swagger пока не добавлены. Native первым получает password/email OTP+MFA, direct provider native handoff — отдельный J4c; existing browser provider + session exchange сохраняется.
+- `task check` PASS/lint 0 issues, OIDC integration/service/HTTP `-race` PASS. `task check:security`/verbose: 0 affected symbols/imported packages; одна module-only GO-2026-5932 в неимпортируемом x/crypto/openpgp, fixed N/A, не удалять x/crypto, нужный Argon2. Подробности — history. SQL/Redis/external/provider-native/key/fleet/load/GC/restore приёмка не выполнялась и не закрыта. Реальные env/secrets/DB не трогались, коммит только по запросу.
 
-## Следующий блок — A6.4
+## Следующий блок — J2
 
-JWT по [согласованному плану](../planning/jwt-access.md): сначала конкретный подэтап/границы, cookie/session default и strict online SQL authority без ослабления ADR 002. Сохранить текущие SMTP/provider/retention contracts и fixed admin protection; не превращать settings в каталог всего deployment ENV. A6.3c/A6.3 остаются открытыми по внешней приёмке.
+Signing/key/claims foundation по [JWT-плану](../planning/jwt-access.md) и ADR 004: ES256, fixed alg/type/key trust, bounded strict parser, expiry/issuer/audience, public-only JWKS, private key lifecycle и негативные/fuzz/race tests. Перепроверить dependency advisories перед реализацией. Не публиковать issuance/native/introspection routes без их SQL/limits/MFA prerequisites, не создавать универсальные wrapper/framework/пустые пакеты.
 
-Затем pre-ui-backend → UI A7 → A8. Реальные provider/SMTP secrets и браузерные сценарии проверять перед подключением UI, не подменять локальными fixtures.
+Затем J3 issuance → J4 native/refresh → J5 verifier/introspection middleware → J6 config/UI contract → J7 → pre-ui-backend → UI A7 → A8. Текущие SMTP/provider/retention contracts и fixed admin guards сохранены; A6.3c/A6.3 внешне открыты. Реальные provider/SMTP/browser workflows проверять перед UI, не подменять fixtures.
 
 ## Открытая приёмка
 

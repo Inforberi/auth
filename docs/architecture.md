@@ -169,6 +169,8 @@ README.md
 
 ### Сборка и запуск
 
+J1 (17 октября): [ADR 004](adr/004-jwt-access-profiles.md) определяет будущий `internal/auth/token` для JWT exchange/native family/online authority, локальный private signing owner и reusable `pkg/authjwt` без imports internal/DB/private keys. Это не новый primary method и не перенос session/access/MFA ownership. В J1 эти пакеты ещё не создаются; появятся с рабочим кодом J2–J5, cookie API сохраняется.
+
 `cmd/auth/main.go` — точка входа и передача signal context приложению. `internal/app/auth/app.go` — App, constructor и явная сборка зависимостей; `run.go` — lifecycle и порядок освобождения ресурсов. Для другого самостоятельного процесса при необходимости создаётся свой пакет `app/<process>`. Не вводить `bootstrap` или `app/wiring`; конфигурация находится отдельно в `internal/config`.
 
 `internal/server/http` получает готовый handler и отвечает за Listen/Serve, timeouts и Shutdown с deadline; не знает о бизнес-фичах и DB repositories. Приложение контролирует завершение сервера, затем закрывает PostgreSQL/Redis и остальные ресурсы. Обработать ошибки запуска, частично созданные ресурсы, deadline shutdown и завершение активных запросов без зависания. Сборка обязательна, но не становится бизнес-логикой или auto-discovery framework.
