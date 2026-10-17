@@ -123,11 +123,15 @@ func TestRedisIssuanceLimits(t *testing.T) {
 			}
 		})
 	}
+	checkRefreshLookupLimits(t, client)
 	if err := client.Close(); err != nil {
 		t.Fatal(err)
 	}
 	if err := limiter.Allow(t.Context(), input); !errors.Is(err, domain.ErrUnavailable) {
 		t.Fatal("Redis error allowed issuance", err)
+	}
+	if err := limiter.AllowRefreshLookup(t.Context(), input.IP); !errors.Is(err, domain.ErrUnavailable) {
+		t.Fatal("Redis error allowed refresh lookup", err)
 	}
 }
 

@@ -9,7 +9,7 @@
 | API и ошибки | [contract](../api/contract.md), [руководство интегратора](../auth-guide.md) | `internal/transport/http/router`, `httpx`, фичевые `transport/http`; generated — `docs/api/generated` |
 | Схема и транзакции | [schema](../schema.md), [ADR 002](../adr/002-sessions-and-transactions.md) | `migrations`, фичевые `repository/postgres` |
 | Sessions/security | [auth-security](../planning/auth-security.md), [ADR 002](../adr/002-sessions-and-transactions.md) | `internal/auth/session`, router; для конкретного сценария — его service/repository |
-| Native refresh — storage | [refresh-storage](../features/refresh-storage.md), [ADR 004](../adr/004-jwt-access-profiles.md) | token/domain/refresh, service/refresh_family, repository/postgres/refresh_*; caller-owned SQL primitives, runtime owner/native HTTP ещё впереди |
+| Native refresh | [refresh-storage](../features/refresh-storage.md), [ADR 004](../adr/004-jwt-access-profiles.md) | token/domain/refresh, service/refresh*, repository/postgres/refresh*; transaction-owned refresh core и Redis budgets; native primary/output/HTTP ещё впереди |
 | JWT — ключи и выдача | [jwt-keys](../features/jwt-keys.md), [jwt-exchange](../features/jwt-exchange.md), [jwt-access](../planning/jwt-access.md), [ADR 004](../adr/004-jwt-access-profiles.md) | internal/auth/token/{signing,service,repository,settings,transport/http}, app/auth/token.go, router/token.go, pkg/authjwt; native/refresh/online middleware — J4/J5 |
 | Политика входа/settings | [auth-settings](../features/auth-settings.md) | `internal/auth/settings`, `internal/app/auth`, `internal/config` |
 | SMTP settings/rotation | [smtp-settings](../features/smtp-settings.md) | Settings: `smtp*`, `app/auth/smtp.go`, `infra/mailer` |

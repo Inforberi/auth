@@ -12,15 +12,22 @@ import (
 // The owner first acquires Access snapshot; it must authorize/issue/renew in this same transaction.
 // A Reused result MUST be committed before returning 401; it is deliberately not an error.
 func RotateRefreshFamily(ctx context.Context, tx pgx.Tx, current, replacement string) (domain.RefreshRotation, error) {
-	var result domain.RefreshRotation
-	if !domain.ValidRefreshVerifier(current) || !domain.ValidRefreshVerifier(replacement) || current == replacement {
-		return result, domain.ErrInvalidRefresh
-	}
-	state, err := lockRefresh(ctx, tx, current)
+	state, err := lockRefreshRotation(ctx, tx, current, replacement)
 	if err != nil {
-		return result, err
+		return domain.RefreshRotation{}, err
 	}
-	result.Family = state.Family
+	return rotateLockedRefresh(ctx, tx, state, replacement)
+}
+
+func lockRefreshRotation(ctx context.Context, tx pgx.Tx, current, replacement string) (refreshState, error) {
+	if !domain.ValidRefreshVerifier(current) || !domain.ValidRefreshVerifier(replacement) || current == replacement {
+		return refreshState{}, domain.ErrInvalidRefresh
+	}
+	return lockRefresh(ctx, tx, current)
+}
+
+func rotateLockedRefresh(ctx context.Context, tx pgx.Tx, state refreshState, replacement string) (domain.RefreshRotation, error) {
+	result := domain.RefreshRotation{Family: state.Family}
 	family := &result.Family
 	id, now := family.SessionID, state.Now
 	if family.RevokedAt != nil || !family.AbsoluteExpiresAt.After(now) {
@@ -46,7 +53,7 @@ func RotateRefreshFamily(ctx context.Context, tx pgx.Tx, current, replacement st
 	if family.Generation > 0 && now.Sub(family.LastRotatedAt) < domain.RefreshRotationInterval {
 		return result, domain.ErrRefreshEarly
 	}
-	if _, err := tx.Exec(ctx, `UPDATE auth.refresh_tokens SET used_at=clock_timestamp() WHERE token_hash=$1`, current); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE auth.refresh_tokens SET used_at=clock_timestamp() WHERE session_id=$1 AND used_at IS NULL`, id); err != nil {
 		return result, err
 	}
 	family.Generation++

@@ -1,6 +1,6 @@
 # ADR 004: JWT-профили и границы доверия
 
-Статус: проектное решение J1, 17 октября 2026. Пользователь согласовал стандартный Bearer JWT, отдельный native/API профиль и настраиваемую локальную проверку для дополнительных backend. J2/J3a/J3b-local реализованы: disabled-by-default session exchange/публичный JWKS с SQL authority и Redis budgets. **Native login/refresh и online middleware пока нет.** Остальные пункты — обязательный контракт следующих этапов, не действующий API. [Порядок реализации](../planning/jwt-access.md), [базовая authority](002-sessions-and-transactions.md).
+Статус: проектное решение J1, 17 октября 2026. Пользователь согласовал стандартный Bearer JWT, отдельный native/API профиль и настраиваемую локальную проверку для дополнительных backend. J2/J3a/J3b-local реализованы: disabled-by-default session exchange/публичный JWKS с SQL authority и Redis budgets. J4a/J4b.1-local реализуют storage и transaction-owned refresh core. **Native login/refresh HTTP и online middleware пока нет.** Остальные пункты — обязательный контракт следующих этапов, не действующий API. [Порядок реализации](../planning/jwt-access.md), [базовая authority](002-sessions-and-transactions.md).
 
 ## 1. Профили
 
@@ -56,7 +56,7 @@ Deployment audience allowlist ≤32 entries, ID ≤128 ASCII bytes. У audience 
 
 ## 4. Выдача, renew и refresh family
 
-J4a-local реализует [storage/profile foundation](../features/refresh-storage.md), не native API: caller-owned SQL primitives/one successor/spent replay decision, immutable browser/api profile и bounded history cleanup. Первый refresh поколения0 может rotate сразу (issuance не rotation), затем между rotations≥30s. Runtime owner должен атомарно добавить current authorization/MFA/policy/renew/sign/audit/commit до публикации J4b; reuse decision не error и обязан commit до401.
+J4a-local реализует [storage/profile foundation](../features/refresh-storage.md), J4b.1-local — полный refresh core без native HTTP: current authorization/MFA/policy/renew/sign/audit/commit, без повышения assurance. Первый refresh поколения0 может rotate сразу (issuance не rotation), затем между rotations≥30s. Repository owner коммитит reuse decision до ErrInvalidRefresh; commit failure — dependency error, не успешный revoke. Native primary/MFA output и безопасный transport остаются J4b.2 до публикации.
 
 J3a/J3b-local реализуют [session exchange](../features/jwt-exchange.md) с SQL guards/commit audit/Redis budgets и optional HTTP/App/config/JWKS. Required password email verification проверяется по current SQL policy; отключение primary method само по себе не logout. Proof clarification: существующий ledger хранит общий факт MFA, поэтому exchange использует factor `amr=mfa`, не заявляя неизвестный TOTP/recovery mechanism. Более конкретные otp/recovery допустимы только при известном механизме.
 

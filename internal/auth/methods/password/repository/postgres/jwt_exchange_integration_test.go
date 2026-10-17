@@ -25,6 +25,7 @@ import (
 	tokenpostgres "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/postgres"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/signing"
+	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
@@ -32,6 +33,10 @@ type tokenBudget func(context.Context, tokenservice.ExchangeInput) error
 
 func (b tokenBudget) Allow(ctx context.Context, input tokenservice.ExchangeInput) error {
 	return b(ctx, input)
+}
+
+func (b tokenBudget) AllowRefreshLookup(ctx context.Context, ip string) error {
+	return b(ctx, tokenservice.ExchangeInput{IP: ip})
 }
 
 func jwtSigningFixture(t *testing.T) (*signing.Signer, *authjwt.PublicKeys) {
@@ -85,7 +90,7 @@ func checkJWTExchange(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		t.Fatal(err)
 	}
 	repo := tokenpostgres.New(db)
-	svc, err := tokenservice.New(repo, signer, tokenBudget(func(context.Context, tokenservice.ExchangeInput) error { return nil }),
+	svc, err := tokenservice.New(repo, signer, tokenBudget(func(context.Context, tokenservice.ExchangeInput) error { return nil }), tokengenerate.New(),
 		tokenservice.Config{AccessTTL: 2 * time.Minute, Resources: []tokenservice.Resource{{Audience: "orders", Permissions: []accessdomain.PermissionKey{"orders.read", "orders.write"}}}}, catalog)
 	if err != nil {
 		t.Fatal(err)

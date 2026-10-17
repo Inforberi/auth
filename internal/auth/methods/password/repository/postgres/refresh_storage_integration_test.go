@@ -41,9 +41,12 @@ func refreshTransaction(ctx context.Context, db *pgxpool.Pool, fn func(pgx.Tx) e
 	return tx.Commit(bounded)
 }
 
-func refreshFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context) (tokenservice.ExchangeInput, string) {
+func refreshFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, admin ...bool) (tokenservice.ExchangeInput, string) {
 	t.Helper()
 	input := jwtActor(t, db, ctx)
+	if len(admin) > 0 && admin[0] {
+		accessExec(t, db, ctx, `INSERT INTO auth.role_permissions(role_id,permission_key) SELECT role_id,'auth.settings.manage' FROM auth.user_roles WHERE user_id=$1`, input.Actor.UserID)
+	}
 	tokens := tokengenerate.New()
 	input.Actor.TokenHash = tokens.Hash("api-ledger:" + input.SessionID)
 	if err := db.QueryRow(ctx, `INSERT INTO auth.sessions(credential_profile,token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,

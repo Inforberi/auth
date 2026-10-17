@@ -14,6 +14,7 @@ import (
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/signing"
+	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
@@ -53,6 +54,16 @@ type exchangeLimiter struct {
 	calls int
 }
 
+func (l *exchangeLimiter) AllowRefreshLookup(_ context.Context, _ string) error { return l.err }
+
+func (r *exchangeRepo) ResolveRefresh(_ context.Context, _ string) (RefreshBinding, error) {
+	return RefreshBinding{}, domain.ErrInvalidRefresh
+}
+
+func (r *exchangeRepo) Refresh(_ context.Context, _ RefreshParams, _ func(context.Context, RefreshProof) (*ExchangeResult, error)) (*RefreshResult, error) {
+	return nil, domain.ErrInvalidRefresh
+}
+
 func (l *exchangeLimiter) Allow(_ context.Context, _ ExchangeInput) error {
 	l.calls++
 	return l.err
@@ -67,7 +78,7 @@ func exchangeFixture(t *testing.T) (*Service, *exchangeRepo, *exchangeSigner, *e
 	now := time.Now().UTC().Truncate(time.Second)
 	repo := &exchangeRepo{proof: SessionProof{AuthVersion: 7, Now: now, Deadline: now.Add(time.Hour), Method: "password", VerifiedAt: now.Add(-time.Hour)}}
 	signer, limiter := &exchangeSigner{}, &exchangeLimiter{}
-	svc, err := New(repo, signer, limiter, Config{AccessTTL: 2 * time.Minute, Resources: []Resource{{Audience: "orders", Permissions: []accessdomain.PermissionKey{"orders.read", "orders.write"}}}}, catalog)
+	svc, err := New(repo, signer, limiter, tokengenerate.New(), Config{AccessTTL: 2 * time.Minute, Resources: []Resource{{Audience: "orders", Permissions: []accessdomain.PermissionKey{"orders.read", "orders.write"}}}}, catalog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,10 +212,10 @@ func TestExchangeConfiguration(t *testing.T) {
 			}
 		})
 	}
-	if _, err := New(nil, &exchangeSigner{}, &exchangeLimiter{}, base, catalog); !errors.Is(err, authjwt.ErrConfiguration) {
+	if _, err := New(nil, &exchangeSigner{}, &exchangeLimiter{}, tokengenerate.New(), base, catalog); !errors.Is(err, authjwt.ErrConfiguration) {
 		t.Fatal(err)
 	}
-	svc, err := New(&exchangeRepo{}, &exchangeSigner{}, &exchangeLimiter{}, base, catalog)
+	svc, err := New(&exchangeRepo{}, &exchangeSigner{}, &exchangeLimiter{}, tokengenerate.New(), base, catalog)
 	if err != nil {
 		t.Fatal(err)
 	}

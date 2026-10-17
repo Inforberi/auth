@@ -75,3 +75,19 @@ func (l *Limiter) Allow(ctx context.Context, input service.ExchangeInput) error 
 	}
 	return nil
 }
+
+// AllowRefreshLookup bounds unknown-token traffic before any SQL lookup.
+// Family/actor budgets follow once an indexed lookup identifies server-owned bindings.
+func (l *Limiter) AllowRefreshLookup(ctx context.Context, ip string) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	const prefix = "auth:{jwt-refresh-lookup}:"
+	allowed, err := l.client.Eval(ctx, issuanceBudget, []string{prefix + "ip:" + l.digest.Digest(ip), prefix + "project"}, l.limits.IPPerMinute, l.limits.ProjectPerMinute).Int64()
+	if err != nil {
+		return fmt.Errorf("%w: %w", domain.ErrUnavailable, err)
+	}
+	if allowed != 1 {
+		return domain.ErrRateLimited
+	}
+	return nil
+}

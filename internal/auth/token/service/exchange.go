@@ -36,6 +36,7 @@ type ExchangeResult struct {
 	*signing.SignedToken
 	Audience string
 	Scope    []accessdomain.PermissionKey
+	Mode     string
 }
 
 func (s *Service) Exchange(ctx context.Context, input ExchangeInput) (*ExchangeResult, error) {
@@ -79,26 +80,38 @@ func (s *Service) Exchange(ctx context.Context, input ExchangeInput) (*ExchangeR
 		return nil, err
 	}
 	issued, err := s.repo.Exchange(ctx, input, resource.mode, func(ctx context.Context, proof SessionProof) (*signing.SignedToken, error) {
-		deadline := proof.Now.Add(s.ttl)
-		if proof.Deadline.Before(deadline) {
-			deadline = proof.Deadline
-		}
-		method := map[string]string{"password": "pwd", "emailotp": "emailotp", "oidc": "oidc"}[proof.Method]
-		claims := authjwt.Claims{
-			Subject: string(input.Actor.UserID), SessionID: input.SessionID, Audience: input.Audience,
-			AuthVersion: proof.AuthVersion, Scope: scope, Mode: resource.mode, ExpiresAt: deadline.Unix(),
-			AuthTime: proof.VerifiedAt.Unix(), Methods: []string{method},
-		}
-		if proof.MFAVerifiedAt != nil {
-			verified := proof.MFAVerifiedAt.Unix()
-			claims.MFATime = &verified
-			// The session ledger retains the fact of MFA, not the individual TOTP/recovery mechanism.
-			claims.Methods = append(claims.Methods, "mfa")
-		}
-		return s.signer.Sign(ctx, claims, proof.Now)
+		return s.signSession(ctx, input, resource.mode, proof)
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &ExchangeResult{SignedToken: issued, Audience: input.Audience, Scope: input.Scope}, nil
+	return &ExchangeResult{SignedToken: issued, Audience: input.Audience, Scope: input.Scope, Mode: resource.mode}, nil
+}
+
+func (s *Service) signSession(ctx context.Context, input ExchangeInput, mode string, proof SessionProof) (*signing.SignedToken, error) {
+	deadline := proof.Now.Add(s.ttl)
+	if proof.Deadline.Before(deadline) {
+		deadline = proof.Deadline
+	}
+	method := map[string]string{"password": "pwd", "emailotp": "emailotp", "oidc": "oidc"}[proof.Method]
+	claims := authjwt.Claims{
+		Subject: string(input.Actor.UserID), SessionID: input.SessionID, Audience: input.Audience,
+		AuthVersion: proof.AuthVersion, Scope: permissionScope(input.Scope), Mode: mode, ExpiresAt: deadline.Unix(),
+		AuthTime: proof.VerifiedAt.Unix(), Methods: []string{method},
+	}
+	if proof.MFAVerifiedAt != nil {
+		verified := proof.MFAVerifiedAt.Unix()
+		claims.MFATime = &verified
+		// The session ledger retains the fact of MFA, not the individual TOTP/recovery mechanism.
+		claims.Methods = append(claims.Methods, "mfa")
+	}
+	return s.signer.Sign(ctx, claims, proof.Now)
+}
+
+func permissionScope(scope []accessdomain.PermissionKey) string {
+	keys := make([]string, len(scope))
+	for i, key := range scope {
+		keys[i] = string(key)
+	}
+	return strings.Join(keys, " ")
 }

@@ -1,6 +1,6 @@
 # Refresh storage — J4a-local
 
-17 октября 2026: реализованы SQL-хранение, транзакционные операции ротации и изоляция API/cookie sessions. **Это ещё не работающий native login/refresh API.** App/HTTP/ENV/native credential output и полный refresh use case не подключены. `JWT_ENABLED` по-прежнему включает только существующий [cookie session exchange](jwt-exchange.md), не native-профиль.
+17 октября 2026: J4a-local реализует storage/profile foundation, J4b.1-local — service и transaction-owned refresh use case с текущими SQL guards, локальной подписью и commit-before-result. **Это ещё не публичный native login/refresh API.** Native primary/MFA credential output, HTTP и его admission/error/transport contract — следующий J4b.2. `JWT_ENABLED` по-прежнему публикует только существующий [cookie session exchange](jwt-exchange.md), не native-профиль.
 
 ## Владельцы и границы
 
@@ -8,12 +8,15 @@
 | --- | --- |
 | `token/domain/refresh.go` | Canonical 32-byte opaque credential → SHA-256 verifier, family/result, предел поколений и интервал |
 | `token/service/refresh_family.go` | Server-owned creation params/shape bounds, не HTTP DTO и не доказательство полномочий |
+| `token/service/refresh.go` | Admission/budgets, генерация successor, current scope intersection и выдача raw только после repository commit |
+| `token/repository/postgres/refresh.go` | Transaction owner, повторная проверка budget hint, committed replay denial, signing/issuance audit/commit |
+| `token/repository/postgres/refresh_authorization.go` | Общие session guards, current grants и допустимый idle renew |
 | `token/repository/postgres/refresh_family.go` | Создание family + первого verifier + audit в переданной transaction |
 | `token/repository/postgres/refresh_lock.go` | Indexed lookup и порядок user/session/family/verifier locks |
 | `token/repository/postgres/refresh_rotate.go` | Consume/successor/reuse writes в той же transaction |
 | `account/repository/postgres/{retention,transient_cleanup}.go` | Existing bounded cleanup без нового worker |
 
-SQL primitives принимают `pgx.Tx` только внутри repository слоя. Их нельзя вызывать из HTTP или передавать transaction в business service. Следующий J4b owner должен собрать primary/MFA/current authorization/signing/rotation/renew/audit/commit в один явный workflow; эти primitives сами не коммитят, не подписывают JWT и не возвращают raw secret.
+SQL primitives принимают `pgx.Tx` только внутри repository слоя. Их нельзя вызывать из HTTP или передавать transaction в business service. `Repository.Refresh` теперь владеет refresh transaction, но создание первой API session/family после native primary/MFA ещё не подключено. Storage primitives сами не коммитят, не подписывают JWT и не возвращают raw secret.
 
 ## Профиль ledger
 
@@ -25,7 +28,7 @@ Ledger verifier и refresh verifier — разные credentials: creation/rotat
 
 ## Хранение и порядок
 
-Одна family на API session, immutable audience/maximum sorted scope/idle policy/absolute deadline. Idle policy при creation ограничивается исходным session lifetime и оставшимся absolute window (округление вниз); следующий owner дополнительно ограничит её deployment policy. Scope keys должны быть проверены по catalog/current grants **до выдачи** J4b, одна shape validation этого не делает.
+Одна family на API session, immutable audience/maximum sorted scope/idle policy/absolute deadline. Idle policy при creation ограничивается исходным session lifetime и оставшимся absolute window (округление вниз); native creation owner дополнительно ограничит её deployment policy. Scope keys при первой выдаче должны быть проверены по catalog/current grants, одна shape validation этого не делает. При refresh уже проверяются текущие grants и deployment resource allowlist, family не расширяется.
 
 `auth.refresh_tokens`: только verifier, session UUID, generation, immutable family deadline и used_at; raw secrets/ciphertext нет. Composite FK связывает deadline с family. Partial unique index допускает максимум один current verifier, UNIQUE(session,generation) — один successor поколения. `auth.refresh_audit` хранит UUID/event/generation/time без verifier/token/IP/email; events family_created/rotated/reuse_detected, indexed existing security retention.
 
@@ -44,9 +47,23 @@ Owner использует Read Committed, bounded overall context и Access sha
 
 Первая rotation поколения 0 может выполняться сразу: первоначальная выдача не считается rotation; затем между успешными rotations ≥30s. Cap проверяется до throttle. Нет retry grace/второго successor: два concurrent запроса дают один successor, затем replay второго отзывает family; потерянный ответ требует нового входа. Client single-flight обязателен.
 
-**Reused — решение, которое owner обязан commit до HTTP 401.** Возврат обычной ошибки в transaction helper откатил бы security mutation. При ошибке commit/DB нельзя возвращать «reuse обработан»: это dependency failure. Тестовый owner подтверждает commit semantics, но runtime owner/HTTP пока не реализован — не считать этот gate закрытым.
+**Reused — решение, которое owner обязан commit до HTTP 401.** Возврат обычной ошибки в transaction helper откатил бы security mutation. `Repository.Refresh` выполняет commit и только затем возвращает ErrInvalidRefresh. При ошибке commit/DB — dependency failure, не «reuse обработан». Это проверено через service и реальный PostgreSQL, включая deferred commit failure; публичный HTTP mapper ещё не подключён.
 
-Примитив rotation **не обновляет session expiry, primary/MFA timestamps и не создаёт access JWT**. J4b должен повторно проверить current permissions ∩ immutable family scope ∩ audience allowlist, policy/verification/MFA/provisioning, сделать допустимый idle renew (не admin activity), clamp access expiry, local sign и audit до commit. Нельзя подключать нынешний primitive как публичную ручку без этих шагов, admission/Redis limits и transport binding.
+Примитив rotation **не обновляет session expiry, primary/MFA timestamps и не создаёт access JWT**. Эти действия принадлежат полному use case ниже; публичная ручка не должна вызывать primitive напрямую.
+
+## Refresh use case — J4b.1-local
+
+1. Service принимает только opaque credential и trusted IP; client не задаёт actor/session/audience/scope/mode. Общий deadline 3s и общий с exchange instance admission8, без очереди.
+2. Redis IP/project lookup budgets срабатывают **до SQL**, включая неизвестные canonical secrets. Только затем один indexed lookup возвращает server-owned user/session/ledger hash как hint, не authentication. Existing issuance actor/session/IP/project budgets проверяются до transaction: family=API session, смена refresh hash не сбрасывает её лимит.
+3. В Read Committed transaction: Access snapshot → user SHARE → session UPDATE → family/verifier UPDATE. Сверяются все hint bindings; state уже содержит текущую auth_version, повторный user lookup не нужен. Spent replay commit/revoke выполняется до текущих scope/MFA policy checks, не откатывается из-за исчезнувшего grant.
+4. Для current credential выполняются общие с exchange session guards: active/version/role bindings/primary/MFA/factor, activation/temporary-password и актуальная password email-verification policy. Отключение primary method само по себе не logout существующей session.
+5. Current grants выбираются одним bounded SQL по максимум64 family keys; service пересекает их с immutable family maximum и текущим deployment audience allowlist. Пустое пересечение/удалённый audience — отказ и rollback. Вновь назначенные permissions за пределами family не добавляются. Current mode берётся из server resource config, не клиента.
+6. Обычная API session может продлить idle до min(now+family idle,absolute); UPDATE пропускается, если deadline не увеличивается. Административная session с idle_timeout_seconds>0 не продлевается refresh. Primary/MFA timestamps и absolute deadline не повышаются.
+7. Общая с exchange claims/signing операция подписывает локально; access expiry ограничен текущим idle/absolute. Refresh audit, successor, renew и issuance audit коммитятся вместе. Последняя SQL проверка запрещает уже истёкшую issuance/session; SQL/audit/sign/commit failure возвращает nil result и rollback. Raw successor добавляется в service result только после успешного repository commit.
+
+Генератор подключается через service port из App, без импорта concrete infra в service. Новых зависимостей/pools/workers/ENV/schema changes в J4b.1 нет. Lookup counters используют отдельный namespace и те же bounded IP/project настройки: это предварительный abuse budget, не двойной расход issuance counter. Existing actor/session/IP/project issuance counters общие с exchange. Два Redis Lua calls и один indexed hint lookup происходят вне SQL transaction; Redis outage fail-closed, auto-retry не добавлен. Новые ключи не выделяются при исчерпанном budget, TTL60s не продлевается.
+
+До публикации остаются native purpose/audience/scope-bound primary/MFA flow, первая API session/family и credential output, refresh/logout HTTP с cookie/Authorization conflict rejection/no-store/без Set-Cookie, safe mapper/Retry-After, отдельные negative API tests и management profile label. Ограничения cleanup/fleet/load ниже остаются обязательными, service-тесты не заменяют их.
 
 ## Очистка и rollout
 

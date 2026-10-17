@@ -36,7 +36,7 @@ func (r *Repository) Exchange(ctx context.Context, input service.ExchangeInput, 
 	if err := accesspostgres.LockAccessSnapshot(ctx, tx); err != nil {
 		return nil, err
 	}
-	proof, err := lockSession(ctx, tx, input)
+	proof, err := lockSession(ctx, tx, input, "browser")
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (r *Repository) Exchange(ctx context.Context, input service.ExchangeInput, 
 	return result, nil
 }
 
-func lockSession(ctx context.Context, tx pgx.Tx, input service.ExchangeInput) (service.SessionProof, error) {
+func lockSession(ctx context.Context, tx pgx.Tx, input service.ExchangeInput, profile string) (service.SessionProof, error) {
 	var proof service.SessionProof
 	err := tx.QueryRow(ctx, `SELECT auth_version FROM auth.users
 		WHERE id=$1 AND status='active' AND deleted_at IS NULL FOR SHARE`, input.Actor.UserID).Scan(&proof.AuthVersion)
@@ -73,9 +73,15 @@ func lockSession(ctx context.Context, tx pgx.Tx, input service.ExchangeInput) (s
 	if err != nil {
 		return proof, err
 	}
+	return sessionProof(ctx, tx, input, profile, proof.AuthVersion)
+}
+
+// The caller holds the user lock and supplies its current auth_version.
+func sessionProof(ctx context.Context, tx pgx.Tx, input service.ExchangeInput, profile string, version int64) (service.SessionProof, error) {
+	proof := service.SessionProof{AuthVersion: version}
 	var verified *time.Time
 	var allowed, mfaReady bool
-	err = tx.QueryRow(ctx, `SELECT LEAST(s.expires_at,s.absolute_expires_at),COALESCE(s.primary_method,''),s.primary_verified_at,s.mfa_verified_at,
+	err := tx.QueryRow(ctx, `SELECT LEAST(s.expires_at,s.absolute_expires_at),COALESCE(s.primary_method,''),s.primary_verified_at,s.mfa_verified_at,
 		NOT EXISTS(SELECT 1 FROM unnest($5::text[]) needed(key) WHERE NOT EXISTS(
 			SELECT 1 FROM auth.user_roles ur JOIN auth.role_permissions rp ON rp.role_id=ur.role_id
 			WHERE ur.user_id=s.user_id AND rp.permission_key=needed.key)),
@@ -83,11 +89,11 @@ func lockSession(ctx context.Context, tx pgx.Tx, input service.ExchangeInput) (s
 			OR (s.mfa_verified_at IS NOT NULL AND EXISTS(SELECT 1 FROM auth.mfa_totp m WHERE m.user_id=s.user_id)),
 		clock_timestamp()
 		FROM auth.role_bound_sessions s WHERE s.user_id=$1 AND s.token_hash=$2 AND s.id=$3 AND s.auth_version=$4
-		AND s.credential_profile='browser'
+		AND s.credential_profile=$6
 		AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()
 		AND NOT EXISTS(SELECT 1 FROM auth.account_provisions p WHERE p.user_id=s.user_id AND (p.activated_at IS NULL OR p.password_change_required))
 		AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials t WHERE t.user_id=s.user_id)
-		FOR SHARE OF s`, input.Actor.UserID, input.Actor.TokenHash, input.SessionID, proof.AuthVersion, input.Scope).
+		FOR SHARE OF s`, input.Actor.UserID, input.Actor.TokenHash, input.SessionID, proof.AuthVersion, input.Scope, profile).
 		Scan(&proof.Deadline, &proof.Method, &verified, &proof.MFAVerifiedAt, &allowed, &mfaReady, &proof.Now)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return proof, sessiondomain.ErrSessionNotFound
