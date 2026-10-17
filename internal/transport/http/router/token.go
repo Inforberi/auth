@@ -43,3 +43,11 @@ func nativeTokenRoutes(r chi.Router, h Handlers) {
 		native.Options(path, handler) // Protect rejects preflight before the handler.
 	}
 }
+
+func introspectionRoutes(r chi.Router, h Handlers) {
+	if h.Config == nil || !h.Config.JWT.Enabled || h.Introspection == nil {
+		return
+	}
+	r.Post("/internal/auth/token/introspect", h.Introspection.Inspect)
+	r.Options("/internal/auth/token/introspect", h.Introspection.Inspect)
+}

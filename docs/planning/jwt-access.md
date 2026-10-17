@@ -58,6 +58,11 @@ Strict режим сохраняет семантику проверок пос�
 - [ ] **J6. CORS/CSRF, configuration и UI.** Отдельные transport policies cookie/browser, bearer API и служебных вызовов; не глобальное ослабление BrowserProtection. Deployment issuer/audiences/key references/TTL/issuance budgets уже подключены J3b, остальные native/introspection settings добавляются с владельцами. UI позже управляет разрешёнными профилями/несекретной policy с current permission/fresh password/MFA/version/audit; signing root material не выдаётся UI. Client не выбирает себе weaker auth mode. Переходы/disable/rotation не отрезают последний административный вход.
 - [ ] **J7. Security и нагрузочная приёмка.** Выполнить матрицу ниже, записать evidence; JWT backend-профили включить в pre-ui-backend, интерфейсы/flow — в A7, повторные security/mixed/load/GC/restore — A8. Не закрывать этап только unit tests или скоростью криптографического микробенчмарка.
 
+### Подэтапы J5
+
+- [x] **J5.1-local. Auth introspection.** [Контракт и ограничения](../features/jwt-introspection.md): отдельная service Basic identity/hash manifest/audience allowlist, crypto + exact SQL user/session/version/proof/family/current policy/grants, no-store/no renewal/без per-token audit writes. Existing JWT Redis pool/atomic budgets и shared issuance guards; новых dependencies/schema/workers нет. Локальные проверки — history; external/fleet/load/GC gates открыты.
+- [ ] **J5.2. Consumer middleware.** Fixed HTTPS JWKS/introspection URLs, bounded/coalesced refresh/backoff/max trust age60s, strict response correlation без positive cache/fallback, typed principal/explicit permission middleware и Go strict/local примеры. До завершения не объявлять strict consumer готовым.
+
 ## Проверка проекта по безопасности — обязательные условия реализации
 
 Дополнено 16 октября 2026 после отдельного анализа. Ниже — пробелы детализации и угрозы будущего решения, **не подтверждённые уязвимости текущего сервиса**. Отмеченные условия обязательны для strict JWT; local-only не получает его гарантий автоматически. Подход — deny-by-default и проверка разрешений для каждого действия, включая доступ к конкретным объектам ([OWASP Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)). Новые layers/stores вводить только для гарантии, которую нельзя получить существующим механизмом.

@@ -5917,6 +5917,77 @@
                 }
             }
         },
+        "/api/v1/internal/auth/token/introspect": {
+            "post": {
+                "description": "Service-to-service HTTPS only. Dedicated per-consumer HTTP Basic credentials, not user Bearer/cookies. Invalid/inactive tokens return only active:false. Does not renew sessions. Custom protocol, not RFC 7662.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tokens"
+                ],
+                "summary": "Check an access JWT against current session authority",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Basic service client ID and secret",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Full access JWT",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/token_http.IntrospectionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/token_http.IntrospectionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid_json",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized_service",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "rate_limited",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "temporarily_unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/setup/complete": {
             "post": {
                 "description": "Consumes installation proof and pending intent with email and TOTP codes. Atomically creates account, verified contact, factor, recovery codes, system grant and durable initialized marker. Returns recovery codes once; does not issue a session. Setup stays closed after restart or loss of administrator.",
@@ -7725,6 +7796,43 @@
                     "type": "string"
                 },
                 "tokenType": {
+                    "type": "string"
+                }
+            }
+        },
+        "token_http.IntrospectionRequest": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "token_http.IntrospectionResponse": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "audience": {
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "type": "integer"
+                },
+                "iss": {
+                    "type": "string"
+                },
+                "jti": {
+                    "type": "string"
+                },
+                "scope": {
+                    "type": "string"
+                },
+                "sid": {
+                    "type": "string"
+                },
+                "sub": {
                     "type": "string"
                 }
             }

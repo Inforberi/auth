@@ -125,6 +125,7 @@ func TestRedisIssuanceLimits(t *testing.T) {
 	}
 	checkRefreshLookupLimits(t, client)
 	checkNativeIssuanceLimits(t, client)
+	checkIntrospectionLimits(t, client)
 	if err := client.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -136,6 +137,9 @@ func TestRedisIssuanceLimits(t *testing.T) {
 	}
 	if err := limiter.AllowNative(t.Context(), input.Actor.UserID, input.IP); !errors.Is(err, domain.ErrUnavailable) {
 		t.Fatal("Redis error allowed native issuance", err)
+	}
+	if err := limiter.AllowIntrospection(t.Context(), "orders-api", 100, 100); !errors.Is(err, domain.ErrUnavailable) {
+		t.Fatal("Redis failure allowed introspection", err)
 	}
 }
 

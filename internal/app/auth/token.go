@@ -21,9 +21,10 @@ import (
 )
 
 type tokenApp struct {
-	service *service.Service
-	handler *tokenhttp.Handler
-	native  *tokenhttp.NativeHandler
+	service       *service.Service
+	handler       *tokenhttp.Handler
+	native        *tokenhttp.NativeHandler
+	introspection *tokenhttp.IntrospectionHandler
 }
 
 func assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client, deployment *config.Config, login nativeLoginDependencies, catalog accesssettings.Catalog, root string, owned *resources, log *zap.Logger) (tokenApp, error) {
@@ -78,6 +79,10 @@ func assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client,
 		return tokenApp{}, err
 	}
 	assembly := tokenApp{service: svc, handler: tokenhttp.New(svc, signer.PublicJWKS(), log)}
+	assembly.introspection, err = assembleIntrospection(pool, limiter, signer.PublicJWKS(), cfg, definitions, catalog)
+	if err != nil {
+		return tokenApp{}, err
+	}
 	assembly.native, err = assembleNativeTokens(&assembly, login.password, login.mfa, login.email, deployment, log)
 	if err != nil {
 		return tokenApp{}, err

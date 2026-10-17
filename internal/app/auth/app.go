@@ -142,6 +142,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	handler := router.New(router.Handlers{
 		Tokens:            tokens.handler,
 		NativeTokens:      tokens.native,
+		Introspection:     tokens.introspection,
 		UserDirectory:     accounthttp.NewUserDirectory(accountservice.NewUserDirectory(accountRepo), log),
 		UserLifecycle:     accounthttp.NewUserLifecycle(accountservice.NewUserLifecycle(accountRepo), log),
 		Provisioning:      provisioningHandler,

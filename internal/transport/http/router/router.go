@@ -26,6 +26,7 @@ import (
 )
 
 type Handlers struct {
+	Introspection     *tokenhttp.IntrospectionHandler
 	NativeTokens      *tokenhttp.NativeHandler
 	Tokens            *tokenhttp.Handler
 	UserLifecycle     *accounthttp.UserLifecycleHandler
@@ -96,6 +97,7 @@ func New(h Handlers) *chi.Mux {
 	}
 
 	r.Route("/api/v1/", func(r chi.Router) {
+		introspectionRoutes(r, h)
 		administrativeLoginRoutes(r, h)
 		accessRoutes(r, h)
 		authSettingsRoutes(r, h)

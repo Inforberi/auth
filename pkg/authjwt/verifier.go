@@ -60,10 +60,6 @@ func (v *Verifier) VerifySignature(ctx context.Context, raw string, now time.Tim
 		return Claims{}, ErrBusy
 	}
 	defer func() { <-v.admission }()
-	header, err := checkCompact(raw)
-	if err != nil {
-		return Claims{}, err
-	}
 	trust := v.trust.Load()
 	if trust == nil {
 		return Claims{}, ErrKeysUnavailable
@@ -71,7 +67,22 @@ func (v *Verifier) VerifySignature(ctx context.Context, raw string, now time.Tim
 	if age := now.Sub(trust.observedAt); age < 0 || age >= MaxKeyAge {
 		return Claims{}, ErrKeysUnavailable
 	}
-	key := trust.keys.keys[header.KeyID]
+	claims, err := verifyClaims(raw, trust.keys)
+	if err != nil || claims.Validate(v.expected, now) != nil {
+		return Claims{}, ErrInvalidToken
+	}
+	if err := ctx.Err(); err != nil {
+		return Claims{}, err
+	}
+	return claims, nil
+}
+
+func verifyClaims(raw string, keys *PublicKeys) (Claims, error) {
+	header, err := checkCompact(raw)
+	if err != nil {
+		return Claims{}, err
+	}
+	key := keys.keys[header.KeyID]
 	if key == nil {
 		return Claims{}, ErrInvalidToken
 	}
@@ -83,12 +94,5 @@ func (v *Verifier) VerifySignature(ctx context.Context, raw string, now time.Tim
 	if err != nil {
 		return Claims{}, ErrInvalidToken
 	}
-	claims, err := decodeClaims(payload)
-	if err != nil || claims.Validate(v.expected, now) != nil {
-		return Claims{}, ErrInvalidToken
-	}
-	if err := ctx.Err(); err != nil {
-		return Claims{}, err
-	}
-	return claims, nil
+	return decodeClaims(payload)
 }

@@ -32,9 +32,9 @@ import (
 
 func TestDisabledTokensDoNotOpenResources(t *testing.T) {
 	owned := &resources{}
-	handler, err := assembleTokens(context.Background(), nil, nil, &config.Config{JWT: settings.Config{PrivateKeyFile: "/not-readable", KeySetFile: "/not-readable", ResourceFile: "/not-readable"}},
+	handler, err := assembleTokens(context.Background(), nil, nil, &config.Config{JWT: settings.Config{PrivateKeyFile: "/not-readable", KeySetFile: "/not-readable", ResourceFile: "/not-readable", IntrospectionClientFile: "/not-readable"}},
 		nativeLoginDependencies{}, accesssettings.Catalog{}, "", owned, zap.NewNop())
-	if err != nil || (handler.handler != nil || handler.service != nil || handler.native != nil) || len(owned.closers) != 0 {
+	if err != nil || (handler.handler != nil || handler.service != nil || handler.native != nil || handler.introspection != nil) || len(owned.closers) != 0 {
 		t.Fatal("disabled JWT opened resources", err)
 	}
 	if _, err := assembleTokens(context.Background(), nil, nil, &config.Config{JWT: settings.Config{Enabled: true}}, nativeLoginDependencies{}, accesssettings.Catalog{}, "", owned, zap.NewNop()); err == nil {
@@ -101,6 +101,12 @@ func TestTokenAssemblyRedis(t *testing.T) {
 		Enabled: true, Issuer: "https://auth.example", SigningKeyID: "synthetic", PrivateKeyFile: privateFile, KeySetFile: publicFile, ResourceFile: resourceFile,
 		AccessTTL: 2 * time.Minute, ActorPerMinute: 30, SessionPerMinute: 10, IPPerMinute: 30, ProjectPerMinute: 3000,
 	}
+	clientFile := filepath.Join(dir, "clients.json")
+	if err := os.WriteFile(clientFile, []byte(`{"clients":[{"id":"orders-api","secretHashes":["`+strings.Repeat("a", 64)+`"],"audiences":["orders"]}]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg.IntrospectionClientFile = clientFile
+	cfg.IntrospectionConsumerPerMinute, cfg.IntrospectionProjectPerMinute = 60000, 60000
 	cfg.NativeEnabled, cfg.RefreshIdleTTL, cfg.RefreshAbsoluteTTL, cfg.ProjectPerMinute = true, time.Hour, 2*time.Hour, 60
 	deployment := &config.Config{
 		JWT:       cfg,
@@ -111,7 +117,7 @@ func TestTokenAssemblyRedis(t *testing.T) {
 	owned := &resources{}
 	t.Cleanup(owned.close)
 	handler, err := assembleTokens(t.Context(), nil, base, deployment, nativeLoginDependencies{password: &passwordservice.PasswordService{}, mfa: &mfaApp{login: &mfaservice.Login{}}, email: &emailOTPApp{}}, catalog, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", owned, zap.NewNop())
-	if err != nil || handler.handler == nil || handler.native == nil || len(owned.closers) != 1 {
+	if err != nil || handler.handler == nil || handler.native == nil || handler.introspection == nil || len(owned.closers) != 1 {
 		t.Fatal("JWT assembly failed", err)
 	}
 	w := httptest.NewRecorder()

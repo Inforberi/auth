@@ -27,6 +27,7 @@ func TestPostgresSchema(t *testing.T) {
 	t.Run("administrator protection", func(t *testing.T) { checkAdministratorProtection(t, db, ctx) })
 	t.Run("access roles", func(t *testing.T) { checkAccessRoles(t, db, ctx) })
 	t.Run("JWT exchange", func(t *testing.T) { checkJWTExchange(t, db, ctx) })
+	t.Run("JWT introspection", func(t *testing.T) { checkJWTIntrospection(t, db, ctx) })
 	t.Run("refresh storage", func(t *testing.T) { checkRefreshStorage(t, db, ctx) })
 	t.Run("refresh use case", func(t *testing.T) { checkRefreshUseCase(t, db, ctx) })
 	t.Run("native logout", func(t *testing.T) { checkNativeLogout(t, db, ctx) })

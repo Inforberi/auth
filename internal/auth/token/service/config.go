@@ -46,15 +46,22 @@ type resourcePolicy struct {
 }
 
 func resourcePolicies(cfg Config, catalog settings.Catalog) (map[string]resourcePolicy, error) {
-	if cfg.AccessTTL < time.Second || cfg.AccessTTL > authjwt.MaxLifetime || cfg.AccessTTL%time.Second != 0 || len(cfg.Resources) == 0 || len(cfg.Resources) > 32 {
+	if cfg.AccessTTL < time.Second || cfg.AccessTTL > authjwt.MaxLifetime || cfg.AccessTTL%time.Second != 0 {
 		return nil, authjwt.ErrConfiguration
 	}
-	policies := make(map[string]resourcePolicy, len(cfg.Resources))
+	return audiencePolicies(cfg.Resources, catalog)
+}
+
+func audiencePolicies(resources []Resource, catalog settings.Catalog) (map[string]resourcePolicy, error) {
+	if len(resources) == 0 || len(resources) > 32 {
+		return nil, authjwt.ErrConfiguration
+	}
+	policies := make(map[string]resourcePolicy, len(resources))
 	core, err := settings.NewCatalog(nil)
 	if err != nil {
 		return nil, err
 	}
-	for _, resource := range cfg.Resources {
+	for _, resource := range resources {
 		mode := resource.Mode
 		if mode == "" {
 			mode = authjwt.Strict

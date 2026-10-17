@@ -1046,6 +1046,30 @@ definitions:
       tokenType:
         type: string
     type: object
+  token_http.IntrospectionRequest:
+    properties:
+      token:
+        type: string
+    type: object
+  token_http.IntrospectionResponse:
+    properties:
+      active:
+        type: boolean
+      audience:
+        type: string
+      expiresAt:
+        type: integer
+      iss:
+        type: string
+      jti:
+        type: string
+      scope:
+        type: string
+      sid:
+        type: string
+      sub:
+        type: string
+    type: object
   token_http.JWKSResponse:
     properties:
       keys:
@@ -5445,6 +5469,55 @@ paths:
       summary: Send test email
       tags:
       - Dev
+  /api/v1/internal/auth/token/introspect:
+    post:
+      consumes:
+      - application/json
+      description: Service-to-service HTTPS only. Dedicated per-consumer HTTP Basic
+        credentials, not user Bearer/cookies. Invalid/inactive tokens return only
+        active:false. Does not renew sessions. Custom protocol, not RFC 7662.
+      parameters:
+      - description: Basic service client ID and secret
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Full access JWT
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/token_http.IntrospectionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/token_http.IntrospectionResponse'
+        "400":
+          description: invalid_json
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: unauthorized_service
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: rate_limited
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: temporarily_unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Check an access JWT against current session authority
+      tags:
+      - Tokens
   /api/v1/setup/complete:
     post:
       consumes:

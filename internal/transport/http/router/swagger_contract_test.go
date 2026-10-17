@@ -31,6 +31,7 @@ func TestSwaggerMatchesRoutes(t *testing.T) {
 			h.Config.JWT.NativeEnabled = true
 			h.NativeTokens = nativeContractHandlers(&nativeContract{}).NativeTokens
 			h.Config.JWT.Enabled = true
+			h.Introspection = tokenhttp.NewIntrospection(&introspectionContract{})
 			h.Tokens = tokenhttp.New(&contractExchange{}, []byte(`{"keys":[]}`), zap.NewNop())
 			err := chi.Walk(New(h), func(method, path string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
 				if method == http.MethodOptions {
@@ -69,6 +70,8 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 		name string
 		dto  any
 	}{
+		{"token_http.IntrospectionRequest", tokenhttp.IntrospectionRequest{}},
+		{"token_http.IntrospectionResponse", tokenhttp.IntrospectionResponse{Active: true, Issuer: "issuer", Subject: "user", SessionID: "session", ID: "token", Audience: "orders", ExpiresAt: 1, Scope: "orders.read"}},
 		{"token_http.ExchangeRequest", tokenhttp.ExchangeRequest{Scope: []accessdomain.PermissionKey{}}},
 		{"token_http.ExchangeResponse", tokenhttp.ExchangeResponse{}},
 		{"token_http.NativePasswordRequest", tokenhttp.NativePasswordRequest{Scope: []accessdomain.PermissionKey{}}},
