@@ -7,6 +7,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
@@ -83,6 +84,21 @@ func (l *Limiter) AllowRefreshLookup(ctx context.Context, ip string) error {
 	defer cancel()
 	const prefix = "auth:{jwt-refresh-lookup}:"
 	allowed, err := l.client.Eval(ctx, issuanceBudget, []string{prefix + "ip:" + l.digest.Digest(ip), prefix + "project"}, l.limits.IPPerMinute, l.limits.ProjectPerMinute).Int64()
+	if err != nil {
+		return fmt.Errorf("%w: %w", domain.ErrUnavailable, err)
+	}
+	if allowed != 1 {
+		return domain.ErrRateLimited
+	}
+	return nil
+}
+
+func (l *Limiter) AllowNative(ctx context.Context, user accountdomain.UserID, ip string) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	const prefix = "auth:{jwt-issuance}:"
+	keys := []string{prefix + "actor:" + l.digest.Digest(string(user)), prefix + "ip:" + l.digest.Digest(ip), prefix + "project"}
+	allowed, err := l.client.Eval(ctx, issuanceBudget, keys, l.limits.ActorPerMinute, l.limits.IPPerMinute, l.limits.ProjectPerMinute).Int64()
 	if err != nil {
 		return fmt.Errorf("%w: %w", domain.ErrUnavailable, err)
 	}

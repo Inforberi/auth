@@ -11,6 +11,7 @@ import (
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/signing"
@@ -55,6 +56,15 @@ type exchangeLimiter struct {
 }
 
 func (l *exchangeLimiter) AllowRefreshLookup(_ context.Context, _ string) error { return l.err }
+
+func (l *exchangeLimiter) AllowNative(_ context.Context, _ accountdomain.UserID, _ string) error {
+	l.calls++
+	return l.err
+}
+
+func (r *exchangeRepo) IssueNative(_ context.Context, _ NativeParams, _ func(context.Context, ExchangeInput, SessionProof) (*signing.SignedToken, error)) (*RefreshResult, error) {
+	return nil, domain.ErrNativeDisabled
+}
 
 func (r *exchangeRepo) ResolveRefresh(_ context.Context, _ string) (RefreshBinding, error) {
 	return RefreshBinding{}, domain.ErrInvalidRefresh

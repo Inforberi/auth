@@ -1,6 +1,6 @@
 # Refresh storage — J4a-local
 
-17 октября 2026: J4a-local реализует storage/profile foundation, J4b.1-local — service и transaction-owned refresh use case с текущими SQL guards, локальной подписью и commit-before-result. **Это ещё не публичный native login/refresh API.** Native primary/MFA credential output, HTTP и его admission/error/transport contract — следующий J4b.2. `JWT_ENABLED` по-прежнему публикует только существующий [cookie session exchange](jwt-exchange.md), не native-профиль.
+17 октября 2026: J4a-local реализует storage/profile foundation, J4b.1-local — service и transaction-owned refresh use case с текущими SQL guards, локальной подписью и commit-before-result. J4b.2a добавляет [первую API issuance от password proof](native-issuance.md). **Это ещё не публичный native login/refresh API.** Native MFA/email OTP purpose binding и HTTP admission/error/transport contract остаются J4b.2. `JWT_ENABLED` по-прежнему публикует только существующий [cookie session exchange](jwt-exchange.md), не native-профиль.
 
 ## Владельцы и границы
 
@@ -16,11 +16,11 @@
 | `token/repository/postgres/refresh_rotate.go` | Consume/successor/reuse writes в той же transaction |
 | `account/repository/postgres/{retention,transient_cleanup}.go` | Existing bounded cleanup без нового worker |
 
-SQL primitives принимают `pgx.Tx` только внутри repository слоя. Их нельзя вызывать из HTTP или передавать transaction в business service. `Repository.Refresh` теперь владеет refresh transaction, но создание первой API session/family после native primary/MFA ещё не подключено. Storage primitives сами не коммитят, не подписывают JWT и не возвращают raw secret.
+SQL primitives принимают `pgx.Tx` только внутри repository слоя. Их нельзя вызывать из HTTP или передавать transaction в business service. `Repository.Refresh` владеет refresh transaction; `Repository.IssueNative` создаёт первую API session/family от server-owned password proof без MFA requirement. Полный native primary/MFA transport ещё не подключён. Storage primitives сами не коммитят, не подписывают JWT и не возвращают raw secret.
 
 ## Профиль ledger
 
-`auth.sessions.credential_profile` — immutable `browser` (default) либо `api`. API row требует primary_verified_at, но **наличие timestamp не заменяет реальную проверку primary/MFA coordinator**. Profile нельзя перевести UPDATE из browser в api или обратно. Существующие session constructors создают только browser; production native row creation ещё не подключён.
+`auth.sessions.credential_profile` — immutable `browser` (default) либо `api`. API row требует primary_verified_at, но **наличие timestamp не заменяет реальную проверку primary/MFA coordinator**. Profile нельзя перевести UPDATE из browser в api или обратно. Существующие browser constructors неизменны; внутренний IssueNative создаёт API row только после текущих password/reference/policy/version guards, при MFA requirement отказывает. App/native HTTP ещё не подключены.
 
 Cookie lookup/renew/rotate/password reauthentication/activity/management-caller и cookie JWT exchange требуют browser profile. Даже знание API ledger verifier не даёт cookie authentication или activity renew. Browser owner может перечислять/отзывать собственные sessions разных профилей через общий ledger; API verifier не становится browser management principal. Reset/logout-all/block/delete/auth_version/role-binding invalidation остаются общими, не второй user/session store.
 
@@ -59,11 +59,11 @@ Owner использует Read Committed, bounded overall context и Access sha
 4. Для current credential выполняются общие с exchange session guards: active/version/role bindings/primary/MFA/factor, activation/temporary-password и актуальная password email-verification policy. Отключение primary method само по себе не logout существующей session.
 5. Current grants выбираются одним bounded SQL по максимум64 family keys; service пересекает их с immutable family maximum и текущим deployment audience allowlist. Пустое пересечение/удалённый audience — отказ и rollback. Вновь назначенные permissions за пределами family не добавляются. Current mode берётся из server resource config, не клиента.
 6. Обычная API session может продлить idle до min(now+family idle,absolute); UPDATE пропускается, если deadline не увеличивается. Административная session с idle_timeout_seconds>0 не продлевается refresh. Primary/MFA timestamps и absolute deadline не повышаются.
-7. Общая с exchange claims/signing операция подписывает локально; access expiry ограничен текущим idle/absolute. Refresh audit, successor, renew и issuance audit коммитятся вместе. Последняя SQL проверка запрещает уже истёкшую issuance/session; SQL/audit/sign/commit failure возвращает nil result и rollback. Raw successor добавляется в service result только после успешного repository commit.
+7. Общая с exchange claims/signing операция подписывает локально; access expiry ограничен текущим idle/absolute. Refresh audit, successor, renew и issuance audit коммитятся вместе. Последняя SQL проверка запрещает уже истёкшую issuance/session; подтверждённый SQL/audit/sign/commit abort возвращает nil result с rollback. При неопределённом сетевом результате commit raw всё равно не выдаётся: нужен новый вход, нельзя обещать rollback уже committed rotation. Повтор старого secret после такой rotation приводит к обычному reuse revoke, не retry grace. Raw successor добавляется в service result только после успешного repository commit.
 
 Генератор подключается через service port из App, без импорта concrete infra в service. Новых зависимостей/pools/workers/ENV/schema changes в J4b.1 нет. Lookup counters используют отдельный namespace и те же bounded IP/project настройки: это предварительный abuse budget, не двойной расход issuance counter. Existing actor/session/IP/project issuance counters общие с exchange. Два Redis Lua calls и один indexed hint lookup происходят вне SQL transaction; Redis outage fail-closed, auto-retry не добавлен. Новые ключи не выделяются при исчерпанном budget, TTL60s не продлевается.
 
-До публикации остаются native purpose/audience/scope-bound primary/MFA flow, первая API session/family и credential output, refresh/logout HTTP с cookie/Authorization conflict rejection/no-store/без Set-Cookie, safe mapper/Retry-After, отдельные negative API tests и management profile label. Ограничения cleanup/fleet/load ниже остаются обязательными, service-тесты не заменяют их.
+До публикации остаются native purpose/audience/scope-bound MFA/email OTP flow, завершение первой API issuance после MFA, refresh/logout HTTP с cookie/Authorization conflict rejection/no-store/без Set-Cookie, safe mapper/Retry-After, отдельные negative API tests и management profile label. Внутренняя password issuance описана [отдельно](native-issuance.md); ограничения cleanup/fleet/load ниже остаются обязательными, service-тесты не заменяют их.
 
 ## Очистка и rollout
 

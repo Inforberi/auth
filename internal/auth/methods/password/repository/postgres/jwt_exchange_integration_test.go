@@ -39,6 +39,12 @@ func (b tokenBudget) AllowRefreshLookup(ctx context.Context, ip string) error {
 	return b(ctx, tokenservice.ExchangeInput{IP: ip})
 }
 
+func (b tokenBudget) AllowNative(ctx context.Context, user accountdomain.UserID, ip string) error {
+	input := tokenservice.ExchangeInput{IP: ip}
+	input.Actor.UserID = user
+	return b(ctx, input)
+}
+
 func jwtSigningFixture(t *testing.T) (*signing.Signer, *authjwt.PublicKeys) {
 	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

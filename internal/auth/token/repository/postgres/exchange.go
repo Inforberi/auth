@@ -47,15 +47,8 @@ func (r *Repository) Exchange(ctx context.Context, input service.ExchangeInput, 
 	if result == nil || result.Raw == "" || result.ExpiresAt.After(proof.Deadline) {
 		return nil, domain.ErrUnavailable
 	}
-	// Expiry may have elapsed during signing. Never commit an already-expired issuance.
-	tag, err := tx.Exec(ctx, `INSERT INTO auth.token_issuance_audit(user_id,session_id,token_id,audience,scope,validation_mode,expires_at)
-		SELECT $1,$2,$3,$4,$5,$6,$7 WHERE $7::timestamptz>clock_timestamp()`,
-		input.Actor.UserID, input.SessionID, result.ID, input.Audience, input.Scope, mode, result.ExpiresAt)
-	if err != nil {
+	if err := auditIssuance(ctx, tx, input, mode, result); err != nil {
 		return nil, err
-	}
-	if tag.RowsAffected() != 1 {
-		return nil, sessiondomain.ErrSessionExpired
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
@@ -78,6 +71,21 @@ func lockSession(ctx context.Context, tx pgx.Tx, input service.ExchangeInput, pr
 
 // The caller holds the user lock and supplies its current auth_version.
 func sessionProof(ctx context.Context, tx pgx.Tx, input service.ExchangeInput, profile string, version int64) (service.SessionProof, error) {
+	proof, err := sessionAuthority(ctx, tx, input, profile, version)
+	if err != nil {
+		return proof, err
+	}
+	policy, err := settingspostgres.LockPublicPolicy(ctx, tx)
+	if err != nil {
+		return proof, err
+	}
+	if err := settingspostgres.RequireSessionVerification(ctx, tx, input.Actor.UserID, proof.Method, policy); err != nil {
+		return proof, err
+	}
+	return proof, nil
+}
+
+func sessionAuthority(ctx context.Context, tx pgx.Tx, input service.ExchangeInput, profile string, version int64) (service.SessionProof, error) {
 	proof := service.SessionProof{AuthVersion: version}
 	var verified *time.Time
 	var allowed, mfaReady bool
@@ -109,13 +117,6 @@ func sessionProof(ctx context.Context, tx pgx.Tx, input service.ExchangeInput, p
 	}
 	if !allowed {
 		return proof, domain.ErrForbidden
-	}
-	policy, err := settingspostgres.LockPublicPolicy(ctx, tx)
-	if err != nil {
-		return proof, err
-	}
-	if err := settingspostgres.RequireSessionVerification(ctx, tx, input.Actor.UserID, proof.Method, policy); err != nil {
-		return proof, err
 	}
 	proof.VerifiedAt = *verified
 	return proof, nil

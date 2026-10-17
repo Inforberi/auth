@@ -162,12 +162,12 @@ func TestLoginPrimaryAndConfig(t *testing.T) {
 		if method == "emailotp" {
 			p.Reference = string(p.UserID)
 		}
-		if !validPrimary(p) {
+		if !ValidPrimary(p) {
 			t.Fatal("valid primary rejected", method)
 		}
 	}
 	p.Method = "unknown"
-	if validPrimary(p) {
+	if ValidPrimary(p) {
 		t.Fatal("unknown primary accepted")
 	}
 	if _, err := NewLogin(nil, nil, nil, nil, nil, loginTestConfig()); err == nil {

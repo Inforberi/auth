@@ -36,40 +36,11 @@ func (l *PasswordService) LoginAdministrator(ctx context.Context, input LoginInp
 }
 
 func (l *PasswordService) login(ctx context.Context, input LoginInput, administrative bool) (*LoginResult, error) {
-	email, err := parseCredentials(input.Email, input.Password)
+	proof, err := l.authenticate(ctx, input, administrative)
 	if err != nil {
-		return nil, fmt.Errorf("service login: %w", err)
-	}
-	if len(input.Password) > 1024 {
-		return nil, passworddomain.ErrInvalidEmailOrPassword
-	}
-	if err := l.admitLogin(ctx, email.String(), input.IP, administrative); err != nil {
 		return nil, err
 	}
-
-	authData, err := l.repo.FindByEmail(ctx, email.String())
-	if err != nil {
-		if errors.Is(err, passworddomain.ErrUserNotFound) {
-			return nil, passworddomain.ErrInvalidEmailOrPassword
-		}
-		return nil, fmt.Errorf("FindByEmail: %w", err)
-	}
-
-	if err := l.hash.Compare(ctx, input.Password, authData.PasswordHash); err != nil {
-		if errors.Is(err, passworddomain.ErrHashBusy) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return nil, err
-		}
-		return nil, passworddomain.ErrInvalidEmailOrPassword
-	}
-
-	if err := l.rehash(ctx, authData, input.Password); err != nil {
-		return nil, err
-	}
-	session, err := l.session.BeginLogin(ctx, mfaservice.PrimaryProof{
-		Administrative: administrative,
-		UserID:         authData.UserID,
-		AuthVersion:    authData.AuthVersion, Method: "password", Reference: authData.PasswordHash, VerifiedAt: time.Now().UTC(),
-	}, input.UserAgent, input.IP)
+	session, err := l.session.BeginLogin(ctx, proof, input.UserAgent, input.IP)
 	if err != nil {
 		if administrative && (errors.Is(err, mfadomain.ErrProofRequired) || errors.Is(err, mfadomain.ErrConflict) || errors.Is(err, sessiondomain.ErrMFARequired)) {
 			return nil, passworddomain.ErrInvalidEmailOrPassword
@@ -81,7 +52,7 @@ func (l *PasswordService) login(ctx context.Context, input LoginInput, administr
 	}
 
 	return &LoginResult{
-		UserID:    authData.UserID,
+		UserID:    proof.UserID,
 		Token:     session.RawToken,
 		ExpiresAt: session.ExpiresAt,
 		Challenge: session.Challenge,

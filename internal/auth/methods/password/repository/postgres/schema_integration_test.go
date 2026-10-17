@@ -29,6 +29,7 @@ func TestPostgresSchema(t *testing.T) {
 	t.Run("JWT exchange", func(t *testing.T) { checkJWTExchange(t, db, ctx) })
 	t.Run("refresh storage", func(t *testing.T) { checkRefreshStorage(t, db, ctx) })
 	t.Run("refresh use case", func(t *testing.T) { checkRefreshUseCase(t, db, ctx) })
+	t.Run("native issuance", func(t *testing.T) { checkNativeIssuance(t, db, ctx) })
 	t.Run("email OTP", func(t *testing.T) { checkEmailOTP(t, db, ctx) })
 	t.Run("email reauthentication", func(t *testing.T) { checkEmailReauthentication(t, db, ctx) })
 	t.Run("initial email binding", func(t *testing.T) { checkEmailBinding(t, db, ctx) })

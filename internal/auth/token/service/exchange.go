@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"net/netip"
-	"slices"
 	"strings"
 	"time"
 
@@ -53,23 +52,11 @@ func (s *Service) Exchange(ctx context.Context, input ExchangeInput) (*ExchangeR
 		return nil, domain.ErrInvalidRequest
 	}
 	input.IP = ip.Unmap().String()
-	resource, ok := s.resources[input.Audience]
-	if !ok || len(input.Scope) == 0 || len(input.Scope) > 64 {
-		return nil, domain.ErrInvalidRequest
+	resource, scope, err := s.requestedResource(input.Audience, input.Scope)
+	if err != nil {
+		return nil, err
 	}
-	input.Scope = slices.Clone(input.Scope)
-	slices.Sort(input.Scope)
-	keys := make([]string, len(input.Scope))
-	for i, key := range input.Scope {
-		if !resource.permissions[key] || i > 0 && key == input.Scope[i-1] {
-			return nil, domain.ErrForbidden
-		}
-		keys[i] = string(key)
-	}
-	scope := strings.Join(keys, " ")
-	if len(scope) > 2048 {
-		return nil, domain.ErrInvalidRequest
-	}
+	input.Scope = scope
 	select {
 	case s.admission <- struct{}{}:
 	default:

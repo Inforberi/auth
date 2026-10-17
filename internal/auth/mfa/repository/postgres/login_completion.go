@@ -27,7 +27,7 @@ func (r *Repository) CompleteLogin(ctx context.Context, input service.LoginCompl
 		if !proof.Administrative && input.AllowPrimary != nil && !input.AllowPrimary(proof.Method, proof.Issuer) {
 			return domain.ErrInvalidCode
 		}
-		if err := requireLoginPrimary(ctx, tx, proof.PrimaryProof); err != nil {
+		if err := RequireLoginPrimary(ctx, tx, proof.PrimaryProof); err != nil {
 			if errors.Is(err, domain.ErrProofRequired) {
 				return domain.ErrInvalidCode
 			}

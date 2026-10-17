@@ -87,7 +87,7 @@ type LoginChallenge struct {
 }
 
 func (s *Login) Start(ctx context.Context, proof PrimaryProof, ip string) (*LoginChallenge, error) {
-	if !validPrimary(proof) || len(ip) > 64 {
+	if !ValidPrimary(proof) || len(ip) > 64 {
 		return nil, domain.ErrProofRequired
 	}
 	if !proof.Administrative && s.cfg.AllowPrimary != nil && !s.cfg.AllowPrimary(proof.Method, proof.Issuer) {
@@ -114,7 +114,7 @@ func (s *Login) Start(ctx context.Context, proof PrimaryProof, ip string) (*Logi
 	return &LoginChallenge{Token: token, Binding: binding, ExpiresAt: state.ExpiresAt, EnrollmentRequired: state.EnrollmentRequired}, nil
 }
 
-func validPrimary(p PrimaryProof) bool {
+func ValidPrimary(p PrimaryProof) bool {
 	if p.Administrative && p.Method != "password" {
 		return false
 	}

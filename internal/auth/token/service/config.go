@@ -1,10 +1,12 @@
 package service
 
 import (
+	"slices"
 	"time"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
@@ -17,6 +19,25 @@ type Resource struct {
 type Config struct {
 	AccessTTL time.Duration
 	Resources []Resource
+	Native    *NativePolicy
+}
+
+func (s *Service) requestedResource(audience string, scope []accessdomain.PermissionKey) (resourcePolicy, []accessdomain.PermissionKey, error) {
+	resource, ok := s.resources[audience]
+	if !ok || len(scope) == 0 || len(scope) > 64 {
+		return resource, nil, domain.ErrInvalidRequest
+	}
+	scope = slices.Clone(scope)
+	slices.Sort(scope)
+	for i, key := range scope {
+		if !resource.permissions[key] || i > 0 && key == scope[i-1] {
+			return resource, nil, domain.ErrForbidden
+		}
+	}
+	if len(permissionScope(scope)) > 2048 {
+		return resource, nil, domain.ErrInvalidRequest
+	}
+	return resource, scope, nil
 }
 
 type resourcePolicy struct {

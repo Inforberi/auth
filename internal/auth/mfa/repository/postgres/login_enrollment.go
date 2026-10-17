@@ -19,7 +19,7 @@ func requireLoginEnrollment(ctx context.Context, tx pgx.Tx, input service.LoginE
 	if !proof.EnrollmentRequired || proof.Administrative || (input.AllowPrimary != nil && !input.AllowPrimary(proof.Method, proof.Issuer)) {
 		return nil, domain.ErrInvalidCode
 	}
-	if err := requireLoginPrimary(ctx, tx, proof.PrimaryProof); err != nil {
+	if err := RequireLoginPrimary(ctx, tx, proof.PrimaryProof); err != nil {
 		if errors.Is(err, domain.ErrProofRequired) {
 			return nil, domain.ErrInvalidCode
 		}

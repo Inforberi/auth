@@ -34,7 +34,7 @@ func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.Prima
 		if err != nil {
 			return err
 		}
-		if err := requireLoginPrimary(ctx, tx, proof); err != nil {
+		if err := RequireLoginPrimary(ctx, tx, proof); err != nil {
 			return err
 		}
 		var enabled, required bool
@@ -68,7 +68,7 @@ func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.Prima
 	return &result, nil
 }
 
-func requireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof) error {
+func RequireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof) error {
 	var valid bool
 	var err error
 	if p.Administrative {
