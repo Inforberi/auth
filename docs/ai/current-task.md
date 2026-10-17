@@ -1,16 +1,17 @@
 # Текущий шаг
 
-Обновлено 17 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), проверки — [history](../planning/history.md#результат-j1-local--17-октября-2026). Это передача контекста, не архив; commits/staging проверять через Git.
+Обновлено 17 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), проверки — [history](../planning/history.md#результат-j2-local--17-октября-2026). Это передача контекста, не архив; commits/staging проверять через Git.
 
-## Последний результат — J1-local
+## Последний результат — J2-local
 
-- Пользователь подтвердил standard Bearer JWT, session exchange и native/API профиль; [ADR 004](../adr/004-jwt-access-profiles.md) фиксирует J1-контракт S1–S10. Strict online default; per-audience local opt-in с default TTL 2m/ceiling 5m/без exp grace, maximum local revocation delay 5m30s при clock difference ≤30s. JWKS freshness ≤60s означает bounded периодический I/O, не полную offline-автономность. Cookie/admin authority не ослаблена.
-- Выбран ES256/existing go-jose/v4; patch v4.1.4→v4.1.6 по опубликованному RSA JWK DoS advisory. Context7 docs + установленный source проверены. Изменены только dependency pin/checksums и документы; JWT runtime/routes/schema/ENV/packages/Swagger пока не добавлены. Native первым получает password/email OTP+MFA, direct provider native handoff — отдельный J4c; existing browser provider + session exchange сохраняется.
-- `task check` PASS/lint 0 issues, OIDC integration/service/HTTP `-race` PASS. `task check:security`/verbose: 0 affected symbols/imported packages; одна module-only GO-2026-5932 в неимпортируемом x/crypto/openpgp, fixed N/A, не удалять x/crypto, нужный Argon2. Подробности — history. SQL/Redis/external/provider-native/key/fleet/load/GC/restore приёмка не выполнялась и не закрыта. Реальные env/secrets/DB не трогались, коммит только по запросу.
+- [Crypto/key foundation](../features/jwt-keys.md): internal/auth/token/signing — ES256 owner/PKCS#8 loader/signing с ID/expiry metadata для audit без raw serialization; pkg/authjwt — strict compact/JWKS/claims и crypto-only VerifySignature без internal/DB/private keys. Existing go-jose v4.1.6 теперь direct dependency, версии не обновлялись. Task formatter/architecture guard включают pkg.
+- Public-only immutable keys, atomic ReplaceKeys без сброса admission, reject out-of-order observedAt, trust age ≥60s/future fail-closed. Fixed ES256/type/issuer/audience/mode, bounds/duplicates/null/unknown rejection, no expiry grace, MFA proof times не повышаются. 8 signatures/32 verifications на owner, без очереди/network/workers; shared instance/fleet budgets/resolver — следующие этапы.
+- Formatter/final task check PASS/lint 0 issues, new packages race PASS (1.431s/1.241s). FuzzVerifier/FuzzPublicKeys requested 5s/parallel2 PASS, не performance/capacity/audit. Security scan: 0 affected symbols/imported packages, 1 module-only finding (предыдущая детализация OpenPGP — J1 history). Только synthetic test keys/temp dirs, реальные key files/ENV/DB не трогались. Коммит только по запросу.
+- Main App/HTTP/ENV/schema/Swagger не подключены: published JWT issuance/refresh/online middleware пока нет. VerifySignature не current authorization; J1 strict default/per-audience local window и guards сохранены. Remote/fleet/emergency trust/restore/load/GC gates открыты. Native password/email OTP+MFA первым, direct native provider handoff J4c, browser provider→session exchange в scope J3.
 
-## Следующий блок — J2
+## Следующий блок — J3
 
-Signing/key/claims foundation по [JWT-плану](../planning/jwt-access.md) и ADR 004: ES256, fixed alg/type/key trust, bounded strict parser, expiry/issuer/audience, public-only JWKS, private key lifecycle и негативные/fuzz/race tests. Перепроверить dependency advisories перед реализацией. Не публиковать issuance/native/introspection routes без их SQL/limits/MFA prerequisites, не создавать универсальные wrapper/framework/пустые пакеты.
+Transaction-owned session→JWT issuance по [JWT-плану](../planning/jwt-access.md) и ADR 004: reuse signer, current live role-bound session/user/version/grants/audience policy, bounded issuance limits, clamp exp к idle/absolute deadline, audit/commit до возврата. Issuance не refresh/activity/fresh MFA. Продумать минимальную config/App границу и disabled behavior; ничего не публиковать без SQL/limits/MFA prerequisites. Для strict consumer ещё нужен J5 online resolver/introspection/middleware, не называть crypto-only проверку полноценной авторизацией.
 
 Затем J3 issuance → J4 native/refresh → J5 verifier/introspection middleware → J6 config/UI contract → J7 → pre-ui-backend → UI A7 → A8. Текущие SMTP/provider/retention contracts и fixed admin guards сохранены; A6.3c/A6.3 внешне открыты. Реальные provider/SMTP/browser workflows проверять перед UI, не подменять fixtures.
 

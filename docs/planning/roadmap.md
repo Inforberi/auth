@@ -470,6 +470,8 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 ## 6. Текущий статус
 
+J2-local (17 октября): [ES256/keys/claims foundation](../features/jwt-keys.md) в internal signing + pkg/authjwt. Strict bounded crypto parsing, public-only atomic trust snapshots/expiry/admission, loader disabled/mismatch/file guards; unit/race/fuzz/task check/security scan выполнены. Новых JWT routes/main App/ENV/schema нет; далее J3 transaction-owned issuance. Full online/local product profiles и real fleet/restore/load/GC остаются J3–J7/pre-ui/A8.
+
 J1-local (17 октября): [ADR 004](../adr/004-jwt-access-profiles.md) зафиксировал JWT/Bearer профили, strict/local authority, сроки и окно отзыва, refresh-family/service/key/restore/browser/resource contracts. Выбран ES256 и existing go-jose/v4 с patch v4.1.6 по security advisory. Runtime выдачи/refresh/verifier/routes пока нет; далее J2. A6.4/J2–J7, pre-ui и A8 остаются открытыми.
 
 A6.3c.3-local (17 октября): сохраняемые сроки очистки с protected GET/POST, version/audit и explicit confirmation сокращения. ENV только seed, worker читает current SQL перед bounded партией; fail-closed без fallback, deadlines активных sessions неизменны. Batch/interval остаются deployment, новых workers/pools/cache нет. [Контракт и ограничения](../features/retention-settings.md). Далее A6.4 JWT; A6.3c/A6.3, external/pre-ui/load/GC/restore gates открыты. Source 000001 дополнен, рабочая БД не менялась.

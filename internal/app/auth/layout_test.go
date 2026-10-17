@@ -13,7 +13,7 @@ import (
 
 func TestPackageBoundaries(t *testing.T) {
 	root := filepath.Join("..", "..", "..")
-	for _, dir := range []string{"cmd", "internal"} {
+	for _, dir := range []string{"cmd", "internal", "pkg"} {
 		err := filepath.WalkDir(filepath.Join(root, dir), func(path string, entry fs.DirEntry, err error) error {
 			if err != nil {
 				return err
@@ -51,6 +51,9 @@ func checkDependency(t *testing.T, path, dep string) {
 	t.Helper()
 	const module = "github.com/Inforberi/financial-intelligence/"
 	local := strings.TrimPrefix(dep, module)
+	if strings.HasPrefix(path, "pkg/authjwt/") && strings.HasPrefix(local, "internal/") {
+		t.Errorf("%s: reusable verifier imports internal implementation %s", path, dep)
+	}
 	for _, old := range []string{"internal/core/", "internal/featers/", "internal/modules/", "internal/app/config", "internal/infra/httpserver"} {
 		if strings.HasPrefix(local, old) {
 			t.Errorf("%s imports removed package %s", path, dep)

@@ -9,7 +9,7 @@
 | API и ошибки | [contract](../api/contract.md), [руководство интегратора](../auth-guide.md) | `internal/transport/http/router`, `httpx`, фичевые `transport/http`; generated — `docs/api/generated` |
 | Схема и транзакции | [schema](../schema.md), [ADR 002](../adr/002-sessions-and-transactions.md) | `migrations`, фичевые `repository/postgres` |
 | Sessions/security | [auth-security](../planning/auth-security.md), [ADR 002](../adr/002-sessions-and-transactions.md) | `internal/auth/session`, router; для конкретного сценария — его service/repository |
-| JWT — J1-контракт | [jwt-access](../planning/jwt-access.md), [ADR 004](../adr/004-jwt-access-profiles.md) | Профили/сроки/local vs strict/refresh/keys, draft API и будущие пакеты; JWT runtime ещё нет |
+| JWT — криптографическая основа | [jwt-keys](../features/jwt-keys.md), [jwt-access](../planning/jwt-access.md), [ADR 004](../adr/004-jwt-access-profiles.md) | internal/auth/token/signing, pkg/authjwt; public issuance/online middleware ещё впереди |
 | Политика входа/settings | [auth-settings](../features/auth-settings.md) | `internal/auth/settings`, `internal/app/auth`, `internal/config` |
 | SMTP settings/rotation | [smtp-settings](../features/smtp-settings.md) | Settings: `smtp*`, `app/auth/smtp.go`, `infra/mailer` |
 | Google/Telegram settings/rotation | [provider-settings](../features/provider-settings.md) | Settings: `provider*`, `app/auth/provider_settings.go`, OIDC flow/MFA provider version, `integrations/oidc` shared owner |

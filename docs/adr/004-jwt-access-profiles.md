@@ -4,6 +4,8 @@
 
 ## 1. Профили
 
+J2-local: [crypto/key foundation](../features/jwt-keys.md) реализован в internal signing и pkg/authjwt. Это не published JWT API/online authority: main App/HTTP/ENV ещё не подключены. Unknown claims отклоняются strict typed decoder, а не игнорируются; claims grammar и amr описаны в feature doc. Остальные гарантии ниже остаются контрактом следующих этапов.
+
 | Профиль | Вход / credential | Продление | Authority |
 | --- | --- | --- | --- |
 | Browser/BFF | Существующая HttpOnly opaque cookie | Существующие session/activity правила | Текущий SQL ledger, без изменений |

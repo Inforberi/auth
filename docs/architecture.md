@@ -169,7 +169,7 @@ README.md
 
 ### Сборка и запуск
 
-J1 (17 октября): [ADR 004](adr/004-jwt-access-profiles.md) определяет будущий `internal/auth/token` для JWT exchange/native family/online authority, локальный private signing owner и reusable `pkg/authjwt` без imports internal/DB/private keys. Это не новый primary method и не перенос session/access/MFA ownership. В J1 эти пакеты ещё не создаются; появятся с рабочим кодом J2–J5, cookie API сохраняется.
+JWT по [ADR 004](adr/004-jwt-access-profiles.md): J2-local реализует `internal/auth/token/signing` (private key owner/loader/signing) и `pkg/authjwt` (strict public-key crypto verifier без internal/DB/private key imports). Остальные token service/repository/transport появятся с J3–J5, пустые пакеты не создаются. Это не primary method и не перенос session/access/MFA ownership; App/HTTP ещё не подключены, cookie API сохраняется. [Реализация и ограничения](features/jwt-keys.md).
 
 `cmd/auth/main.go` — точка входа и передача signal context приложению. `internal/app/auth/app.go` — App, constructor и явная сборка зависимостей; `run.go` — lifecycle и порядок освобождения ресурсов. Для другого самостоятельного процесса при необходимости создаётся свой пакет `app/<process>`. Не вводить `bootstrap` или `app/wiring`; конфигурация находится отдельно в `internal/config`.
 

@@ -1,5 +1,7 @@
 # Текущий API-контракт
 
+J2-local: реализованы [внутренние ключи/подпись и reusable crypto verifier](../features/jwt-keys.md), **без новых JWT HTTP endpoints или Swagger**. VerifySignature не заменяет online SQL authority; старые browser/admin routes не принимают Bearer вместо session cookie.
+
 J1 (17 октября): будущие JWT/native/introspection DTO/routes/errors описаны в [ADR 004](../adr/004-jwt-access-profiles.md#7-http-контракт-и-защита-ресурсов). Это draft контракта J2–J7, **не существующие API/Swagger endpoints**. Cookie/session по-прежнему единственный опубликованный credential профиль.
 
 A6.3c.3-local: protected GET/POST `/api/v1/admin/auth/settings/retention`. [Контракт](../features/retention-settings.md): полная policy в днях, current permission/fresh password+MFA/version/audit для записи, `confirmShortening=true` при сокращении. Применение со следующей worker-партии без restart; активные session deadlines не меняются. Ошибки `400 invalid_retention_settings`, `409 retention_settings_conflict`/`retention_confirmation_required`; batch/interval остаются ENV.

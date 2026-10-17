@@ -5,6 +5,7 @@ go 1.27.2
 require (
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/go-chi/chi/v5 v5.3.2
+	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/pquerna/otp v1.5.0
@@ -23,7 +24,6 @@ require (
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.6 // indirect
 	github.com/go-openapi/jsonpointer v0.23.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.5 // indirect
 	github.com/go-openapi/spec v0.22.4 // indirect
