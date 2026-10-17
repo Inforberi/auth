@@ -64,6 +64,7 @@ func (r *Repository) PurgeRetention(ctx context.Context, cfg service.RetentionCo
 			"retention_settings_audit",
 			"email_login_audit",
 			"mfa_audit",
+			"token_issuance_audit",
 		} {
 			// Identifiers come only from this fixed list, never from configuration/input.
 			name := pgx.Identifier{"auth", table}.Sanitize()

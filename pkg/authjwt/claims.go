@@ -59,7 +59,7 @@ func ValidateIssuer(issuer string) error {
 }
 
 func (e Expectations) Validate() error {
-	if ValidateIssuer(e.Issuer) != nil || !validAudience(e.Audience) || e.Mode != Strict && e.Mode != Local {
+	if ValidateIssuer(e.Issuer) != nil || !ValidAudience(e.Audience) || e.Mode != Strict && e.Mode != Local {
 		return ErrConfiguration
 	}
 	return nil
@@ -67,7 +67,7 @@ func (e Expectations) Validate() error {
 
 func ValidKeyID(kid string) bool { return kidPattern.MatchString(kid) }
 
-func validAudience(s string) bool {
+func ValidAudience(s string) bool {
 	if len(s) == 0 || len(s) > 128 {
 		return false
 	}

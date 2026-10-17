@@ -26,6 +26,7 @@ func TestPostgresSchema(t *testing.T) {
 	t.Run("MFA HTTP login", func(t *testing.T) { checkMFAHTTPLogin(t, db, ctx) })
 	t.Run("administrator protection", func(t *testing.T) { checkAdministratorProtection(t, db, ctx) })
 	t.Run("access roles", func(t *testing.T) { checkAccessRoles(t, db, ctx) })
+	t.Run("JWT exchange", func(t *testing.T) { checkJWTExchange(t, db, ctx) })
 	t.Run("email OTP", func(t *testing.T) { checkEmailOTP(t, db, ctx) })
 	t.Run("email reauthentication", func(t *testing.T) { checkEmailReauthentication(t, db, ctx) })
 	t.Run("initial email binding", func(t *testing.T) { checkEmailBinding(t, db, ctx) })

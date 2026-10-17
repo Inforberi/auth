@@ -27,7 +27,7 @@ Public JWKS ≤16 KiB, 1–4 unique kid; только EC/P-256/ES256/use=sig, op
 - Только ES256/typ=at+jwt/bounded kid; нет none/HMAC/embedded keys/crit/b64/compression/произвольного fetch URL.
 - Подпись, затем exact issuer/audience/mode, canonical UUID/jti, positive auth_version, sorted bounded permission keys.
 - Целые timestamps, TTL ≤5m, без grace после exp, future iat/nbf ≤30s; исходные proof times не обновляются.
-- Один primary amr (pwd/emailotp/oidc), optional один factor (otp/recovery) с согласованным mfa_time.
+- Один primary amr (pwd/emailotp/oidc), optional один factor (mfa/otp/recovery) с согласованным mfa_time. Exchange использует общее mfa: ledger не сохраняет точный TOTP/recovery mechanism; см. [J3a](jwt-exchange.md).
 
 Unknown claims отклоняются, не игнорируются: это строгая форма собственного контракта, не обещание совместимости с любым issuer. Duplicate/case aliases/nulls/неверные JSON types также отвергаются. Claims — **криптографически проверенные данные, не текущий authorization principal**. Для strict ещё нужна online authority; для local — явная audience policy. Scope не доказывает доступ к конкретным строкам/полям.
 

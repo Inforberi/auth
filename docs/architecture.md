@@ -169,7 +169,7 @@ README.md
 
 ### Сборка и запуск
 
-JWT по [ADR 004](adr/004-jwt-access-profiles.md): J2-local реализует `internal/auth/token/signing` (private key owner/loader/signing) и `pkg/authjwt` (strict public-key crypto verifier без internal/DB/private key imports). Остальные token service/repository/transport появятся с J3–J5, пустые пакеты не создаются. Это не primary method и не перенос session/access/MFA ownership; App/HTTP ещё не подключены, cookie API сохраняется. [Реализация и ограничения](features/jwt-keys.md).
+JWT по [ADR 004](adr/004-jwt-access-profiles.md): `internal/auth/token/signing` владеет private key/loader/signing; `pkg/authjwt` — strict public-key crypto verifier без internal/DB/private key imports. J3a добавляет token service/domain и собственные PostgreSQL/Redis repositories для transaction-owned session exchange; transport/App подключаются J3b, пустые пакеты не создаются. Это не primary method и не перенос session/access/MFA ownership; cookie API сохраняется. [Ключи](features/jwt-keys.md), [выдача и ограничения](features/jwt-exchange.md).
 
 `cmd/auth/main.go` — точка входа и передача signal context приложению. `internal/app/auth/app.go` — App, constructor и явная сборка зависимостей; `run.go` — lifecycle и порядок освобождения ресурсов. Для другого самостоятельного процесса при необходимости создаётся свой пакет `app/<process>`. Не вводить `bootstrap` или `app/wiring`; конфигурация находится отдельно в `internal/config`.
 

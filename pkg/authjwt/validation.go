@@ -7,7 +7,7 @@ import (
 
 // Validate checks protocol invariants, not current permissions or session authority.
 func (c Claims) Validate(expected Expectations, now time.Time) error {
-	if c.Issuer != expected.Issuer || c.Audience != expected.Audience || !validAudience(c.Audience) || c.Mode != expected.Mode || c.Mode != Strict && c.Mode != Local ||
+	if c.Issuer != expected.Issuer || c.Audience != expected.Audience || !ValidAudience(c.Audience) || c.Mode != expected.Mode || c.Mode != Strict && c.Mode != Local ||
 		!validUUID(c.Subject) || !validUUID(c.SessionID) || c.AuthVersion < 1 || !validScope(c.Scope) {
 		return ErrInvalidToken
 	}
@@ -47,7 +47,7 @@ func (c Claims) validProof() bool {
 		switch method {
 		case "pwd", "emailotp", "oidc":
 			primary++
-		case "otp", "recovery":
+		case "mfa", "otp", "recovery":
 			factors++
 		default:
 			return false

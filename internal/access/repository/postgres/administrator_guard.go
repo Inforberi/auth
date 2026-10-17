@@ -14,6 +14,13 @@ func LockAccessChanges(ctx context.Context, tx pgx.Tx) error {
 	return err
 }
 
+// LockAccessSnapshot permits concurrent issuance, but excludes role/assignment mutations until commit.
+// Like LockAccessChanges, it must precede user/session locks in a Read Committed transaction.
+func LockAccessSnapshot(ctx context.Context, tx pgx.Tx) error {
+	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock_shared(734013981)`)
+	return err
+}
+
 // RequireAdministratorRemains requires LockAccessChanges in the same Read Committed transaction.
 func RequireAdministratorRemains(ctx context.Context, tx pgx.Tx, target accountdomain.UserID) error {
 	var allowed bool

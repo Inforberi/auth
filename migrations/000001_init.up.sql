@@ -532,6 +532,20 @@ CREATE VIEW auth.role_bound_sessions WITH (security_invoker=true) AS
     WHERE r.id IS NULL OR r.session_revision<>binding.revision::bigint
   );
 
+CREATE TABLE auth.token_issuance_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  session_id UUID NOT NULL,
+  token_id TEXT NOT NULL CHECK (token_id ~ '^[A-Za-z0-9_-]{43}$'),
+  audience TEXT NOT NULL CHECK (octet_length(audience) BETWEEN 1 AND 128),
+  scope TEXT[] NOT NULL CHECK (cardinality(scope) BETWEEN 1 AND 64 AND octet_length(array_to_string(scope,' '))<=2048),
+  validation_mode TEXT NOT NULL CHECK (validation_mode IN ('strict','local')),
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  CHECK (expires_at>created_at AND expires_at<=created_at+interval '5 minutes')
+);
+CREATE INDEX token_issuance_audit_retention ON auth.token_issuance_audit(created_at,id);
+
 CREATE TABLE auth.email_bindings (
   id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,

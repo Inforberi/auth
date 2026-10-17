@@ -1,6 +1,6 @@
 # ADR 004: JWT-профили и границы доверия
 
-Статус: проектное решение J1, 17 октября 2026. Пользователь согласовал стандартный Bearer JWT, отдельный native/API профиль и настраиваемую локальную проверку для дополнительных backend. **Выдача JWT, refresh и middleware пока не реализованы.** Ниже — обязательный контракт J2–J7, не действующий API. [Порядок реализации](../planning/jwt-access.md), [базовая authority](002-sessions-and-transactions.md).
+Статус: проектное решение J1, 17 октября 2026. Пользователь согласовал стандартный Bearer JWT, отдельный native/API профиль и настраиваемую локальную проверку для дополнительных backend. **Публичная выдача JWT, refresh и middleware пока не реализованы.** Внутреннее ядро выдачи J3a описано ниже; остальное — обязательный контракт следующих этапов, не действующий API. [Порядок реализации](../planning/jwt-access.md), [базовая authority](002-sessions-and-transactions.md).
 
 ## 1. Профили
 
@@ -55,6 +55,8 @@ Header: только `alg=ES256`, bounded `kid`, `typ=at+jwt`. Отвергат�
 Deployment audience allowlist ≤32 entries, ID ≤128 ASCII bytes. У audience — собственные разрешённые permission keys и validation mode; максимум 256 разрешённых keys, в одном token/request ≤64 и суммарно ≤2048 bytes. При превышении scope не обрезается молча: caller запрашивает меньший набор. Каждый scope существует в permission catalog и доступен пользователю; UUID/role/token claims из тела не заменяют SQL authority. Поля и row filters не пакуем в JWT.
 
 ## 4. Выдача, renew и refresh family
+
+J3a-local реализует внутренний [session exchange](../features/jwt-exchange.md) с SQL guards/commit audit и Redis budgets; HTTP/App/config publication остаётся J3b. Proof clarification: существующий ledger хранит общий факт MFA, поэтому exchange использует factor `amr=mfa`, не заявляя неизвестный TOTP/recovery mechanism. Более конкретные otp/recovery допустимы только при известном механизме.
 
 Session exchange проверяет текущую cookie-session без sliding refresh; JWT issuance не считается пользовательской activity администратора. `exp = min(now+configured TTL, session idle deadline, absolute deadline)`, при истечении — отказ, а не token с продлённым сроком. Подпись только локальным ключом после admission; issuance/final guard/audit согласованы с user/session/Access locks и commit. Не отдавать signed result до successful commit и не держать транзакцию на сеть/provider/KMS.
 
