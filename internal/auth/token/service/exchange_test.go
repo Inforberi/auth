@@ -12,6 +12,7 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/signing"
@@ -55,14 +56,18 @@ type exchangeLimiter struct {
 	calls int
 }
 
-func (l *exchangeLimiter) AllowRefreshLookup(_ context.Context, _ string) error { return l.err }
+func (l *exchangeLimiter) AllowCredentialLookup(_ context.Context, _ string) error { return l.err }
 
 func (l *exchangeLimiter) AllowNative(_ context.Context, _ accountdomain.UserID, _ string) error {
 	l.calls++
 	return l.err
 }
 
-func (r *exchangeRepo) IssueNative(_ context.Context, _ NativeParams, _ func(context.Context, ExchangeInput, SessionProof) (*signing.SignedToken, error)) (*RefreshResult, error) {
+func (r *exchangeRepo) IssueNative(_ context.Context, _ NativeParams, _ NativeSigner) (*RefreshResult, error) {
+	return nil, domain.ErrNativeDisabled
+}
+
+func (r *exchangeRepo) CompleteNativeMFA(_ context.Context, _ NativeMFAParams, _ func(mfaservice.NativeTarget) (string, error), _ NativeSigner) (*RefreshResult, error) {
 	return nil, domain.ErrNativeDisabled
 }
 

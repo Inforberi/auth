@@ -15,10 +15,9 @@ import (
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/service"
-	"github.com/Inforberi/financial-intelligence/internal/auth/token/signing"
 )
 
-func (r *Repository) IssueNative(ctx context.Context, p service.NativeParams, sign func(context.Context, service.ExchangeInput, service.SessionProof) (*signing.SignedToken, error)) (*service.RefreshResult, error) {
+func (r *Repository) IssueNative(ctx context.Context, p service.NativeParams, sign service.NativeSigner) (*service.RefreshResult, error) {
 	if p.Input.Proof.Administrative || p.Input.Proof.Method != "password" {
 		return nil, mfadomain.ErrProofRequired
 	}
@@ -40,17 +39,29 @@ func (r *Repository) IssueNative(ctx context.Context, p service.NativeParams, si
 	if err := authorizeNativePrimary(ctx, tx, proof); err != nil {
 		return nil, err
 	}
+	result, err := issueNativeSession(ctx, tx, p, nil, sign)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func issueNativeSession(ctx context.Context, tx pgx.Tx, p service.NativeParams, verified *time.Time, sign service.NativeSigner) (*service.RefreshResult, error) {
+	proof := p.Input.Proof
 	version := proof.AuthVersion
 	var id string
 	policy := p.Policy
-	err = tx.QueryRow(ctx, `INSERT INTO auth.sessions(credential_profile,token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,
-		primary_method,primary_verified_at,user_agent,ip_address,idle_timeout_seconds,activity_interval_seconds,admin_absolute_seconds)
+	err := tx.QueryRow(ctx, `INSERT INTO auth.sessions(credential_profile,token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,
+		primary_method,primary_verified_at,user_agent,ip_address,idle_timeout_seconds,activity_interval_seconds,admin_absolute_seconds,mfa_verified_at)
 		VALUES('api',$1,$2,$3,statement_timestamp(),statement_timestamp()+$4::bigint*interval '1 second',
-		statement_timestamp()+$5::bigint*interval '1 second','password',LEAST($6::timestamptz,statement_timestamp()),$7,$8,$9,$10,$11) RETURNING id`,
+		statement_timestamp()+$5::bigint*interval '1 second','password',LEAST($6::timestamptz,statement_timestamp()),$7,$8,$9,$10,$11,$12) RETURNING id`,
 		p.LedgerVerifier, proof.UserID, version, int64(policy.IdleTTL/time.Second), int64(policy.AbsoluteTTL/time.Second), proof.VerifiedAt, p.Input.UserAgent, p.Input.IP,
 		int64(min(policy.IdleTTL, policy.Sessions.AdminIdleTimeout)/time.Second),
 		int64(min(policy.Sessions.AdminActivityInterval, min(policy.IdleTTL, policy.Sessions.AdminIdleTimeout)/10)/time.Second),
-		int64(min(policy.AbsoluteTTL, policy.Sessions.AdminAbsoluteTTL)/time.Second)).Scan(&id)
+		int64(min(policy.AbsoluteTTL, policy.Sessions.AdminAbsoluteTTL)/time.Second), verified).Scan(&id)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +75,7 @@ func (r *Repository) IssueNative(ctx context.Context, p service.NativeParams, si
 	if err != nil {
 		return nil, err
 	}
-	issued, err := sign(ctx, input, current)
+	issued, err := sign(ctx, input, p.Mode, current)
 	if err != nil {
 		return nil, err
 	}
@@ -72,9 +83,6 @@ func (r *Repository) IssueNative(ctx context.Context, p service.NativeParams, si
 		return nil, domain.ErrUnavailable
 	}
 	if err := auditIssuance(ctx, tx, input, p.Mode, issued); err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
 	return &service.RefreshResult{ExchangeResult: &service.ExchangeResult{SignedToken: issued, Audience: input.Audience, Scope: input.Scope, Mode: p.Mode}, RefreshExpiresAt: family.AbsoluteExpiresAt}, nil

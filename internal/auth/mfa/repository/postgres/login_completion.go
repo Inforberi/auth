@@ -77,16 +77,21 @@ func (r *Repository) CompleteLogin(ctx context.Context, input service.LoginCompl
 
 type lockedLoginChallenge struct {
 	service.PrimaryProof
+	Target             service.NativeTarget
 	EnrollmentRequired bool
 	ExpiresAt          time.Time
 }
 
 func lockLoginChallenge(ctx context.Context, tx pgx.Tx, digest, binding string, accessLocked bool) (*lockedLoginChallenge, error) {
+	return lockLoginChallengeProfile(ctx, tx, digest, binding, accessLocked, "browser")
+}
+
+func lockLoginChallengeProfile(ctx context.Context, tx pgx.Tx, digest, binding string, accessLocked bool, profile string) (*lockedLoginChallenge, error) {
 	var user accountdomain.UserID
 	var administrative bool
 	// Inspect intent without locking; administrative flows take Access before user/challenge/factor locks.
 	err := tx.QueryRow(ctx, `SELECT user_id,administrative FROM auth.mfa_login_challenges
-		WHERE digest=$1 AND binding_hash=$2`, digest, binding).Scan(&user, &administrative)
+		WHERE digest=$1 AND binding_hash=$2 AND credential_profile=$3`, digest, binding, profile).Scan(&user, &administrative)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrInvalidCode
 	}
@@ -95,6 +100,10 @@ func lockLoginChallenge(ctx context.Context, tx pgx.Tx, digest, binding string, 
 	}
 	if administrative && !accessLocked {
 		if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
+			return nil, err
+		}
+	} else if profile == "api" && !accessLocked {
+		if err := accesspostgres.LockAccessSnapshot(ctx, tx); err != nil {
 			return nil, err
 		}
 	}
@@ -108,10 +117,10 @@ func lockLoginChallenge(ctx context.Context, tx pgx.Tx, digest, binding string, 
 		return nil, err
 	}
 	proof := lockedLoginChallenge{PrimaryProof: service.PrimaryProof{UserID: user, AuthVersion: version, Administrative: administrative}}
-	err = tx.QueryRow(ctx, `SELECT primary_method,primary_reference,primary_issuer,primary_verified_at,enrollment_required,expires_at,provider_version
+	err = tx.QueryRow(ctx, `SELECT primary_method,primary_reference,primary_issuer,primary_verified_at,enrollment_required,expires_at,provider_version,COALESCE(native_audience,''),native_scope
 		FROM auth.mfa_login_challenges WHERE user_id=$1 AND digest=$2 AND binding_hash=$3 AND auth_version=$4
-		AND administrative=$5 AND expires_at>clock_timestamp() AND attempts<5 FOR UPDATE`, user, digest, binding, version, administrative).
-		Scan(&proof.Method, &proof.Reference, &proof.Issuer, &proof.VerifiedAt, &proof.EnrollmentRequired, &proof.ExpiresAt, &proof.ProviderVersion)
+		AND administrative=$5 AND credential_profile=$6 AND expires_at>clock_timestamp() AND attempts<5 FOR UPDATE`, user, digest, binding, version, administrative, profile).
+		Scan(&proof.Method, &proof.Reference, &proof.Issuer, &proof.VerifiedAt, &proof.EnrollmentRequired, &proof.ExpiresAt, &proof.ProviderVersion, &proof.Target.Audience, &proof.Target.Scope)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrInvalidCode
 	}

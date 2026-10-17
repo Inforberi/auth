@@ -23,7 +23,7 @@ func (r *Repository) FindRecoveryOwner(ctx context.Context, request, digest, bin
 	err := r.db.QueryRow(ctx, `SELECT r.user_id FROM auth.mfa_recovery_requests r
 		JOIN auth.mfa_login_challenges c ON c.digest=r.challenge_digest AND c.user_id=r.user_id
 		JOIN auth.users u ON u.id=r.user_id WHERE r.request_id=$1 AND c.digest=$2 AND c.binding_hash=$3
-		AND r.auth_version=u.auth_version AND c.auth_version=u.auth_version AND c.attempts<5
+		AND c.credential_profile='browser' AND r.auth_version=u.auth_version AND c.auth_version=u.auth_version AND c.attempts<5
 		AND c.expires_at>clock_timestamp() AND r.expires_at>clock_timestamp() AND r.attempts<5
 		AND r.state='approved' AND u.status='active' AND u.deleted_at IS NULL AND `+currentRecoveryOperator,
 		request, digest, binding).Scan(&user)

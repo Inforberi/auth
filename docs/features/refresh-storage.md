@@ -1,6 +1,6 @@
 # Refresh storage — J4a-local
 
-17 октября 2026: J4a-local реализует storage/profile foundation, J4b.1-local — service и transaction-owned refresh use case с текущими SQL guards, локальной подписью и commit-before-result. J4b.2a добавляет [первую API issuance от password proof](native-issuance.md). **Это ещё не публичный native login/refresh API.** Native MFA/email OTP purpose binding и HTTP admission/error/transport contract остаются J4b.2. `JWT_ENABLED` по-прежнему публикует только существующий [cookie session exchange](jwt-exchange.md), не native-профиль.
+17 октября 2026: J4a-local реализует storage/profile foundation, J4b.1-local — transaction-owned refresh, J4b.2a — [первую password API issuance](native-issuance.md), J4b.2b.1 — [native MFA/enrollment](native-mfa.md). **Это ещё не публичный native login/refresh API.** Email OTP purpose binding и App/HTTP admission/error/transport contract остаются открытыми. `JWT_ENABLED` по-прежнему публикует только существующий [cookie session exchange](jwt-exchange.md), не native-профиль.
 
 ## Владельцы и границы
 
@@ -63,7 +63,7 @@ Owner использует Read Committed, bounded overall context и Access sha
 
 Генератор подключается через service port из App, без импорта concrete infra в service. Новых зависимостей/pools/workers/ENV/schema changes в J4b.1 нет. Lookup counters используют отдельный namespace и те же bounded IP/project настройки: это предварительный abuse budget, не двойной расход issuance counter. Existing actor/session/IP/project issuance counters общие с exchange. Два Redis Lua calls и один indexed hint lookup происходят вне SQL transaction; Redis outage fail-closed, auto-retry не добавлен. Новые ключи не выделяются при исчерпанном budget, TTL60s не продлевается.
 
-До публикации остаются native purpose/audience/scope-bound MFA/email OTP flow, завершение первой API issuance после MFA, refresh/logout HTTP с cookie/Authorization conflict rejection/no-store/без Set-Cookie, safe mapper/Retry-After, отдельные negative API tests и management profile label. Внутренняя password issuance описана [отдельно](native-issuance.md); ограничения cleanup/fleet/load ниже остаются обязательными, service-тесты не заменяют их.
+До публикации остаются native email OTP purpose binding, App/config и HTTP login/MFA/enrollment/refresh/logout с cookie/Authorization conflict rejection/no-store/без Set-Cookie, safe mapper/Retry-After, отдельные negative API tests и management profile label. Внутренние [password issuance](native-issuance.md) и [MFA completion](native-mfa.md) реализованы; ограничения cleanup/fleet/load ниже остаются обязательными, service-тесты не заменяют их.
 
 ## Очистка и rollout
 

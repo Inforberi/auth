@@ -8,7 +8,6 @@ import (
 	"time"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 )
 
 // PrimaryProof comes from a verified method adapter, never from an HTTP request.
@@ -43,6 +42,8 @@ type LoginRepository interface {
 	CompleteLogin(context.Context, LoginCompletion, LoginFactor) (*LoginCommit, error)
 	SaveLoginEnrollment(context.Context, LoginEnrollmentParams) (time.Time, error)
 	ConfirmLoginEnrollment(context.Context, LoginEnrollmentParams, Check, []string) error
+	SaveNativeLoginChallenge(context.Context, PrimaryProof, NativeTarget, string, string, time.Duration) (*LoginChallengeState, error)
+	FindNativeLoginOwner(context.Context, string, string) (accountdomain.UserID, error)
 }
 
 type LoginFactor func(accountdomain.UserID) (Check, string)
@@ -84,34 +85,6 @@ type LoginChallenge struct {
 	Binding            string `json:"-"`
 	ExpiresAt          time.Time
 	EnrollmentRequired bool
-}
-
-func (s *Login) Start(ctx context.Context, proof PrimaryProof, ip string) (*LoginChallenge, error) {
-	if !ValidPrimary(proof) || len(ip) > 64 {
-		return nil, domain.ErrProofRequired
-	}
-	if !proof.Administrative && s.cfg.AllowPrimary != nil && !s.cfg.AllowPrimary(proof.Method, proof.Issuer) {
-		return nil, domain.ErrProofRequired
-	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	if err := s.admitLogin(ctx, "start", string(proof.UserID), ip, s.cfg.UserLimitPerMinute); err != nil {
-		return nil, err
-	}
-	token, err := randomLoginToken()
-	if err != nil {
-		return nil, err
-	}
-	binding, err := randomLoginToken()
-	if err != nil {
-		return nil, err
-	}
-	state, err := s.repo.SaveLoginChallenge(ctx, proof, s.cipher.Digest("login:"+token),
-		s.cipher.Digest("browser:"+binding), s.cfg.ChallengeTTL)
-	if err != nil {
-		return nil, err
-	}
-	return &LoginChallenge{Token: token, Binding: binding, ExpiresAt: state.ExpiresAt, EnrollmentRequired: state.EnrollmentRequired}, nil
 }
 
 func ValidPrimary(p PrimaryProof) bool {

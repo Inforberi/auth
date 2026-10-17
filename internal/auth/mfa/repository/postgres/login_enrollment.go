@@ -12,7 +12,11 @@ import (
 )
 
 func requireLoginEnrollment(ctx context.Context, tx pgx.Tx, input service.LoginEnrollmentParams) (*lockedLoginChallenge, error) {
-	proof, err := lockLoginChallenge(ctx, tx, input.ChallengeDigest, input.BindingHash, false)
+	profile := "browser"
+	if input.Native {
+		profile = "api"
+	}
+	proof, err := lockLoginChallengeProfile(ctx, tx, input.ChallengeDigest, input.BindingHash, false, profile)
 	if err != nil {
 		return nil, err
 	}

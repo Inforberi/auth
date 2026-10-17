@@ -15,10 +15,30 @@ import (
 )
 
 func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.PrimaryProof, digest, binding string, ttl time.Duration) (*service.LoginChallengeState, error) {
+	return r.saveLoginChallenge(ctx, proof, nil, digest, binding, ttl)
+}
+
+func (r *Repository) SaveNativeLoginChallenge(ctx context.Context, proof service.PrimaryProof, target service.NativeTarget, digest, binding string, ttl time.Duration) (*service.LoginChallengeState, error) {
+	return r.saveLoginChallenge(ctx, proof, &target, digest, binding, ttl)
+}
+
+func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.PrimaryProof, target *service.NativeTarget, digest, binding string, ttl time.Duration) (*service.LoginChallengeState, error) {
+	profile := "browser"
+	var bound service.NativeTarget
+	var audience *string
+	if target != nil {
+		profile = "api"
+		bound = *target
+		audience = &bound.Audience
+	}
 	var result service.LoginChallengeState
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		if proof.Administrative {
 			if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
+				return err
+			}
+		} else if target != nil {
+			if err := accesspostgres.LockAccessSnapshot(ctx, tx); err != nil {
 				return err
 			}
 		}
@@ -50,13 +70,14 @@ func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.Prima
 			return err
 		}
 		err = tx.QueryRow(ctx, `INSERT INTO auth.mfa_login_challenges
-			(user_id,digest,binding_hash,auth_version,primary_method,primary_reference,primary_issuer,primary_verified_at,expires_at,administrative,enrollment_required,provider_version)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,LEAST($8::timestamptz,statement_timestamp()),statement_timestamp()+$9::double precision*interval '1 second',$10,$11,$12)
+			(user_id,digest,binding_hash,auth_version,primary_method,primary_reference,primary_issuer,primary_verified_at,expires_at,administrative,enrollment_required,provider_version,credential_profile,native_audience,native_scope)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,LEAST($8::timestamptz,statement_timestamp()),statement_timestamp()+$9::double precision*interval '1 second',$10,$11,$12,$13,$14,$15)
 			ON CONFLICT(user_id) DO UPDATE SET digest=EXCLUDED.digest,binding_hash=EXCLUDED.binding_hash,
 			auth_version=EXCLUDED.auth_version,primary_method=EXCLUDED.primary_method,primary_reference=EXCLUDED.primary_reference,
 			primary_issuer=EXCLUDED.primary_issuer,primary_verified_at=EXCLUDED.primary_verified_at,administrative=EXCLUDED.administrative,enrollment_required=EXCLUDED.enrollment_required,provider_version=EXCLUDED.provider_version,attempts=0,
+			credential_profile=EXCLUDED.credential_profile,native_audience=EXCLUDED.native_audience,native_scope=EXCLUDED.native_scope,
 			created_at=statement_timestamp(),expires_at=EXCLUDED.expires_at RETURNING expires_at`,
-			proof.UserID, digest, binding, proof.AuthVersion, proof.Method, proof.Reference, proof.Issuer, proof.VerifiedAt, ttl.Seconds(), proof.Administrative, result.EnrollmentRequired, proof.ProviderVersion).Scan(&result.ExpiresAt)
+			proof.UserID, digest, binding, proof.AuthVersion, proof.Method, proof.Reference, proof.Issuer, proof.VerifiedAt, ttl.Seconds(), proof.Administrative, result.EnrollmentRequired, proof.ProviderVersion, profile, audience, bound.Scope).Scan(&result.ExpiresAt)
 		if err != nil {
 			return err
 		}
@@ -116,10 +137,18 @@ func RequireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof)
 }
 
 func (r *Repository) FindLoginOwner(ctx context.Context, digest, binding string) (accountdomain.UserID, error) {
+	return r.findLoginOwner(ctx, digest, binding, "browser")
+}
+
+func (r *Repository) FindNativeLoginOwner(ctx context.Context, digest, binding string) (accountdomain.UserID, error) {
+	return r.findLoginOwner(ctx, digest, binding, "api")
+}
+
+func (r *Repository) findLoginOwner(ctx context.Context, digest, binding, profile string) (accountdomain.UserID, error) {
 	var user accountdomain.UserID
 	err := r.db.QueryRow(ctx, `SELECT c.user_id FROM auth.mfa_login_challenges c JOIN auth.users u ON u.id=c.user_id
 		WHERE c.digest=$1 AND c.binding_hash=$2 AND c.auth_version=u.auth_version AND c.attempts<5
-		AND c.expires_at>clock_timestamp() AND u.status='active' AND u.deleted_at IS NULL`, digest, binding).Scan(&user)
+		AND c.credential_profile=$3 AND c.expires_at>clock_timestamp() AND u.status='active' AND u.deleted_at IS NULL`, digest, binding, profile).Scan(&user)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", domain.ErrInvalidCode
 	}

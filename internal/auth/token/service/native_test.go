@@ -12,7 +12,6 @@ import (
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/token/signing"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
@@ -27,7 +26,7 @@ type nativeRepo struct {
 	err    error
 }
 
-func (r *nativeRepo) IssueNative(ctx context.Context, p NativeParams, sign func(context.Context, ExchangeInput, SessionProof) (*signing.SignedToken, error)) (*RefreshResult, error) {
+func (r *nativeRepo) IssueNative(ctx context.Context, p NativeParams, sign NativeSigner) (*RefreshResult, error) {
 	r.calls++
 	r.params = p
 	if r.err != nil {
@@ -35,7 +34,7 @@ func (r *nativeRepo) IssueNative(ctx context.Context, p NativeParams, sign func(
 	}
 	input := ExchangeInput{Actor: accessservice.Principal{UserID: p.Input.Proof.UserID, TokenHash: p.LedgerVerifier}, SessionID: "22222222-2222-4222-8222-222222222222", Audience: p.Input.Audience, Scope: p.Input.Scope}
 	proof := SessionProof{AuthVersion: p.Input.Proof.AuthVersion, VerifiedAt: p.Input.Proof.VerifiedAt, Method: "password", Now: time.Now().UTC(), Deadline: time.Now().Add(p.Policy.IdleTTL)}
-	issued, err := sign(ctx, input, proof)
+	issued, err := sign(ctx, input, p.Mode, proof)
 	if err != nil {
 		return nil, err
 	}

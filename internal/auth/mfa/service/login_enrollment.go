@@ -18,15 +18,24 @@ type ConfirmLoginEnrollmentInput struct {
 }
 
 type LoginEnrollmentParams struct {
+	Native                                         bool
 	AllowPrimary                                   func(string, string) bool
 	ChallengeDigest, BindingHash, EnrollmentDigest string
 	Secret                                         []byte
 }
 
 func (s *Login) StartRequiredEnrollment(ctx context.Context, input LoginEnrollmentInput) (*Enrollment, error) {
+	return s.startRequiredEnrollment(ctx, input, false)
+}
+
+func (s *Login) StartNativeRequiredEnrollment(ctx context.Context, input LoginEnrollmentInput) (*Enrollment, error) {
+	return s.startRequiredEnrollment(ctx, input, true)
+}
+
+func (s *Login) startRequiredEnrollment(ctx context.Context, input LoginEnrollmentInput, native bool) (*Enrollment, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	user, params, err := s.admitEnrollment(ctx, input)
+	user, params, err := s.admitEnrollmentFor(ctx, input, native)
 	if err != nil {
 		return nil, err
 	}
@@ -44,12 +53,20 @@ func (s *Login) StartRequiredEnrollment(ctx context.Context, input LoginEnrollme
 }
 
 func (s *Login) ConfirmRequiredEnrollment(ctx context.Context, input ConfirmLoginEnrollmentInput) (*RecoveryCodes, error) {
+	return s.confirmRequiredEnrollment(ctx, input, false)
+}
+
+func (s *Login) ConfirmNativeRequiredEnrollment(ctx context.Context, input ConfirmLoginEnrollmentInput) (*RecoveryCodes, error) {
+	return s.confirmRequiredEnrollment(ctx, input, true)
+}
+
+func (s *Login) confirmRequiredEnrollment(ctx context.Context, input ConfirmLoginEnrollmentInput, native bool) (*RecoveryCodes, error) {
 	if !validLoginToken(input.Token) || !domain.ValidCode(input.Code) {
 		return nil, domain.ErrInvalidCode
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	user, params, err := s.admitEnrollment(ctx, input.LoginEnrollmentInput)
+	user, params, err := s.admitEnrollmentFor(ctx, input.LoginEnrollmentInput, native)
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +84,9 @@ func (s *Login) ConfirmRequiredEnrollment(ctx context.Context, input ConfirmLogi
 	return &RecoveryCodes{Codes: codes}, nil
 }
 
-func (s *Login) admitEnrollment(ctx context.Context, input LoginEnrollmentInput) (accountdomain.UserID, LoginEnrollmentParams, error) {
+func (s *Login) admitEnrollmentFor(ctx context.Context, input LoginEnrollmentInput, native bool) (accountdomain.UserID, LoginEnrollmentParams, error) {
 	var params LoginEnrollmentParams
+	params.Native = native
 	if !validLoginToken(input.Challenge) || !validLoginToken(input.Binding) || len(input.IP) > 64 {
 		return "", params, domain.ErrInvalidCode
 	}
@@ -76,8 +94,15 @@ func (s *Login) admitEnrollment(ctx context.Context, input LoginEnrollmentInput)
 		return "", params, err
 	}
 	params.ChallengeDigest, params.BindingHash = s.cipher.Digest("login:"+input.Challenge), s.cipher.Digest("browser:"+input.Binding)
+	if native {
+		params.ChallengeDigest, params.BindingHash = s.cipher.Digest("native-login:"+input.Challenge), s.cipher.Digest("native-binding:"+input.Binding)
+	}
 	params.AllowPrimary = s.cfg.AllowPrimary
-	user, err := s.repo.FindLoginOwner(ctx, params.ChallengeDigest, params.BindingHash)
+	find := s.repo.FindLoginOwner
+	if native {
+		find = s.repo.FindNativeLoginOwner
+	}
+	user, err := find(ctx, params.ChallengeDigest, params.BindingHash)
 	if err != nil {
 		return "", params, err
 	}

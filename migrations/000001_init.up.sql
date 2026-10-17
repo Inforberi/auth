@@ -307,6 +307,9 @@ CREATE INDEX mfa_enrollments_expiry ON auth.mfa_enrollments(expires_at,user_id);
 
 CREATE TABLE auth.mfa_login_challenges (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  credential_profile TEXT NOT NULL DEFAULT 'browser' CHECK (credential_profile IN ('browser','api')),
+  native_audience TEXT COLLATE "C",
+  native_scope TEXT[],
   digest TEXT NOT NULL UNIQUE CHECK (digest ~ '^[a-f0-9]{64}$'),
   binding_hash TEXT NOT NULL CHECK (binding_hash ~ '^[a-f0-9]{64}$'),
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
@@ -321,9 +324,26 @@ CREATE TABLE auth.mfa_login_challenges (
   created_at TIMESTAMPTZ NOT NULL DEFAULT statement_timestamp(),
   expires_at TIMESTAMPTZ NOT NULL,
   CHECK (expires_at>created_at AND expires_at<=created_at+interval '5 minutes'),
-  CHECK (primary_verified_at<=created_at)
+  CHECK (primary_verified_at<=created_at),
+  CHECK ((credential_profile='browser' AND native_audience IS NULL AND native_scope IS NULL)
+    OR (credential_profile='api' AND NOT administrative AND primary_method='password'
+      AND native_audience IS NOT NULL AND octet_length(native_audience) BETWEEN 1 AND 128 AND native_audience ~ '^[!-~]+$'
+      AND native_scope IS NOT NULL AND cardinality(native_scope) BETWEEN 1 AND 64
+      AND array_position(native_scope,NULL) IS NULL AND octet_length(array_to_string(native_scope,' '))<=2048))
 );
 CREATE INDEX mfa_login_challenges_expiry ON auth.mfa_login_challenges(expires_at,user_id);
+
+CREATE FUNCTION auth.protect_login_target() RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.digest=OLD.digest AND ROW(NEW.credential_profile,NEW.native_audience,NEW.native_scope,NEW.binding_hash)
+    IS DISTINCT FROM ROW(OLD.credential_profile,OLD.native_audience,OLD.native_scope,OLD.binding_hash) THEN
+    RAISE EXCEPTION 'login challenge target is immutable';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER mfa_login_target BEFORE UPDATE OF credential_profile,native_audience,native_scope,binding_hash
+  ON auth.mfa_login_challenges FOR EACH ROW EXECUTE FUNCTION auth.protect_login_target();
 
 CREATE TABLE auth.mfa_recovery_requests (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -420,7 +440,7 @@ BEGIN
     WHERE id=target AND status='active' AND deleted_at IS NULL FOR UPDATE;
   IF current_version IS DISTINCT FROM version THEN RETURN false; END IF;
   SELECT digest INTO challenge FROM auth.mfa_login_challenges WHERE user_id=target
-    AND auth_version=version AND attempts<5 AND expires_at>clock_timestamp() FOR UPDATE;
+    AND credential_profile='browser' AND auth_version=version AND attempts<5 AND expires_at>clock_timestamp() FOR UPDATE;
   IF challenge IS NULL THEN RETURN false; END IF;
   SELECT * INTO pending FROM auth.mfa_recovery_requests WHERE user_id=target
     AND request_id=request AND auth_version=version AND challenge_digest=challenge

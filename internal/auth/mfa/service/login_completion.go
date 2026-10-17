@@ -38,9 +38,7 @@ type LoginSession struct {
 }
 
 func (s *Login) Complete(ctx context.Context, input CompleteLoginInput) (*LoginSession, error) {
-	if !validLoginToken(input.Token) || !validLoginToken(input.Binding) ||
-		(input.Recovery && !domain.ValidRecoveryCode(input.Code)) || (!input.Recovery && !domain.ValidCode(input.Code)) ||
-		len(input.UserAgent) > 512 || len(input.IP) > 64 {
+	if !validCompletion(input) {
 		return nil, domain.ErrInvalidCode
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -71,17 +69,27 @@ func (s *Login) Complete(ctx context.Context, input CompleteLoginInput) (*LoginS
 		AdminIdleTimeout:      s.cfg.AdminIdleTimeout,
 		AdminAbsoluteTTL:      s.cfg.AdminAbsoluteTTL,
 		AdminActivityInterval: s.cfg.AdminActivityInterval,
-	}, func(user accountdomain.UserID) (Check, string) {
-		digest := ""
-		if input.Recovery {
-			digest = s.cipher.Digest("recovery:" + string(user) + ":" + input.Code)
-		}
-		return factorCheck(s.cipher, s.code, user, input.Code), digest
-	})
+	}, s.loginFactor(input.Code, input.Recovery))
 	if err != nil {
 		return nil, err
 	}
 	return &LoginSession{Token: raw, UserID: result.UserID, ExpiresAt: result.ExpiresAt, MFAVerified: result.MFAVerified}, nil
+}
+
+func validCompletion(input CompleteLoginInput) bool {
+	return validLoginToken(input.Token) && validLoginToken(input.Binding) &&
+		((input.Recovery && domain.ValidRecoveryCode(input.Code)) || (!input.Recovery && domain.ValidCode(input.Code))) &&
+		len(input.UserAgent) <= 512 && len(input.IP) <= 64
+}
+
+func (s *Login) loginFactor(code string, recovery bool) LoginFactor {
+	return func(user accountdomain.UserID) (Check, string) {
+		digest := ""
+		if recovery {
+			digest = s.cipher.Digest("recovery:" + string(user) + ":" + code)
+		}
+		return factorCheck(s.cipher, s.code, user, code), digest
+	}
 }
 
 func (s *Login) admitLogin(ctx context.Context, purpose, subject, ip string, count int) error {

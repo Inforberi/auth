@@ -77,9 +77,8 @@ func (l *Limiter) Allow(ctx context.Context, input service.ExchangeInput) error 
 	return nil
 }
 
-// AllowRefreshLookup bounds unknown-token traffic before any SQL lookup.
-// Family/actor budgets follow once an indexed lookup identifies server-owned bindings.
-func (l *Limiter) AllowRefreshLookup(ctx context.Context, ip string) error {
+// AllowCredentialLookup bounds refresh and native MFA lookup before high-cardinality keys/SQL.
+func (l *Limiter) AllowCredentialLookup(ctx context.Context, ip string) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 	const prefix = "auth:{jwt-refresh-lookup}:"

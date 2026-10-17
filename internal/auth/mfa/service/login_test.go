@@ -24,10 +24,20 @@ type loginRepoStub struct {
 	binding   string
 	completed LoginCompletion
 	recovery  string
+	target    NativeTarget
 }
 
 func (r *loginRepoStub) FindLoginOwner(context.Context, string, string) (accountdomain.UserID, error) {
 	return r.proof.UserID, r.err
+}
+
+func (r *loginRepoStub) FindNativeLoginOwner(ctx context.Context, digest, binding string) (accountdomain.UserID, error) {
+	return r.FindLoginOwner(ctx, digest, binding)
+}
+
+func (r *loginRepoStub) SaveNativeLoginChallenge(ctx context.Context, p PrimaryProof, target NativeTarget, digest, binding string, ttl time.Duration) (*LoginChallengeState, error) {
+	r.target = target
+	return r.SaveLoginChallenge(ctx, p, digest, binding, ttl)
 }
 
 func (r *loginRepoStub) SaveLoginChallenge(_ context.Context, proof PrimaryProof, digest, binding string, ttl time.Duration) (*LoginChallengeState, error) {

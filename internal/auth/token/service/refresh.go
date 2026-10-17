@@ -61,7 +61,7 @@ func (s *Service) Refresh(ctx context.Context, input RefreshInput) (*RefreshResu
 	}
 	defer func() { <-s.admission }()
 	address := ip.Unmap().String()
-	if err := s.limiter.AllowRefreshLookup(ctx, address); err != nil {
+	if err := s.limiter.AllowCredentialLookup(ctx, address); err != nil {
 		return nil, err
 	}
 	binding, err := s.repo.ResolveRefresh(ctx, verifier)

@@ -35,7 +35,7 @@ func (b tokenBudget) Allow(ctx context.Context, input tokenservice.ExchangeInput
 	return b(ctx, input)
 }
 
-func (b tokenBudget) AllowRefreshLookup(ctx context.Context, ip string) error {
+func (b tokenBudget) AllowCredentialLookup(ctx context.Context, ip string) error {
 	return b(ctx, tokenservice.ExchangeInput{IP: ip})
 }
 

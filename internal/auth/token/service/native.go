@@ -26,6 +26,8 @@ type NativeParams struct {
 	LedgerVerifier, RefreshVerifier string `json:"-"`
 }
 
+type NativeSigner func(context.Context, ExchangeInput, string, SessionProof) (*signing.SignedToken, error)
+
 type nativeCredentials struct{ ledgerVerifier, refresh, refreshVerifier string }
 
 // IssueNative consumes only a server-owned password proof. Required MFA remains fail-closed
@@ -66,10 +68,7 @@ func (s *Service) IssueNative(ctx context.Context, input NativeInput) (*RefreshR
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.repo.IssueNative(ctx, NativeParams{Input: input, Policy: *s.native, Mode: resource.mode, LedgerVerifier: credentials.ledgerVerifier, RefreshVerifier: credentials.refreshVerifier},
-		func(ctx context.Context, exchange ExchangeInput, proof SessionProof) (*signing.SignedToken, error) {
-			return s.signSession(ctx, exchange, resource.mode, proof)
-		})
+	result, err := s.repo.IssueNative(ctx, NativeParams{Input: input, Policy: *s.native, Mode: resource.mode, LedgerVerifier: credentials.ledgerVerifier, RefreshVerifier: credentials.refreshVerifier}, s.signSession)
 	if err != nil {
 		return nil, err
 	}

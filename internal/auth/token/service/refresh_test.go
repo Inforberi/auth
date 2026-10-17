@@ -47,7 +47,7 @@ type refreshLimiter struct {
 	ip        string
 }
 
-func (l *refreshLimiter) AllowRefreshLookup(_ context.Context, ip string) error {
+func (l *refreshLimiter) AllowCredentialLookup(_ context.Context, ip string) error {
 	l.lookups++
 	l.ip = ip
 	return l.lookupErr

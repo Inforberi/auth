@@ -1,6 +1,6 @@
 # Первая API issuance — J4b.2a-local
 
-17 октября 2026: реализована атомарная выдача API session + access JWT + первой refresh family от проверенного пароля. **Это внутренний use case, не опубликованный native login API.** App не передаёт NativePolicy, native HTTP/ENV нет. `JWT_ENABLED` по-прежнему включает только cookie exchange/JWKS. Native MFA/email OTP binding и transport — следующий блок.
+17 октября 2026: реализована атомарная выдача API session + access JWT + первой refresh family от проверенного пароля; J4b.2b.1 добавляет [native MFA coordinator](native-mfa.md). **Это внутренние use cases, не опубликованный native login API.** App не передаёт NativePolicy, native HTTP/ENV нет. `JWT_ENABLED` по-прежнему включает только cookie exchange/JWKS. Email OTP purpose binding и transport ещё впереди.
 
 ## Границы кода
 
@@ -22,7 +22,7 @@
 3. Общий instance admission8/deadline3s и атомарный Redis actor/IP/project budget применяются до issuance SQL. Counters общие с exchange, existing config/pool/no-retry semantics сохранены. **Family ещё нет:** пустой session ID не превращается в общий лимит10 для всех native logins и не создаёт empty-session key. Password hashing имеет собственные прежние admission/budgets; deadline3s относится к последующей issuance.
 4. Генерируются два независимых canonical256-bit секрета. Ledger secret нужен только для SQL verifier и не возвращается клиенту. Refresh verifier не совпадает с ledger verifier; наружу после commit выходит только refresh secret и signed access result.
 5. Read Committed transaction: Access shared snapshot → active user SHARE с проверкой версии и свежести proof → текущий primary reference/public policy → MFA/factor requirement. Возраст password proof <1min, допускается backend/DB skew до5s; future timestamp при записи clamp к SQL time. Password replace/reset/block/policy/grant races не дают использовать старое состояние. Redis/сеть/hasher не выполняются под этими locks.
-6. Если factor уже enrolled или роль требует MFA, возвращается ErrMFARequired **без session/family/tokens**. Пока это отказ, а не native restricted challenge; публиковать такой незавершённый login как готовую MFA поддержку нельзя.
+6. Если factor уже enrolled или роль требует MFA, низкоуровневый IssueNative возвращает ErrMFARequired **без session/family/tokens**. Новый NativeLogin.Begin обрабатывает этот исход созданием native-bound restricted challenge; NativeLogin.Complete завершает MFA и issuance в общей transaction. HTTP пока не опубликован.
 7. Создаётся сразу API-profile session, не browser session с последующим exchange. Current role-bound session/grants/provisioning guards общие с exchange. Public policy уже проверена и удерживается RequireLoginPrimary — повторный SQL policy lookup не нужен. Создаются family/первый verifier, выполняется общий local signing и metadata audit/final expiry guard, затем commit. При ошибке result=nil; подтверждённый SQL/sign/audit/commit abort откатывает все новые rows.
 
 Потерянный ответ commit может оставить неизвестный клиенту **committed** результат: rollback нельзя обещать при любой сетевой ошибке. Raw credentials всё равно не возвращаются без подтверждённого commit, автоматического повтора нет. Требуется новый вход; недоступная клиенту session может остаться до expiry/retention или отзыва owner. Deferred SQL commit failure проверен, реальный lost-commit-reply/fleet drill остаётся внешним gate.
@@ -40,6 +40,6 @@ NativePolicy — optional server-only constructor config, не ENV/UI/API. Бе�
 
 ## Что осталось до native API
 
-Нужны native purpose/transport/audience/scope-bound primary и MFA/enrollment challenges, одноразовая completion в той же issuance transaction, email OTP request/consume binding, first session output после MFA и HTTP contracts. Browser challenge нельзя просто передать в native completion или наоборот. Direct provider handoff — отдельный J4c.
+Native purpose/transport/audience/scope-bound MFA/enrollment и одноразовая completion в общей issuance transaction реализованы [отдельным блоком](native-mfa.md). Остаются email OTP request/consume binding и HTTP contracts/App publication. Browser challenge нельзя передать в native completion или наоборот. Direct provider handoff — отдельный J4c.
 
 Затем refresh/logout HTTP: bounded JSON, cookie/Authorization conflict rejection, safe mapper/Retry-After/no-store/без Set-Cookie, management profile label и negative/concurrency API tests. Перед публикацией — deployment config/ceilings, retention candidate-scan/held-ledger backlog/drain/storage, strict consumer J5 и внешние security/load/restore gates. Внутренние SQL/unit tests не доказывают готовность native клиента, capacity или отсутствие GC/memory проблем.
