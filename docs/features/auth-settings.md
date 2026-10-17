@@ -2,6 +2,8 @@
 
 ## Текущий статус
 
+J6.1/J6.2-local: settings GET дополнен [JWT deployment metadata и сохраняемыми switches выдачи](jwt-profile-settings.md). Полная policy требует `tokenIssuance.sessionExchange` и `tokenIssuance.native`. Deployment profile/mode/keys read-only, instance capabilities не доказывают fleet readiness. Disable не закрывает introspection/logout/browser admin и не отзывает существующие токены.
+
 A6.3c.3-local: [сохраняемые сроки очистки](retention-settings.md), protected GET/POST/version/audit и подтверждение сокращения. Worker читает SQL snapshot перед каждой партией; batch/interval и session deadlines остаются deployment. Далее A6.4 JWT, внешняя pre-ui приёмка открыта.
 
 A6.3c.2-local: [сохраняемые Google/Telegram credentials](provider-settings.md), scoped encryption и protected GET/POST; no secret reads, version/audit/current guards. App adapters используют per-operation SQL snapshot и общий HTTP/JWKS owner, pending proof revision проверяется в final SQL/MFA transactions. Callback/issuer/endpoints/budgets и root keys остаются deployment configuration; ENV credentials теперь только seed. `availableMethods` — локальная operational готовность adapter, включение дополнительно требует configured SQL credentials. Ни наличие полей, ни сохранение не доказывают реальную provider/fleet готовность; внешняя приёмка открыта.

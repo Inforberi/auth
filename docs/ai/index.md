@@ -16,6 +16,7 @@
 | JWT — ключи и выдача | [jwt-keys](../features/jwt-keys.md), [jwt-exchange](../features/jwt-exchange.md), [jwt-access](../planning/jwt-access.md), [ADR 004](../adr/004-jwt-access-profiles.md) | internal/auth/token/{signing,service,repository,settings,transport/http}, app/auth/token.go, router/token.go, pkg/authjwt |
 | JWT online authority | [jwt-introspection](../features/jwt-introspection.md) | token/{service,repository/postgres,repository/redis,settings,transport/http}/introspection*, app/auth/token_introspection |
 | JWT consumer/middleware | [jwt-consumer](../features/jwt-consumer.md) | pkg/authjwt/{consumer,consumer_transport,jwks_cache,introspection,middleware,permissions,principal}, example_test; Auth TLS wire contract — router/jwt_consumer_contract_test |
+| JWT settings/UI contract | [jwt-profile-settings](../features/jwt-profile-settings.md) | settings policy/SQL/HTTP tokenIssuance, read-only tokenProfiles; app/auth/token_deployment; final token/MFA SQL guards |
 | Политика входа/settings | [auth-settings](../features/auth-settings.md) | `internal/auth/settings`, `internal/app/auth`, `internal/config` |
 | SMTP settings/rotation | [smtp-settings](../features/smtp-settings.md) | Settings: `smtp*`, `app/auth/smtp.go`, `infra/mailer` |
 | Google/Telegram settings/rotation | [provider-settings](../features/provider-settings.md) | Settings: `provider*`, `app/auth/provider_settings.go`, OIDC flow/MFA provider version, `integrations/oidc` shared owner |
