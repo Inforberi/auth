@@ -634,6 +634,29 @@ definitions:
           type: string
         type: array
     type: object
+  mfa_http.SecurityStatusResponse:
+    properties:
+      disableAllowedByPolicy:
+        type: boolean
+      emailReauthenticationEnabled:
+        type: boolean
+      freshMfaProof:
+        type: boolean
+      freshPrimaryProof:
+        type: boolean
+      passwordConfigured:
+        type: boolean
+      recoveryCodesRemaining:
+        type: integer
+      requiredByAdministration:
+        type: boolean
+      requiredByRole:
+        type: boolean
+      totpEnabled:
+        type: boolean
+      verifiedEmail:
+        type: boolean
+    type: object
   mfa_http.StartRecoveryRequest:
     properties:
       challenge:
@@ -998,7 +1021,7 @@ paths:
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "409":
-          description: auth_policy_conflict, auth_method_not_ready
+          description: auth_policy_conflict, auth_method_not_ready, last_administrator
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "503":
@@ -3289,6 +3312,40 @@ paths:
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
       summary: Request operator-assisted MFA replacement
+      tags:
+      - MFA
+  /api/v1/auth/mfa/status:
+    get:
+      description: Live owner-only snapshot, no fresh proof required. No secrets,
+        recovery code values, session refresh or audit. Availability is local, not
+        SMTP/fleet health. Policy flags are informational; mutations independently
+        recheck current state and proof.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.SecurityStatusResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read own MFA status and policy
       tags:
       - MFA
   /api/v1/auth/mfa/step-up:

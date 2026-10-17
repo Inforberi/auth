@@ -15,6 +15,7 @@ var settingsErrors = []httpx.ErrorRule{
 	httpx.MatchError(domain.ErrInvalidPolicy, 400, "invalid_auth_policy", "invalid authentication policy"),
 	httpx.MatchError(domain.ErrPolicyConflict, 409, "auth_policy_conflict", "authentication policy changed; reload and retry"),
 	httpx.MatchError(domain.ErrMethodNotReady, 409, "auth_method_not_ready", "login adapter not ready on this instance"),
+	httpx.MatchError(accountdomain.ErrLastAdministrator, 409, "last_administrator", "a usable protected super-administrator is required"),
 	httpx.MatchError(accessdomain.ErrFreshAuthRequired, 403, "fresh_auth_required", "fresh password and MFA required"),
 	httpx.MatchError(accessdomain.ErrForbidden, 403, "forbidden", "forbidden"),
 }

@@ -68,7 +68,7 @@ func TestAuthSettingsSchema(t *testing.T) {
 	if err := db.QueryRow(ctx, `INSERT INTO auth.roles(key,name,system) VALUES('super_admin','Super admin',true) RETURNING id`).Scan(&role); err != nil {
 		t.Fatal(err)
 	}
-	accessExec(t, db, ctx, `INSERT INTO auth.role_permissions(role_id,permission_key) VALUES($1,'auth.settings.manage')`, role)
+	accessExec(t, db, ctx, `INSERT INTO auth.role_permissions(role_id,permission_key) VALUES($1,'auth.settings.manage'),($1,'access.assignments.manage')`, role)
 	accessExec(t, db, ctx, `INSERT INTO auth.user_roles(user_id,role_id) VALUES($1,$2)`, actor.UserID, role)
 	if result, err := svc.Read(ctx, actor); err != nil || result != a {
 		t.Fatal(result, err)

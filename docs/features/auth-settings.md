@@ -8,6 +8,23 @@ A6.1-local реализует domain/service/PostgreSQL store и first-install s
 
 A6.3a-local сохраняет MFA policy у custom role через roles API и добавляет ограниченный первичный TOTP enrollment, не новые поля singleton Auth settings. [Контракт и ограничения](mfa.md#обязательная-mfa-по-роли--a63a). Далее usable-admin transitions, SMTP/provider secrets и retention settings; их пустые поля/adapters не создаются. Внешняя pre-ui-backend приёмка остаётся обязательной.
 
+## Безопасные переходы и подготовка администратора — A6.3b-local
+
+Отключение любого ранее включённого public method или переход к required password verification при включённом password требует пригодного **system super_admin**: active/non-deleted account, permanent password с verified credential email, enrolled TOTP, без временного пароля и незавершённого provisioning/password change. У system роли должно сохраняться `access.assignments.manage`. Одна custom administrative роль не считается резервным super-admin. Это та же credential readiness, что используется при защите последнего администратора; не проверка доставки почты, наличия authenticator у человека или готовности других экземпляров.
+
+Проверка выполняется в существующей settings write transaction после authority/version/local adapter checks под общим Access lock, согласованным с изменениями ролей и статуса. Нет прохода всех пользователей, fan-out, нового cache или сетевых вызовов под locks. `409 last_administrator` не меняет policy/version/audit. Старый `expectedVersion` по-прежнему даёт conflict раньше readiness. No-op и открытие public method не требуют пригодного резервного администратора: нельзя блокировать восстановление более строгой проверкой. Закрытие регистрации само по себе не закрывает существующий вход и не относится к этому guard. Readiness-проверка не запрещает отключать последний метод обычных пользователей.
+
+**Admin-only onboarding — управляемая подготовка, без нового обходного private flow:**
+
+1. Действующий защищённый администратор временно включает public password; public registration может оставаться закрытой. Остальные ordinary users с подходящими credentials тоже смогут войти: это осознанный project-wide switch, не скрытый доступ только для одного target.
+2. Создаёт/приглашает пользователя существующим protected API. Пользователь активирует постоянный пароль, подтверждает credential email и подключает TOTP с сохранением recovery codes; если назначена required роль, используется ограниченный A6.3a enrollment и новый вход.
+3. После подготовки выдаёт custom administrative роль либо system super_admin через соответствующий API; target повторно входит через private password+MFA route. Проверить этот вход до закрытия public password.
+4. Закрывает public primary с актуальной settings version. Уже настроенные администраторы продолжают private login. Неподготовленная membership не означает пригодный administrative account; API не создаёт фактор за пользователя и не включает password-only fallback.
+
+Если проект не разрешает временно открывать public method, новое private onboarding не публикуется этим блоком: нужен отдельно согласованный restricted enrollment, а не direct SQL/сброс базы. Deployment flags/credentials/root keys всё ещё ENV; их безопасный rollout — отдельный runbook. Security containment может блокировать скомпрометированного последнего admin; этот guard не отменяет protective recovery и не заменяет operator recovery.
+
+Self-status для будущего UI — [`GET /api/v1/auth/mfa/status`](mfa.md#статус-mfa-для-владельца--a63b). Current/pending login при смене policy по-прежнему проверяет SQL authority в final transaction: побеждает сериализованный commit; непринятые OTP/recovery proofs не расходуются. Existing sessions не получают logout-all от смены public profile. Local SQL/race/HTTP проверки не закрывают реальные browser/admin-only/fleet workflows pre-ui/A8.
+
 ## API настроек — A6.2c-local
 
 Обе ручки используют текущую `__Host-session` и разрешённый HTTPS Origin, возвращают `Cache-Control: no-store`, не продлевают session/cookie. Actor берётся только из trusted session context; UUID/hash оператора из JSON не принимаются. Требуется актуальное `auth.settings.manage`, в том числе для чтения.

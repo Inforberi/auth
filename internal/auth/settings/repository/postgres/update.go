@@ -35,6 +35,11 @@ func (r *Repository) Update(ctx context.Context, input service.UpdateInput) (dom
 			result = before
 			return nil
 		}
+		if input.Policy.RestrictsLogin(before.Policy) {
+			if err := accesspostgres.RequireUsableAdministrator(ctx, tx); err != nil {
+				return err
+			}
+		}
 		result, err = scanSnapshot(tx.QueryRow(ctx, `UPDATE auth.auth_settings SET version=version+1,
 			password_enabled=$1,email_otp_enabled=$2,google_enabled=$3,telegram_enabled=$4,
 			registration_enabled=$5,google_registration_enabled=$6,telegram_registration_enabled=$7,password_email_verification=$8

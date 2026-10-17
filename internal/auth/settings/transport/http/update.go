@@ -59,7 +59,7 @@ func (input UpdateRequest) policy() (domain.Policy, bool) {
 // @Failure 400 {object} httpx.ErrorResponse "invalid_json, invalid_auth_policy"
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse "forbidden, fresh_auth_required"
-// @Failure 409 {object} httpx.ErrorResponse "auth_policy_conflict, auth_method_not_ready"
+// @Failure 409 {object} httpx.ErrorResponse "auth_policy_conflict, auth_method_not_ready, last_administrator"
 // @Failure 503 {object} httpx.ErrorResponse
 // @Router /api/v1/admin/auth/settings [post]
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {

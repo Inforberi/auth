@@ -39,3 +39,12 @@ func TestPolicyErrorsAreSafe(t *testing.T) {
 		t.Fatal("policy mapper swallowed unrelated error")
 	}
 }
+
+func TestSettingsLastAdministratorError(t *testing.T) {
+	h := &Handler{log: zap.NewNop()}
+	w := httptest.NewRecorder()
+	h.respondError(w, httptest.NewRequest("POST", "/settings", nil), fmt.Errorf("private context: %w", accountdomain.ErrLastAdministrator))
+	if w.Code != 409 || !strings.Contains(w.Body.String(), "last_administrator") || strings.Contains(w.Body.String(), "private") {
+		t.Fatal(w.Code, w.Body.String())
+	}
+}

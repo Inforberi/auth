@@ -21,6 +21,7 @@ func mfaRoutes(r chi.Router, h Handlers) {
 		r.Post("/mfa/recovery/complete", h.MFA.CompleteRecovery)
 	}
 	owner := r.With(h.Middleware.NoRefreshAuth)
+	owner.Get("/mfa/status", h.MFA.ReadStatus)
 	if h.EmailOTP != nil && h.Config.EmailOTP.ReauthenticationEnabled {
 		owner.Post("/reauthenticate/email/request", h.EmailOTP.RequestReauthentication)
 		owner.Post("/reauthenticate/email/confirm", h.EmailOTP.ConfirmReauthentication)

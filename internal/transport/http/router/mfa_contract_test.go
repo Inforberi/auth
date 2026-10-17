@@ -25,6 +25,12 @@ type contractMFA struct {
 	input mfaservice.CompleteLoginInput
 }
 
+func (f *contractMFA) Status(_ context.Context, p mfaservice.Proof) (*mfaservice.SecurityStatus, error) {
+	f.calls++
+	f.proof = p
+	return &mfaservice.SecurityStatus{TOTPEnabled: true, RequiredByRole: true, RecoveryCodesRemaining: 7}, f.err
+}
+
 func (f *contractMFA) StartEnrollment(_ context.Context, p mfaservice.Proof) (*mfaservice.Enrollment, error) {
 	f.calls++
 	f.proof = p
@@ -92,8 +98,11 @@ func (f *contractMFA) ConfirmRequiredEnrollment(_ context.Context, p mfaservice.
 }
 
 func TestMFAOwnerRoutesAndOrigin(t *testing.T) {
-	for _, path := range []string{"/mfa/totp/enrollment", "/mfa/totp/enrollment/confirm", "/mfa/totp/replacement", "/mfa/totp/replacement/confirm", "/mfa/step-up", "/mfa/recovery-codes/regenerate", "/mfa/totp"} {
+	for _, path := range []string{"/mfa/status", "/mfa/totp/enrollment", "/mfa/totp/enrollment/confirm", "/mfa/totp/replacement", "/mfa/totp/replacement/confirm", "/mfa/step-up", "/mfa/recovery-codes/regenerate", "/mfa/totp"} {
 		method := "POST"
+		if path == "/mfa/status" {
+			method = "GET"
+		}
 		if path == "/mfa/totp" {
 			method = "DELETE"
 		}
@@ -223,5 +232,22 @@ func TestMFAChallengeNeverIssuesSession(t *testing.T) {
 	cookies := w.Result().Cookies()
 	if len(cookies) != 2 || cookies[0].MaxAge != -1 || cookies[1].Name != mfahttp.LoginCookie || !cookies[1].Secure || !cookies[1].HttpOnly || cookies[1].Path != "/" || cookies[1].Domain != "" {
 		t.Fatal("challenge/session cookies", cookies)
+	}
+}
+
+func TestMFAStatusDoesNotRefreshOrExposeSecrets(t *testing.T) {
+	sessions := &securitySessions{}
+	h := contractHandlers("prod")
+	h.Middleware = sessionhttp.New(sessions, zap.NewNop())
+	r := httptest.NewRequest("GET", "/api/v1/auth/mfa/status", nil)
+	r.Header.Set("Origin", "https://localhost:8443")
+	r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: mfaBrowser})
+	w := httptest.NewRecorder()
+	New(h).ServeHTTP(w, r)
+	if w.Code != 200 || sessions.refresh != 0 || sessions.noRefresh != 1 || len(w.Result().Cookies()) != 0 {
+		t.Fatal("status refreshed session", w.Code, w.Header(), sessions)
+	}
+	if !strings.Contains(w.Body.String(), `"disableAllowedByPolicy":false`) || strings.Contains(w.Body.String(), "secret") || strings.Contains(w.Body.String(), mfaBrowser) {
+		t.Fatal("status policy/secret contract", w.Body.String())
 	}
 }

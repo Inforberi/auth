@@ -36,6 +36,24 @@ func RequireAdministratorRemains(ctx context.Context, tx pgx.Tx, target accountd
 	return nil
 }
 
+// RequireUsableAdministrator shares the Access lock with role/status mutations.
+func RequireUsableAdministrator(ctx context.Context, tx pgx.Tx) error {
+	var ready bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS(
+		SELECT 1 FROM auth.roles r JOIN auth.user_roles ur ON ur.role_id=r.id
+		JOIN auth.users u ON u.id=ur.user_id
+		WHERE r.key='super_admin' AND r.system
+		AND EXISTS(SELECT 1 FROM auth.role_permissions rp WHERE rp.role_id=r.id AND rp.permission_key='access.assignments.manage')
+		AND `+usableAdministrator+`)`).Scan(&ready)
+	if err != nil {
+		return err
+	}
+	if !ready {
+		return accountdomain.ErrLastAdministrator
+	}
+	return nil
+}
+
 // This is local credential readiness, not proof that mail delivery or a human-held factor is available.
 const usableAdministrator = `u.status='active' AND u.deleted_at IS NULL
 	AND EXISTS(SELECT 1 FROM auth.password_credentials p JOIN auth.user_emails e

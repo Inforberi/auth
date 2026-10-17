@@ -38,6 +38,9 @@ func TestPublicPolicySchema(t *testing.T) {
 	accessExec(t, db, ctx, `WITH r AS(INSERT INTO auth.roles(key,name) VALUES('policy_operator','Policy operator') RETURNING id),
 		p AS(INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,'auth.settings.manage' FROM r)
 		INSERT INTO auth.user_roles(user_id,role_id) SELECT $1,id FROM r`, actor.UserID)
+	accessExec(t, db, ctx, `WITH r AS(INSERT INTO auth.roles(key,name,system) VALUES('super_admin','Super admin',true) RETURNING id),
+		p AS(INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,'access.assignments.manage' FROM r)
+		INSERT INTO auth.user_roles(user_id,role_id) SELECT $1,id FROM r`, actor.UserID)
 	update := func(policy settingsdomain.Policy) error {
 		current, err := repo.Load(ctx)
 		if err != nil {

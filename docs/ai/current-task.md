@@ -1,23 +1,20 @@
 # Текущий шаг
 
-Обновлено 17 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), checks — [history](../planning/history.md#результат-a63a-local--17-октября-2026). Это передача контекста, не архив.
+Обновлено 17 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), checks — [history](../planning/history.md#результат-a63b-local--17-октября-2026). Это передача контекста, не архив.
 
-## Последний результат — A6.3a-local
+## Последний результат — A6.3b-local
 
-- Existing role API сохраняет mfaRequired. Omission/null на update не снимает policy; enable повышает role session_revision, OR нескольких ролей, current actor/proof/version/audit и fixed admin guards сохранены. Policy/metadata-only update не переписывает permissions; fan-out по пользователям нет.
-- Required role без factor получает только browser-bound limited enrollment через включённый primary. Existing ledger/limits/shared activation, purpose login, current primary/state recheck, исходный TTL/attempts. Confirm возвращает recovery codes, не session; затем новый primary + MFA login. [Контракт/ограничения](../features/mfa.md#обязательная-mfa-по-роли--a63a).
-- Issuance получает policy и role bindings одним SQL snapshot; direct INSERT не обходит MFA. Startup MFA-off отклоняет required роли; local readiness не доказывает fleet readiness.
-- Formatter/task check/Swagger contracts PASS, lint 0 issues; full PostgreSQL 18.6/race/up-down-up PASS 35.048s. Non-owner SQL/HTTP/TOTP/rollback/replay/concurrent winner/late issuance и Google/Telegram/email OTP primary fixtures проверены локально, не живые внешние providers/SMTP.
-- AS5-local (admin idle/absolute), AS6a/b-local (grant/permission elevation) уже реализованы. Source 000001 изменён, рабочие DB/ENV/secrets не трогались; controlled upgrade/invalidation прежних sessions/challenges до трафика остаётся обязательным. Коммит текущего блока — только по запросу.
+- Ограничение public login через settings требует usable system super_admin: password/verified credential email/TOTP/status/provisioning readiness под existing Access lock; без fan-out. `409 last_administrator` не меняет policy/version/audit. No-op/открытие метода не блокируют recovery. [Правила и границы](../features/auth-settings.md#безопасные-переходы-и-подготовка-администратора--a63b-local).
+- Owner GET `/api/v1/auth/mfa/status`: factor/role/admin policy, recovery count/contact/proof flags. Один SQL snapshot, общие predicates с sensitive mutations, Origin/live session/no-refresh/no-store, без secrets/cookie/audit/guessing counters. [Контракт](../features/mfa.md#статус-mfa-для-владельца--a63b).
+- Новый администратор готовит password/verified email/TOTP/codes до закрытия public primary; temporary public opening — project-wide с закрытой регистрацией. Private login не ослаблен; при запрете такого opening нужен отдельно согласованный restricted private onboarding, не direct SQL.
+- Formatter/Swagger/task check PASS, lint 0 issues; full PostgreSQL 18.6/race PASS 30.565s, targeted non-owner profiles/settings/status PASS. Новых ENV/schema/dependencies/workers нет, рабочая DB/secrets не менялись. Коммит — только по запросу.
 
-## Следующий блок — A6.3b
+## Следующий блок — A6.3c
 
-1. Usable-admin/profile transitions и last reachable protected admin; self-status/policy для UI.
-2. Сейчас private administrative login требует уже enrolled factor. Первичный limited enrollment требует включённого public primary; для нового custom-admin в admin-only профиле подготовить factor заранее. Выбрать безопасный конкретный onboarding до расширения private flow, не ослаблять preflight автоматически.
-3. Соблюдать [матрицу совместимости](../planning/implementation.md#совместимость-настроек-и-безопасные-переключения--a63--a7), проверить concurrent toggles и pending/existing flows.
+Integration secrets/SMTP/providers: определить минимальный versioned protected update и masked reads; secrets не возвращать, network connection tests вне SQL locks. Rotation/lifecycle/runtime propagation и fleet consistency, затем retention/runtime settings; root/deployment keys остаются ENV. Не создавать пустые поля/adapters. Родитель A6.3 открыт; [матрица совместимости](../planning/implementation.md#совместимость-настроек-и-безопасные-переключения--a63--a7) и внешняя приёмка остаются обязательными.
 
-Затем A6.3c integration secrets/SMTP/providers/connection tests/rotation/runtime/fleet/retention; root/deployment keys остаются ENV. Родитель A6.3 открыт. Далее A6.4 [JWT](../planning/jwt-access.md) → pre-ui-backend → UI A7 → A8. Cookie/session — default; strict online authority сохраняется, local-only JWT требует отдельного ADR. Следующая реализация и коммит — по запросу пользователя.
+Далее A6.4 [JWT](../planning/jwt-access.md) → pre-ui-backend → UI A7 → A8. Cookie/session — default; strict online authority сохраняется, local-only JWT требует отдельного ADR. Код определяет поведение; фактические commits/staging проверять через Git.
 
 ## Открытая приёмка
 
-AS5-external/AS6 целиком/A6.3b/c/pre-ui/A8 не закрыты. Только разрешённый изолированный HTTPS-стенд с synthetic data: browser/ingress/multi-tab/interaction-vs-polling/sleep-resume/SMTP/provider/authenticator/admin workflows, fleet settings и [13.1d.4 recovery drill](../operations/mfa-recovery-acceptance.md). Нет credentials/оператора — NOT RUN, не PASS. Mixed/multi-instance load 6.8b, память/GC 6.8c и shutdown/backup/restore обязательны; capacity не установлена. Не включать cache/GC tuning без измерений.
+AS5-external/AS6 целиком/A6.3/pre-ui/A8 не закрыты. Только разрешённый изолированный HTTPS-стенд с synthetic data: browser/ingress/multi-tab/interaction-vs-polling/sleep-resume/SMTP/provider/authenticator/admin-only workflows, fleet settings и [13.1d.4 recovery drill](../operations/mfa-recovery-acceptance.md). Нет credentials/оператора — NOT RUN, не PASS. Mixed/multi-instance load 6.8b, память/GC 6.8c и shutdown/backup/restore обязательны; capacity не установлена. Source 000001 изменён предыдущими блоками; controlled upgrade/invalidation старых sessions/challenges до трафика обязателен, не reset/mixed fleet. Не включать cache/GC tuning без измерений.

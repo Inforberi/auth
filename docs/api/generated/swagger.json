@@ -185,7 +185,7 @@
                         }
                     },
                     "409": {
-                        "description": "auth_policy_conflict, auth_method_not_ready",
+                        "description": "auth_policy_conflict, auth_method_not_ready, last_administrator",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -3388,6 +3388,53 @@
                 }
             }
         },
+        "/api/v1/auth/mfa/status": {
+            "get": {
+                "description": "Live owner-only snapshot, no fresh proof required. No secrets, recovery code values, session refresh or audit. Availability is local, not SMTP/fleet health. Policy flags are informational; mutations independently recheck current state and proof.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Read own MFA status and policy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfa_http.SecurityStatusResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/mfa/step-up": {
             "post": {
                 "description": "Requires fresh password proof, or opt-in verified-email proof for an external-only account, within five minutes. Consumes TOTP/recovery, rotates the current session verifier and records fresh MFA context atomically. Does not extend session lifetime.",
@@ -5945,6 +5992,41 @@
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "mfa_http.SecurityStatusResponse": {
+            "type": "object",
+            "properties": {
+                "disableAllowedByPolicy": {
+                    "type": "boolean"
+                },
+                "emailReauthenticationEnabled": {
+                    "type": "boolean"
+                },
+                "freshMfaProof": {
+                    "type": "boolean"
+                },
+                "freshPrimaryProof": {
+                    "type": "boolean"
+                },
+                "passwordConfigured": {
+                    "type": "boolean"
+                },
+                "recoveryCodesRemaining": {
+                    "type": "integer"
+                },
+                "requiredByAdministration": {
+                    "type": "boolean"
+                },
+                "requiredByRole": {
+                    "type": "boolean"
+                },
+                "totpEnabled": {
+                    "type": "boolean"
+                },
+                "verifiedEmail": {
+                    "type": "boolean"
                 }
             }
         },

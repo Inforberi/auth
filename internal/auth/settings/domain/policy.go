@@ -58,3 +58,11 @@ func (p Policy) RequireAvailable(available PublicMethods) error {
 	}
 	return nil
 }
+
+func (p Policy) RestrictsLogin(previous Policy) bool {
+	return previous.Methods.Password && !p.Methods.Password ||
+		previous.Methods.EmailOTP && !p.Methods.EmailOTP ||
+		previous.Methods.Google && !p.Methods.Google ||
+		previous.Methods.Telegram && !p.Methods.Telegram ||
+		p.Methods.Password && previous.PasswordEmailVerification != VerificationRequired && p.PasswordEmailVerification == VerificationRequired
+}

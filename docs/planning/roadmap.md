@@ -470,6 +470,8 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 ## 6. Текущий статус
 
+A6.3b-local (17 октября): transition guard пригодного system super_admin при отключении public methods/ужесточении verification; owner MFA status без secrets/refresh; управляемая подготовка нового администратора до закрытия public primary. Private login не ослаблен, нового private onboarding нет. Локальные SQL/race/HTTP проверки пройдены; реальные admin-only/browser/fleet workflows — pre-ui/A8. Далее A6.3c integration settings/secrets/runtime, затем JWT/pre-ui/UI; родитель A6.3 остаётся открыт. [Подробности](../features/auth-settings.md#безопасные-переходы-и-подготовка-администратора--a63b-local).
+
 14 октября 2026, 13.1d.1–d.3-local: [сценарий потери всех MFA-факторов](mfa-recovery.md) получил opt-in HTTP/App/ENV/Swagger, CLI approve/cancel с отдельными DB grants/session_user/OID/audit и independent durable delivery. Замена только после current approval + primary/browser + нового TOTP, без session/status/role/password override. Default-off, runtime не owner/operator; отключение новых операций не прекращает committed notice delivery. Далее d.4 operational приёмка, внешнее включение зависит от утверждённой проверки владельца; UI ещё нет.
 
 14 октября 2026, 10.3b-local: готова отдельная CLI смены пароля существующего super-admin через DB operator membership + точное подтверждение target/version. Сохранены роли/MFA/status/setup marker, атомарны revoke/cleanup/audit; обычный email reset проверен для admin. [Runbook](../features/admin-recovery.md). Внешняя операторская приёмка и lost-factor recovery ещё открыты; runtime HTTP bypass не добавлялся.

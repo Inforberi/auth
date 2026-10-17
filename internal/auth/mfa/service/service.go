@@ -25,6 +25,7 @@ func (p Proof) Validate() error {
 type Check func(encrypted []byte, lastStep int64, now time.Time) (int64, error)
 
 type Repository interface {
+	Status(context.Context, Proof) (*SecurityStatus, error)
 	SaveEnrollment(context.Context, Proof, string, []byte) (time.Time, error)
 	ConfirmEnrollment(context.Context, Proof, string, Check, []string) error
 	Consume(context.Context, accountdomain.UserID, int64, Check, string) (time.Time, error)

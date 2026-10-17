@@ -70,9 +70,7 @@ func (r *Repository) Disable(ctx context.Context, proof service.Proof) error {
 			return err
 		}
 		var required bool
-		err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id
-			WHERE ur.user_id=$1 AND (r.system AND r.key='super_admin' OR EXISTS(SELECT 1 FROM auth.role_permissions rp
-			WHERE rp.role_id=r.id AND rp.permission_key IN ('access.roles.manage','access.assignments.manage','accounts.email.bind','accounts.users.manage','accounts.users.status.manage','accounts.users.delete','auth.settings.manage')))) OR auth.role_requires_mfa($1)`, proof.UserID).Scan(&required)
+		err := tx.QueryRow(ctx, `SELECT `+administrativeMFARequired+` OR auth.role_requires_mfa($1)`, proof.UserID).Scan(&required)
 		if err != nil {
 			return err
 		}

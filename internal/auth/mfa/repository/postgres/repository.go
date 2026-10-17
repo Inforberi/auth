@@ -55,15 +55,7 @@ func (r *Repository) requireProof(ctx context.Context, tx pgx.Tx, proof service.
 	var id string
 	err = tx.QueryRow(ctx, `SELECT id FROM auth.role_bound_sessions s WHERE user_id=$1 AND token_hash=$2 AND auth_version=$3
 		AND revoked_at IS NULL AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()
-		AND ((password_verified_at<=clock_timestamp() AND password_verified_at>clock_timestamp()-interval '5 minutes')
-		OR ($4 AND email_reauthenticated_at<=clock_timestamp()
-			AND email_reauthenticated_at>clock_timestamp()-interval '5 minutes'
-			AND NOT EXISTS(SELECT 1 FROM auth.password_credentials WHERE user_id=$1)
-			AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials WHERE user_id=$1)
-			AND NOT EXISTS(SELECT 1 FROM auth.account_provisions WHERE user_id=$1 AND activated_at IS NULL)
-			AND EXISTS(SELECT 1 FROM auth.linked_identities WHERE user_id=$1)
-			AND EXISTS(SELECT 1 FROM auth.user_emails e WHERE e.user_id=$1
-				AND e.id=s.email_reauthenticated_id AND e.verified_at IS NOT NULL))) FOR UPDATE OF s`,
+		AND (`+freshManagementPrimary+`) FOR UPDATE OF s`,
 		proof.UserID, proof.TokenHash, version, r.emailProofEnabled).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.ErrProofRequired

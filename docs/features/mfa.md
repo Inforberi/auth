@@ -14,6 +14,33 @@ A5.2b-local подключает MFA к password, Google/Telegram OIDC и email 
 
 Без подключённого фактора обычный login сохраняется. При enabled TOTP основной вход возвращает HTTP 202, `status=mfa_required`, `challenge`, `expiresAt` и HttpOnly browser cookie, но не новую session cookie. Старую cookie этого браузера очищаем; это не глобальный logout других сессий. После второго фактора создаётся общая SQL-сессия. MFA не заменяет email verification, permissions или основной вход. Factor state нельзя включать/выключать прямым SQL вместо protected flow.
 
+## Статус MFA для владельца — A6.3b
+
+`GET /api/v1/auth/mfa/status` требует обычную действующую session и разрешённый HTTPS Origin. Публикуется только при включённом deployment MFA. Нельзя прочитать чужой account по UUID в query/body; owner/version/hash берутся из trusted context и повторно проверяются одним SQL statement вместе с status/revoke/deadlines/role revisions. Fresh proof для чтения не нужен, guessing budgets не расходуются. No-store, без Set-Cookie/sliding refresh, секретов, значений recovery codes и audit-записей. Это отдельное чтение страницы безопасности, не новый запрос каждого middleware и не polling.
+
+Ответ `200`:
+
+```json
+{
+  "totpEnabled": true,
+  "requiredByRole": false,
+  "requiredByAdministration": true,
+  "disableAllowedByPolicy": false,
+  "recoveryCodesRemaining": 10,
+  "verifiedEmail": true,
+  "passwordConfigured": true,
+  "emailReauthenticationEnabled": false,
+  "freshPrimaryProof": true,
+  "freshMfaProof": true
+}
+```
+
+`requiredByRole` — OR custom role policies; `requiredByAdministration` — фиксированная защита privileged mutations. `disableAllowedByPolicy` отражает только установленный фактор и отсутствие обязательной политики, **не разрешение выполнить DELETE без актуальных proofs**. `freshPrimaryProof` использует то же SQL-условие, что owner MFA mutations: password либо opt-in email proof для external-only; обычный OAuth SSO не становится этим proof. `freshMfaProof` — окно пять минут и существующий фактор. Значения могут устареть сразу после чтения: sensitive операции независимо повторяют guards в транзакции.
+
+`passwordConfigured` — наличие постоянной credential row, не доказательство пригодности administrative login; `verifiedEmail` — наличие подтверждённого contact, не проверка доставки. `emailReauthenticationEnabled` — immutable operational opt-in данного экземпляра, не гарантия SMTP/fleet health или права текущего account использовать этот путь. `recoveryCodesRemaining` — количество ещё не потреблённых codes, не доказательство, что владелец их сохранил. UI предупреждает о нуле codes/отсутствующей verified почте; эта почта сама не разрешает обход MFA. Operator-assisted recovery требует contact, подтверждённый до создания recovery intent, и отдельную процедуру.
+
+Ошибки: `401` — middleware отклонил session; `403 invalid_origin` либо `fresh_auth_required`, если session/version уже изменилась между middleware и SQL-read; `503 temporarily_unavailable` — зависимость недоступна. При MFA-off route отсутствует. Нет нового ENV, схемы, worker, pool или dependency.
+
 ## Обязательная MFA по роли — A6.3a
 
 Управление — прежние protected POST `/api/v1/admin/roles` и `/api/v1/admin/roles/{id}`; list/detail возвращают `mfaRequired`. Create без поля/null создаёт optional policy. Update без поля/null сохраняет текущую; явные true/false меняют её с прежними version, delegation, fresh password/MFA и audit guards. System role не редактируется. Поле отражает политику всего входа custom role, не отключает обязательные proof guards административных операций. `409 mfa_not_ready` означает отсутствие настроенного MFA на обслуживающем экземпляре; не доказывает состояние остальных узлов.
@@ -39,7 +66,7 @@ Confirm повторяет current primary/method/status/version/required-role/f
 
 Первый required enrollment доверяет принятому primary proof, но не объявляет обычный OIDC/SSO вход свежим локальным password/MFA-management proof. Это отдельный bootstrap только отсутствующего фактора; replacement/disable/regeneration сохраняют прежние независимые guards. Самостоятельно verified email не создаётся. External-only аккаунту без verified contact нужно сохранить recovery codes и подготовить контролируемую привязку почты после входа: существующее operator-assisted lost-factor recovery требует verified contact до создания recovery intent. Наличие MFA не означает, что все пути восстановления уже доступны; отобразить эту готовность в self-status/UI A6.3b/A7.
 
-При admin-only профиле без public methods новый пользователь должен подключить TOTP до закрытия подходящего primary. Этот блок не открывает public registration и не ослабляет private-admin preflight автоматически. Полная проверка достижимости onboarding/last usable admin при переключениях, self-status для UI и реальные workflows остаются A6.3b/pre-ui; обычному пользователю всё ещё можно запретить последний public method по политике проекта. Настройки подключения SMTP/providers/secrets/retention — следующие части A6.3, root/deployment keys остаются ENV.
+При admin-only профиле без public methods новый пользователь должен подключить TOTP до закрытия подходящего primary. A6.3b-local фиксирует [управляемую подготовку и transition guard](auth-settings.md#безопасные-переходы-и-подготовка-администратора--a63b-local), не ослабляя private-admin preflight. Обычному пользователю всё ещё можно запретить последний public method по политике проекта. Реальные workflows остаются pre-ui/A8. Настройки подключения SMTP/providers/secrets/retention — A6.3c, root/deployment keys остаются ENV.
 
 Чтение защищённой session не получает нового policy lookup: old tokens отсекает существующая revision view. Смена только MFA-флага/метаданных не переписывает permissions, настройка не сканирует пользователей. Массовое включение может вызвать burst повторных входов, а не SQL fan-out: сохраняются admission/guessing bounds. Capacity/GC не измерены. Local tests включают реальные SQL/HTTP/TOTP, но provider proofs в них synthetic, не живые Google/Telegram/SMTP flows. Browser/authenticator/fleet/fault/load/restore и rollout прежней БД — открытые gates. Изменён source 000001 без применения к рабочей БД; controlled upgrade и invalidation прежних sessions/challenges до трафика обязательны, прямое DBA изменение policy также должно корректно повысить role revision.
 

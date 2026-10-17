@@ -12,6 +12,7 @@ import (
 )
 
 type management interface {
+	Status(context.Context, service.Proof) (*service.SecurityStatus, error)
 	StartEnrollment(context.Context, service.Proof) (*service.Enrollment, error)
 	ConfirmEnrollment(context.Context, service.ConfirmInput) (*service.RecoveryCodes, error)
 	StartReplacement(context.Context, service.Proof) (*service.Enrollment, error)

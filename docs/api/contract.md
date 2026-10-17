@@ -1,6 +1,8 @@
 # Текущий API-контракт
 
-Состояние на 16 октября 2026. Источник маршрутов — `internal/transport/http/router`; DTO и error mapping — transport каждой фичи. Спецификация — Swagger 2.0, не OpenAPI 3.
+Состояние на 17 октября 2026. Источник маршрутов — `internal/transport/http/router`; DTO и error mapping — transport каждой фичи. Спецификация — Swagger 2.0, не OpenAPI 3.
+
+A6.3b-local: `GET /api/v1/auth/mfa/status` — [owner MFA snapshot](../features/mfa.md#статус-mfa-для-владельца--a63b), live session/Origin/no-store, без fresh proof, cookies, secrets или продления. `200` возвращает factor/policy/readiness/recovery-code count; middleware `401`/Origin `403`, stale SQL proof `403 fresh_auth_required`, dependency `503`. Settings POST при отключении public method или ужесточении password verification дополнительно возвращает `409 last_administrator`, если нет пригодного защищённого system super_admin; no-op/открытие метода не блокируют восстановление. [Правила переходов и admin-only onboarding](../features/auth-settings.md#безопасные-переходы-и-подготовка-администратора--a63b-local).
 
 | Метод и путь | Успех | Ошибки |
 | --- | --- | --- |
