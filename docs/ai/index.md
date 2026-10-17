@@ -17,6 +17,7 @@
 | Каталог разрешений | [access-catalog](../features/access-catalog.md) | `internal/access/settings`, `cmd/access-catalog`, `internal/app/access` |
 | Список/карточка пользователей | [user-directory](../features/user-directory.md) | Account: `user_directory`, `list_users`, `read_user` |
 | Статус, удаление, retention | [account-deletion](../features/account-deletion.md) | `internal/auth/account`, config, app lifecycle |
+| Сохраняемые сроки очистки | [retention-settings](../features/retention-settings.md) | Settings: `retention*`, account worker; batch/interval остаются ENV |
 | Первый super-admin | [initial-setup](../features/initial-setup.md) | Account: `setup*`; не lost-admin recovery |
 | Аварийное восстановление пароля | [admin-recovery](../features/admin-recovery.md) | `cmd/admin-recovery`, password: `operator_recovery*`, `deploy/recovery-grants.sql` |
 | Приглашения/provisioning | [invitations](../features/invitations.md) | Account: `provision*`/`invitation_*`, password: `activate_invitation*` |

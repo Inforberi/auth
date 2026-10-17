@@ -64,7 +64,11 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("assemble email binding: %w", err)
 	}
-	retentionSvc := accountservice.NewRetention(accountRepo, cfg.Retention)
+	retentionSettings, err := assembleRetentionSettings(ctx, pool, cfg.Retention)
+	if err != nil {
+		return nil, fmt.Errorf("assemble retention settings: %w", err)
+	}
+	retentionSvc := accountservice.NewRetention(accountRepo, cfg.Retention).WithSettings(retentionSettings)
 	argonHash := hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), cfg.Capacity.HashConcurrency)
 	setup, err := assembleSetup(accountRepo, rdb, mail, argonHash, cfg, log)
 	if err != nil {
@@ -141,6 +145,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		AuthSettings:      settingshttp.New(policy, cfg.AvailableAuthMethods(), log),
 		SMTPSettings:      smtpSettings,
 		ProviderSettings:  settingshttp.NewProviders(providers, log),
+		RetentionSettings: settingshttp.NewRetention(retentionSettings, log),
 		Setup:             setup,
 		EmailBinding:      emailBinding,
 		MFA:               mfaHandler,

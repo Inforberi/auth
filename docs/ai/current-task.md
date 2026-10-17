@@ -1,19 +1,18 @@
 # Текущий шаг
 
-Обновлено 17 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), проверки — [history](../planning/history.md#результат-a63c2-local--17-октября-2026). Это передача контекста, не архив; commits/staging проверять через Git.
+Обновлено 17 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), проверки — [history](../planning/history.md#результат-a63c3-local--17-октября-2026). Это передача контекста, не архив; commits/staging проверять через Git.
 
-## Последний результат — A6.3c.2-local
+## Последний результат — A6.3c.3-local
 
-- [Google/Telegram settings](../features/provider-settings.md): fixed provider rows, per-provider encrypted secret, ENV только seed, protected presence-only GET/versioned POST с current permission/fresh password+MFA/audit. Client ID нельзя менять при existing identities; disabled method и explicit secret обязательны для его замены. Callback/issuer/endpoints/budgets/root keys — deployment, не UI.
-- Current SQL credential snapshot на start/callback, immutable OAuth/verifier view на shared HTTP/JWKS owner/provider, без polling/cache/new pools/workers/dependencies. ProviderVersion связан с Redis flow → verified identity/primary → SQL creation/link/session/MFA/enrollment/recovery до commit; stale/zero managed proof требует restart, existing sessions сохранены. [Правила и ограничения](../features/provider-settings.md#rotation-и-незавершённые-входы).
-- Adapter operational readiness и configured SQL credential readiness разделены; enable/startup не разрешены без credentials. Неготовый enabled seed не сохраняется. Lost row/cipher failure не разрешают ENV fallback. Source 000001 дополнен; existing install требует controlled encrypted bootstrap/schema/grants/legacy pending invalidation до traffic, maintenance upgrade CLI не реализован. Mixed old/new fleet недопустим.
-- Formatter/Swagger/final task check PASS/lint 0 issues; full PostgreSQL 18.6/race PASS 34.835s, Redis/OIDC/crypto/service race PASS. Docker disk-full диагностирован: свой test PG пересоздан на bounded tmpfs, чужие Docker данные не чистились. Все созданные временные containers/data удалены; рабочая DB/ENV/secrets не трогались. Коммит — только по запросу.
+- [Retention settings](../features/retention-settings.md): три срока в SQL singleton/version; ENV только initial seed, protected GET/POST/current permission/fresh password+MFA/no-op/audit rollback, explicit confirmation сокращения. Значения в днях 1..106751; defaults 30/30/180.
+- Worker читает current SQL snapshot перед каждой партией, без cache/new timers/pools/workers. Read failure отменяет очистку без ENV fallback; общий deadline 5s включает read. In-flight партия может использовать прежние сроки до deadline. Batch/interval остаются deployment, действующие session deadlines не меняются. SQL/race проверяет seed/update races, rollback, authority и реальную очистку/сохранность активных sessions.
+- Formatter/Swagger/task check PASS/lint 0 issues; full PostgreSQL 18.6/race PASS 34.930s, targeted SQL/race PASS 1.783s и service/HTTP race PASS. Disposable PG на bounded tmpfs; рабочие DB/ENV/secrets не трогались. Source 000001 дополнен без рабочей migration, controlled schema/grants/seed rollout обязателен. Maintenance upgrade CLI не добавлен, mixed old/new fleet недопустим. Подробности проверок/cleanup — history. Коммит только по запросу.
 
-## Следующий блок — A6.3c.3
+## Следующий блок — A6.4
 
-Сохраняемые retention/runtime settings: сначала минимальный набор существующих worker параметров и владельцы/bounds/суммарные бюджеты, version/current permission/fresh password+MFA/audit, безопасное применение на экземплярах без новых timers/cache. Не переносить весь deployment env/root secrets в UI и не менять deadlines ранее выданных sessions. Сохранять SMTP/provider credential contracts, current SQL authority и fixed admin protection. Родители A6.3c/A6.3 открыты.
+JWT по [согласованному плану](../planning/jwt-access.md): сначала конкретный подэтап/границы, cookie/session default и strict online SQL authority без ослабления ADR 002. Сохранить текущие SMTP/provider/retention contracts и fixed admin protection; не превращать settings в каталог всего deployment ENV. A6.3c/A6.3 остаются открытыми по внешней приёмке.
 
-Затем A6.4 [JWT](../planning/jwt-access.md) → pre-ui-backend → UI A7 → A8. Cookie/session default, strict online authority без ослабления ADR 002.
+Затем pre-ui-backend → UI A7 → A8. Реальные provider/SMTP secrets и браузерные сценарии проверять перед подключением UI, не подменять локальными fixtures.
 
 ## Открытая приёмка
 

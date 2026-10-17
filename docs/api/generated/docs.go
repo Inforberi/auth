@@ -346,6 +346,122 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/admin/auth/settings/retention": {
+            "get": {
+                "description": "Requires a live session, allowed HTTPS Origin and auth.settings.manage. No fresh proof is required for reading. Durations are in days; worker batch and interval remain deployment configuration.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Retention settings"
+                ],
+                "summary": "Read saved data retention periods",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/retention_settings_http.SettingsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Requires auth.settings.manage, fresh password+MFA and expectedVersion. All periods must be 1..106751 days. Shortening any period requires confirmShortening=true and can cause irreversible deletion. Each subsequent worker batch reads current SQL settings; an already started batch can use the old snapshot within its five-second deadline. Existing session deadlines and transient challenge expiry do not change.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Retention settings"
+                ],
+                "summary": "Update data retention periods",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Complete retention policy and current version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/retention_settings_http.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/retention_settings_http.SettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "retention_settings_conflict, retention_confirmation_required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/auth/settings/smtp": {
             "get": {
                 "description": "Requires a live session, HTTPS Origin and auth.settings.manage. passwordSet is presence only. No secrets, session refresh or network tests.",
@@ -6731,6 +6847,49 @@ const docTemplate = `{
                 },
                 "expectedVersion": {
                     "type": "integer"
+                }
+            }
+        },
+        "retention_settings_http.Policy": {
+            "type": "object",
+            "properties": {
+                "emailReservationDays": {
+                    "type": "integer"
+                },
+                "securityAuditDays": {
+                    "type": "integer"
+                },
+                "sessionDays": {
+                    "type": "integer"
+                }
+            }
+        },
+        "retention_settings_http.SettingsResponse": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/retention_settings_http.Policy"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "retention_settings_http.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "expectedVersion",
+                "policy"
+            ],
+            "properties": {
+                "confirmShortening": {
+                    "type": "boolean"
+                },
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/retention_settings_http.Policy"
                 }
             }
         },

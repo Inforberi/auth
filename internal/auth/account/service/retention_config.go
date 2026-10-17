@@ -3,6 +3,8 @@ package service
 import (
 	"fmt"
 	"time"
+
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
 type RetentionConfig struct {
@@ -17,8 +19,7 @@ func (c RetentionConfig) Validate() error {
 	if c.BatchSize < 1 || c.BatchSize > 1000 || c.Interval < time.Second || c.Interval > time.Hour {
 		return fmt.Errorf("retention batch must be 1..1000 and interval 1s..1h")
 	}
-	// Bound days so conversion to a Go duration cannot overflow in the cleanup worker.
-	const maxDays = int((1<<63 - 1) / (24 * time.Hour))
+	const maxDays = settingsdomain.MaxRetentionDays
 	for _, setting := range []struct {
 		name string
 		days int

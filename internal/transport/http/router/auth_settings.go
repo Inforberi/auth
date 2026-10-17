@@ -26,4 +26,10 @@ func authSettingsRoutes(r chi.Router, h Handlers) {
 			protected.Post("/admin/auth/settings/providers/{provider}", h.ProviderSettings.Update)
 		}
 	}
+	if h.RetentionSettings != nil {
+		protected.Get("/admin/auth/settings/retention", h.RetentionSettings.Read)
+		if h.Config != nil && h.Config.MFA.Enabled {
+			protected.Post("/admin/auth/settings/retention", h.RetentionSettings.Update)
+		}
+	}
 }

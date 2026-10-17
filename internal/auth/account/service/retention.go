@@ -3,25 +3,45 @@ package service
 import (
 	"context"
 	"time"
+
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
 type RetentionRepository interface {
 	PurgeRetention(context.Context, RetentionConfig) (int64, error)
 }
 
+type RetentionSettings interface {
+	Current(context.Context) (settingsdomain.RetentionPolicy, error)
+}
+
 type RetentionService struct {
-	repo RetentionRepository
-	cfg  RetentionConfig
+	repo     RetentionRepository
+	cfg      RetentionConfig
+	settings RetentionSettings
 }
 
 func NewRetention(repo RetentionRepository, cfg RetentionConfig) *RetentionService {
 	return &RetentionService{repo: repo, cfg: cfg}
 }
 
+func (s *RetentionService) WithSettings(source RetentionSettings) *RetentionService {
+	s.settings = source
+	return s
+}
+
 func (s *RetentionService) Purge(ctx context.Context) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	return s.repo.PurgeRetention(ctx, s.cfg)
+	cfg := s.cfg
+	if s.settings != nil {
+		policy, err := s.settings.Current(ctx)
+		if err != nil {
+			return 0, err
+		}
+		cfg.EmailReservationDays, cfg.SessionDays, cfg.SecurityAuditDays = policy.EmailReservationDays, policy.SessionDays, policy.SecurityAuditDays
+	}
+	return s.repo.PurgeRetention(ctx, cfg)
 }
 
 func (s *RetentionService) RunRetention(ctx context.Context, report func(error)) {

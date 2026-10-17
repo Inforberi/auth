@@ -470,6 +470,8 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 ## 6. Текущий статус
 
+A6.3c.3-local (17 октября): сохраняемые сроки очистки с protected GET/POST, version/audit и explicit confirmation сокращения. ENV только seed, worker читает current SQL перед bounded партией; fail-closed без fallback, deadlines активных sessions неизменны. Batch/interval остаются deployment, новых workers/pools/cache нет. [Контракт и ограничения](../features/retention-settings.md). Далее A6.4 JWT; A6.3c/A6.3, external/pre-ui/load/GC/restore gates открыты. Source 000001 дополнен, рабочая БД не менялась.
+
 A6.3c.2-local (17 октября): protected сохраняемые Google/Telegram credentials с independent revisions, encrypted secrets и live immutable adapter views на shared HTTP/JWKS owners. Pending OIDC/link/session/MFA/recovery proofs связаны с revision до SQL commit; rotation не отзывает existing sessions. Callback/budgets/root остаются ENV. [Контракт](../features/provider-settings.md). Далее A6.3c.3 retention/runtime; external provider/fleet/browser/load/restore gates открыты, deployment рабочей БД не выполнялся.
 
 A6.3c.1-local (17 октября): сохраняемый SMTP с encrypted password, protected read/update/test, deployment destination allowlist и live SQL source для mail delivery. No new workers/pools/dependencies; source 000001 дополнен без рабочей migration. SQL/Redis/race/HTTP/lint PASS; actual provider/SMTP/fleet/browser/load/restore NOT RUN. Далее A6.3c.2 Google/Telegram credentials revision/lifecycle, затем A6.3c.3 retention/runtime. Родитель A6.3 открыт. [Контракт](../features/smtp-settings.md).

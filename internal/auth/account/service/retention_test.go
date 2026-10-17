@@ -5,11 +5,14 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
 type retentionStub struct {
 	config RetentionConfig
 	err    error
+	calls  int
 }
 
 func (r *retentionStub) PurgeRetention(ctx context.Context, cfg RetentionConfig) (int64, error) {
@@ -18,10 +21,41 @@ func (r *retentionStub) PurgeRetention(ctx context.Context, cfg RetentionConfig)
 		return 0, errors.New("missing bounded deadline")
 	}
 	r.config = cfg
+	r.calls++
 	if r.err != nil {
 		return 0, r.err
 	}
 	return 7, nil
+}
+
+type retentionSettingsStub struct {
+	policy settingsdomain.RetentionPolicy
+	err    error
+}
+
+func (s *retentionSettingsStub) Current(ctx context.Context) (settingsdomain.RetentionPolicy, error) {
+	if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) > 5*time.Second {
+		return settingsdomain.RetentionPolicy{}, errors.New("missing shared batch deadline")
+	}
+	return s.policy, s.err
+}
+
+func TestRetentionLiveSettings(t *testing.T) {
+	repo := &retentionStub{}
+	settings := &retentionSettingsStub{policy: settingsdomain.RetentionPolicy{EmailReservationDays: 7, SessionDays: 60, SecurityAuditDays: 365}}
+	cfg := RetentionConfig{EmailReservationDays: 30, SessionDays: 30, SecurityAuditDays: 180, BatchSize: 12, Interval: time.Minute}
+	svc := NewRetention(repo, cfg).WithSettings(settings)
+	if _, err := svc.Purge(t.Context()); err != nil || repo.config.SessionDays != 60 || repo.config.BatchSize != 12 || repo.config.Interval != time.Minute {
+		t.Fatal(repo.config, err)
+	}
+	settings.policy.SessionDays = 90
+	if _, err := svc.Purge(t.Context()); err != nil || repo.config.SessionDays != 90 || svc.cfg != cfg {
+		t.Fatal("stale or mutated config", err)
+	}
+	settings.err = errors.New("missing settings")
+	if count, err := svc.Purge(t.Context()); !errors.Is(err, settings.err) || count != 0 || repo.calls != 2 {
+		t.Fatal("cleanup used ENV fallback", count, err)
+	}
 }
 
 func TestRetentionPurge(t *testing.T) {

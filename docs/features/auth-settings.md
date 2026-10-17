@@ -2,7 +2,9 @@
 
 ## Текущий статус
 
-A6.3c.2-local: [сохраняемые Google/Telegram credentials](provider-settings.md), scoped encryption и protected GET/POST; no secret reads, version/audit/current guards. App adapters используют per-operation SQL snapshot и общий HTTP/JWKS owner, pending proof revision проверяется в final SQL/MFA transactions. Callback/issuer/endpoints/budgets и root keys остаются deployment configuration; ENV credentials теперь только seed. `availableMethods` — локальная operational готовность adapter, включение дополнительно требует configured SQL credentials. Ни наличие полей, ни сохранение не доказывают реальную provider/fleet готовность. Следующий локальный блок — retention/runtime A6.3c.3, внешняя приёмка открыта.
+A6.3c.3-local: [сохраняемые сроки очистки](retention-settings.md), protected GET/POST/version/audit и подтверждение сокращения. Worker читает SQL snapshot перед каждой партией; batch/interval и session deadlines остаются deployment. Далее A6.4 JWT, внешняя pre-ui приёмка открыта.
+
+A6.3c.2-local: [сохраняемые Google/Telegram credentials](provider-settings.md), scoped encryption и protected GET/POST; no secret reads, version/audit/current guards. App adapters используют per-operation SQL snapshot и общий HTTP/JWKS owner, pending proof revision проверяется в final SQL/MFA transactions. Callback/issuer/endpoints/budgets и root keys остаются deployment configuration; ENV credentials теперь только seed. `availableMethods` — локальная operational готовность adapter, включение дополнительно требует configured SQL credentials. Ни наличие полей, ни сохранение не доказывают реальную provider/fleet готовность; внешняя приёмка открыта.
 
 AS5-local (17 октября): session, выданная владельцу встроенных административных прав/system super-admin, получает независимый idle/absolute профиль; это относится и к публичному входу такого пользователя. Настройки сроков пока ENV, не поля settings API. [Сроки, activity endpoint и подключение UI](../operations/browser-security.md#сроки-административных-сессий--as5).
 
