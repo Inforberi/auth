@@ -11,7 +11,7 @@ type sessionRepo interface {
 	CreateSession(
 		ctx context.Context,
 		sessionParams CreateSessionParams,
-	) error
+	) (time.Time, error)
 	FindSession(ctx context.Context, tokenHash string) (*sessiondomain.Session, error)
 	RefreshSession(ctx context.Context, tokenHash string, session *sessiondomain.Session, expectedExpiry time.Time) (bool, error)
 }

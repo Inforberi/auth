@@ -23,13 +23,16 @@ type PrimaryProof struct {
 }
 
 type LoginConfig struct {
-	AllowPrimary         func(method, issuer string) bool
-	ChallengeTTL         time.Duration
-	SessionTTL           time.Duration
-	AbsoluteSessionTTL   time.Duration
-	UserLimitPerMinute   int
-	IPLimitPerMinute     int
-	GlobalLimitPerMinute int
+	AllowPrimary          func(method, issuer string) bool
+	ChallengeTTL          time.Duration
+	SessionTTL            time.Duration
+	AbsoluteSessionTTL    time.Duration
+	AdminIdleTimeout      time.Duration
+	AdminAbsoluteTTL      time.Duration
+	AdminActivityInterval time.Duration
+	UserLimitPerMinute    int
+	IPLimitPerMinute      int
+	GlobalLimitPerMinute  int
 }
 
 type LoginRepository interface {

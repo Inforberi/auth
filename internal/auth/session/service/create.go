@@ -10,15 +10,18 @@ import (
 )
 
 type CreateSessionParams struct {
-	PrimaryProof      *mfaservice.PrimaryProof
-	AuthVersion       int64
-	AbsoluteExpiresAt time.Time
-	UserID            accountdomain.UserID
-	CreatedAt         time.Time
-	ExpiresAt         time.Time
-	TokenHash         string
-	UserAgent         string
-	IPAddress         string
+	PrimaryProof          *mfaservice.PrimaryProof
+	AdminIdleTimeout      time.Duration
+	AdminAbsoluteTTL      time.Duration
+	AdminActivityInterval time.Duration
+	AuthVersion           int64
+	AbsoluteExpiresAt     time.Time
+	UserID                accountdomain.UserID
+	CreatedAt             time.Time
+	ExpiresAt             time.Time
+	TokenHash             string
+	UserAgent             string
+	IPAddress             string
 }
 
 // RawToken is returned to the caller; only its digest is stored in the ledger.
@@ -43,18 +46,21 @@ func (s *SessionService) createSession(ctx context.Context, userID accountdomain
 	now := s.now.NowUTC()
 	expiresAt := now.Add(s.cfg.SessionTTL)
 
-	err = s.repo.CreateSession(
+	expiresAt, err = s.repo.CreateSession(
 		ctx,
 		CreateSessionParams{
-			PrimaryProof:      proof,
-			AuthVersion:       version,
-			AbsoluteExpiresAt: now.Add(s.cfg.AbsoluteSessionTTL),
-			UserID:            userID,
-			CreatedAt:         now,
-			ExpiresAt:         expiresAt,
-			TokenHash:         tokenHash,
-			UserAgent:         userAgent,
-			IPAddress:         ip,
+			AdminIdleTimeout:      s.cfg.AdminIdleTimeout,
+			AdminAbsoluteTTL:      s.cfg.AdminAbsoluteTTL,
+			AdminActivityInterval: s.cfg.AdminActivityInterval,
+			PrimaryProof:          proof,
+			AuthVersion:           version,
+			AbsoluteExpiresAt:     now.Add(s.cfg.AbsoluteSessionTTL),
+			UserID:                userID,
+			CreatedAt:             now,
+			ExpiresAt:             expiresAt,
+			TokenHash:             tokenHash,
+			UserAgent:             userAgent,
+			IPAddress:             ip,
 		},
 	)
 	if err != nil {

@@ -88,7 +88,7 @@ func checkMFAFoundation(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		params := f.params
 		params.AuthVersion = 2
 		params.TokenHash = tokengenerate.New().Hash("mfa-primary-bypass")
-		if err := f.sessions.CreateSession(ctx, params); !errors.Is(err, sessiondomain.ErrMFARequired) {
+		if _, err := f.sessions.CreateSession(ctx, params); !errors.Is(err, sessiondomain.ErrMFARequired) {
 			t.Fatal("ordinary session bypassed MFA", err)
 		}
 		input := mfaservice.VerifyInput{UserID: f.user, AuthVersion: 2, Code: mfaCode(t, db, ctx, enrollment.Secret, 30*time.Second)}
@@ -121,7 +121,7 @@ func checkMFAFoundation(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 			t.Fatal(err)
 		}
 		params.AuthVersion = 3
-		if err := f.sessions.CreateSession(ctx, params); !errors.Is(err, sessiondomain.ErrMFARequired) {
+		if _, err := f.sessions.CreateSession(ctx, params); !errors.Is(err, sessiondomain.ErrMFARequired) {
 			t.Fatal("reset bypassed MFA", err)
 		}
 		if _, err := deleteFixture(ctx, f, 3); err != nil {

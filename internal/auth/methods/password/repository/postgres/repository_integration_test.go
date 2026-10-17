@@ -47,7 +47,7 @@ func checkRepository(t *testing.T, db *pgxpool.Pool, ctx context.Context, repo *
 		UserID: id, AuthVersion: 1, TokenHash: strings.Repeat("e", 64),
 		CreatedAt: time.Now().UTC(), ExpiresAt: time.Now().UTC().Add(time.Hour), AbsoluteExpiresAt: time.Now().UTC().Add(2 * time.Hour),
 	}
-	if err := ledger.CreateSession(ctx, params); err != nil {
+	if _, err := ledger.CreateSession(ctx, params); err != nil {
 		t.Fatal(err)
 	}
 	if err := repo.ChangePassword(ctx, id, params.TokenHash, "test-hash", "new-hash"); err != nil {

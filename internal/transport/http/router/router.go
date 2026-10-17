@@ -34,6 +34,7 @@ type Handlers struct {
 	Setup             *accounthttp.SetupHandler
 	MFA               *mfahttp.Handler
 	Session           *sessionhttp.Handler
+	Activity          *sessionhttp.ActivityHandler
 	Rotation          *sessionhttp.RotationHandler
 	Reauthentication  *passwordhttp.ReauthenticationHandler
 	Recovery          *passwordhttp.RecoveryHandler
@@ -176,6 +177,9 @@ func googleRoutes(r chi.Router, h Handlers) {
 }
 
 func sessionRoutes(r chi.Router, h Handlers) {
+	if h.Activity != nil {
+		r.With(h.Middleware.NoRefreshAuth).Post("/session/activity", h.Activity.Record)
+	}
 	if h.Reauthentication != nil {
 		r.With(h.Middleware.NoRefreshAuth).Post("/reauthenticate/password", h.Reauthentication.Confirm)
 	}

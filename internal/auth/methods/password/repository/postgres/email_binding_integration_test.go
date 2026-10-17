@@ -149,7 +149,7 @@ func checkEmailBinding(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		params := f.params
 		params.AuthVersion = 2
 		params.TokenHash = tokengenerate.New().Hash("bound-session-" + string(f.user))
-		if err := f.sessions.CreateSession(ctx, params); err != nil {
+		if _, err := f.sessions.CreateSession(ctx, params); err != nil {
 			t.Fatal(err)
 		}
 		proof := mfaservice.Proof{UserID: f.user, AuthVersion: 2, TokenHash: params.TokenHash}

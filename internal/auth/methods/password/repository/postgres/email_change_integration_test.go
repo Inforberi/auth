@@ -118,7 +118,7 @@ func checkEmailChange(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		if err := f.accounts.ConfirmEmailChange(ctx, f.intent.ConfirmDigest); !errors.Is(err, accountdomain.ErrInvalidEmailChange) {
 			t.Fatal("cancelled change completed", err)
 		}
-		if err := f.sessions.CreateSession(ctx, f.params); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
+		if _, err := f.sessions.CreateSession(ctx, f.params); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
 			t.Fatal("stale issuance after cancellation", err)
 		}
 	})

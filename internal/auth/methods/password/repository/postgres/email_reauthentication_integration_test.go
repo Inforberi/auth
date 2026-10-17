@@ -86,7 +86,7 @@ func checkEmailReauthentication(t *testing.T, db *pgxpool.Pool, ctx context.Cont
 		}
 		params := f.params
 		params.TokenHash = tokengenerate.New().Hash("other-session-" + string(f.user))
-		if err := f.sessions.CreateSession(ctx, params); err != nil {
+		if _, err := f.sessions.CreateSession(ctx, params); err != nil {
 			t.Fatal(err)
 		}
 		foreign := proof

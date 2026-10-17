@@ -33,9 +33,9 @@ func (m *mockRepo) FindSession(ctx context.Context, tokenHash string) (*sessiond
 func (m *mockRepo) CreateSession(
 	ctx context.Context,
 	sessionParams CreateSessionParams,
-) error {
+) (time.Time, error) {
 	args := m.Called(ctx, sessionParams)
-	return args.Error(0)
+	return args.Get(0).(time.Time), args.Error(1)
 }
 
 func (m *mockRepo) RefreshSession(

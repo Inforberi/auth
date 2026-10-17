@@ -27,7 +27,7 @@ func validConfig() Config {
 		Server:    httpserver.Config{Port: "8080"}, Logger: logger.Config{Env: "dev", Level: "info"},
 		Redis:      redisclient.Config{Host: "localhost", Port: "6379"},
 		MailSender: mailer.Config{SMTPHost: "localhost", SMTPPort: "1025", SMTPFrom: "auth@example.com", SMTPDomain: "example.com"},
-		Session:    sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, SessionRefreshThreshold: time.Minute, FreshAuthTTL: 5 * time.Minute},
+		Session:    sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, SessionRefreshThreshold: time.Minute, FreshAuthTTL: 5 * time.Minute, AdminIdleTimeout: 30 * time.Minute, AdminAbsoluteTTL: 12 * time.Hour, AdminActivityInterval: time.Minute},
 		Password:   passwordservice.Config{ResetTokenTTL: time.Hour, ResetURL: "https://example.com/reset", ResetGlobalLimit: 100},
 		Capacity:   passwordservice.CapacityConfig{HashConcurrency: 2, LoginIPLimit: 30, LoginEmailLimit: 10, LoginGlobalLimit: 1000},
 	}

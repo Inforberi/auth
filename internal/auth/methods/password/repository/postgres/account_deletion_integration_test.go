@@ -118,7 +118,8 @@ func checkAccountDeletion(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 			other := func() error {
 				switch action {
 				case "issuance":
-					return f.sessions.CreateSession(ctx, f.params)
+					_, err := f.sessions.CreateSession(ctx, f.params)
+					return err
 				case "recovery":
 					return f.accounts.RecoverProtectedAccount(ctx, f.intent.RecoveryDigest, "old-hash", "replacement")
 				case "duplicate":
@@ -189,7 +190,7 @@ func checkAccountDeletion(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		f := newStatusFixture(t, db, ctx, "delete-active-issuance")
 		f.params.TokenHash = tokengenerate.New().Hash("delete-new-session")
 		deletion := func() error { _, err := deleteFixture(ctx, f, 1); return err }
-		deleteErr, issueErr := protectionPair(deletion, func() error { return f.sessions.CreateSession(ctx, f.params) })
+		deleteErr, issueErr := protectionPair(deletion, func() error { _, err := f.sessions.CreateSession(ctx, f.params); return err })
 		if deleteErr != nil || (issueErr != nil && !errors.Is(issueErr, sessiondomain.ErrSessionNotFound)) {
 			t.Fatal(deleteErr, issueErr)
 		}

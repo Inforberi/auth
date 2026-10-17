@@ -37,7 +37,7 @@ func checkTemporaryPasswords(t *testing.T, db *pgxpool.Pool, ctx context.Context
 		}
 		sessions := sessionpostgres.New(db)
 		params := sessionservice.CreateSessionParams{UserID: created.UserID, AuthVersion: 1}
-		if err := sessions.CreateSession(ctx, params); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
+		if _, err := sessions.CreateSession(ctx, params); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
 			t.Fatal("session issuance bypass", err)
 		}
 		ledgerToken := temporaryTokenDigest("pending-session:" + string(created.UserID))

@@ -56,6 +56,7 @@ func assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, ses
 	login, err := mfaservice.NewLogin(repo, cipher, mfatotp.Authenticator{}, limits, tokens, mfaservice.LoginConfig{
 		AllowPrimary: allowPrimary,
 		ChallengeTTL: cfg.MFA.ChallengeTTL, SessionTTL: cfg.Session.SessionTTL, AbsoluteSessionTTL: cfg.Session.AbsoluteSessionTTL,
+		AdminIdleTimeout: cfg.Session.AdminIdleTimeout, AdminAbsoluteTTL: cfg.Session.AdminAbsoluteTTL, AdminActivityInterval: cfg.Session.AdminActivityInterval,
 		UserLimitPerMinute: cfg.MFA.UserLimitPerMinute, IPLimitPerMinute: cfg.MFA.IPLimitPerMinute, GlobalLimitPerMinute: cfg.MFA.GlobalLimitPerMinute,
 	})
 	if err != nil {

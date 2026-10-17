@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -42,12 +43,14 @@ func (r *Repository) CompleteLogin(ctx context.Context, input service.LoginCompl
 		// SQL owns the authentication times and session lifetime; no caller-provided MFA timestamp.
 		err = tx.QueryRow(ctx, `INSERT INTO auth.sessions
 			(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,user_agent,ip_address,
-			primary_method,primary_verified_at,mfa_verified_at,password_verified_at)
+			primary_method,primary_verified_at,mfa_verified_at,password_verified_at,idle_timeout_seconds,activity_interval_seconds,admin_absolute_seconds)
 			VALUES ($1,$2,$3,statement_timestamp(),statement_timestamp()+$4::double precision*interval '1 second',
 			statement_timestamp()+$5::double precision*interval '1 second',$6,$7,$8,$9,$10,
-			CASE WHEN $11::boolean THEN $9::timestamptz ELSE NULL END) RETURNING expires_at`,
+			CASE WHEN $11::boolean THEN $9::timestamptz ELSE NULL END,
+			COALESCE(NULLIF($12,0),1800),COALESCE(NULLIF($13,0),60),COALESCE(NULLIF($14,0),43200)) RETURNING expires_at`,
 			input.SessionHash, proof.UserID, proof.AuthVersion, input.SessionTTL.Seconds(), input.AbsoluteSessionTTL.Seconds(),
-			input.UserAgent, input.IP, proof.Method, proof.VerifiedAt, verified, proof.Administrative).Scan(&result.ExpiresAt)
+			input.UserAgent, input.IP, proof.Method, proof.VerifiedAt, verified, proof.Administrative,
+			int64(input.AdminIdleTimeout/time.Second), int64(input.AdminActivityInterval/time.Second), int64(input.AdminAbsoluteTTL/time.Second)).Scan(&result.ExpiresAt)
 		if err != nil {
 			return err
 		}

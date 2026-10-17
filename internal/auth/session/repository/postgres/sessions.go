@@ -12,8 +12,9 @@ import (
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 )
 
-func (r *Repository) CreateSession(ctx context.Context, p service.CreateSessionParams) error {
-	return r.transaction(ctx, func(ctx context.Context, tx pgx.Tx) error {
+func (r *Repository) CreateSession(ctx context.Context, p service.CreateSessionParams) (time.Time, error) {
+	var expires time.Time
+	err := r.transaction(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		var version int64
 		if err := tx.QueryRow(ctx, `SELECT auth_version FROM auth.users WHERE id=$1 AND status='active' AND deleted_at IS NULL FOR SHARE`, p.UserID).Scan(&version); err != nil {
 			return sessionError(err)
@@ -40,10 +41,14 @@ func (r *Repository) CreateSession(ctx context.Context, p service.CreateSessionP
 		if p.PrimaryProof != nil {
 			verifiedAt = p.PrimaryProof.VerifiedAt
 		}
-		_, err := tx.Exec(ctx, `INSERT INTO auth.role_bound_sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,user_agent,ip_address,primary_method,primary_verified_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, p.TokenHash, p.UserID, version, p.CreatedAt, p.ExpiresAt, p.AbsoluteExpiresAt, p.UserAgent, p.IPAddress, method, verifiedAt)
+		err := tx.QueryRow(ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,user_agent,ip_address,primary_method,primary_verified_at,
+			idle_timeout_seconds,activity_interval_seconds,admin_absolute_seconds)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,COALESCE(NULLIF($11,0),1800),COALESCE(NULLIF($12,0),60),COALESCE(NULLIF($13,0),43200)) RETURNING expires_at`,
+			p.TokenHash, p.UserID, version, p.CreatedAt, p.ExpiresAt, p.AbsoluteExpiresAt, p.UserAgent, p.IPAddress, method, verifiedAt,
+			int64(p.AdminIdleTimeout/time.Second), int64(p.AdminActivityInterval/time.Second), int64(p.AdminAbsoluteTTL/time.Second)).Scan(&expires)
 		return err
 	})
+	return expires, err
 }
 
 func (r *Repository) FindSession(ctx context.Context, token string) (*domain.Session, error) {
@@ -51,12 +56,12 @@ func (r *Repository) FindSession(ctx context.Context, token string) (*domain.Ses
 	defer cancel()
 	var session domain.Session
 	err := r.db.QueryRow(ctx, `SELECT s.id,s.user_id,s.user_agent,s.ip_address,s.created_at,s.expires_at,s.absolute_expires_at,
-		COALESCE(s.primary_method,''),s.primary_verified_at,s.mfa_verified_at,s.auth_version
+		COALESCE(s.primary_method,''),s.primary_verified_at,s.mfa_verified_at,s.auth_version,s.idle_timeout_seconds
 		FROM auth.role_bound_sessions s JOIN auth.users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL
 		AND s.auth_version=u.auth_version AND u.status='active' AND u.deleted_at IS NULL
 		AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()`, token).
 		Scan(&session.ID, &session.UserID, &session.UserAgent, &session.IPAddress, &session.CreatedAt, &session.ExpiresAt, &session.AbsoluteExpiresAt,
-			&session.PrimaryMethod, &session.PrimaryVerifiedAt, &session.MFAVerifiedAt, &session.AuthVersion)
+			&session.PrimaryMethod, &session.PrimaryVerifiedAt, &session.MFAVerifiedAt, &session.AuthVersion, &session.IdleTimeoutSeconds)
 	if err != nil {
 		return nil, sessionError(err)
 	}
@@ -73,6 +78,7 @@ func (r *Repository) RefreshSession(ctx context.Context, token string, session *
 		var actual time.Time
 		err := tx.QueryRow(ctx, `UPDATE auth.role_bound_sessions SET expires_at=LEAST($2,absolute_expires_at)
 			WHERE token_hash=$1 AND user_id=$3 AND auth_version=$4 AND revoked_at IS NULL
+			AND idle_timeout_seconds=0
 			AND expires_at=$5 AND expires_at<LEAST($2,absolute_expires_at)
 			AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()
 			RETURNING expires_at`, token, session.ExpiresAt, session.UserID, version, expectedExpiry).Scan(&actual)

@@ -33,7 +33,7 @@ func TestPrimaryLoginDispatch(t *testing.T) {
 		tokens.On("GenerateToken").Return("raw", nil)
 		tokens.On("Hash", "raw").Return("hash")
 		clock.On("NowUTC").Return(now)
-		repo.On("CreateSession", mock.Anything, mock.Anything).Return(failure)
+		repo.On("CreateSession", mock.Anything, mock.Anything).Return(now.Add(cfg.SessionTTL), failure)
 		mfa := &mfaStarterStub{}
 		proof := mfaservice.PrimaryProof{UserID: "user", AuthVersion: 7, Method: "password", Reference: "compared-hash", VerifiedAt: time.Now()}
 		result, err := NewLogin(New(clock, repo, tokens, cfg), mfa).BeginLogin(context.Background(), proof, "agent", "ip")

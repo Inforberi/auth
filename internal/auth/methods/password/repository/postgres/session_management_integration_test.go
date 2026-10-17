@@ -35,7 +35,7 @@ func checkSessionManagement(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 			UserID: user, AuthVersion: 1, TokenHash: hash,
 			CreatedAt: time.Now().UTC(), ExpiresAt: time.Now().UTC().Add(time.Hour), AbsoluteExpiresAt: time.Now().UTC().Add(2 * time.Hour),
 		}
-		if err := ledger.CreateSession(ctx, p); err != nil {
+		if _, err := ledger.CreateSession(ctx, p); err != nil {
 			t.Fatal(err)
 		}
 		row, err := ledger.FindSession(ctx, hash)
@@ -113,7 +113,7 @@ func checkSessionManagement(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 	var issueErr, logoutErr error
 	racingHash := strings.Repeat("4", 64)
 	wg.Go(func() {
-		issueErr = ledger.CreateSession(ctx, sessionservice.CreateSessionParams{
+		_, issueErr = ledger.CreateSession(ctx, sessionservice.CreateSessionParams{
 			UserID: owner, AuthVersion: 1, TokenHash: racingHash,
 			CreatedAt: time.Now().UTC(), ExpiresAt: time.Now().UTC().Add(time.Hour), AbsoluteExpiresAt: time.Now().UTC().Add(2 * time.Hour),
 		})
@@ -145,7 +145,7 @@ func checkSessionManagement(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 	if err := db.QueryRow(ctx, `SELECT auth_version FROM auth.users WHERE id=$1`, owner).Scan(&version); err != nil || version != 2 {
 		t.Fatal("logout-all version", version, err)
 	}
-	if err := ledger.CreateSession(ctx, sessionservice.CreateSessionParams{UserID: owner, AuthVersion: 1}); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
+	if _, err := ledger.CreateSession(ctx, sessionservice.CreateSessionParams{UserID: owner, AuthVersion: 1}); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
 		t.Fatal("stale issuance accepted", err)
 	}
 	foreignHash = strings.Repeat("5", 64)

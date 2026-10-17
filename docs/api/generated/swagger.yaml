@@ -432,6 +432,11 @@ definitions:
       status:
         type: string
     type: object
+  http.ActivityResponse:
+    properties:
+      expiresAt:
+        type: string
+    type: object
   http.ConfirmEmailBindingRequest:
     properties:
       code:
@@ -3690,6 +3695,34 @@ paths:
       summary: Reset password
       tags:
       - Auth
+  /api/v1/auth/session/activity:
+    post:
+      description: Call only after user interaction, never from polling or timers
+        alone. Administrative sessions use a stored bounded idle window; ordinary
+        sessions are unchanged. Does not renew primary, password or MFA proof or the
+        absolute deadline. No body or client timestamps.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ActivityResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Report interactive session activity
+      tags:
+      - Sessions
   /api/v1/auth/session/rotate:
     post:
       description: Requires an allowed Origin and the current session cookie. Replaces

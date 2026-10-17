@@ -1,24 +1,24 @@
 # Текущий шаг
 
-Обновлено 16 октября 2026. Это передача контекста, не история. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), checks — [history](../planning/history.md#результат-as6a-local-и-lifetime-regression--16-октября-2026).
+Обновлено 17 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), checks — [history](../planning/history.md#результат-as5-local--17-октября-2026). Это передача контекста, не архив.
 
-## Последний результат — AS6a-local
+## Последний результат — AS5-local
 
-- Новое обычное/system назначение роли активному пользователю атомарно повышает auth_version: старые sessions/stale refresh не наследуют grant. Нужен новый login с действующим MFA. No-op не разлогинивает, revoke уменьшает live permissions без logout-all, pending сохраняет invitation/activation version.
-- Использованы существующие UPDATE users/ordered locks/audit/session authority. Нет новых schema/ENV/dependencies/hot-path calls, fan-out UPDATE или cache. [Решение](../planning/auth-security.md#решение-as6a-новое-назначение-роли), [контракт](../features/roles-permissions.md).
-- Formatter/task check (lint 0 issues), access/session race, полный SQL/race suite до финального pending исключения и финальные targeted system/HTTP/access/onboarding regressions PASS; условия в history. Synthetic new-login fixture не заменяет настоящий primary/MFA/browser E2E. Тестовый контейнер/данные удалены, рабочие ENV/БД/secrets/defaults не менялись.
-- AS5 regression подтверждает persisted absolute deadline и неизменность primary/MFA timestamps при refresh. Отдельный admin idle/absolute профиль пока не реализован; нынешние 7/14 дней не объявлены подходящими admin defaults.
+- Независимый admin idle/absolute профиль: defaults 30m/12h, activity interval 1m. SQL issuance выбирает его по восьми core admin permissions/system super-admin, независимо от primary URL; обычные sessions сохраняют старый профиль.
+- Явный POST /api/v1/auth/session/activity: current cookie + Origin + NoRefreshAuth, bounded SQL extension, без обновления proof/absolute. Фоновые reads/generic refresh не продлевают admin session. Cookie получает закоммиченный expiry, no-op не пишет cookie.
+- SQL хранит lifetime policy на момент issuance; ENV changes не переписывают старые сроки. Coalescing может завершить idle до interval раньше; UI A7 должен сообщать только взаимодействие, не polling heartbeat. [Контракт/нагрузка/upgrade](../operations/browser-security.md#сроки-административных-сессий--as5).
+- Unit/config/router/lint и полный PostgreSQL 18.6/race/up-down-up PASS. Non-owner SQL/HTTP: 16 concurrent reports → один UPDATE, proof/absolute неизменны, expired direct authority/rotate/reauth запрещены. Реальный MFA completion проверен с обоими intents; настоящий browser/fleet/load этим не доказан.
+- AS6a/b-local уже защищают grant/permission elevation через auth_version и immutable role revisions, без fan-out UPDATE всех пользователей. MFA-role policy ещё не реализована.
+- Изменён source 000001, не рабочая БД/ENV/secrets. Applied installation требует controlled schema/code/grants upgrade и invalidation прежних sessions/challenges до трафика, не reset/mixed fleet. AS6b, план совместимости и AS5 зафиксированы отдельными коммитами.
 
-## Следующий backend-блок
+## Следующий блок — A6.3
 
-1. AS6b: повышение permissions через edit уже назначенной роли. Выбрать и проверить session authority binding без массового UPDATE всех владельцев роли; новый grant покрыт AS6a, role edits пока сохраняют прежнее live-поведение.
-2. AS5: согласовать admin inactivity/absolute сроки, смысл активности и погрешность bounded touch; не менять defaults без решения/тестов. Учесть existing sessions и NoRefreshAuth.
-3. A6.3: совместить с MFA по custom roles/enrollment-required; затем integration secrets/SMTP/provider rotation/connection tests, retention и runtime propagation. Root/deployment secrets остаются вне UI.
+1. MFA по custom roles и enrollment-required flow; текущие admin guards не отключаем. Усиление роли связывается с AS6/role revision, старые sessions не наследуют обход MFA.
+2. Затем integration secrets/SMTP/provider rotation/connection tests, retention/runtime propagation; root/deployment secrets остаются вне UI.
+3. Соблюдать [совместимость настроек A6.3/A7](../planning/implementation.md#совместимость-настроек-и-безопасные-переключения--a63--a7): реальные зависимости, сохраняемые неактивные предпочтения, last-admin и безопасные переходы. Матрица — план, не уже реализованные новые проверки.
 
-Далее A6.4 [JWT J1–J7/S1–S10](../planning/jwt-access.md) → pre-ui-backend → UI A7 → A8. JWT не реализован: cookie/session — default, strict online authority сохраняется; local-only требует отдельного ADR с принятым окном отзыва. Следующие изменения приложения и коммит — по запросу пользователя.
+Далее A6.4 [JWT J1–J7/S1–S10](../planning/jwt-access.md) → pre-ui-backend → UI A7 → A8. Cookie/session — default, strict online authority сохраняется; local-only JWT требует отдельного ADR. Следующая реализация и коммит — по запросу пользователя.
 
-## Открытые условия приёмки
+## Открытая приёмка
 
-- AS5/AS6b/A6.security целиком не закрыты. AS1–AS4-local уже выполнен, browser/ingress/multi-tab/lost-response gates остаются открытыми.
-- До UI — разрешённый изолированный HTTPS-стенд с synthetic data: реальные SMTP/provider/authenticator/admin workflows, fleet settings consistency и [13.1d.4 recovery drill](../operations/mfa-recovery-acceptance.md). Нет credentials/оператора — NOT RUN, не PASS; автоматически включать реальные методы нельзя.
-- Финальные A8/A8-admin-e2e, mixed/multi-instance load 6.8b, память/goroutines/GC 6.8c, shutdown/backup/restore открыты. Capacity всего сервиса не установлена.
+AS5-external/AS6 целиком/A6.3/pre-ui/A8 не закрыты. Нужен разрешённый изолированный HTTPS-стенд с synthetic data: browser/ingress/multi-tab/interaction-vs-polling/sleep-resume/SMTP/provider/authenticator/admin workflows, fleet settings и [13.1d.4 recovery drill](../operations/mfa-recovery-acceptance.md). Нет credentials/оператора — NOT RUN, не PASS. Mixed/multi-instance load 6.8b, память/GC 6.8c и shutdown/backup/restore обязательны; capacity не установлена.

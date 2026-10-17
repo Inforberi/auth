@@ -383,6 +383,9 @@ CREATE TABLE auth.sessions (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
   role_revisions JSONB NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(role_revisions)='object' AND octet_length(role_revisions::text)<=4096),
+  idle_timeout_seconds BIGINT NOT NULL DEFAULT 1800 CHECK (idle_timeout_seconds>=0),
+  activity_interval_seconds BIGINT NOT NULL DEFAULT 60 CHECK (activity_interval_seconds>=0),
+  admin_absolute_seconds BIGINT NOT NULL DEFAULT 43200 CHECK (admin_absolute_seconds>0),
   created_at TIMESTAMPTZ NOT NULL,
   expires_at TIMESTAMPTZ NOT NULL,
   absolute_expires_at TIMESTAMPTZ NOT NULL,
@@ -413,17 +416,41 @@ BEGIN
     IF NEW.role_revisions IS DISTINCT FROM OLD.role_revisions THEN
       RAISE EXCEPTION 'session role revisions are immutable';
     END IF;
+    IF ROW(NEW.idle_timeout_seconds,NEW.activity_interval_seconds,NEW.admin_absolute_seconds)
+      IS DISTINCT FROM ROW(OLD.idle_timeout_seconds,OLD.activity_interval_seconds,OLD.admin_absolute_seconds) THEN
+      RAISE EXCEPTION 'session lifetime policy is immutable';
+    END IF;
   ELSE
     SELECT COALESCE(jsonb_object_agg(r.id::text,r.session_revision),'{}'::jsonb)
       INTO NEW.role_revisions
       FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id
       WHERE ur.user_id=NEW.user_id;
+    -- Administrative permissions, not the login URL, choose the stricter profile.
+    IF EXISTS (SELECT 1 FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id
+      LEFT JOIN auth.role_permissions rp ON rp.role_id=ur.role_id
+      WHERE ur.user_id=NEW.user_id AND ((r.system AND r.key='super_admin') OR rp.permission_key IN (
+        'access.roles.manage','access.assignments.manage','accounts.email.bind','accounts.users.manage',
+        'accounts.users.read','accounts.users.status.manage','accounts.users.delete','auth.settings.manage'))) THEN
+      IF NEW.idle_timeout_seconds<60 OR NEW.activity_interval_seconds<1
+        OR NEW.activity_interval_seconds>NEW.idle_timeout_seconds/10
+        OR NEW.admin_absolute_seconds<NEW.idle_timeout_seconds THEN
+        RAISE EXCEPTION 'invalid administrative session lifetime';
+      END IF;
+      NEW.absolute_expires_at := LEAST(NEW.created_at+NEW.admin_absolute_seconds*interval '1 second',
+        statement_timestamp()+NEW.admin_absolute_seconds*interval '1 second');
+      NEW.expires_at := LEAST(NEW.absolute_expires_at,
+        NEW.created_at+NEW.idle_timeout_seconds*interval '1 second',
+        statement_timestamp()+NEW.idle_timeout_seconds*interval '1 second');
+    ELSE
+      NEW.idle_timeout_seconds := 0;
+      NEW.activity_interval_seconds := 0;
+    END IF;
   END IF;
   RETURN NEW;
 END;
 $$;
 
-CREATE TRIGGER sessions_role_binding BEFORE INSERT OR UPDATE OF role_revisions ON auth.sessions
+CREATE TRIGGER sessions_role_binding BEFORE INSERT OR UPDATE OF role_revisions,idle_timeout_seconds,activity_interval_seconds,admin_absolute_seconds ON auth.sessions
   FOR EACH ROW EXECUTE FUNCTION auth.bind_session_roles();
 
 -- Keep the issuance bindings even after an assignment is revoked: old tokens must not revive.

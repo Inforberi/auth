@@ -56,7 +56,7 @@ func checkStatusRaces(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 			var wg sync.WaitGroup
 			wg.Go(func() {
 				if operation == "issuance" {
-					operationErr = f.sessions.CreateSession(ctx, params)
+					_, operationErr = f.sessions.CreateSession(ctx, params)
 				} else {
 					_, operationErr = f.sessions.RefreshSession(ctx, f.params.TokenHash, snapshot, snapshot.ExpiresAt)
 				}

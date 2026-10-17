@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -46,7 +47,7 @@ func TestCreateSession_Success(t *testing.T) {
 			mock.Anything,
 			expected,
 		).
-		Return(nil)
+		Return(expected.ExpiresAt, nil)
 
 	svc := New(clock, repo, token, cfg)
 
@@ -118,6 +119,19 @@ func TestCreateSession_TokenError(t *testing.T) {
 	)
 }
 
+func TestCreationReturnsCommittedDeadline(t *testing.T) {
+	repo, token, clock := &mockRepo{}, &mockTokenHash{}, &mockClock{}
+	clamped := now.Add(30 * time.Minute)
+	token.On("GenerateToken").Return("raw", nil)
+	token.On("Hash", "raw").Return("hash")
+	clock.On("NowUTC").Return(now)
+	repo.On("CreateSession", mock.Anything, mock.Anything).Return(clamped, nil)
+	result, err := New(clock, repo, token, cfg).CreateSessionAtVersion(t.Context(), "user", "", "", 1)
+	if err != nil || !result.ExpiresAt.Equal(clamped) {
+		t.Fatal("cookie deadline ignored SQL clamp", result, err)
+	}
+}
+
 var ErrCreateSession = errors.New("error create session")
 
 func TestCreateSession_CreateSessionError(t *testing.T) {
@@ -130,7 +144,7 @@ func TestCreateSession_CreateSessionError(t *testing.T) {
 
 	clock.On("NowUTC").Return(now)
 
-	repo.On("CreateSession", mock.Anything, mock.Anything).Return(ErrCreateSession)
+	repo.On("CreateSession", mock.Anything, mock.Anything).Return(time.Time{}, ErrCreateSession)
 
 	svc := New(clock, repo, token, cfg)
 

@@ -85,7 +85,8 @@ func checkProtectedRecoveryRaces(t *testing.T, db *pgxpool.Pool, ctx context.Con
 			attempt := func() error {
 				switch action {
 				case "session-issuance":
-					return f.sessions.CreateSession(ctx, f.params)
+					_, err := f.sessions.CreateSession(ctx, f.params)
+					return err
 				case "password-change":
 					return f.passwords.ChangePassword(ctx, f.user, f.params.TokenHash, "old-hash", "attacker-hash")
 				case "forgot-attacker-email":
@@ -132,7 +133,7 @@ func checkProtectedRecoveryRaces(t *testing.T, db *pgxpool.Pool, ctx context.Con
 		}
 		f.params.AuthVersion = 2
 		f.params.TokenHash = tokengenerate.New().Hash("chain-session")
-		if err := f.sessions.CreateSession(ctx, f.params); err != nil {
+		if _, err := f.sessions.CreateSession(ctx, f.params); err != nil {
 			t.Fatal(err)
 		}
 		var err error

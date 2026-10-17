@@ -49,6 +49,27 @@ func TestSessionRefreshClamped(t *testing.T) {
 	repo.AssertExpectations(t)
 }
 
+func TestAdministrativeReadsDoNotRefresh(t *testing.T) {
+	for _, refresh := range []bool{true, false} {
+		repo, token, clock := &mockRepo{}, &mockTokenHash{}, &mockClock{}
+		proof := now.Add(-time.Minute)
+		session := &sessiondomain.Session{
+			UserID: "user", CreatedAt: now.Add(-time.Hour),
+			ExpiresAt: now.Add(time.Second), AbsoluteExpiresAt: now.Add(time.Hour), IdleTimeoutSeconds: 1800,
+			PrimaryVerifiedAt: &proof, MFAVerifiedAt: &proof,
+		}
+		repo.On("FindSession", mock.Anything, "hash").Return(session, nil)
+		token.On("Hash", "raw").Return("hash")
+		clock.On("NowUTC").Return(now)
+		result, err := New(clock, repo, token, cfg).validateSession(t.Context(), "raw", refresh)
+		if err != nil || result.Extended || !result.ExpiresAt.Equal(session.ExpiresAt) ||
+			!result.PrimaryVerifiedAt.Equal(proof) || !result.MFAVerifiedAt.Equal(proof) {
+			t.Fatal("background read renewed administrative session/proof", result, err)
+		}
+		repo.AssertNotCalled(t, "RefreshSession", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	}
+}
+
 func TestAbsoluteExpiryDoesNotWrite(t *testing.T) {
 	repo, token, clock := &mockRepo{}, &mockTokenHash{}, &mockClock{}
 	absolute := now.Add(time.Hour)

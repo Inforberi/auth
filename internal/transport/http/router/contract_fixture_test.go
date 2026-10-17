@@ -88,6 +88,7 @@ func contractHandlers(env string) Handlers {
 		EmailBinding:      accounthttp.NewEmailBinding(&contractEmailBinding{}, log),
 		MFA:               mfahttp.NewWithRecovery(&contractMFA{}, &contractMFA{}, &contractMFARecovery{}, log),
 		Session:           sessionhttp.NewHandler(contractManagement{}, log),
+		Activity:          sessionhttp.NewActivity(contractActivity{}, log),
 		Rotation:          sessionhttp.NewRotation(contractRotation{}, log),
 		Reauthentication:  passwordhttp.NewReauthentication(contractReauthentication{}, log),
 		Recovery:          passwordhttp.NewRecovery(contractRecovery{}, log),

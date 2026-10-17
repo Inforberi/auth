@@ -145,6 +145,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		EmailBinding:      emailBinding,
 		MFA:               mfaHandler,
 		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
+		Activity:          sessionhttp.NewActivity(sessionservice.NewActivity(sessionRepo), log),
 		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessionRepo, tokenGen), log),
 		Reauthentication:  passwordhttp.NewReauthentication(passwordservice.NewReauthentication(passwordRepo, sessionRepo, argonHash, loginLimit, tokenGen, cfg.Session.FreshAuthTTL), log),
 		Recovery:          passwordhttp.NewRecovery(recoverySvc, log),

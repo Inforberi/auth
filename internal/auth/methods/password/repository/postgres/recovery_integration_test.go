@@ -26,7 +26,7 @@ func checkRecovery(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	}
 	ledger := sessionpostgres.New(db)
 	params := sessionservice.CreateSessionParams{UserID: user, AuthVersion: 1, CreatedAt: time.Now().UTC(), ExpiresAt: time.Now().UTC().Add(time.Hour), AbsoluteExpiresAt: time.Now().UTC().Add(2 * time.Hour), TokenHash: strings.Repeat("a", 64)}
-	if err := ledger.CreateSession(ctx, params); err != nil {
+	if _, err := ledger.CreateSession(ctx, params); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := ledger.FindSession(ctx, params.TokenHash); err != nil {
@@ -92,7 +92,7 @@ func checkRecovery(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	if _, err := ledger.FindSession(ctx, params.TokenHash); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
 		t.Fatal("old session accepted", err)
 	}
-	if err := ledger.CreateSession(ctx, params); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
+	if _, err := ledger.CreateSession(ctx, params); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
 		t.Fatal("old-password issuance accepted", err)
 	}
 	stale := &sessiondomain.Session{UserID: user, ExpiresAt: time.Now().UTC().Add(time.Hour)}
@@ -105,7 +105,7 @@ func checkRecovery(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	}
 	params.AuthVersion = 2
 	params.TokenHash = strings.Repeat("d", 64)
-	if err := ledger.CreateSession(ctx, params); err != nil {
+	if _, err := ledger.CreateSession(ctx, params); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := ledger.FindSession(ctx, params.TokenHash); err != nil {

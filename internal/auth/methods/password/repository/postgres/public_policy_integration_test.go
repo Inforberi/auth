@@ -116,7 +116,7 @@ func TestPublicPolicySchema(t *testing.T) {
 		if _, err := f.login.Complete(ctx, pending); !errors.Is(err, settingsdomain.ErrMethodDisabled) {
 			t.Fatal("pending MFA bypassed policy", err)
 		}
-		if err := plain.sessions.CreateSession(ctx, plain.params); !errors.Is(err, settingsdomain.ErrMethodDisabled) {
+		if _, err := plain.sessions.CreateSession(ctx, plain.params); !errors.Is(err, settingsdomain.ErrMethodDisabled) {
 			t.Fatal("direct session bypass", err)
 		}
 		if _, err := New(db).CreateUser(ctx, "disabled-registration@example.com", "hash"); !errors.Is(err, settingsdomain.ErrMethodDisabled) {
@@ -143,7 +143,7 @@ func TestPublicPolicySchema(t *testing.T) {
 			t.Fatal(err)
 		}
 		f.params.TokenHash = strings.Repeat("e", 64)
-		if err := f.sessions.CreateSession(ctx, f.params); err != nil {
+		if _, err := f.sessions.CreateSession(ctx, f.params); err != nil {
 			t.Fatal("closed registration disabled existing login", err)
 		}
 	})
@@ -211,7 +211,7 @@ func TestPublicPolicySchema(t *testing.T) {
 			t.Fatal(err)
 		}
 		f.params.TokenHash = strings.Repeat("f", 64)
-		if err := f.sessions.CreateSession(ctx, f.params); !errors.Is(err, settingsdomain.ErrMethodDisabled) {
+		if _, err := f.sessions.CreateSession(ctx, f.params); !errors.Is(err, settingsdomain.ErrMethodDisabled) {
 			t.Fatal("committed disable not seen", err)
 		}
 	})
@@ -266,7 +266,7 @@ func TestPublicPolicySchema(t *testing.T) {
 		f := newStatusFixture(t, db, ctx, "policy-missing")
 		accessExec(t, db, ctx, `DELETE FROM auth.auth_settings`)
 		f.params.TokenHash = strings.Repeat("d", 64)
-		if err := f.sessions.CreateSession(ctx, f.params); !errors.Is(err, settingsdomain.ErrPolicyUnavailable) {
+		if _, err := f.sessions.CreateSession(ctx, f.params); !errors.Is(err, settingsdomain.ErrPolicyUnavailable) {
 			t.Fatal("missing policy fallback", err)
 		}
 	})

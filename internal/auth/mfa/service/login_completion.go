@@ -19,6 +19,9 @@ type LoginCompletion struct {
 	Digest, BindingHash, SessionHash string
 	UserAgent, IP                    string
 	SessionTTL, AbsoluteSessionTTL   time.Duration
+	AdminIdleTimeout                 time.Duration
+	AdminAbsoluteTTL                 time.Duration
+	AdminActivityInterval            time.Duration
 }
 
 type LoginCommit struct {
@@ -65,6 +68,9 @@ func (s *Login) Complete(ctx context.Context, input CompleteLoginInput) (*LoginS
 		Digest:       digest, BindingHash: binding,
 		SessionHash: s.tokens.Hash(raw), UserAgent: input.UserAgent, IP: input.IP,
 		SessionTTL: s.cfg.SessionTTL, AbsoluteSessionTTL: s.cfg.AbsoluteSessionTTL,
+		AdminIdleTimeout:      s.cfg.AdminIdleTimeout,
+		AdminAbsoluteTTL:      s.cfg.AdminAbsoluteTTL,
+		AdminActivityInterval: s.cfg.AdminActivityInterval,
 	}, func(user accountdomain.UserID) (Check, string) {
 		digest := ""
 		if input.Recovery {

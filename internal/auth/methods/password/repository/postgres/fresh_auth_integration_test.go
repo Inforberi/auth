@@ -65,7 +65,7 @@ func checkFreshAuthentication(t *testing.T, db *pgxpool.Pool, ctx context.Contex
 		}
 		other := f.params
 		other.TokenHash = tokengenerate.New().Hash("fresh-auth-other-session")
-		if err := ledger.CreateSession(ctx, other); err != nil {
+		if _, err := ledger.CreateSession(ctx, other); err != nil {
 			t.Fatal(err)
 		}
 		if err := f.accounts.RequestEmailChange(ctx, f.snapshot, other.TokenHash, f.newEmail, f.intent, false, 5*time.Minute); !errors.Is(err, accountdomain.ErrFreshAuthRequired) {

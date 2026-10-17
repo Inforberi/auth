@@ -97,6 +97,11 @@ func (cfg Config) validateSessions() error {
 	if cfg.Session.SessionTTL <= 0 || cfg.Session.AbsoluteSessionTTL < cfg.Session.SessionTTL || cfg.Session.SessionRefreshThreshold <= 0 || cfg.Session.SessionRefreshThreshold >= cfg.Session.SessionTTL {
 		return fmt.Errorf("invalid session durations")
 	}
+	if cfg.Session.AdminIdleTimeout < time.Minute || cfg.Session.AdminAbsoluteTTL < cfg.Session.AdminIdleTimeout ||
+		cfg.Session.AdminActivityInterval < time.Second || cfg.Session.AdminActivityInterval > cfg.Session.AdminIdleTimeout/10 ||
+		cfg.Session.AdminIdleTimeout%time.Second != 0 || cfg.Session.AdminAbsoluteTTL%time.Second != 0 || cfg.Session.AdminActivityInterval%time.Second != 0 {
+		return fmt.Errorf("admin session durations must be whole seconds: idle >= 1m, absolute >= idle, activity interval 1s..idle/10")
+	}
 	return nil
 }
 

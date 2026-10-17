@@ -2,6 +2,8 @@
 
 ## Текущий статус
 
+AS5-local (17 октября): session, выданная владельцу встроенных административных прав/system super-admin, получает независимый idle/absolute профиль; это относится и к публичному входу такого пользователя. Настройки сроков пока ENV, не поля settings API. [Сроки, activity endpoint и подключение UI](../operations/browser-security.md#сроки-административных-сессий--as5).
+
 A6.1-local реализует domain/service/PostgreSQL store и first-install seed. A6.2a-local добавляет независимый административный password+MFA login. A6.2b-local подключает startup и runtime enforcement сохраняемой публичной политики. A6.2c-local публикует protected settings API ниже. UI ещё нет. ENV-флаги методов используются только при первой инициализации, credentials/operational параметры пока остаются в ENV.
 
 Далее A6.3 — MFA policy по ролям, SMTP/provider secrets и retention settings. Их поля и пустые adapters сейчас не создаются. Внешняя pre-ui-backend приёмка остаётся обязательной.

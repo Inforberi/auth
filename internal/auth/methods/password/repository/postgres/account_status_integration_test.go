@@ -44,7 +44,7 @@ func newStatusFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, name 
 	f.status = accountservice.NewStatus(f.accounts)
 	now := time.Now().UTC()
 	f.params = sessionservice.CreateSessionParams{UserID: f.user, AuthVersion: 1, TokenHash: tokengenerate.New().Hash("status-" + name), CreatedAt: now, ExpiresAt: now.Add(time.Hour), AbsoluteExpiresAt: now.Add(2 * time.Hour)}
-	if err := f.sessions.CreateSession(ctx, f.params); err != nil {
+	if _, err := f.sessions.CreateSession(ctx, f.params); err != nil {
 		t.Fatal(err)
 	}
 	return f
@@ -81,7 +81,7 @@ func checkAccountStatus(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		if _, err := f.sessions.FindSession(ctx, f.params.TokenHash); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
 			t.Fatal("unblock revived session", err)
 		}
-		if err := f.sessions.CreateSession(ctx, f.params); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
+		if _, err := f.sessions.CreateSession(ctx, f.params); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
 			t.Fatal("old credential snapshot reissued session", err)
 		}
 		if err := f.accounts.Confirm(ctx, verification.Digest); !errors.Is(err, accountdomain.ErrInvalidVerification) {
@@ -97,7 +97,7 @@ func checkAccountStatus(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		fresh := f.params
 		fresh.AuthVersion = 3
 		fresh.TokenHash = tokengenerate.New().Hash("fresh-basic")
-		if err := f.sessions.CreateSession(ctx, fresh); err != nil {
+		if _, err := f.sessions.CreateSession(ctx, fresh); err != nil {
 			t.Fatal("fresh session refused", err)
 		}
 		var auditCount, outboxCount int
@@ -143,7 +143,7 @@ func assertInactiveAccount(t *testing.T, ctx context.Context, f statusFixture) {
 	if _, err := f.sessions.FindSession(ctx, f.params.TokenHash); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
 		t.Fatal("inactive session accepted", err)
 	}
-	if err := f.sessions.CreateSession(ctx, f.params); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
+	if _, err := f.sessions.CreateSession(ctx, f.params); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
 		t.Fatal("inactive issuance accepted", err)
 	}
 	management := sessionservice.NewManagement(f.sessions)

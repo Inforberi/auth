@@ -25,7 +25,7 @@ func checkSessionRotation(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	tokens := tokengenerate.New()
 	old := tokens.Hash("session-rotation-old")
 	p := sessionservice.CreateSessionParams{UserID: owner, AuthVersion: 1, TokenHash: old, CreatedAt: time.Now().UTC(), ExpiresAt: time.Now().UTC().Add(time.Hour), AbsoluteExpiresAt: time.Now().UTC().Add(2 * time.Hour)}
-	if err := ledger.CreateSession(ctx, p); err != nil {
+	if _, err := ledger.CreateSession(ctx, p); err != nil {
 		t.Fatal(err)
 	}
 	before, err := ledger.FindSession(ctx, old)
@@ -91,7 +91,7 @@ func checkSessionRotation(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 				t.Fatal(err)
 			}
 			p.UserID, p.TokenHash = user, tokens.Hash(fmt.Sprintf("session-rotation-guard-%d", i))
-			if err := ledger.CreateSession(ctx, p); err != nil {
+			if _, err := ledger.CreateSession(ctx, p); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := db.Exec(ctx, tc.invalidate, user); err != nil {
