@@ -199,6 +199,199 @@
                 }
             }
         },
+        "/api/v1/admin/auth/settings/smtp": {
+            "get": {
+                "description": "Requires a live session, HTTPS Origin and auth.settings.manage. passwordSet is presence only. No secrets, session refresh or network tests.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SMTP settings"
+                ],
+                "summary": "Read SMTP settings without the password",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/smtp_settings_http.SettingsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Requires auth.settings.manage and fresh password+MFA. Full config replacement, explicit requireTls. Omitted/null password preserves it; empty clears it only without username. Changed destination/username requires explicit password. SMTP_ALLOWED_TARGETS is deployment-only; production cannot disable TLS. No network request in this transaction.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SMTP settings"
+                ],
+                "summary": "Replace SMTP settings and optionally rotate the password",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "configuration, expectedVersion and optional password",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/smtp_settings_http.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/smtp_settings_http.SettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid_json, invalid_smtp_settings",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "forbidden, fresh_auth_required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "smtp_settings_conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/auth/settings/smtp/test": {
+            "post": {
+                "description": "Requires auth.settings.manage and fresh password+MFA. Tests the authorized saved version only, after releasing SQL locks; greeting/STARTTLS/AUTH/NOOP, not actual delivery. Max 10 seconds, 3/user/minute and 10/project/minute, 2 concurrent tests/instance. Does not store a readiness claim or refresh the session.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SMTP settings"
+                ],
+                "summary": "Test the saved SMTP connection without sending email",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "saved SMTP version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/smtp_settings_http.TestRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/smtp_settings_http.TestResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "smtp_settings_conflict, smtp_connection_failed",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/permissions": {
             "get": {
                 "description": "Requires current access.roles.manage or access.assignments.manage. Returns declared keys, not an ability to create arbitrary permissions through HTTP.",
@@ -6380,6 +6573,114 @@
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "smtp_settings_http.ConfigRequest": {
+            "type": "object",
+            "required": [
+                "domain",
+                "from",
+                "host",
+                "port",
+                "requireTls"
+            ],
+            "properties": {
+                "domain": {
+                    "type": "string"
+                },
+                "from": {
+                    "type": "string"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "requireTls": {
+                    "type": "boolean"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "smtp_settings_http.ConfigResponse": {
+            "type": "object",
+            "properties": {
+                "domain": {
+                    "type": "string"
+                },
+                "from": {
+                    "type": "string"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "requireTls": {
+                    "type": "boolean"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "smtp_settings_http.SettingsResponse": {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/smtp_settings_http.ConfigResponse"
+                },
+                "passwordSet": {
+                    "type": "boolean"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "smtp_settings_http.TestRequest": {
+            "type": "object",
+            "required": [
+                "expectedVersion"
+            ],
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                }
+            }
+        },
+        "smtp_settings_http.TestResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                },
+                "testedVersion": {
+                    "type": "integer"
+                }
+            }
+        },
+        "smtp_settings_http.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "config",
+                "expectedVersion"
+            ],
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/smtp_settings_http.ConfigRequest"
+                },
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string",
+                    "x-nullable": true
                 }
             }
         }

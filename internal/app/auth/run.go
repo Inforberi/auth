@@ -45,7 +45,9 @@ type resources struct {
 }
 
 func (r *resources) add(close func()) {
-	r.closers = append(r.closers, close)
+	if close != nil {
+		r.closers = append(r.closers, close)
+	}
 }
 
 func (r *resources) close() {

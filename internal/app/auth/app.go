@@ -24,7 +24,6 @@ import (
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
-	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 	httpserver "github.com/Inforberi/financial-intelligence/internal/server/http"
@@ -52,7 +51,10 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 
 	now := clock.UTCClock{}
 	tokenGen := tokengenerate.New()
-	mail := mailer.New(cfg.MailSender)
+	mail, smtpSettings, err := assembleSMTP(ctx, pool, rdb, cfg, log)
+	if err != nil {
+		return nil, fmt.Errorf("assemble SMTP settings: %w", err)
+	}
 	accountSvc, accountRepo, err := assembleAccount(pool, rdb, mail, cfg.Account, accountpostgres.DeliveryConfig{EmailChanges: cfg.EmailChange.Enabled, Invitations: cfg.Invitation.Enabled, EmailBinding: cfg.EmailBinding.Enabled})
 	if err != nil {
 		return nil, fmt.Errorf("assemble account: %w", err)
@@ -95,16 +97,12 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("assemble telegram: %w", err)
 	}
-	if closeTelegram != nil {
-		resources.add(closeTelegram)
-	}
+	resources.add(closeTelegram)
 	google, closeGoogle, err := assembleGoogle(ctx, cfg, accountRepo, rdb, loginSvc, policy, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble Google: %w", err)
 	}
-	if closeGoogle != nil {
-		resources.add(closeGoogle)
-	}
+	resources.add(closeGoogle)
 	var emailChange *accounthttp.EmailChangeHandler
 	var protectedRecovery *passwordhttp.ProtectedRecoveryHandler
 	var activation *passwordhttp.ActivationHandler
@@ -141,6 +139,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		TemporaryAdmin:    temporaryAdmin,
 		Access:            accesshttp.New(access.Service, log),
 		AuthSettings:      settingshttp.New(policy, cfg.AvailableAuthMethods(), log),
+		SMTPSettings:      smtpSettings,
 		Setup:             setup,
 		EmailBinding:      emailBinding,
 		MFA:               mfaHandler,

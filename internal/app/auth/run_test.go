@@ -22,6 +22,7 @@ func TestRunClosesResourcesAfterServer(t *testing.T) {
 		t.Run(map[bool]string{false: "shutdown", true: "serve failure"}[fail], func(t *testing.T) {
 			var order []string
 			owned := &resources{}
+			owned.add(nil)
 			for _, name := range []string{"logger", "postgres", "redis"} {
 				owned.add(func() { order = append(order, name) })
 			}

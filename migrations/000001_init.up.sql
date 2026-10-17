@@ -96,6 +96,24 @@ CREATE TABLE auth.auth_settings_audit (
 );
 CREATE INDEX auth_settings_audit_retention ON auth.auth_settings_audit(created_at,id);
 
+CREATE TABLE auth.smtp_settings (
+  singleton BOOLEAN PRIMARY KEY CHECK (singleton),
+  version BIGINT NOT NULL DEFAULT 1 CHECK (version>0),
+  configuration JSONB NOT NULL CHECK (jsonb_typeof(configuration)='object' AND octet_length(configuration::text)<=4096),
+  password BYTEA NOT NULL CHECK (octet_length(password) BETWEEN 28 AND 4124),
+  password_set BOOLEAN NOT NULL
+);
+
+CREATE TABLE auth.smtp_settings_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id UUID NOT NULL REFERENCES auth.users(id),
+  version BIGINT NOT NULL UNIQUE CHECK (version>1),
+  previous_configuration JSONB NOT NULL CHECK (jsonb_typeof(previous_configuration)='object' AND octet_length(previous_configuration::text)<=4096),
+  next_configuration JSONB NOT NULL CHECK (jsonb_typeof(next_configuration)='object' AND octet_length(next_configuration::text)<=4096),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+CREATE INDEX smtp_settings_audit_retention ON auth.smtp_settings_audit(created_at,id);
+
 CREATE TABLE auth.access_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id UUID NOT NULL REFERENCES auth.users(id),

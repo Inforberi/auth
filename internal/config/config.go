@@ -22,30 +22,31 @@ import (
 )
 
 type Config struct {
-	Access            accesssettings.Config
-	Browser           requestmiddleware.OriginConfig
-	HTTP              requestmiddleware.CapacityConfig
-	Proxy             requestmiddleware.ProxyConfig
-	Account           accountservice.Config
-	EmailChange       accountservice.EmailChangeConfig
-	EmailBinding      accountservice.EmailBindingConfig
-	InitialSetup      accountservice.SetupConfig
-	Invitation        accountservice.InvitationConfig
-	TemporaryPassword passwordservice.TemporaryPasswordConfig
-	EmailOTP          otpservice.Config
-	Telegram          telegramservice.Config
-	Google            googleservice.Config
-	Retention         accountservice.RetentionConfig
-	Postgres          postgres.Config
-	Logger            logger.Config
-	Session           sessionservice.Config
-	MFA               mfaservice.Config
-	Server            httpserver.Config
-	Redis             redisclient.Config
-	MailSender        mailer.Config
-	Password          passwordservice.Config
-	Capacity          passwordservice.CapacityConfig
-	Swagger           SwaggerConfig
+	Access             accesssettings.Config
+	Browser            requestmiddleware.OriginConfig
+	HTTP               requestmiddleware.CapacityConfig
+	Proxy              requestmiddleware.ProxyConfig
+	Account            accountservice.Config
+	EmailChange        accountservice.EmailChangeConfig
+	EmailBinding       accountservice.EmailBindingConfig
+	InitialSetup       accountservice.SetupConfig
+	Invitation         accountservice.InvitationConfig
+	TemporaryPassword  passwordservice.TemporaryPasswordConfig
+	EmailOTP           otpservice.Config
+	Telegram           telegramservice.Config
+	Google             googleservice.Config
+	Retention          accountservice.RetentionConfig
+	Postgres           postgres.Config
+	Logger             logger.Config
+	Session            sessionservice.Config
+	MFA                mfaservice.Config
+	Server             httpserver.Config
+	Redis              redisclient.Config
+	MailSender         mailer.Config
+	SMTPAllowedTargets string `env:"SMTP_ALLOWED_TARGETS"`
+	Password           passwordservice.Config
+	Capacity           passwordservice.CapacityConfig
+	Swagger            SwaggerConfig
 }
 
 func New() (*Config, error) {

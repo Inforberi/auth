@@ -11,6 +11,7 @@
 | Sessions/security | [auth-security](../planning/auth-security.md), [ADR 002](../adr/002-sessions-and-transactions.md) | `internal/auth/session`, router; для конкретного сценария — его service/repository |
 | JWT — план | [jwt-access](../planning/jwt-access.md) | Контракты и условия будущей реализации, не действующий API |
 | Политика входа/settings | [auth-settings](../features/auth-settings.md) | `internal/auth/settings`, `internal/app/auth`, `internal/config` |
+| SMTP settings/rotation | [smtp-settings](../features/smtp-settings.md) | Settings: `smtp*`, `app/auth/smtp.go`, `infra/mailer`; provider credentials ещё ENV |
 | Роли/permissions | [roles-permissions](../features/roles-permissions.md) | `internal/access` |
 | Каталог разрешений | [access-catalog](../features/access-catalog.md) | `internal/access/settings`, `cmd/access-catalog`, `internal/app/access` |
 | Список/карточка пользователей | [user-directory](../features/user-directory.md) | Account: `user_directory`, `list_users`, `read_user` |

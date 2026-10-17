@@ -31,6 +31,7 @@ type Handlers struct {
 	TemporaryAdmin    *passwordhttp.TemporaryAdminHandler
 	Access            *accesshttp.Handler
 	AuthSettings      *settingshttp.Handler
+	SMTPSettings      *settingshttp.SMTPHandler
 	Setup             *accounthttp.SetupHandler
 	MFA               *mfahttp.Handler
 	Session           *sessionhttp.Handler

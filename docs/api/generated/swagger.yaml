@@ -889,6 +889,78 @@ definitions:
       name:
         type: string
     type: object
+  smtp_settings_http.ConfigRequest:
+    properties:
+      domain:
+        type: string
+      from:
+        type: string
+      host:
+        type: string
+      port:
+        type: integer
+      requireTls:
+        type: boolean
+      username:
+        type: string
+    required:
+    - domain
+    - from
+    - host
+    - port
+    - requireTls
+    type: object
+  smtp_settings_http.ConfigResponse:
+    properties:
+      domain:
+        type: string
+      from:
+        type: string
+      host:
+        type: string
+      port:
+        type: integer
+      requireTls:
+        type: boolean
+      username:
+        type: string
+    type: object
+  smtp_settings_http.SettingsResponse:
+    properties:
+      config:
+        $ref: '#/definitions/smtp_settings_http.ConfigResponse'
+      passwordSet:
+        type: boolean
+      version:
+        type: integer
+    type: object
+  smtp_settings_http.TestRequest:
+    properties:
+      expectedVersion:
+        type: integer
+    required:
+    - expectedVersion
+    type: object
+  smtp_settings_http.TestResponse:
+    properties:
+      status:
+        type: string
+      testedVersion:
+        type: integer
+    type: object
+  smtp_settings_http.UpdateRequest:
+    properties:
+      config:
+        $ref: '#/definitions/smtp_settings_http.ConfigRequest'
+      expectedVersion:
+        type: integer
+      password:
+        type: string
+        x-nullable: true
+    required:
+    - config
+    - expectedVersion
+    type: object
 info:
   contact: {}
   description: Reusable authentication service. Cookie sessions require HTTPS. All
@@ -1031,6 +1103,143 @@ paths:
       summary: Replace authentication settings
       tags:
       - Auth settings
+  /api/v1/admin/auth/settings/smtp:
+    get:
+      description: Requires a live session, HTTPS Origin and auth.settings.manage.
+        passwordSet is presence only. No secrets, session refresh or network tests.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/smtp_settings_http.SettingsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read SMTP settings without the password
+      tags:
+      - SMTP settings
+    post:
+      consumes:
+      - application/json
+      description: Requires auth.settings.manage and fresh password+MFA. Full config
+        replacement, explicit requireTls. Omitted/null password preserves it; empty
+        clears it only without username. Changed destination/username requires explicit
+        password. SMTP_ALLOWED_TARGETS is deployment-only; production cannot disable
+        TLS. No network request in this transaction.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: configuration, expectedVersion and optional password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/smtp_settings_http.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/smtp_settings_http.SettingsResponse'
+        "400":
+          description: invalid_json, invalid_smtp_settings
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: forbidden, fresh_auth_required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: smtp_settings_conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Replace SMTP settings and optionally rotate the password
+      tags:
+      - SMTP settings
+  /api/v1/admin/auth/settings/smtp/test:
+    post:
+      consumes:
+      - application/json
+      description: Requires auth.settings.manage and fresh password+MFA. Tests the
+        authorized saved version only, after releasing SQL locks; greeting/STARTTLS/AUTH/NOOP,
+        not actual delivery. Max 10 seconds, 3/user/minute and 10/project/minute,
+        2 concurrent tests/instance. Does not store a readiness claim or refresh the
+        session.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: saved SMTP version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/smtp_settings_http.TestRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/smtp_settings_http.TestResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: smtp_settings_conflict, smtp_connection_failed
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Test the saved SMTP connection without sending email
+      tags:
+      - SMTP settings
   /api/v1/admin/permissions:
     get:
       description: Requires current access.roles.manage or access.assignments.manage.

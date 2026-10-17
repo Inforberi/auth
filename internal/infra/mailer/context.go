@@ -16,8 +16,42 @@ func (m *Mailer) SendContext(ctx context.Context, to, subject, body string) erro
 	}
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
+	cfg := m.cfg
+	if m.source != nil {
+		var err error
+		cfg, err = m.source(ctx)
+		if err != nil {
+			return fmt.Errorf("SMTP configuration unavailable")
+		}
+	}
+	return withSMTPClient(ctx, cfg, func(client *smtp.Client) error {
+		if err := client.Mail(cfg.SMTPFrom); err != nil {
+			return err
+		}
+		if err := client.Rcpt(to); err != nil {
+			return err
+		}
+		w, err := client.Data()
+		if err != nil {
+			return err
+		}
+		if _, err := w.Write([]byte(buildMessage(cfg.SMTPFrom, to, subject, body, cfg.SMTPDomain))); err != nil {
+			return err
+		}
+		return w.Close()
+	})
+}
+
+// CheckContext tests greeting/TLS/AUTH/NOOP, not delivery or recipient ownership.
+func CheckContext(ctx context.Context, cfg Config) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	return withSMTPClient(ctx, cfg, func(client *smtp.Client) error { return client.Noop() })
+}
+
+func withSMTPClient(ctx context.Context, cfg Config, operation func(*smtp.Client) error) error {
 	dialer := net.Dialer{Timeout: 5 * time.Second}
-	conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(m.cfg.SMTPHost, m.cfg.SMTPPort))
+	conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(cfg.SMTPHost, cfg.SMTPPort))
 	if err != nil {
 		return err
 	}
@@ -28,37 +62,24 @@ func (m *Mailer) SendContext(ctx context.Context, to, subject, body string) erro
 	if err := conn.SetDeadline(deadline); err != nil {
 		return err
 	}
-	client, err := smtp.NewClient(conn, m.cfg.SMTPHost)
+	client, err := smtp.NewClient(conn, cfg.SMTPHost)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = client.Close() }() //nolint:gosec // The successful path reports Quit errors; this is failure cleanup.
 	if ok, _ := client.Extension("STARTTLS"); ok {
-		if err := client.StartTLS(&tls.Config{ServerName: m.cfg.SMTPHost, MinVersion: tls.VersionTLS12}); err != nil {
+		if err := client.StartTLS(&tls.Config{ServerName: cfg.SMTPHost, MinVersion: tls.VersionTLS12}); err != nil {
 			return err
 		}
-	} else if m.cfg.RequireTLS {
+	} else if cfg.RequireTLS {
 		return fmt.Errorf("SMTP requires STARTTLS")
 	}
-	if m.cfg.SMTPUsername != "" {
-		if err := client.Auth(smtp.PlainAuth("", m.cfg.SMTPUsername, m.cfg.SMTPPassword, m.cfg.SMTPHost)); err != nil {
+	if cfg.SMTPUsername != "" {
+		if err := client.Auth(smtp.PlainAuth("", cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPHost)); err != nil {
 			return err
 		}
 	}
-	if err := client.Mail(m.cfg.SMTPFrom); err != nil {
-		return err
-	}
-	if err := client.Rcpt(to); err != nil {
-		return err
-	}
-	w, err := client.Data()
-	if err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte(buildMessage(m.cfg.SMTPFrom, to, subject, body, m.cfg.SMTPDomain))); err != nil {
-		return err
-	}
-	if err := w.Close(); err != nil {
+	if err := operation(client); err != nil {
 		return err
 	}
 	return client.Quit()

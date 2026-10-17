@@ -4,9 +4,9 @@
 
 AS5-local (17 октября): session, выданная владельцу встроенных административных прав/system super-admin, получает независимый idle/absolute профиль; это относится и к публичному входу такого пользователя. Настройки сроков пока ENV, не поля settings API. [Сроки, activity endpoint и подключение UI](../operations/browser-security.md#сроки-административных-сессий--as5).
 
-A6.1-local реализует domain/service/PostgreSQL store и first-install seed. A6.2a-local добавляет независимый административный password+MFA login. A6.2b-local подключает startup и runtime enforcement сохраняемой публичной политики. A6.2c-local публикует protected settings API ниже. UI ещё нет. ENV-флаги методов используются только при первой инициализации, credentials/operational параметры пока остаются в ENV.
+A6.1-local реализует domain/service/PostgreSQL store и first-install seed. A6.2a-local добавляет независимый административный password+MFA login. A6.2b-local подключает startup и runtime enforcement сохраняемой публичной политики. A6.2c-local публикует protected settings API ниже. UI ещё нет. ENV-флаги методов используются только при первой инициализации. A6.3c.1-local добавил [сохраняемый SMTP](smtp-settings.md): encrypted password, безопасный GET/update/test, актуальный SQL source для каждой отправки. Google/Telegram credentials пока остаются ENV до A6.3c.2; root/deployment keys и SMTP destination allowlist не переносятся в UI.
 
-A6.3a-local сохраняет MFA policy у custom role через roles API и добавляет ограниченный первичный TOTP enrollment, не новые поля singleton Auth settings. [Контракт и ограничения](mfa.md#обязательная-mfa-по-роли--a63a). Далее usable-admin transitions, SMTP/provider secrets и retention settings; их пустые поля/adapters не создаются. Внешняя pre-ui-backend приёмка остаётся обязательной.
+A6.3a-local сохраняет MFA policy у custom role через roles API и добавляет ограниченный первичный TOTP enrollment, не новые поля singleton Auth settings. [Контракт и ограничения](mfa.md#обязательная-mfa-по-роли--a63a). Usable-admin transitions/self-status выполнены локально в A6.3b; далее provider secrets и retention settings. Их пустые поля/adapters не создаются. Внешняя pre-ui-backend приёмка остаётся обязательной.
 
 ## Безопасные переходы и подготовка администратора — A6.3b-local
 
@@ -51,7 +51,7 @@ Self-status для будущего UI — [`GET /api/v1/auth/mfa/status`](mfa.m
 
 `availableMethods` — immutable возможности **того экземпляра, который ответил**, а не сохранённые публичные flags и не health-check SMTP/provider. Проверка происходит после SQL authority/version, до no-op/UPDATE, без сетевых запросов, дополнительных SQL/Redis вызовов и фонового реестра. Непривязанный к runtime repository не разрешает Update. Предпочтение provider registration при выключенном методе можно сохранить без credentials.
 
-До A6.3 отсутствующие credentials задаются через ENV и restart. Перед включением provider необходимо согласованно развернуть одинаковую operational конфигурацию на **всех** обслуживающих login экземплярах. API одного узла не доказывает readiness остальных; GET через балансировщик также этого не доказывает. Это обязательная deployment/pre-ui-backend проверка, не реализованный распределённый readiness consensus. Live provider/SMTP/browser/fleet проверки остаются открытыми. Secrets/client credentials/root keys через этот API не читаются и не обновляются.
+Google/Telegram credentials до A6.3c.2 задаются через ENV и restart. Перед включением provider необходимо согласованно развернуть одинаковую operational конфигурацию на **всех** обслуживающих login экземплярах. API одного узла не доказывает readiness остальных; GET через балансировщик также этого не доказывает. SMTP A6.3c.1 имеет отдельные [protected endpoints](smtp-settings.md), encrypted secret и live delivery source; это не поля public Policy. Его allowlist/root key должны совпадать на fleet. Live provider/SMTP/browser/fleet проверки остаются открытыми. Secrets/root keys через public policy API не читаются и не обновляются.
 
 ## Публичная политика в работе — A6.2b-local
 

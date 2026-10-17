@@ -84,6 +84,7 @@ func contractHandlers(env string) Handlers {
 		TemporaryAdmin:    passwordhttp.NewTemporaryAdmin(&contractTemporaryAdmin{}, log),
 		Access:            accesshttp.New(&contractAccess{}, log),
 		AuthSettings:      settingshttp.New(&contractAuthSettings{}, availableSettingsMethods, log),
+		SMTPSettings:      settingshttp.NewSMTP(&contractSMTP{}, log),
 		Setup:             accounthttp.NewSetup(&contractSetup{}, log),
 		EmailBinding:      accounthttp.NewEmailBinding(&contractEmailBinding{}, log),
 		MFA:               mfahttp.NewWithRecovery(&contractMFA{}, &contractMFA{}, &contractMFARecovery{}, log),
