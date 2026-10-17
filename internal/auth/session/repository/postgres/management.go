@@ -21,7 +21,7 @@ func authorizeCaller(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, 
 		return 0, sessionError(err)
 	}
 	var valid bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.sessions WHERE user_id=$1 AND token_hash=$2
+	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.role_bound_sessions WHERE user_id=$1 AND token_hash=$2
   AND auth_version=$3 AND revoked_at IS NULL AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp())`, user, hash, version).Scan(&valid)
 	if err != nil {
 		return 0, err
@@ -42,7 +42,7 @@ func (r *Repository) ListOwnSessions(ctx context.Context, user accountdomain.Use
 		var cursorTime any
 		if before != "" {
 			var created time.Time
-			err := tx.QueryRow(ctx, `SELECT created_at FROM auth.sessions WHERE id=$1 AND user_id=$2`, before, user).Scan(&created)
+			err := tx.QueryRow(ctx, `SELECT created_at FROM auth.role_bound_sessions WHERE id=$1 AND user_id=$2`, before, user).Scan(&created)
 			if errors.Is(err, pgx.ErrNoRows) {
 				return domain.ErrInvalidSessionID
 			}
@@ -52,7 +52,7 @@ func (r *Repository) ListOwnSessions(ctx context.Context, user accountdomain.Use
 			cursorTime = created
 		}
 		rows, err := tx.Query(ctx, `SELECT id,user_agent,ip_address,created_at,expires_at,absolute_expires_at
-   FROM auth.sessions WHERE user_id=$1 AND auth_version=$2 AND revoked_at IS NULL
+   FROM auth.role_bound_sessions WHERE user_id=$1 AND auth_version=$2 AND revoked_at IS NULL
    AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()
    AND ($3::timestamptz IS NULL OR (created_at,id)<($3::timestamptz,$4::uuid))
    ORDER BY created_at DESC,id DESC LIMIT $5`, user, version, cursorTime, nullableCursor(before), limit)
@@ -86,7 +86,7 @@ func (r *Repository) RevokeOwnSession(ctx context.Context, user accountdomain.Us
 		if err != nil {
 			return err
 		}
-		result, err := tx.Exec(ctx, `UPDATE auth.sessions SET revoked_at=clock_timestamp()
+		result, err := tx.Exec(ctx, `UPDATE auth.role_bound_sessions SET revoked_at=clock_timestamp()
    WHERE id=$1 AND user_id=$2 AND auth_version=$3 AND revoked_at IS NULL
    AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()`, id, user, version)
 		if err != nil {

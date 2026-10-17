@@ -53,7 +53,7 @@ func (r *Repository) requireProof(ctx context.Context, tx pgx.Tx, proof service.
 		return err
 	}
 	var id string
-	err = tx.QueryRow(ctx, `SELECT id FROM auth.sessions s WHERE user_id=$1 AND token_hash=$2 AND auth_version=$3
+	err = tx.QueryRow(ctx, `SELECT id FROM auth.role_bound_sessions s WHERE user_id=$1 AND token_hash=$2 AND auth_version=$3
 		AND revoked_at IS NULL AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()
 		AND ((password_verified_at<=clock_timestamp() AND password_verified_at>clock_timestamp()-interval '5 minutes')
 		OR ($4 AND email_reauthenticated_at<=clock_timestamp()

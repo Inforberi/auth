@@ -24,7 +24,7 @@ func (r *Repository) ReadAssignments(ctx context.Context, actor service.Principa
 			WHERE ur.user_id=target.id AND rp.permission_key=ANY($4::text[]) ORDER BY rp.permission_key)
 		FROM auth.users target
 		WHERE target.id=$3 AND target.deleted_at IS NULL AND EXISTS (
-			SELECT 1 FROM auth.sessions s JOIN auth.users u ON u.id=s.user_id AND u.auth_version=s.auth_version
+			SELECT 1 FROM auth.role_bound_sessions s JOIN auth.users u ON u.id=s.user_id AND u.auth_version=s.auth_version
 			WHERE u.id=$1 AND s.token_hash=$2 AND u.status='active' AND u.deleted_at IS NULL
 			AND s.revoked_at IS NULL AND s.expires_at>statement_timestamp() AND s.absolute_expires_at>statement_timestamp()
 			AND EXISTS (SELECT 1 FROM auth.user_roles ur JOIN auth.role_permissions rp ON rp.role_id=ur.role_id

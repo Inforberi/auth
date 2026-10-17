@@ -62,7 +62,7 @@ func requireBindingSession(ctx context.Context, tx pgx.Tx, user domain.UserID, t
 
 func lockSessionProof(ctx context.Context, tx pgx.Tx, user domain.UserID, token string, version domain.AuthVersion, freshFor time.Duration, requireExistingMFA bool) error {
 	var id string
-	err := tx.QueryRow(ctx, `SELECT id FROM auth.sessions WHERE user_id=$1 AND token_hash=$2 AND auth_version=$3
+	err := tx.QueryRow(ctx, `SELECT id FROM auth.role_bound_sessions WHERE user_id=$1 AND token_hash=$2 AND auth_version=$3
 		AND revoked_at IS NULL AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()
 		AND ($4::double precision=0 OR (password_verified_at<=clock_timestamp()
 		AND password_verified_at>clock_timestamp()-$4::double precision*interval '1 second'))

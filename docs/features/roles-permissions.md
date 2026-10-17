@@ -54,9 +54,23 @@ Principal содержит user UUID и hash session token, не клиентс�
 
 Повтор без изменений с актуальной версией не делает лишний UPDATE/audit. Устаревшая expected version даёт conflict, а не молча перезаписывает чужое изменение. После потери ответа следует прочитать текущее состояние; CreateRole не имеет command-id replay, повтор того же key даёт conflict.
 
-Права не помещаются в session token и не кешируются. Authorize делает один индексируемый SQL-запрос с проверкой session/status/auth_version; UserAccess — один запрос. После committed grant старая session отклоняется по новой auth_version. После revoke следующая проверка видит уменьшенные права. Уже разрешённая выполняющаяся операция автоматически не отменяется; чувствительные операции связывают проверку и запись транзакционными гарантиями. Редактирование permissions существующей роли пока сохраняет прежнее live-поведение: защита повышения через role edit — открытый AS6b, AS6 целиком не завершён.
+Права не помещаются в session token и не кешируются. Authorize делает один индексируемый SQL-запрос с проверкой session/status/auth_version; UserAccess — один запрос. После committed grant старая session отклоняется по новой auth_version. После revoke следующая проверка видит уменьшенные права. Уже разрешённая выполняющаяся операция автоматически не отменяется; чувствительные операции связывают проверку и запись транзакционными гарантиями. AS6b-local закрывает повышение через edit по правилам ниже; общий AS6/MFA-policy и внешняя приёмка ещё не завершены.
 
 `users.access_version` — версия назначений пользователя, не общий ETag effective permissions: изменение содержимого роли повышает `roles.version`, без массового UPDATE всех владельцев. По assignment version нельзя кешировать права. Все service операции ограничены тремя секундами; rollback cleanup — пятью.
+
+## Изменение прав роли и сессии — AS6b-local
+
+`roles.session_revision` — серверная ревизия безопасности, не публичный ETag. Она растёт в прежнем UPDATE роли при добавлении хотя бы одного permission, включая замену части набора. Metadata edits, перестановка, no-op и чистое удаление permissions её не повышают. Не вычисляем effective diff для каждого владельца: расширение самой роли требует нового входа даже при наличии того же permission через другую роль. Audit failure откатывает definition/version/session_revision вместе.
+
+INSERT trigger `auth.bind_session_roles` записывает в `sessions.role_revisions` соответствие UUID → session_revision всех ролей при выдаче любой сессии, включая MFA completion. Клиент не задаёт снимок. Это не grants/cache: текущие permissions/status/auth_version/expiry проверяются в SQL. До 32 ролей и 4096 bytes; одно set-based чтение внутри INSERT, без нового обращения из Go. UPDATE снимка запрещён; refresh/rotate/password/email reauth/MFA step-up его не меняют.
+
+Bearer-authority queries используют updatable security-invoker view `auth.role_bound_sessions` над ledger. Несовпадение/отсутствие роли делает старую session недействительной; нужен новый primary login с требуемым MFA, не rotate/step-up. SQL guards фич и sensitive transactions используют ту же view, не только HTTP middleware. Полный revoke/retention/operator cleanup используют base ledger, включая недействительные записи. Проверка остаётся одним SQL statement, но добавляет bounded сравнение ревизий через role PK: это не обещание RPS или нулевой стоимости.
+
+Bindings сохраняются после снятия назначения, ревизия не уменьшается: permission/assignment removal не оживляет старую cookie. Консервативный эффект — session, созданная с ролью, может потребовать нового входа при последующем расширении этой роли даже после её отзыва у владельца. Session без роли в snapshot не затрагивается. Role edit не переписывает users/auth_version/access_version или все session rows. Выдача, снявшая старый снимок до edit, недействительна даже при более позднем commit; повторить login, не вводить grace.
+
+Прямое DBA изменение role_permissions не является этим API: при расширении existing role оператор обязан согласованно повысить session_revision либо инвалидировать sessions. Это относится и к upgrade system role; нового system-edit endpoint нет.
+
+Изменена только исходная 000001 up/down, реальная БД не обновлялась. Applied installation требует controlled schema/code upgrade, grants на view/underlying tables и invalidation старых sessions/challenges до трафика: пустой default snapshot существующей строки не доказывает отсутствие ролей. Не смешивать старые raw-ledger инстансы с новыми; fallback отсутствует. Не reset рабочей БД и не автоматический deploy. MFA-role/enrollment policy A6.3 и внешние browser/load/fault gates остаются открытыми.
 
 ## Системный администратор и незавершённые части
 

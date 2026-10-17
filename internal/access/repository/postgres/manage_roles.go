@@ -62,7 +62,11 @@ func (r *Repository) UpdateRole(ctx context.Context, input service.UpdateRoleInp
 			return nil
 		}
 		role.Key, role.Name, role.Description, role.Permissions = input.Key, input.Name, input.Description, requested
-		if err := tx.QueryRow(ctx, `UPDATE auth.roles SET key=$2,name=$3,description=$4,version=version+1 WHERE id=$1 RETURNING version`, role.ID, role.Key, role.Name, role.Description).Scan(&role.Version); err != nil {
+		elevated := slices.ContainsFunc(requested, func(key domain.PermissionKey) bool {
+			return !slices.Contains(current.Permissions, key)
+		})
+		if err := tx.QueryRow(ctx, `UPDATE auth.roles SET key=$2,name=$3,description=$4,version=version+1,
+			session_revision=session_revision+CASE WHEN $5 THEN 1 ELSE 0 END WHERE id=$1 RETURNING version`, role.ID, role.Key, role.Name, role.Description, elevated).Scan(&role.Version); err != nil {
 			return err
 		}
 		if err := replacePermissions(ctx, tx, role); err != nil {

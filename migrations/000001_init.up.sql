@@ -49,6 +49,7 @@ CREATE TABLE auth.roles (
   description TEXT NOT NULL DEFAULT '' CHECK (octet_length(description) <= 2000),
   system BOOLEAN NOT NULL DEFAULT false,
   version BIGINT NOT NULL DEFAULT 1 CHECK (version > 0),
+  session_revision BIGINT NOT NULL DEFAULT 1 CHECK (session_revision > 0),
   CHECK (system = (key = 'super_admin'))
 );
 
@@ -381,6 +382,7 @@ CREATE TABLE auth.sessions (
   token_hash TEXT PRIMARY KEY CHECK (token_hash ~ '^[a-f0-9]{64}$'),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  role_revisions JSONB NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(role_revisions)='object' AND octet_length(role_revisions::text)<=4096),
   created_at TIMESTAMPTZ NOT NULL,
   expires_at TIMESTAMPTZ NOT NULL,
   absolute_expires_at TIMESTAMPTZ NOT NULL,
@@ -403,6 +405,35 @@ CREATE TABLE auth.sessions (
 );
 CREATE INDEX sessions_owner ON auth.sessions(user_id,created_at DESC,id DESC);
 CREATE INDEX sessions_retention_due ON auth.sessions(LEAST(revoked_at,expires_at,absolute_expires_at),id);
+
+CREATE FUNCTION auth.bind_session_roles() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    IF NEW.role_revisions IS DISTINCT FROM OLD.role_revisions THEN
+      RAISE EXCEPTION 'session role revisions are immutable';
+    END IF;
+  ELSE
+    SELECT COALESCE(jsonb_object_agg(r.id::text,r.session_revision),'{}'::jsonb)
+      INTO NEW.role_revisions
+      FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id
+      WHERE ur.user_id=NEW.user_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER sessions_role_binding BEFORE INSERT OR UPDATE OF role_revisions ON auth.sessions
+  FOR EACH ROW EXECUTE FUNCTION auth.bind_session_roles();
+
+-- Keep the issuance bindings even after an assignment is revoked: old tokens must not revive.
+CREATE VIEW auth.role_bound_sessions WITH (security_invoker=true) AS
+  SELECT s.* FROM auth.sessions s
+  WHERE NOT EXISTS (
+    SELECT 1 FROM jsonb_each_text(s.role_revisions) binding(role_id,revision)
+    LEFT JOIN auth.roles r ON r.id=binding.role_id::uuid
+    WHERE r.id IS NULL OR r.session_revision<>binding.revision::bigint
+  );
 
 CREATE TABLE auth.email_bindings (
   id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),

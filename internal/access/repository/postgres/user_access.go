@@ -20,7 +20,7 @@ func (r *Repository) ReadAccess(ctx context.Context, principal service.Principal
 		ARRAY(SELECT role_id FROM auth.user_roles WHERE user_id=u.id ORDER BY role_id LIMIT 33),
 		ARRAY(SELECT DISTINCT rp.permission_key FROM auth.user_roles ur JOIN auth.role_permissions rp ON rp.role_id=ur.role_id
 			WHERE ur.user_id=u.id AND rp.permission_key=ANY($3::text[]) ORDER BY rp.permission_key)
-		FROM auth.users u JOIN auth.sessions s ON s.user_id=u.id AND s.auth_version=u.auth_version
+		FROM auth.users u JOIN auth.role_bound_sessions s ON s.user_id=u.id AND s.auth_version=u.auth_version
 		WHERE u.id=$1 AND s.token_hash=$2 AND u.status='active' AND u.deleted_at IS NULL
 		AND s.revoked_at IS NULL AND s.expires_at>statement_timestamp() AND s.absolute_expires_at>statement_timestamp()`,
 		principal.UserID, principal.TokenHash, keys).Scan(&access.Version, &access.RoleIDs, &access.Permissions)

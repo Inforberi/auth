@@ -40,7 +40,7 @@ func (r *Repository) CreateSession(ctx context.Context, p service.CreateSessionP
 		if p.PrimaryProof != nil {
 			verifiedAt = p.PrimaryProof.VerifiedAt
 		}
-		_, err := tx.Exec(ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,user_agent,ip_address,primary_method,primary_verified_at)
+		_, err := tx.Exec(ctx, `INSERT INTO auth.role_bound_sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,user_agent,ip_address,primary_method,primary_verified_at)
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, p.TokenHash, p.UserID, version, p.CreatedAt, p.ExpiresAt, p.AbsoluteExpiresAt, p.UserAgent, p.IPAddress, method, verifiedAt)
 		return err
 	})
@@ -52,7 +52,7 @@ func (r *Repository) FindSession(ctx context.Context, token string) (*domain.Ses
 	var session domain.Session
 	err := r.db.QueryRow(ctx, `SELECT s.id,s.user_id,s.user_agent,s.ip_address,s.created_at,s.expires_at,s.absolute_expires_at,
 		COALESCE(s.primary_method,''),s.primary_verified_at,s.mfa_verified_at,s.auth_version
-		FROM auth.sessions s JOIN auth.users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL
+		FROM auth.role_bound_sessions s JOIN auth.users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL
 		AND s.auth_version=u.auth_version AND u.status='active' AND u.deleted_at IS NULL
 		AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()`, token).
 		Scan(&session.ID, &session.UserID, &session.UserAgent, &session.IPAddress, &session.CreatedAt, &session.ExpiresAt, &session.AbsoluteExpiresAt,
@@ -71,7 +71,7 @@ func (r *Repository) RefreshSession(ctx context.Context, token string, session *
 			return sessionError(err)
 		}
 		var actual time.Time
-		err := tx.QueryRow(ctx, `UPDATE auth.sessions SET expires_at=LEAST($2,absolute_expires_at)
+		err := tx.QueryRow(ctx, `UPDATE auth.role_bound_sessions SET expires_at=LEAST($2,absolute_expires_at)
 			WHERE token_hash=$1 AND user_id=$3 AND auth_version=$4 AND revoked_at IS NULL
 			AND expires_at=$5 AND expires_at<LEAST($2,absolute_expires_at)
 			AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()
@@ -85,7 +85,7 @@ func (r *Repository) RefreshSession(ctx context.Context, token string, session *
 			return err
 		}
 		// Another request may already have extended it. Never shorten or resurrect it.
-		err = tx.QueryRow(ctx, `SELECT expires_at FROM auth.sessions
+		err = tx.QueryRow(ctx, `SELECT expires_at FROM auth.role_bound_sessions
 			WHERE token_hash=$1 AND user_id=$2 AND auth_version=$3 AND revoked_at IS NULL
 			AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()`, token, session.UserID, version).Scan(&actual)
 		if err != nil {

@@ -23,7 +23,7 @@ func (r *PasswordRepo) ChangePassword(ctx context.Context, user accountdomain.Us
 			return err
 		}
 		var valid bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.sessions WHERE token_hash=$1 AND user_id=$2 AND auth_version=$3
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.role_bound_sessions WHERE token_hash=$1 AND user_id=$2 AND auth_version=$3
 			AND revoked_at IS NULL AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp())`, session, user, version).Scan(&valid); err != nil {
 			return err
 		}

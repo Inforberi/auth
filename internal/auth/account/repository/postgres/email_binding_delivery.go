@@ -15,7 +15,7 @@ func (r *Repository) claimBindingDelivery(ctx context.Context) (*domain.Verifica
 	err := r.db.QueryRow(ctx, `WITH due AS (
 		SELECT b.id FROM auth.email_bindings b JOIN auth.users u ON u.id=b.user_id
 		JOIN auth.users a ON a.id=b.actor_id
-		JOIN auth.sessions s ON s.user_id=a.id AND s.token_hash=b.actor_session_hash AND s.auth_version=a.auth_version
+		JOIN auth.role_bound_sessions s ON s.user_id=a.id AND s.token_hash=b.actor_session_hash AND s.auth_version=a.auth_version
 		WHERE b.delivered_at IS NULL AND b.available_at<=statement_timestamp() AND b.expires_at>clock_timestamp()
 		AND b.delivery_attempts<5 AND b.attempts<5 AND (b.lease_until IS NULL OR b.lease_until<=clock_timestamp())
 		AND u.status='active' AND u.deleted_at IS NULL AND u.auth_version=b.auth_version

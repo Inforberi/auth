@@ -36,7 +36,7 @@ func (r *Repository) ConfirmReauthentication(ctx context.Context, proof mfaservi
 		if subtle.ConstantTimeCompare([]byte(expected), []byte(verifier)) != 1 {
 			return recordFailedCode(ctx, tx, digest)
 		}
-		err = tx.QueryRow(ctx, `UPDATE auth.sessions SET token_hash=$3,email_reauthenticated_id=$4,
+		err = tx.QueryRow(ctx, `UPDATE auth.role_bound_sessions SET token_hash=$3,email_reauthenticated_id=$4,
 			email_reauthenticated_at=clock_timestamp() WHERE user_id=$1 AND token_hash=$2
 			AND revoked_at IS NULL AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()
 			RETURNING email_reauthenticated_at,LEAST(expires_at,absolute_expires_at)`,

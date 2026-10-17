@@ -10,7 +10,7 @@ import (
 func (r *Repository) HasPermission(ctx context.Context, principal service.Principal, permission domain.PermissionKey) (bool, error) {
 	var allowed bool
 	err := r.db.QueryRow(ctx, `SELECT EXISTS (
-		SELECT 1 FROM auth.sessions s
+		SELECT 1 FROM auth.role_bound_sessions s
 		JOIN auth.users u ON u.id=s.user_id AND u.auth_version=s.auth_version
 		WHERE s.user_id=$1 AND s.token_hash=$2 AND s.revoked_at IS NULL
 		AND s.expires_at>statement_timestamp() AND s.absolute_expires_at>statement_timestamp()

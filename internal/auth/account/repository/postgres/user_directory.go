@@ -2,7 +2,7 @@ package postgres
 
 const directoryActor = `WITH directory_actor AS MATERIALIZED (
 	SELECT EXISTS (
-		SELECT 1 FROM auth.sessions s JOIN auth.users actor ON actor.id=s.user_id AND actor.auth_version=s.auth_version
+		SELECT 1 FROM auth.role_bound_sessions s JOIN auth.users actor ON actor.id=s.user_id AND actor.auth_version=s.auth_version
 		WHERE actor.id=$1 AND s.token_hash=$2 AND actor.status='active' AND actor.deleted_at IS NULL
 		AND s.revoked_at IS NULL AND s.expires_at>statement_timestamp() AND s.absolute_expires_at>statement_timestamp()
 		AND EXISTS (SELECT 1 FROM auth.user_roles ur JOIN auth.role_permissions rp ON rp.role_id=ur.role_id

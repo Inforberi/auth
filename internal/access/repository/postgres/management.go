@@ -57,7 +57,7 @@ func lockActor(ctx context.Context, tx pgx.Tx, actor service.Principal, target s
 	}
 	var deadline time.Time
 	err = tx.QueryRow(ctx, `SELECT LEAST(s.expires_at,s.absolute_expires_at,
-		s.password_verified_at+interval '5 minutes',s.mfa_verified_at+interval '5 minutes') FROM auth.sessions s
+		s.password_verified_at+interval '5 minutes',s.mfa_verified_at+interval '5 minutes') FROM auth.role_bound_sessions s
 		JOIN auth.users u ON u.id=s.user_id AND u.auth_version=s.auth_version
 		WHERE s.user_id=$1 AND s.token_hash=$2 AND s.revoked_at IS NULL
 		AND u.status='active' AND u.deleted_at IS NULL

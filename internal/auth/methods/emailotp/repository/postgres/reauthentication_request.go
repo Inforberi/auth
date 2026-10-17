@@ -22,7 +22,7 @@ func lockReauthenticationSession(ctx context.Context, tx pgx.Tx, proof mfaservic
 		return err
 	}
 	var id string
-	err = tx.QueryRow(ctx, `SELECT id FROM auth.sessions s WHERE s.user_id=$1 AND s.token_hash=$2
+	err = tx.QueryRow(ctx, `SELECT id FROM auth.role_bound_sessions s WHERE s.user_id=$1 AND s.token_hash=$2
 		AND s.auth_version=$3 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp()
 		AND s.absolute_expires_at>clock_timestamp()
 		AND NOT EXISTS(SELECT 1 FROM auth.password_credentials WHERE user_id=$1)

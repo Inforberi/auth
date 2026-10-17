@@ -14,7 +14,7 @@ import (
 
 func (r *Repository) RequireIdentityFreshAuth(ctx context.Context, user domain.UserID, token string, freshFor time.Duration) error {
 	var valid bool
-	err := r.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.sessions s JOIN auth.users u ON u.id=s.user_id
+	err := r.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.role_bound_sessions s JOIN auth.users u ON u.id=s.user_id
 		JOIN auth.password_credentials p ON p.user_id=u.id
 		JOIN auth.user_emails e ON e.id=p.email_id AND e.user_id=p.user_id
 		WHERE u.id=$1 AND u.status='active' AND u.deleted_at IS NULL AND s.token_hash=$2

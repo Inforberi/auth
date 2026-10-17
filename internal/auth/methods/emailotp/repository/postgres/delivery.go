@@ -24,7 +24,7 @@ func (r *Repository) ClaimDelivery(ctx context.Context) (*domain.Delivery, error
       AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials WHERE user_id=u.id)
       AND NOT EXISTS(SELECT 1 FROM auth.account_provisions WHERE user_id=u.id AND activated_at IS NULL)
       AND EXISTS(SELECT 1 FROM auth.linked_identities WHERE user_id=u.id)
-      AND EXISTS(SELECT 1 FROM auth.sessions s WHERE s.user_id=u.id AND s.token_hash=c.session_hash
+      AND EXISTS(SELECT 1 FROM auth.role_bound_sessions s WHERE s.user_id=u.id AND s.token_hash=c.session_hash
         AND s.auth_version=u.auth_version AND s.revoked_at IS NULL
         AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp())))
   ORDER BY o.available_at,o.id FOR UPDATE OF o SKIP LOCKED LIMIT 1

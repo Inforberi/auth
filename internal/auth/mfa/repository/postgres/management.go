@@ -14,7 +14,7 @@ import (
 
 func requireFreshMFA(ctx context.Context, tx pgx.Tx, proof service.Proof) error {
 	var valid bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.sessions s
+	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.role_bound_sessions s
 		WHERE s.user_id=$1 AND s.token_hash=$2 AND s.auth_version=$3
 		AND s.mfa_verified_at<=clock_timestamp() AND s.mfa_verified_at>clock_timestamp()-interval '5 minutes'
 		AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1))`, proof.UserID, proof.TokenHash, proof.AuthVersion).Scan(&valid)
@@ -38,7 +38,7 @@ func (r *Repository) StepUp(ctx context.Context, proof service.Proof, replacemen
 			return err
 		}
 		result.VerifiedAt = verified
-		err = tx.QueryRow(ctx, `UPDATE auth.sessions SET token_hash=$3,mfa_verified_at=$4,
+		err = tx.QueryRow(ctx, `UPDATE auth.role_bound_sessions SET token_hash=$3,mfa_verified_at=$4,
 			primary_method=COALESCE(primary_method,CASE WHEN password_verified_at IS NOT NULL THEN 'password' ELSE 'emailotp' END),
 			primary_verified_at=COALESCE(primary_verified_at,password_verified_at,email_reauthenticated_at)
 			WHERE user_id=$1 AND token_hash=$2 AND revoked_at IS NULL AND expires_at>clock_timestamp()
