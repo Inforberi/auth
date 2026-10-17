@@ -4,6 +4,8 @@
 
 ## Профиль и границы
 
+J4a storage добавляет immutable browser/api profile в общем session ledger и feature-owned refresh tables/transaction primitives в token/repository/postgres. Это не второй session store и не работающий native HTTP: пока нет полного owner для authorization/signing/renew/commit. Cookie operations требуют browser profile, общий revoke продолжает охватывать оба профиля. [Границы и следующий блок](features/refresh-storage.md).
+
 Один независимый backend на проект, собственные PostgreSQL, Redis, SMTP и secrets. Браузер работает через cookie/BFF и HTTPS; native/API access требует отдельного контракта, не переиспользования browser cookie. Общий SSO, организации, multi-app и Telegram commerce — отдельные расширения. Не строим свой OAuth server или универсальный plugin framework.
 
 ## Согласованное решение — 7 октября 2026

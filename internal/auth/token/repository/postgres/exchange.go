@@ -83,6 +83,7 @@ func lockSession(ctx context.Context, tx pgx.Tx, input service.ExchangeInput) (s
 			OR (s.mfa_verified_at IS NOT NULL AND EXISTS(SELECT 1 FROM auth.mfa_totp m WHERE m.user_id=s.user_id)),
 		clock_timestamp()
 		FROM auth.role_bound_sessions s WHERE s.user_id=$1 AND s.token_hash=$2 AND s.id=$3 AND s.auth_version=$4
+		AND s.credential_profile='browser'
 		AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()
 		AND NOT EXISTS(SELECT 1 FROM auth.account_provisions p WHERE p.user_id=s.user_id AND (p.activated_at IS NULL OR p.password_change_required))
 		AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials t WHERE t.user_id=s.user_id)

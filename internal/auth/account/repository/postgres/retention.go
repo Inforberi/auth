@@ -45,6 +45,7 @@ func (r *Repository) PurgeRetention(ctx context.Context, cfg service.RetentionCo
 			SELECT id FROM auth.sessions
 			WHERE LEAST(revoked_at,expires_at,absolute_expires_at)
 				<= statement_timestamp()-$1::double precision*interval '24 hours'
+			AND NOT EXISTS(SELECT 1 FROM auth.refresh_families f WHERE f.session_id=auth.sessions.id)
 			ORDER BY LEAST(revoked_at,expires_at,absolute_expires_at),id
 			LIMIT $2 FOR UPDATE SKIP LOCKED
 		)
@@ -65,6 +66,7 @@ func (r *Repository) PurgeRetention(ctx context.Context, cfg service.RetentionCo
 			"email_login_audit",
 			"mfa_audit",
 			"token_issuance_audit",
+			"refresh_audit",
 		} {
 			// Identifiers come only from this fixed list, never from configuration/input.
 			name := pgx.Identifier{"auth", table}.Sanitize()

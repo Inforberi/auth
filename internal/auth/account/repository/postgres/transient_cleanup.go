@@ -65,5 +65,21 @@ func (r *Repository) purgeTransientAuthData(ctx context.Context, batch int) (int
 			removed += result.RowsAffected()
 		}
 	}
+	// Drain verifiers before their families; never cascade thousands of generations per batch item.
+	for _, query := range []string{
+		`WITH due AS (SELECT token_hash FROM auth.refresh_tokens WHERE expires_at<=statement_timestamp()
+		 ORDER BY expires_at,token_hash LIMIT $1 FOR UPDATE SKIP LOCKED)
+		 DELETE FROM auth.refresh_tokens t USING due WHERE t.token_hash=due.token_hash`,
+		`WITH due AS (SELECT session_id FROM auth.refresh_families f WHERE absolute_expires_at<=statement_timestamp()
+		 AND NOT EXISTS(SELECT 1 FROM auth.refresh_tokens t WHERE t.session_id=f.session_id)
+		 ORDER BY absolute_expires_at,session_id LIMIT $1 FOR UPDATE SKIP LOCKED)
+		 DELETE FROM auth.refresh_families f USING due WHERE f.session_id=due.session_id`,
+	} {
+		result, err := r.db.Exec(ctx, query, batch)
+		if err != nil {
+			return removed, err
+		}
+		removed += result.RowsAffected()
+	}
 	return removed, nil
 }

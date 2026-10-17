@@ -21,7 +21,7 @@ func authorizeCaller(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, 
 		return 0, sessionError(err)
 	}
 	var valid bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.role_bound_sessions WHERE user_id=$1 AND token_hash=$2
+	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.role_bound_sessions WHERE user_id=$1 AND token_hash=$2 AND credential_profile='browser'
   AND auth_version=$3 AND revoked_at IS NULL AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp())`, user, hash, version).Scan(&valid)
 	if err != nil {
 		return 0, err

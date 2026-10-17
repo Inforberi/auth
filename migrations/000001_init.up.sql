@@ -443,6 +443,7 @@ REVOKE ALL ON FUNCTION auth.decide_mfa_recovery(UUID,UUID,BIGINT,BOOLEAN,TEXT,TE
 
 CREATE TABLE auth.sessions (
   id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+  credential_profile TEXT NOT NULL DEFAULT 'browser' CHECK (credential_profile IN ('browser','api')),
   token_hash TEXT PRIMARY KEY CHECK (token_hash ~ '^[a-f0-9]{64}$'),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
@@ -464,6 +465,7 @@ CREATE TABLE auth.sessions (
   ip_address TEXT NOT NULL,
   CHECK (created_at<expires_at AND expires_at<=absolute_expires_at),
   CHECK ((primary_method IS NULL)=(primary_verified_at IS NULL)),
+  CHECK (credential_profile='browser' OR primary_verified_at IS NOT NULL),
   CHECK ((email_reauthenticated_at IS NULL)=(email_reauthenticated_id IS NULL)),
   CHECK (email_reauthenticated_at IS NULL OR (email_reauthenticated_at>=created_at
     AND email_reauthenticated_at<absolute_expires_at)),
@@ -478,6 +480,9 @@ LANGUAGE plpgsql AS $$
 DECLARE required_mfa BOOLEAN;
 BEGIN
   IF TG_OP = 'UPDATE' THEN
+    IF NEW.credential_profile IS DISTINCT FROM OLD.credential_profile THEN
+      RAISE EXCEPTION 'session credential profile is immutable';
+    END IF;
     IF NEW.role_revisions IS DISTINCT FROM OLD.role_revisions THEN
       RAISE EXCEPTION 'session role revisions are immutable';
     END IF;
@@ -520,7 +525,7 @@ BEGIN
 END;
 $$;
 
-CREATE TRIGGER sessions_role_binding BEFORE INSERT OR UPDATE OF role_revisions,idle_timeout_seconds,activity_interval_seconds,admin_absolute_seconds ON auth.sessions
+CREATE TRIGGER sessions_role_binding BEFORE INSERT OR UPDATE OF credential_profile,role_revisions,idle_timeout_seconds,activity_interval_seconds,admin_absolute_seconds ON auth.sessions
   FOR EACH ROW EXECUTE FUNCTION auth.bind_session_roles();
 
 -- Keep the issuance bindings even after an assignment is revoked: old tokens must not revive.
@@ -531,6 +536,57 @@ CREATE VIEW auth.role_bound_sessions WITH (security_invoker=true) AS
     LEFT JOIN auth.roles r ON r.id=binding.role_id::uuid
     WHERE r.id IS NULL OR r.session_revision<>binding.revision::bigint
   );
+
+CREATE TABLE auth.refresh_families (
+  session_id UUID PRIMARY KEY REFERENCES auth.sessions(id) ON DELETE CASCADE,
+  audience TEXT COLLATE "C" NOT NULL CHECK (octet_length(audience) BETWEEN 1 AND 128 AND audience ~ '^[!-~]+$'),
+  scope TEXT[] NOT NULL CHECK (cardinality(scope) BETWEEN 1 AND 64
+    AND array_position(scope,NULL) IS NULL AND octet_length(array_to_string(scope,' '))<=2048),
+  idle_seconds BIGINT NOT NULL CHECK (idle_seconds>0),
+  generation INTEGER NOT NULL DEFAULT 0 CHECK (generation BETWEEN 0 AND 4095),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  last_rotated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  absolute_expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ,
+  CHECK (created_at<absolute_expires_at AND last_rotated_at>=created_at AND last_rotated_at<absolute_expires_at),
+  CHECK (idle_seconds*interval '1 second'<=absolute_expires_at-created_at),
+  UNIQUE(session_id,absolute_expires_at)
+);
+CREATE INDEX refresh_families_expiry ON auth.refresh_families(absolute_expires_at,session_id);
+
+CREATE FUNCTION auth.protect_refresh_binding() RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  IF ROW(NEW.session_id,NEW.audience,NEW.scope,NEW.idle_seconds,NEW.absolute_expires_at,NEW.created_at)
+    IS DISTINCT FROM ROW(OLD.session_id,OLD.audience,OLD.scope,OLD.idle_seconds,OLD.absolute_expires_at,OLD.created_at) THEN
+    RAISE EXCEPTION 'refresh family binding is immutable';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER refresh_family_binding BEFORE UPDATE OF session_id,audience,scope,idle_seconds,absolute_expires_at,created_at
+  ON auth.refresh_families FOR EACH ROW EXECUTE FUNCTION auth.protect_refresh_binding();
+
+CREATE TABLE auth.refresh_tokens (
+  token_hash TEXT PRIMARY KEY CHECK (token_hash ~ '^[a-f0-9]{64}$'),
+  session_id UUID NOT NULL,
+  generation INTEGER NOT NULL CHECK (generation BETWEEN 0 AND 4095),
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  UNIQUE(session_id,generation),
+  FOREIGN KEY(session_id,expires_at) REFERENCES auth.refresh_families(session_id,absolute_expires_at)
+);
+CREATE UNIQUE INDEX refresh_tokens_one_current ON auth.refresh_tokens(session_id) WHERE used_at IS NULL;
+CREATE INDEX refresh_tokens_expiry ON auth.refresh_tokens(expires_at,token_hash);
+
+CREATE TABLE auth.refresh_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  session_id UUID NOT NULL,
+  event TEXT NOT NULL CHECK (event IN ('family_created','rotated','reuse_detected')),
+  generation INTEGER NOT NULL CHECK (generation BETWEEN 0 AND 4095),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+CREATE INDEX refresh_audit_retention ON auth.refresh_audit(created_at,id);
 
 CREATE TABLE auth.token_issuance_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

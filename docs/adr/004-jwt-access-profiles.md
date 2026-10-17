@@ -56,6 +56,8 @@ Deployment audience allowlist ≤32 entries, ID ≤128 ASCII bytes. У audience 
 
 ## 4. Выдача, renew и refresh family
 
+J4a-local реализует [storage/profile foundation](../features/refresh-storage.md), не native API: caller-owned SQL primitives/one successor/spent replay decision, immutable browser/api profile и bounded history cleanup. Первый refresh поколения0 может rotate сразу (issuance не rotation), затем между rotations≥30s. Runtime owner должен атомарно добавить current authorization/MFA/policy/renew/sign/audit/commit до публикации J4b; reuse decision не error и обязан commit до401.
+
 J3a/J3b-local реализуют [session exchange](../features/jwt-exchange.md) с SQL guards/commit audit/Redis budgets и optional HTTP/App/config/JWKS. Required password email verification проверяется по current SQL policy; отключение primary method само по себе не logout. Proof clarification: существующий ledger хранит общий факт MFA, поэтому exchange использует factor `amr=mfa`, не заявляя неизвестный TOTP/recovery mechanism. Более конкретные otp/recovery допустимы только при известном механизме.
 
 Session exchange проверяет текущую cookie-session без sliding refresh; JWT issuance не считается пользовательской activity администратора. `exp = min(now+configured TTL, session idle deadline, absolute deadline)`, при истечении — отказ, а не token с продлённым сроком. Подпись только локальным ключом после admission; issuance/final guard/audit согласованы с user/session/Access locks и commit. Не отдавать signed result до successful commit и не держать транзакцию на сеть/provider/KMS.

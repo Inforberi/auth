@@ -22,6 +22,7 @@ func (r *Repository) RecordActivity(ctx context.Context, user accountdomain.User
 		err := tx.QueryRow(ctx, `UPDATE auth.role_bound_sessions
 			SET expires_at=LEAST(statement_timestamp()+idle_timeout_seconds*interval '1 second',absolute_expires_at)
 			WHERE token_hash=$1 AND user_id=$2 AND auth_version=$3 AND revoked_at IS NULL
+			AND credential_profile='browser'
 			AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()
 			AND idle_timeout_seconds>0
 			AND expires_at<=statement_timestamp()+(idle_timeout_seconds-activity_interval_seconds)*interval '1 second'
@@ -36,6 +37,7 @@ func (r *Repository) RecordActivity(ctx context.Context, user accountdomain.User
 		// A coalesced activity report and an ordinary session are valid no-ops, not failures.
 		err = tx.QueryRow(ctx, `SELECT expires_at FROM auth.role_bound_sessions
 			WHERE token_hash=$1 AND user_id=$2 AND auth_version=$3 AND revoked_at IS NULL
+			AND credential_profile='browser'
 			AND expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()`, tokenHash, user, version).Scan(&result.ExpiresAt)
 		return sessionError(err)
 	})
