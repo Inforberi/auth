@@ -10,6 +10,7 @@ import (
 
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/signing"
@@ -101,6 +102,13 @@ func lockSession(ctx context.Context, tx pgx.Tx, input service.ExchangeInput) (s
 	}
 	if !allowed {
 		return proof, domain.ErrForbidden
+	}
+	policy, err := settingspostgres.LockPublicPolicy(ctx, tx)
+	if err != nil {
+		return proof, err
+	}
+	if err := settingspostgres.RequireSessionVerification(ctx, tx, input.Actor.UserID, proof.Method, policy); err != nil {
+		return proof, err
 	}
 	proof.VerifiedAt = *verified
 	return proof, nil

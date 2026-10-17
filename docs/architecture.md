@@ -169,7 +169,7 @@ README.md
 
 ### Сборка и запуск
 
-JWT по [ADR 004](adr/004-jwt-access-profiles.md): `internal/auth/token/signing` владеет private key/loader/signing; `pkg/authjwt` — strict public-key crypto verifier без internal/DB/private key imports. J3a добавляет token service/domain и собственные PostgreSQL/Redis repositories для transaction-owned session exchange; transport/App подключаются J3b, пустые пакеты не создаются. Это не primary method и не перенос session/access/MFA ownership; cookie API сохраняется. [Ключи](features/jwt-keys.md), [выдача и ограничения](features/jwt-exchange.md).
+JWT по [ADR 004](adr/004-jwt-access-profiles.md): `internal/auth/token/signing` владеет private key/loader/signing; `pkg/authjwt` — strict public-key crypto verifier без internal/DB/private key imports. Token service/domain, собственные PostgreSQL/Redis repositories и transport/http реализуют transaction-owned session exchange/JWKS; settings хранит deployment config/strict resource loader, app/auth/token.go — сборку, router/token.go — регистрацию. Выключен по умолчанию; отдельный bounded Redis owner только для issuance, lifecycle в existing run.go. Это не primary method и не перенос session/access/MFA ownership; старый cookie API сохраняется. [Ключи](features/jwt-keys.md), [выдача и ограничения](features/jwt-exchange.md).
 
 `cmd/auth/main.go` — точка входа и передача signal context приложению. `internal/app/auth/app.go` — App, constructor и явная сборка зависимостей; `run.go` — lifecycle и порядок освобождения ресурсов. Для другого самостоятельного процесса при необходимости создаётся свой пакет `app/<process>`. Не вводить `bootstrap` или `app/wiring`; конфигурация находится отдельно в `internal/config`.
 

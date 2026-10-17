@@ -1013,6 +1013,61 @@ definitions:
     - config
     - expectedVersion
     type: object
+  token_http.ExchangeRequest:
+    properties:
+      audience:
+        type: string
+      scope:
+        items:
+          type: string
+        type: array
+    required:
+    - audience
+    - scope
+    type: object
+  token_http.ExchangeResponse:
+    properties:
+      accessToken:
+        type: string
+      audience:
+        type: string
+      expiresAt:
+        type: string
+      expiresIn:
+        type: integer
+      scope:
+        type: string
+      tokenType:
+        type: string
+    type: object
+  token_http.JWKSResponse:
+    properties:
+      keys:
+        items:
+          $ref: '#/definitions/token_http.PublicKey'
+        type: array
+    type: object
+  token_http.PublicKey:
+    properties:
+      alg:
+        type: string
+      crv:
+        type: string
+      key_ops:
+        items:
+          type: string
+        type: array
+      kid:
+        type: string
+      kty:
+        type: string
+      use:
+        type: string
+      x:
+        type: string
+      "y":
+        type: string
+    type: object
 info:
   contact: {}
   description: Reusable authentication service. Cookie sessions require HTTPS. All
@@ -1021,6 +1076,39 @@ info:
   title: Auth API
   version: "1.0"
 paths:
+  /.well-known/jwks.json:
+    get:
+      description: Public-only deployment key set. Contains no private signing material.
+        Not an authorization decision. Keys are operator-controlled and loaded on
+        startup.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/token_http.JWKSResponse'
+        "304":
+          description: unchanged
+      summary: Public JWT verification keys
+      tags:
+      - Tokens
+    head:
+      description: Public-only deployment key set. Contains no private signing material.
+        Not an authorization decision. Keys are operator-controlled and loaded on
+        startup.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/token_http.JWKSResponse'
+        "304":
+          description: unchanged
+      summary: Public JWT verification keys
+      tags:
+      - Tokens
   /api/v1/admin/auth/login/email:
     post:
       consumes:
@@ -4726,6 +4814,56 @@ paths:
       summary: Begin mandatory password setup
       tags:
       - Auth
+  /api/v1/auth/token/exchange:
+    post:
+      consumes:
+      - application/json
+      description: Requires exact allowed Origin and a live completed cookie session.
+        Does not refresh the session or MFA. Scope is restricted by the configured
+        audience and current SQL grants. Strict tokens still require an online authority
+        decision at the consumer.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: audience and permission keys
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/token_http.ExchangeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/token_http.ExchangeResponse'
+        "400":
+          description: invalid_json, invalid_token_request, ambiguous_credentials
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: invalid_origin, forbidden, email_not_verified, mfa_required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: rate_limited
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: temporarily_unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Issue an access JWT from the current cookie session
+      tags:
+      - Tokens
   /api/v1/dev/send-mail:
     post:
       consumes:

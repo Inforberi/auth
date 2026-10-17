@@ -38,6 +38,7 @@ func (cfg Config) Validate() error {
 			return nil
 		},
 		cfg.MFA.Validate,
+		cfg.JWT.Validate,
 		cfg.Retention.Validate,
 		cfg.Capacity.Validate,
 		cfg.HTTP.Validate,

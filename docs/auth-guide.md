@@ -152,6 +152,8 @@ Set-Cookie: __Host-session=<secret>; Path=/; Secure; HttpOnly; SameSite=Lax; Exp
 - Клиент должен принять обновлённый cookie после reauthentication/rotation/продления.
 - Auth-ответы имеют `Cache-Control: no-store`; секреты нельзя кешировать CDN.
 
+Опциональный [JWT exchange](features/jwt-exchange.md) добавляет `POST /api/v1/auth/token/exchange`: завершённая cookie-session получает короткий JWT для разрешённого backend audience. Это не замена cookie существующих admin routes. JWT_ENABLED=false по умолчанию; DTO/JWKS/config/errors и strict/local ограничения описаны по ссылке. Native/refresh и online middleware пока нет.
+
 ### 3.4. Frontend и CORS
 
 Same-origin frontend использует обычные cookies. Для доверенного другого origin в рамках same-site deployment нужен `AUTH_CORS_ENABLED=true`, allowlist и:

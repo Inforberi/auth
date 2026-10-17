@@ -15,6 +15,50 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/.well-known/jwks.json": {
+            "get": {
+                "description": "Public-only deployment key set. Contains no private signing material. Not an authorization decision. Keys are operator-controlled and loaded on startup.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tokens"
+                ],
+                "summary": "Public JWT verification keys",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/token_http.JWKSResponse"
+                        }
+                    },
+                    "304": {
+                        "description": "unchanged"
+                    }
+                }
+            },
+            "head": {
+                "description": "Public-only deployment key set. Contains no private signing material. Not an authorization decision. Keys are operator-controlled and loaded on startup.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tokens"
+                ],
+                "summary": "Public JWT verification keys",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/token_http.JWKSResponse"
+                        }
+                    },
+                    "304": {
+                        "description": "unchanged"
+                    }
+                }
+            }
+        },
         "/api/v1/admin/auth/login/email": {
             "post": {
                 "description": "Requires a permanent password, verified email, enrolled MFA and current administrative authority. Always returns an MFA challenge, never a session. Complete with /api/v1/auth/mfa/login/complete. Independent of public login method settings; does not create an account or assign roles. Uses the public password login rate budget.",
@@ -5204,6 +5248,77 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/auth/token/exchange": {
+            "post": {
+                "description": "Requires exact allowed Origin and a live completed cookie session. Does not refresh the session or MFA. Scope is restricted by the configured audience and current SQL grants. Strict tokens still require an online authority decision at the consumer.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tokens"
+                ],
+                "summary": "Issue an access JWT from the current cookie session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "audience and permission keys",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/token_http.ExchangeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/token_http.ExchangeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid_json, invalid_token_request, ambiguous_credentials",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "invalid_origin, forbidden, email_not_verified, mfa_required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "rate_limited",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "temporarily_unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/dev/send-mail": {
             "post": {
                 "description": "Dev-only endpoint for manual SMTP testing. Available only when APP_ENV=dev.",
@@ -7023,6 +7138,90 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "x-nullable": true
+                }
+            }
+        },
+        "token_http.ExchangeRequest": {
+            "type": "object",
+            "required": [
+                "audience",
+                "scope"
+            ],
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "scope": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "token_http.ExchangeResponse": {
+            "type": "object",
+            "properties": {
+                "accessToken": {
+                    "type": "string"
+                },
+                "audience": {
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "type": "string"
+                },
+                "expiresIn": {
+                    "type": "integer"
+                },
+                "scope": {
+                    "type": "string"
+                },
+                "tokenType": {
+                    "type": "string"
+                }
+            }
+        },
+        "token_http.JWKSResponse": {
+            "type": "object",
+            "properties": {
+                "keys": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/token_http.PublicKey"
+                    }
+                }
+            }
+        },
+        "token_http.PublicKey": {
+            "type": "object",
+            "properties": {
+                "alg": {
+                    "type": "string"
+                },
+                "crv": {
+                    "type": "string"
+                },
+                "key_ops": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "kid": {
+                    "type": "string"
+                },
+                "kty": {
+                    "type": "string"
+                },
+                "use": {
+                    "type": "string"
+                },
+                "x": {
+                    "type": "string"
+                },
+                "y": {
+                    "type": "string"
                 }
             }
         }

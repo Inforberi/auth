@@ -13,6 +13,7 @@ import (
 	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
+	tokensettings "github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
@@ -39,6 +40,7 @@ type Config struct {
 	Postgres           postgres.Config
 	Logger             logger.Config
 	Session            sessionservice.Config
+	JWT                tokensettings.Config
 	MFA                mfaservice.Config
 	Server             httpserver.Config
 	Redis              redisclient.Config

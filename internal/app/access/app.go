@@ -37,3 +37,5 @@ func New(ctx context.Context, pool *pgxpool.Pool, cfg settings.Config, mfaReady 
 }
 
 func (a *App) Templates() []settings.RoleTemplate { return a.definition.Templates() }
+
+func (a *App) Catalog() settings.Catalog { return a.definition.Catalog() }

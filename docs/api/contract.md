@@ -1,6 +1,6 @@
 # Текущий API-контракт
 
-J2-local: реализованы [внутренние ключи/подпись и reusable crypto verifier](../features/jwt-keys.md), **без новых JWT HTTP endpoints или Swagger**. VerifySignature не заменяет online SQL authority; старые browser/admin routes не принимают Bearer вместо session cookie.
+J3b-local: optional `POST /api/v1/auth/token/exchange` (cookie + exact Origin/NoRefreshAuth) и public `GET/HEAD /.well-known/jwks.json`, выключены при JWT_ENABLED=false. [Конфигурация, DTO/ошибки и ограничения](../features/jwt-exchange.md), Swagger обновлён. Native login/refresh/introspection ещё не реализованы. VerifySignature не заменяет online SQL authority; старые browser/admin routes не принимают Bearer вместо session cookie.
 
 J1 (17 октября): будущие JWT/native/introspection DTO/routes/errors описаны в [ADR 004](../adr/004-jwt-access-profiles.md#7-http-контракт-и-защита-ресурсов). Это draft контракта J2–J7, **не существующие API/Swagger endpoints**. Cookie/session по-прежнему единственный опубликованный credential профиль.
 

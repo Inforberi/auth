@@ -19,12 +19,14 @@ import (
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
+	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
 type Handlers struct {
+	Tokens            *tokenhttp.Handler
 	UserLifecycle     *accounthttp.UserLifecycleHandler
 	UserDirectory     *accounthttp.UserDirectoryHandler
 	Provisioning      *accounthttp.ProvisioningHandler
@@ -82,6 +84,7 @@ func New(h Handlers) *chi.Mux {
 	r.Get("/health/ready", readiness(h.ReadyCheck))
 
 	r.Get("/ping", ping)
+	publicTokenRoutes(r, h)
 
 	if h.Config != nil && h.Config.Swagger.Enabled {
 		swagger := r.With(middleware.BasicAuth("swagger", map[string]string{h.Config.Swagger.Username: h.Config.Swagger.Password}))
@@ -102,6 +105,7 @@ func New(h Handlers) *chi.Mux {
 		emailBindingRoutes(r, h)
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(browserProtection(h))
+			tokenExchangeRoutes(r, h)
 			mfaRoutes(r, h)
 			emailOTPRoutes(r, h)
 			googleRoutes(r, h)

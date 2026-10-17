@@ -32,7 +32,13 @@ type SessionProof struct {
 	Now           time.Time
 }
 
-func (s *Service) Exchange(ctx context.Context, input ExchangeInput) (*signing.SignedToken, error) {
+type ExchangeResult struct {
+	*signing.SignedToken
+	Audience string
+	Scope    []accessdomain.PermissionKey
+}
+
+func (s *Service) Exchange(ctx context.Context, input ExchangeInput) (*ExchangeResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	if err := ctx.Err(); err != nil {
@@ -72,7 +78,7 @@ func (s *Service) Exchange(ctx context.Context, input ExchangeInput) (*signing.S
 	if err := s.limiter.Allow(ctx, input); err != nil {
 		return nil, err
 	}
-	return s.repo.Exchange(ctx, input, resource.mode, func(ctx context.Context, proof SessionProof) (*signing.SignedToken, error) {
+	issued, err := s.repo.Exchange(ctx, input, resource.mode, func(ctx context.Context, proof SessionProof) (*signing.SignedToken, error) {
 		deadline := proof.Now.Add(s.ttl)
 		if proof.Deadline.Before(deadline) {
 			deadline = proof.Deadline
@@ -91,4 +97,8 @@ func (s *Service) Exchange(ctx context.Context, input ExchangeInput) (*signing.S
 		}
 		return s.signer.Sign(ctx, claims, proof.Now)
 	})
+	if err != nil {
+		return nil, err
+	}
+	return &ExchangeResult{SignedToken: issued, Audience: input.Audience, Scope: input.Scope}, nil
 }

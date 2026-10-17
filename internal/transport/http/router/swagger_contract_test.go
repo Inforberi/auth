@@ -9,12 +9,15 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 
+	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	oidchttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
+	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
@@ -24,7 +27,10 @@ func TestSwaggerMatchesRoutes(t *testing.T) {
 	for _, env := range []string{"dev", "prod"} {
 		t.Run(env, func(t *testing.T) {
 			routes := map[string]bool{}
-			err := chi.Walk(New(contractHandlers(env)), func(method, path string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+			h := contractHandlers(env)
+			h.Config.JWT.Enabled = true
+			h.Tokens = tokenhttp.New(&contractExchange{}, []byte(`{"keys":[]}`), zap.NewNop())
+			err := chi.Walk(New(h), func(method, path string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
 				routes[strings.ToLower(method)+" "+path] = true
 				if _, ok := doc.Paths[path][strings.ToLower(method)]; !ok {
 					t.Errorf("undocumented route: %s %s", method, path)
@@ -58,6 +64,10 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 		name string
 		dto  any
 	}{
+		{"token_http.ExchangeRequest", tokenhttp.ExchangeRequest{Scope: []accessdomain.PermissionKey{}}},
+		{"token_http.ExchangeResponse", tokenhttp.ExchangeResponse{}},
+		{"token_http.JWKSResponse", tokenhttp.JWKSResponse{Keys: []tokenhttp.PublicKey{}}},
+		{"token_http.PublicKey", tokenhttp.PublicKey{Operations: []string{"verify"}}},
 		{"password_http.ForgotRequest", passwordhttp.ForgotRequest{}},
 		{"password_http.ResetRequest", passwordhttp.ResetRequest{}},
 		{"password_http.ProtectedRecoveryRequest", passwordhttp.ProtectedRecoveryRequest{}},
@@ -109,8 +119,13 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 			}
 			for name, value := range fields {
 				expectedType := "string"
-				if _, ok := value.(bool); ok {
+				switch value.(type) {
+				case bool:
 					expectedType = "boolean"
+				case float64:
+					expectedType = "integer"
+				case []any:
+					expectedType = "array"
 				}
 				if schema.Properties[name].Type != expectedType {
 					t.Errorf("missing/wrong JSON property %s", name)
@@ -137,6 +152,7 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 func TestSwaggerRequestAndResponseReferences(t *testing.T) {
 	doc := readAPI(t)
 	requests := map[string]string{
+		"/api/v1/auth/token/exchange":              "token_http.ExchangeRequest",
 		"/api/v1/auth/email-otp/request":           "emailotp_http.RequestCodeRequest",
 		"/api/v1/auth/email-otp/confirm":           "emailotp_http.ConfirmCodeRequest",
 		"/api/v1/auth/temporary-password/login":    "password_http.TemporaryLoginRequest",
@@ -182,7 +198,7 @@ func TestSwaggerRequestAndResponseReferences(t *testing.T) {
 					if _, ok := doc.Definitions[name]; !ok {
 						t.Errorf("%s %s: broken schema reference %s", path, status, name)
 					}
-				} else if response.Schema.Type != "string" && status != "204" {
+				} else if response.Schema.Type != "string" && status != "204" && status != "304" {
 					t.Errorf("%s %s: unknown inline response schema", path, status)
 				}
 			}

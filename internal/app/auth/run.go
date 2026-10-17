@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -18,6 +19,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
 	redisclient "github.com/Inforberi/financial-intelligence/internal/infra/redis"
+	httpserver "github.com/Inforberi/financial-intelligence/internal/server/http"
 )
 
 type App struct {
@@ -122,4 +124,23 @@ func runWithDelivery(ctx context.Context, log *zap.Logger, serve func(context.Co
 		defer stop()
 	}
 	return serve(ctx)
+}
+
+func serveAuth(log *zap.Logger, cfg httpserver.Config, handler http.Handler, retention *accountservice.RetentionService, workers ...deliveryWorker) func(context.Context) error {
+	active := make([]deliveryWorker, 0, len(workers))
+	for _, worker := range workers {
+		if worker != nil {
+			active = append(active, worker)
+		}
+	}
+	return func(ctx context.Context) error {
+		stopRetention := startBackground(ctx, func(ctx context.Context) {
+			retention.RunRetention(ctx, func(error) { log.Warn("retention processing failed") })
+		})
+		defer stopRetention()
+		serve := func(ctx context.Context) error {
+			return httpserver.Run(ctx, log, cfg, handler)
+		}
+		return runWithDelivery(ctx, log, serve, active...)
+	}
 }

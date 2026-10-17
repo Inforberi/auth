@@ -8,3 +8,6 @@ backups
 bin
 tmp
 docs/reference
+secrets
+**/*.pem
+**/*.key

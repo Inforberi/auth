@@ -26,7 +26,6 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
-	httpserver "github.com/Inforberi/financial-intelligence/internal/server/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/router"
 )
@@ -47,6 +46,10 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	access, policy, providers, err := assembleAccessPolicy(ctx, pool, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("assemble access and auth policy: %w", err)
+	}
+	tokens, err := assembleTokens(ctx, pool, rdb, cfg.JWT, access.Catalog(), cfg.Account.EncryptionKey, resources, log)
+	if err != nil {
+		return nil, fmt.Errorf("assemble JWT: %w", err)
 	}
 
 	now := clock.UTCClock{}
@@ -137,6 +140,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		mailTest = dev.NewMailTest(mail, log)
 	}
 	handler := router.New(router.Handlers{
+		Tokens:            tokens,
 		UserDirectory:     accounthttp.NewUserDirectory(accountservice.NewUserDirectory(accountRepo), log),
 		UserLifecycle:     accounthttp.NewUserLifecycle(accountservice.NewUserLifecycle(accountRepo), log),
 		Provisioning:      provisioningHandler,
@@ -179,20 +183,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		Provisioning:       provisioning,
 		TemporaryPasswords: temporary,
 		resources:          resources,
-		serve: func(ctx context.Context) error {
-			stopRetention := startBackground(ctx, func(ctx context.Context) {
-				retentionSvc.RunRetention(ctx, func(error) { log.Warn("retention processing failed") })
-			})
-			defer stopRetention()
-			serve := func(ctx context.Context) error {
-				return httpserver.Run(ctx, log, cfg.Server, handler)
-			}
-			workers := []deliveryWorker{recoverySvc, accountSvc, mfaDelivery}
-			if emailOTPDelivery != nil {
-				workers = append(workers, emailOTPDelivery)
-			}
-			return runWithDelivery(ctx, log, serve, workers...)
-		},
+		serve:              serveAuth(log, cfg.Server, handler, retentionSvc, recoverySvc, accountSvc, mfaDelivery, emailOTPDelivery),
 	}, nil
 }
 

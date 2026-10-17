@@ -28,6 +28,12 @@ func RequirePublicLogin(ctx context.Context, tx pgx.Tx, user accountdomain.UserI
 	if err := policy.RequireMethod(domain.PrimaryMethod(method, issuer), false); err != nil {
 		return err
 	}
+	return RequireSessionVerification(ctx, tx, user, method, policy)
+}
+
+// RequireSessionVerification also protects credentials derived from an existing session.
+// The caller holds the user, any existing session and current policy locks; disabling a primary method alone is not logout.
+func RequireSessionVerification(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, method string, policy domain.Policy) error {
 	if method == "password" && policy.PasswordEmailVerification == domain.VerificationRequired {
 		var verified bool
 		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.password_credentials p JOIN auth.user_emails e

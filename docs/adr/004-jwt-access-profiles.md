@@ -1,10 +1,10 @@
 # ADR 004: JWT-профили и границы доверия
 
-Статус: проектное решение J1, 17 октября 2026. Пользователь согласовал стандартный Bearer JWT, отдельный native/API профиль и настраиваемую локальную проверку для дополнительных backend. **Публичная выдача JWT, refresh и middleware пока не реализованы.** Внутреннее ядро выдачи J3a описано ниже; остальное — обязательный контракт следующих этапов, не действующий API. [Порядок реализации](../planning/jwt-access.md), [базовая authority](002-sessions-and-transactions.md).
+Статус: проектное решение J1, 17 октября 2026. Пользователь согласовал стандартный Bearer JWT, отдельный native/API профиль и настраиваемую локальную проверку для дополнительных backend. J2/J3a/J3b-local реализованы: disabled-by-default session exchange/публичный JWKS с SQL authority и Redis budgets. **Native login/refresh и online middleware пока нет.** Остальные пункты — обязательный контракт следующих этапов, не действующий API. [Порядок реализации](../planning/jwt-access.md), [базовая authority](002-sessions-and-transactions.md).
 
 ## 1. Профили
 
-J2-local: [crypto/key foundation](../features/jwt-keys.md) реализован в internal signing и pkg/authjwt. Это не published JWT API/online authority: main App/HTTP/ENV ещё не подключены. Unknown claims отклоняются strict typed decoder, а не игнорируются; claims grammar и amr описаны в feature doc. Остальные гарантии ниже остаются контрактом следующих этапов.
+J2-local: [crypto/key foundation](../features/jwt-keys.md) реализован в internal signing и pkg/authjwt; J3b подключает optional [App/HTTP/ENV session exchange](../features/jwt-exchange.md). Crypto verification не является current authority consumer. Unknown claims отклоняются strict typed decoder, а не игнорируются; claims grammar и amr описаны в feature doc. Остальные гарантии ниже остаются контрактом следующих этапов.
 
 | Профиль | Вход / credential | Продление | Authority |
 | --- | --- | --- | --- |
@@ -56,7 +56,7 @@ Deployment audience allowlist ≤32 entries, ID ≤128 ASCII bytes. У audience 
 
 ## 4. Выдача, renew и refresh family
 
-J3a-local реализует внутренний [session exchange](../features/jwt-exchange.md) с SQL guards/commit audit и Redis budgets; HTTP/App/config publication остаётся J3b. Proof clarification: существующий ledger хранит общий факт MFA, поэтому exchange использует factor `amr=mfa`, не заявляя неизвестный TOTP/recovery mechanism. Более конкретные otp/recovery допустимы только при известном механизме.
+J3a/J3b-local реализуют [session exchange](../features/jwt-exchange.md) с SQL guards/commit audit/Redis budgets и optional HTTP/App/config/JWKS. Required password email verification проверяется по current SQL policy; отключение primary method само по себе не logout. Proof clarification: существующий ledger хранит общий факт MFA, поэтому exchange использует factor `amr=mfa`, не заявляя неизвестный TOTP/recovery mechanism. Более конкретные otp/recovery допустимы только при известном механизме.
 
 Session exchange проверяет текущую cookie-session без sliding refresh; JWT issuance не считается пользовательской activity администратора. `exp = min(now+configured TTL, session idle deadline, absolute deadline)`, при истечении — отказ, а не token с продлённым сроком. Подпись только локальным ключом после admission; issuance/final guard/audit согласованы с user/session/Access locks и commit. Не отдавать signed result до successful commit и не держать транзакцию на сеть/provider/KMS.
 

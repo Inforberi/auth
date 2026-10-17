@@ -5,3 +5,6 @@ data/
 backups/
 bin/
 tmp/
+secrets/
+*.pem
+*.key

@@ -9,9 +9,9 @@ import (
 )
 
 type Resource struct {
-	Audience    string
-	Mode        string
-	Permissions []accessdomain.PermissionKey
+	Audience    string                       `json:"audience"`
+	Mode        string                       `json:"mode"`
+	Permissions []accessdomain.PermissionKey `json:"permissions"`
 }
 
 type Config struct {

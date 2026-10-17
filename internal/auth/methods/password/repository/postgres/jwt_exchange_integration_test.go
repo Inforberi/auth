@@ -18,6 +18,7 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	tokendomain "github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
@@ -185,6 +186,31 @@ func checkJWTExchange(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		}
 		if _, err := svc.Exchange(ctx, input); err != nil {
 			t.Fatal("transaction lock leaked", err)
+		}
+	})
+
+	t.Run("current verification without primary login revocation", func(t *testing.T) {
+		input := jwtActor(t, db, ctx)
+		var previous string
+		var enabled bool
+		if err := db.QueryRow(ctx, `SELECT password_email_verification,password_enabled FROM auth.auth_settings WHERE singleton`).Scan(&previous, &enabled); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			accessExec(t, db, ctx, `UPDATE auth.auth_settings SET password_email_verification=$1,password_enabled=$2 WHERE singleton`, previous, enabled)
+		})
+		var emailID string
+		if err := db.QueryRow(ctx, `INSERT INTO auth.user_emails(user_id,email) VALUES ($1,$2) RETURNING id`, input.Actor.UserID, string(input.Actor.UserID)+"@example.test").Scan(&emailID); err != nil {
+			t.Fatal(err)
+		}
+		accessExec(t, db, ctx, `INSERT INTO auth.password_credentials(user_id,email_id,password_hash) VALUES ($1,$2,'synthetic hash')`, input.Actor.UserID, emailID)
+		accessExec(t, db, ctx, `UPDATE auth.auth_settings SET password_email_verification='required',password_enabled=false WHERE singleton`)
+		if result, err := svc.Exchange(ctx, input); result != nil || !errors.Is(err, accountdomain.ErrEmailUnverified) {
+			t.Fatal("existing unverified password session bypassed policy", err)
+		}
+		accessExec(t, db, ctx, `UPDATE auth.user_emails SET verified_at=clock_timestamp() WHERE id=$1`, emailID)
+		if _, err := svc.Exchange(ctx, input); err != nil {
+			t.Fatal("disabled primary method unexpectedly revoked completed session", err)
 		}
 	})
 
