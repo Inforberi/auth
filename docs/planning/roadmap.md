@@ -470,6 +470,8 @@ Fault tests: revoked session не возрождается; blocked user не с
 
 ## 6. Текущий статус
 
+A6.3c.2-local (17 октября): protected сохраняемые Google/Telegram credentials с independent revisions, encrypted secrets и live immutable adapter views на shared HTTP/JWKS owners. Pending OIDC/link/session/MFA/recovery proofs связаны с revision до SQL commit; rotation не отзывает existing sessions. Callback/budgets/root остаются ENV. [Контракт](../features/provider-settings.md). Далее A6.3c.3 retention/runtime; external provider/fleet/browser/load/restore gates открыты, deployment рабочей БД не выполнялся.
+
 A6.3c.1-local (17 октября): сохраняемый SMTP с encrypted password, protected read/update/test, deployment destination allowlist и live SQL source для mail delivery. No new workers/pools/dependencies; source 000001 дополнен без рабочей migration. SQL/Redis/race/HTTP/lint PASS; actual provider/SMTP/fleet/browser/load/restore NOT RUN. Далее A6.3c.2 Google/Telegram credentials revision/lifecycle, затем A6.3c.3 retention/runtime. Родитель A6.3 открыт. [Контракт](../features/smtp-settings.md).
 
 A6.3b-local (17 октября): transition guard пригодного system super_admin при отключении public methods/ужесточении verification; owner MFA status без secrets/refresh; управляемая подготовка нового администратора до закрытия public primary. Private login не ослаблен, нового private onboarding нет. Локальные SQL/race/HTTP проверки пройдены; реальные admin-only/browser/fleet workflows — pre-ui/A8. Далее A6.3c integration settings/secrets/runtime, затем JWT/pre-ui/UI; родитель A6.3 остаётся открыт. [Подробности](../features/auth-settings.md#безопасные-переходы-и-подготовка-администратора--a63b-local).

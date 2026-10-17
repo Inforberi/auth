@@ -114,6 +114,26 @@ CREATE TABLE auth.smtp_settings_audit (
 );
 CREATE INDEX smtp_settings_audit_retention ON auth.smtp_settings_audit(created_at,id);
 
+CREATE TABLE auth.provider_settings (
+  provider TEXT PRIMARY KEY CHECK(provider IN ('google','telegram')),
+  version BIGINT NOT NULL DEFAULT 1 CHECK(version>0),
+  client_id TEXT NOT NULL CHECK(octet_length(client_id)<=512),
+  secret BYTEA NOT NULL CHECK(octet_length(secret) BETWEEN 28 AND 1052),
+  secret_set BOOLEAN NOT NULL,
+  CHECK(NOT secret_set OR client_id<>'')
+);
+CREATE TABLE auth.provider_settings_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id UUID NOT NULL REFERENCES auth.users(id),
+  provider TEXT NOT NULL CHECK(provider IN ('google','telegram')),
+  version BIGINT NOT NULL CHECK(version>1),
+  previous_configuration JSONB NOT NULL CHECK(jsonb_typeof(previous_configuration)='object' AND octet_length(previous_configuration::text)<=4096),
+  next_configuration JSONB NOT NULL CHECK(jsonb_typeof(next_configuration)='object' AND octet_length(next_configuration::text)<=4096),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  UNIQUE(provider,version)
+);
+CREATE INDEX provider_settings_audit_retention ON auth.provider_settings_audit(created_at,id);
+
 CREATE TABLE auth.access_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id UUID NOT NULL REFERENCES auth.users(id),
@@ -278,6 +298,7 @@ CREATE TABLE auth.mfa_login_challenges (
   enrollment_required BOOLEAN NOT NULL DEFAULT false CHECK (NOT enrollment_required OR NOT administrative),
   primary_reference TEXT NOT NULL CHECK (octet_length(primary_reference) BETWEEN 1 AND 1024),
   primary_issuer TEXT NOT NULL CHECK (octet_length(primary_issuer)<=512),
+  provider_version BIGINT NOT NULL DEFAULT 0 CHECK(provider_version>=0 AND (primary_method='oidc' OR provider_version=0)),
   primary_verified_at TIMESTAMPTZ NOT NULL,
   attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
   created_at TIMESTAMPTZ NOT NULL DEFAULT statement_timestamp(),

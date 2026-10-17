@@ -1,6 +1,6 @@
 # Сохраняемые настройки SMTP — A6.3c.1-local
 
-SMTP-настройки принадлежат `internal/auth/settings`. Root encryption key и egress policy остаются deployment ENV. Google/Telegram credentials пока ENV; их runtime rotation — следующий A6.3c.2, не часть этого блока.
+SMTP-настройки принадлежат `internal/auth/settings`. Root encryption key и egress policy остаются deployment ENV. Google/Telegram credentials имеют отдельный [контракт A6.3c.2](provider-settings.md); SMTP не превращается в общий plugin framework.
 
 ## Первоначальная настройка и хранение
 

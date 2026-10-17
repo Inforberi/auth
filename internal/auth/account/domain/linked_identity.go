@@ -17,8 +17,9 @@ var (
 // IdentityKey is supplied only after the method adapter verifies the provider proof.
 // Issuer and subject are opaque, case-sensitive identifiers, never an email match.
 type IdentityKey struct {
-	Issuer  string
-	Subject string
+	Issuer          string
+	Subject         string
+	ProviderVersion int64
 }
 
 func (key IdentityKey) Validate() error {

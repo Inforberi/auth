@@ -50,13 +50,13 @@ func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.Prima
 			return err
 		}
 		err = tx.QueryRow(ctx, `INSERT INTO auth.mfa_login_challenges
-			(user_id,digest,binding_hash,auth_version,primary_method,primary_reference,primary_issuer,primary_verified_at,expires_at,administrative,enrollment_required)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,LEAST($8::timestamptz,statement_timestamp()),statement_timestamp()+$9::double precision*interval '1 second',$10,$11)
+			(user_id,digest,binding_hash,auth_version,primary_method,primary_reference,primary_issuer,primary_verified_at,expires_at,administrative,enrollment_required,provider_version)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,LEAST($8::timestamptz,statement_timestamp()),statement_timestamp()+$9::double precision*interval '1 second',$10,$11,$12)
 			ON CONFLICT(user_id) DO UPDATE SET digest=EXCLUDED.digest,binding_hash=EXCLUDED.binding_hash,
 			auth_version=EXCLUDED.auth_version,primary_method=EXCLUDED.primary_method,primary_reference=EXCLUDED.primary_reference,
-			primary_issuer=EXCLUDED.primary_issuer,primary_verified_at=EXCLUDED.primary_verified_at,administrative=EXCLUDED.administrative,enrollment_required=EXCLUDED.enrollment_required,attempts=0,
+			primary_issuer=EXCLUDED.primary_issuer,primary_verified_at=EXCLUDED.primary_verified_at,administrative=EXCLUDED.administrative,enrollment_required=EXCLUDED.enrollment_required,provider_version=EXCLUDED.provider_version,attempts=0,
 			created_at=statement_timestamp(),expires_at=EXCLUDED.expires_at RETURNING expires_at`,
-			proof.UserID, digest, binding, proof.AuthVersion, proof.Method, proof.Reference, proof.Issuer, proof.VerifiedAt, ttl.Seconds(), proof.Administrative, result.EnrollmentRequired).Scan(&result.ExpiresAt)
+			proof.UserID, digest, binding, proof.AuthVersion, proof.Method, proof.Reference, proof.Issuer, proof.VerifiedAt, ttl.Seconds(), proof.Administrative, result.EnrollmentRequired, proof.ProviderVersion).Scan(&result.ExpiresAt)
 		if err != nil {
 			return err
 		}
@@ -86,6 +86,11 @@ func requireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof)
 	}
 	if err := settingspostgres.RequirePublicLogin(ctx, tx, p.UserID, p.Method, p.Issuer); err != nil {
 		return err
+	}
+	if p.Method == "oidc" {
+		if err := settingspostgres.RequireProviderRevision(ctx, tx, p.Issuer, p.ProviderVersion); err != nil {
+			return err
+		}
 	}
 	switch p.Method {
 	case "password":

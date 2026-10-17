@@ -199,6 +199,150 @@
                 }
             }
         },
+        "/api/v1/admin/auth/settings/providers/{provider}": {
+            "get": {
+                "description": "Live session, HTTPS Origin and auth.settings.manage; no fresh proof for reading. Presence is not a live provider test. Redirect URI and fixed issuer/endpoints remain deployment configuration.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Provider settings"
+                ],
+                "summary": "Read Google or Telegram client settings without the secret",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "google",
+                            "telegram"
+                        ],
+                        "type": "string",
+                        "description": "Provider",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/provider_settings_http.SettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Requires auth.settings.manage, fresh password+MFA and expectedVersion. Omitted/null secret preserves it; explicit empty clears only while the method is disabled. Client ID change requires explicit secret, disabled method and no linked identities. Rotation invalidates pending OIDC/MFA/enrollment/recovery proofs, not existing sessions. No external connection under SQL locks.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Provider settings"
+                ],
+                "summary": "Configure or rotate Google/Telegram client credentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact allowed HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "google",
+                            "telegram"
+                        ],
+                        "type": "string",
+                        "description": "Provider",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "client ID, expectedVersion and optional new secret",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/provider_settings_http.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/provider_settings_http.SettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "provider_settings_conflict, provider_client_bound, auth_method_not_ready",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/auth/settings/smtp": {
             "get": {
                 "description": "Requires a live session, HTTPS Origin and auth.settings.manage. passwordSet is presence only. No secrets, session refresh or network tests.",
@@ -6548,6 +6692,42 @@
             "properties": {
                 "idempotencyKey": {
                     "type": "string"
+                }
+            }
+        },
+        "provider_settings_http.SettingsResponse": {
+            "type": "object",
+            "properties": {
+                "clientId": {
+                    "type": "string"
+                },
+                "clientSecretSet": {
+                    "type": "boolean"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "provider_settings_http.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "clientId",
+                "expectedVersion"
+            ],
+            "properties": {
+                "clientId": {
+                    "type": "string"
+                },
+                "clientSecret": {
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "expectedVersion": {
+                    "type": "integer"
                 }
             }
         },

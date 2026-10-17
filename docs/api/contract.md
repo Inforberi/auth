@@ -1,5 +1,7 @@
 # Текущий API-контракт
 
+A6.3c.2-local: GET/POST `/api/v1/admin/auth/settings/providers/{provider}` (`google`/`telegram`). [Protected credentials contract](../features/provider-settings.md): masked presence only/no secret reads, trusted actor, current permission/fresh password+MFA/version/audit для update. Rotation требует restart старых pending flows, не logout существующих sessions; late final proof даёт `400 login_restart_required`. Redirect/issuer/endpoints/budgets остаются deployment configuration, provider-side проверка — настоящий authorization-code flow, не фиктивный health-test.
+
 A6.3c.1-local: protected GET/POST `/api/v1/admin/auth/settings/smtp`, POST `/api/v1/admin/auth/settings/smtp/test`. Read возвращает version/config/passwordSet без секрета, POST требует fresh password+MFA и expectedVersion. [Контракт, ошибки, rotation и ограничения](../features/smtp-settings.md). Test использует только saved authorized version и не отправляет email; network вне SQL locks, bounded/Redis limits. SMTP применён к live delivery; Google/Telegram credentials ещё ENV.
 
 Состояние на 17 октября 2026. Источник маршрутов — `internal/transport/http/router`; DTO и error mapping — transport каждой фичи. Спецификация — Swagger 2.0, не OpenAPI 3.

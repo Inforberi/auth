@@ -11,20 +11,24 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
-func assembleAccessPolicy(ctx context.Context, pool *pgxpool.Pool, cfg *config.Config) (*accessapp.App, *settingsservice.Service, error) {
+func assembleAccessPolicy(ctx context.Context, pool *pgxpool.Pool, cfg *config.Config) (*accessapp.App, *settingsservice.Service, *settingsservice.Providers, error) {
 	access, err := accessapp.New(ctx, pool, cfg.Access, cfg.MFA.Enabled)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	service := settingsservice.New(settingspostgres.New(pool))
 	snapshot, err := service.Initialize(ctx, cfg.InitialAuthPolicy())
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
+	}
+	providers, err := assembleProviderSettings(ctx, pool, cfg, snapshot.Policy)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	if err := cfg.ConfigureAuthAdapters(snapshot.Policy); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	service = settingsservice.New(settingspostgres.NewWithRuntime(pool, cfg.AvailableAuthMethods()))
 	cfg.EmailOTP.CheckPolicy = func(ctx context.Context) error { return service.CheckPublic(ctx, "emailotp", false) }
-	return access, service, nil
+	return access, service, providers, nil
 }

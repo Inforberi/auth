@@ -39,22 +39,18 @@ func (s *Service) Callback(ctx context.Context, input CallbackInput) (*CallbackR
 	if err != nil {
 		return nil, err
 	}
-	if flow.Purpose != domain.Login && flow.Purpose != domain.Link {
-		return nil, domain.ErrInvalidFlow
+	provider, err := s.callbackProvider(ctx, *flow, input.SessionToken)
+	if err != nil {
+		return nil, err
 	}
-	if flow.Purpose == domain.Link {
-		if input.SessionToken == "" || len(input.SessionToken) > 128 ||
-			subtle.ConstantTimeCompare([]byte(flow.SessionHash), []byte(s.tokens.Hash(input.SessionToken))) != 1 {
-			return nil, accountdomain.ErrFreshAuthRequired
-		}
-	}
-	key, err := s.provider.Verify(ctx, input.Code, *flow)
+	key, err := provider.Verify(ctx, input.Code, *flow)
 	if err != nil {
 		return nil, err
 	}
 	if key.Issuer != s.cfg.Issuer {
 		return nil, domain.ErrInvalidFlow
 	}
+	key.ProviderVersion = flow.ProviderVersion
 	if flow.Purpose == domain.Link {
 		if err := s.management.Link(ctx, flow.UserID, flow.SessionHash, key); err != nil {
 			return nil, err
@@ -68,11 +64,30 @@ func (s *Service) Callback(ctx context.Context, input CallbackInput) (*CallbackR
 	session, err := s.sessions.BeginLogin(ctx, mfaservice.PrimaryProof{
 		UserID: user.ID, AuthVersion: int64(user.AuthVersion),
 		Method: "oidc", Issuer: key.Issuer, Reference: key.Subject, VerifiedAt: time.Now().UTC(),
+		ProviderVersion: flow.ProviderVersion,
 	}, input.UserAgent, input.IP)
 	if err != nil {
 		return nil, err
 	}
 	return &CallbackResult{Session: session}, nil
+}
+
+func (s *Service) callbackProvider(ctx context.Context, flow domain.Flow, sessionToken string) (Provider, error) {
+	if flow.Purpose != domain.Login && flow.Purpose != domain.Link {
+		return nil, domain.ErrInvalidFlow
+	}
+	if flow.Purpose == domain.Link && (sessionToken == "" || len(sessionToken) > 128 ||
+		subtle.ConstantTimeCompare([]byte(flow.SessionHash), []byte(s.tokens.Hash(sessionToken))) != 1) {
+		return nil, accountdomain.ErrFreshAuthRequired
+	}
+	provider, version, err := s.currentProvider(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if version != flow.ProviderVersion {
+		return nil, domain.ErrInvalidFlow
+	}
+	return provider, nil
 }
 
 func (s *Service) registrationAllowed() bool {

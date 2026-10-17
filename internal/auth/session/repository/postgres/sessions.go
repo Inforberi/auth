@@ -37,6 +37,11 @@ func (r *Repository) CreateSession(ctx context.Context, p service.CreateSessionP
 		if err := settingspostgres.RequirePublicLogin(ctx, tx, p.UserID, method, issuer); err != nil {
 			return err
 		}
+		if method == "oidc" {
+			if err := settingspostgres.RequireProviderRevision(ctx, tx, issuer, p.PrimaryProof.ProviderVersion); err != nil {
+				return err
+			}
+		}
 		verifiedAt := p.CreatedAt
 		if p.PrimaryProof != nil {
 			verifiedAt = p.PrimaryProof.VerifiedAt

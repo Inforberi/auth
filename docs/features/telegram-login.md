@@ -1,5 +1,7 @@
 # Вход через Telegram
 
+A6.3c.2-local: [Client ID/Secret — сохраняемые настройки](provider-settings.md), ENV только seed. Изменение secret не требует restart; старые pending OIDC/link/MFA/recovery proofs требуют нового primary login, existing sessions сохраняются. Secret никогда не возвращается в GET/audit/logging. Callback и admission budgets остаются deployment ENV; routes доступны при готовом operational adapter, публичный допуск/регистрация определяются сохранённой Auth policy. Исторические описания первоначального ENV-only подключения ниже не заменяют этот runtime contract.
+
 После A3.4b общие domain/service/Redis/HTTP сценарии находятся в `methods/oidc`, bounded token/JWKS client — в `integrations/oidc`. Telegram сохраняет свои config, fixed endpoints, публичные routes, cookies, Redis prefix и cipher purpose. [Google](google-login.md) использует ту же реализацию с отдельным профилем; другой issuer не разрешает account resolution Telegram flow.
 
 ## Реализовано в A3.2-local

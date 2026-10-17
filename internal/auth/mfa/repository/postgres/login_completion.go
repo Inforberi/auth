@@ -108,10 +108,10 @@ func lockLoginChallenge(ctx context.Context, tx pgx.Tx, digest, binding string, 
 		return nil, err
 	}
 	proof := lockedLoginChallenge{PrimaryProof: service.PrimaryProof{UserID: user, AuthVersion: version, Administrative: administrative}}
-	err = tx.QueryRow(ctx, `SELECT primary_method,primary_reference,primary_issuer,primary_verified_at,enrollment_required,expires_at
+	err = tx.QueryRow(ctx, `SELECT primary_method,primary_reference,primary_issuer,primary_verified_at,enrollment_required,expires_at,provider_version
 		FROM auth.mfa_login_challenges WHERE user_id=$1 AND digest=$2 AND binding_hash=$3 AND auth_version=$4
 		AND administrative=$5 AND expires_at>clock_timestamp() AND attempts<5 FOR UPDATE`, user, digest, binding, version, administrative).
-		Scan(&proof.Method, &proof.Reference, &proof.Issuer, &proof.VerifiedAt, &proof.EnrollmentRequired, &proof.ExpiresAt)
+		Scan(&proof.Method, &proof.Reference, &proof.Issuer, &proof.VerifiedAt, &proof.EnrollmentRequired, &proof.ExpiresAt, &proof.ProviderVersion)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrInvalidCode
 	}

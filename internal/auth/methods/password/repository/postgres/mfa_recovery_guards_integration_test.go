@@ -95,10 +95,14 @@ func checkMFARecoveryCompletionGuards(t *testing.T, db *pgxpool.Pool, ctx contex
 		})
 	}
 	t.Run("external-only-no-verified-contact", func(t *testing.T) {
+		// The initialized installation requires a versioned managed-provider proof.
+		accessExec(t, db, ctx, `INSERT INTO auth.provider_settings(provider,client_id,secret,secret_set)
+			VALUES('google','fixture.apps.googleusercontent.com',$1,true)`, make([]byte, 48))
 		f := prepareLostFactor(t, db, ctx, "external", false)
 		accessExec(t, db, ctx, `INSERT INTO auth.linked_identities(user_id,issuer,subject) VALUES($1,'https://accounts.google.com','recovery-external')`, f.user)
 		accessExec(t, db, ctx, `DELETE FROM auth.password_credentials WHERE user_id=$1`, f.user)
 		f.proof.Method, f.proof.Issuer, f.proof.Reference = "oidc", "https://accounts.google.com", "recovery-external"
+		f.proof.ProviderVersion = 1
 		primary := f.start(t, ctx)
 		f.svc = recoveryService(t, db, func(method, issuer string) bool { return method == "oidc" && issuer == "https://accounts.google.com" })
 		candidate, err := f.svc.Start(ctx, mfaservice.StartRecoveryInput{Token: primary.Token, Binding: primary.Binding, IP: primary.IP})

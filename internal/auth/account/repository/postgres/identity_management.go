@@ -86,6 +86,9 @@ func (r *Repository) LinkIdentity(ctx context.Context, user domain.UserID, token
 		if err := policy.RequireMethod(settingsdomain.PrimaryMethod("oidc", key.Issuer), false); err != nil {
 			return err
 		}
+		if err := settingspostgres.RequireProviderRevision(ctx, tx, key.Issuer, key.ProviderVersion); err != nil {
+			return err
+		}
 		if !created {
 			return nil
 		}

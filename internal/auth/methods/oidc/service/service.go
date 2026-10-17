@@ -16,7 +16,7 @@ type flowRepository interface {
 	Allow(context.Context, string, int, int) (bool, error)
 }
 
-type provider interface {
+type Provider interface {
 	AuthorizationURL(state string, flow domain.Flow) string
 	Verify(context.Context, string, domain.Flow) (accountdomain.IdentityKey, error)
 }
@@ -41,17 +41,30 @@ type identityManagement interface {
 }
 
 type Service struct {
-	cfg        Config
-	flows      flowRepository
-	provider   provider
-	identities identities
-	sessions   sessions
-	tokens     tokens
-	management identityManagement
+	cfg            Config
+	flows          flowRepository
+	provider       Provider
+	providerSource func(context.Context) (Provider, int64, error)
+	identities     identities
+	sessions       sessions
+	tokens         tokens
+	management     identityManagement
 }
 
-func New(cfg Config, flows flowRepository, provider provider, identities identities, sessions sessions, tokens tokens, management identityManagement) *Service {
+func New(cfg Config, flows flowRepository, provider Provider, identities identities, sessions sessions, tokens tokens, management identityManagement) *Service {
 	return &Service{cfg: cfg, flows: flows, provider: provider, identities: identities, sessions: sessions, tokens: tokens, management: management}
+}
+
+func (s *Service) WithProviderSource(source func(context.Context) (Provider, int64, error)) *Service {
+	s.providerSource = source
+	return s
+}
+
+func (s *Service) currentProvider(ctx context.Context) (Provider, int64, error) {
+	if s.providerSource != nil {
+		return s.providerSource(ctx)
+	}
+	return s.provider, 0, nil
 }
 
 func (s *Service) admit(ctx context.Context, ip string) error {

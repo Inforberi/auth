@@ -32,6 +32,7 @@ type Handlers struct {
 	Access            *accesshttp.Handler
 	AuthSettings      *settingshttp.Handler
 	SMTPSettings      *settingshttp.SMTPHandler
+	ProviderSettings  *settingshttp.ProviderHandler
 	Setup             *accounthttp.SetupHandler
 	MFA               *mfahttp.Handler
 	Session           *sessionhttp.Handler

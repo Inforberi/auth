@@ -39,6 +39,9 @@ func (r *Repository) ResolveIdentityAccount(ctx context.Context, key domain.Iden
 		if err := policy.RequireMethod(settingsdomain.PrimaryMethod("oidc", key.Issuer), true); err != nil {
 			return err
 		}
+		if err := settingspostgres.RequireProviderRevision(ctx, tx, key.Issuer, key.ProviderVersion); err != nil {
+			return err
+		}
 		_, err = tx.Exec(ctx, `INSERT INTO auth.identity_audit(user_id,event,auth_version) VALUES ($1,'identity_created',$2)`, user.ID, user.AuthVersion)
 		return err
 	})

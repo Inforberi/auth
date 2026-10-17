@@ -873,6 +873,30 @@ definitions:
     required:
     - idempotencyKey
     type: object
+  provider_settings_http.SettingsResponse:
+    properties:
+      clientId:
+        type: string
+      clientSecretSet:
+        type: boolean
+      provider:
+        type: string
+      version:
+        type: integer
+    type: object
+  provider_settings_http.UpdateRequest:
+    properties:
+      clientId:
+        type: string
+      clientSecret:
+        type: string
+        x-nullable: true
+      expectedVersion:
+        type: integer
+    required:
+    - clientId
+    - expectedVersion
+    type: object
   router.HealthResponse:
     properties:
       status:
@@ -1103,6 +1127,109 @@ paths:
       summary: Replace authentication settings
       tags:
       - Auth settings
+  /api/v1/admin/auth/settings/providers/{provider}:
+    get:
+      description: Live session, HTTPS Origin and auth.settings.manage; no fresh proof
+        for reading. Presence is not a live provider test. Redirect URI and fixed
+        issuer/endpoints remain deployment configuration.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Provider
+        enum:
+        - google
+        - telegram
+        in: path
+        name: provider
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/provider_settings_http.SettingsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read Google or Telegram client settings without the secret
+      tags:
+      - Provider settings
+    post:
+      consumes:
+      - application/json
+      description: Requires auth.settings.manage, fresh password+MFA and expectedVersion.
+        Omitted/null secret preserves it; explicit empty clears only while the method
+        is disabled. Client ID change requires explicit secret, disabled method and
+        no linked identities. Rotation invalidates pending OIDC/MFA/enrollment/recovery
+        proofs, not existing sessions. No external connection under SQL locks.
+      parameters:
+      - description: Exact allowed HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Provider
+        enum:
+        - google
+        - telegram
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: client ID, expectedVersion and optional new secret
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/provider_settings_http.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/provider_settings_http.SettingsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: provider_settings_conflict, provider_client_bound, auth_method_not_ready
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Configure or rotate Google/Telegram client credentials
+      tags:
+      - Provider settings
   /api/v1/admin/auth/settings/smtp:
     get:
       description: Requires a live session, HTTPS Origin and auth.settings.manage.

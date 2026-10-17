@@ -31,6 +31,9 @@ func (r *Repository) Update(ctx context.Context, input service.UpdateInput) (dom
 		if err := input.Policy.RequireAvailable(r.available); err != nil {
 			return err
 		}
+		if err := requireProviderSettings(ctx, tx, input.Policy); err != nil {
+			return err
+		}
 		if before.Policy == input.Policy {
 			result = before
 			return nil

@@ -21,6 +21,11 @@ func (s *Service) Start(ctx context.Context, ip string) (*StartedFlow, error) {
 }
 
 func (s *Service) startFlow(ctx context.Context, flow domain.Flow) (*StartedFlow, error) {
+	provider, version, err := s.currentProvider(ctx)
+	if err != nil {
+		return nil, err
+	}
+	flow.ProviderVersion = version
 	parts := make([]string, 4)
 	for i := range parts {
 		var err error
@@ -34,5 +39,5 @@ func (s *Service) startFlow(ctx context.Context, flow domain.Flow) (*StartedFlow
 	if err := s.flows.Save(ctx, state, binding, flow); err != nil {
 		return nil, err
 	}
-	return &StartedFlow{URL: s.provider.AuthorizationURL(state, flow), Binding: binding}, nil
+	return &StartedFlow{URL: provider.AuthorizationURL(state, flow), Binding: binding}, nil
 }

@@ -26,6 +26,7 @@ func (h *Handler) respondError(w http.ResponseWriter, r *http.Request, err error
 }
 
 var policyErrors = []httpx.ErrorRule{
+	httpx.MatchError(domain.ErrProviderRevision, 400, "login_restart_required", "provider credentials changed; restart login"),
 	httpx.MatchError(domain.ErrMethodDisabled, 404, "method_disabled", "login method disabled"),
 	httpx.MatchError(domain.ErrRegistrationDisabled, 403, "registration_disabled", "public registration disabled"),
 	httpx.MatchError(domain.ErrPolicyUnavailable, 503, "temporarily_unavailable", "temporarily unavailable"),

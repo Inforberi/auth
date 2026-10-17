@@ -3,11 +3,11 @@ package service
 import (
 	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/domain"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
 type Config struct {
@@ -24,10 +24,13 @@ func (c Config) Validate() error {
 	if !c.Enabled {
 		return nil
 	}
-	id, err := strconv.ParseUint(c.ClientID, 10, 64)
-	if err != nil || id == 0 || strconv.FormatUint(id, 10) != c.ClientID || len(c.ClientSecret) > 1024 || strings.TrimSpace(c.ClientSecret) == "" {
+	if !settingsdomain.ValidProviderClientID("telegram", c.ClientID) || !settingsdomain.ValidProviderSecret(c.ClientSecret) || strings.TrimSpace(c.ClientSecret) == "" {
 		return fmt.Errorf("telegram login requires valid client ID and secret from BotFather")
 	}
+	return c.ValidateOperational()
+}
+
+func (c Config) ValidateOperational() error {
 	u, err := url.Parse(c.RedirectURI)
 	if err != nil || len(c.RedirectURI) > 2048 || u.Scheme != "https" || u.Hostname() == "" || u.User != nil ||
 		u.RawQuery != "" || u.Fragment != "" || u.Path != "/api/v1/auth/telegram/callback" {

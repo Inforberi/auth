@@ -14,18 +14,18 @@ func (cfg Config) ValidateDeployment() error {
 	return cfg.Validate()
 }
 
-// Configured adapters stay available for later policy re-enabling. Missing secrets are allowed only while disabled.
+// Adapter readiness covers callback/budgets; managed credential readiness is checked in settings SQL.
 func (cfg *Config) ConfigureAuthAdapters(policy domain.Policy) error {
 	google := cfg.Google
 	google.Enabled = true
-	googleErr := google.Validate()
+	googleErr := google.ValidateOperational()
 	if policy.Methods.Google && googleErr != nil {
 		return fmt.Errorf("saved Google policy: %w", googleErr)
 	}
 	cfg.Google.Enabled = googleErr == nil
 	telegram := cfg.Telegram
 	telegram.Enabled = true
-	telegramErr := telegram.Validate()
+	telegramErr := telegram.ValidateOperational()
 	if policy.Methods.Telegram && telegramErr != nil {
 		return fmt.Errorf("saved Telegram policy: %w", telegramErr)
 	}

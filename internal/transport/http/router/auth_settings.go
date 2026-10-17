@@ -20,4 +20,10 @@ func authSettingsRoutes(r chi.Router, h Handlers) {
 			protected.Post("/admin/auth/settings/smtp/test", h.SMTPSettings.TestConnection)
 		}
 	}
+	if h.ProviderSettings != nil {
+		protected.Get("/admin/auth/settings/providers/{provider}", h.ProviderSettings.Read)
+		if h.Config != nil && h.Config.MFA.Enabled {
+			protected.Post("/admin/auth/settings/providers/{provider}", h.ProviderSettings.Update)
+		}
+	}
 }

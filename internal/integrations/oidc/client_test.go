@@ -77,9 +77,9 @@ func testProviderProof(t *testing.T, issuer, authorization, tokenURL, keys strin
 			t.Error(err)
 		}
 		id, secret, basic := r.BasicAuth()
-		authOK := basic && id == "123" && secret == "fixture-secret"
+		authOK := basic && id == "123" && secret == "view-secret"
 		if style == oauth2.AuthStyleInParams {
-			authOK = !basic && r.Form.Get("client_secret") == "fixture-secret"
+			authOK = !basic && r.Form.Get("client_secret") == "view-secret"
 		}
 		if !authOK || r.Form.Get("client_id") != "123" || r.Form.Get("code_verifier") != flow.Verifier ||
 			r.Form.Get("grant_type") != "authorization_code" || r.Form.Get("redirect_uri") != "https://auth.example/api/v1/auth/telegram/callback" {
@@ -94,8 +94,8 @@ func testProviderProof(t *testing.T, issuer, authorization, tokenURL, keys strin
 	defer client.Close()
 	client.oauth.Endpoint.TokenURL = server.URL + "/token"
 	client.http.client = server.Client()
-	client.verifier = oidc.NewVerifier(issuer, oidc.NewRemoteKeySet(oidc.ClientContext(context.Background(), server.Client()), server.URL+"/keys"),
-		&oidc.Config{ClientID: "123", SupportedSigningAlgs: []string{oidc.RS256}})
+	client.keys = oidc.NewRemoteKeySet(oidc.ClientContext(context.Background(), server.Client()), server.URL+"/keys")
+	client = client.WithCredentials("123", "view-secret")
 	auth, err := url.Parse(client.AuthorizationURL("state", flow))
 	if err != nil || auth.Scheme+"://"+auth.Host+auth.Path != authorization || auth.Query().Get("scope") != "openid" ||
 		auth.Query().Get("nonce") != flow.Nonce || auth.Query().Get("state") != "state" || auth.Query().Get("code_challenge_method") != "S256" {

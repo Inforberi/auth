@@ -3,11 +3,11 @@ package service
 import (
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/google/domain"
 	oidcservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
 type Config struct {
@@ -20,15 +20,17 @@ type Config struct {
 	GlobalLimit         int    `env:"GOOGLE_LOGIN_PROJECT_ATTEMPTS_PER_MINUTE" env-default:"1000"`
 }
 
-var webClientID = regexp.MustCompile(`^[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$`)
-
 func (c Config) Validate() error {
 	if !c.Enabled {
 		return nil
 	}
-	if len(c.ClientID) > 512 || !webClientID.MatchString(c.ClientID) || len(c.ClientSecret) > 1024 || strings.TrimSpace(c.ClientSecret) == "" {
+	if !settingsdomain.ValidProviderClientID("google", c.ClientID) || !settingsdomain.ValidProviderSecret(c.ClientSecret) || strings.TrimSpace(c.ClientSecret) == "" {
 		return fmt.Errorf("google login requires web OAuth client ID and secret")
 	}
+	return c.ValidateOperational()
+}
+
+func (c Config) ValidateOperational() error {
 	u, err := url.Parse(c.RedirectURI)
 	if err != nil || len(c.RedirectURI) > 2048 || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "/api/v1/auth/google/callback" {
 		return fmt.Errorf("GOOGLE_OIDC_REDIRECT_URI must be the HTTPS Google callback URL")

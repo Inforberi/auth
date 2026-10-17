@@ -20,9 +20,10 @@ var (
 )
 
 type Flow struct {
-	Verifier    string               `json:"verifier"`
-	Nonce       string               `json:"nonce"`
-	Purpose     Purpose              `json:"purpose"`
-	UserID      accountdomain.UserID `json:"userId,omitempty"`
-	SessionHash string               `json:"sessionHash,omitempty"`
+	ProviderVersion int64                `json:"providerVersion,omitempty"`
+	Verifier        string               `json:"verifier"`
+	Nonce           string               `json:"nonce"`
+	Purpose         Purpose              `json:"purpose"`
+	UserID          accountdomain.UserID `json:"userId,omitempty"`
+	SessionHash     string               `json:"sessionHash,omitempty"`
 }

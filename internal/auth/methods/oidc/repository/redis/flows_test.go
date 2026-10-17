@@ -41,7 +41,7 @@ func TestRedisFlow(t *testing.T) {
 		t.Fatal(err)
 	}
 	google := New(db, googleCipher, "auth:google")
-	flow := domain.Flow{Verifier: "fixture-verifier", Nonce: "fixture-nonce", Purpose: domain.Link, UserID: "12345678-1234-1234-1234-123456789abc", SessionHash: strings.Repeat("a", 64)}
+	flow := domain.Flow{Verifier: "fixture-verifier", Nonce: "fixture-nonce", Purpose: domain.Link, UserID: "12345678-1234-1234-1234-123456789abc", SessionHash: strings.Repeat("a", 64), ProviderVersion: 7}
 	if err := repo.Save(t.Context(), "state", "binding", flow); err != nil {
 		t.Fatal(err)
 	}

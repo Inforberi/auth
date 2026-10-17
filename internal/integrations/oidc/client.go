@@ -19,12 +19,14 @@ type Client struct {
 	http     *boundedTransport
 	cancel   context.CancelFunc
 	issuer   string
+	keys     *oidc.RemoteKeySet
 }
 
 func New(ctx context.Context, cfg Config) *Client {
 	transport, httpClient := newHTTPClient(cfg.TokenURL, cfg.KeysURL)
 	lifetime, cancel := context.WithCancel(ctx)
 	ctx = oidc.ClientContext(lifetime, httpClient)
+	keys := oidc.NewRemoteKeySet(ctx, cfg.KeysURL)
 	return &Client{
 		oauth: oauth2.Config{
 			ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, RedirectURL: cfg.RedirectURI,
@@ -32,11 +34,22 @@ func New(ctx context.Context, cfg Config) *Client {
 				AuthURL: cfg.AuthorizationURL, TokenURL: cfg.TokenURL, AuthStyle: cfg.AuthStyle,
 			},
 		},
-		verifier: oidc.NewVerifier(cfg.Issuer, oidc.NewRemoteKeySet(ctx, cfg.KeysURL),
+		verifier: oidc.NewVerifier(cfg.Issuer, keys,
 			&oidc.Config{ClientID: cfg.ClientID, SupportedSigningAlgs: []string{oidc.RS256}}),
 		http:   transport,
 		cancel: cancel,
 		issuer: cfg.Issuer,
+		keys:   keys,
+	}
+}
+
+// WithCredentials borrows the owner's transport/key cache; only the owner is closed at shutdown.
+func (c *Client) WithCredentials(id, secret string) *Client {
+	oauth := c.oauth
+	oauth.ClientID, oauth.ClientSecret = id, secret
+	return &Client{
+		oauth: oauth, http: c.http, cancel: c.cancel, issuer: c.issuer, keys: c.keys,
+		verifier: oidc.NewVerifier(c.issuer, c.keys, &oidc.Config{ClientID: id, SupportedSigningAlgs: []string{oidc.RS256}}),
 	}
 }
 

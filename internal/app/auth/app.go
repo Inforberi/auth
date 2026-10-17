@@ -44,7 +44,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	if err != nil {
 		return nil, err
 	}
-	access, policy, err := assembleAccessPolicy(ctx, pool, cfg)
+	access, policy, providers, err := assembleAccessPolicy(ctx, pool, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("assemble access and auth policy: %w", err)
 	}
@@ -93,12 +93,12 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 	passwordHandler := passwordhttp.New(passwordSvc,
 		log.With(zap.String("feature", "password_auth"), zap.String("layer", "transport")))
 	middleware := sessionhttp.New(sessionSvc, log)
-	telegram, closeTelegram, err := assembleTelegram(ctx, cfg, accountRepo, rdb, loginSvc, policy, log)
+	telegram, closeTelegram, err := assembleTelegram(ctx, cfg, accountRepo, rdb, loginSvc, policy, providers, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble telegram: %w", err)
 	}
 	resources.add(closeTelegram)
-	google, closeGoogle, err := assembleGoogle(ctx, cfg, accountRepo, rdb, loginSvc, policy, log)
+	google, closeGoogle, err := assembleGoogle(ctx, cfg, accountRepo, rdb, loginSvc, policy, providers, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble Google: %w", err)
 	}
@@ -140,6 +140,7 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		Access:            accesshttp.New(access.Service, log),
 		AuthSettings:      settingshttp.New(policy, cfg.AvailableAuthMethods(), log),
 		SMTPSettings:      smtpSettings,
+		ProviderSettings:  settingshttp.NewProviders(providers, log),
 		Setup:             setup,
 		EmailBinding:      emailBinding,
 		MFA:               mfaHandler,

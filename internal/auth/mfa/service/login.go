@@ -13,13 +13,14 @@ import (
 
 // PrimaryProof comes from a verified method adapter, never from an HTTP request.
 type PrimaryProof struct {
-	Administrative bool
-	UserID         accountdomain.UserID
-	AuthVersion    int64
-	Method         string
-	Reference      string
-	Issuer         string
-	VerifiedAt     time.Time
+	ProviderVersion int64
+	Administrative  bool
+	UserID          accountdomain.UserID
+	AuthVersion     int64
+	Method          string
+	Reference       string
+	Issuer          string
+	VerifiedAt      time.Time
 }
 
 type LoginConfig struct {

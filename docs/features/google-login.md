@@ -4,7 +4,7 @@ Optional backend: Google Authorization Code/OIDC с PKCE S256 и nonce. Выкл
 
 ## Подключение
 
-Создать OAuth client типа Web application в Google Cloud Console, настроить consent screen/test users и зарегистрировать **точный** HTTPS callback из GOOGLE_OIDC_REDIRECT_URI. Затем передать Client ID/Secret серверу и включить GOOGLE_LOGIN_ENABLED. Client Secret не попадает в UI-запросы, Swagger, Git или логи; runtime secret settings появятся в A6.
+Создать OAuth client типа Web application в Google Cloud Console, настроить consent screen/test users и зарегистрировать **точный** HTTPS callback из GOOGLE_OIDC_REDIRECT_URI. A6.3c.2-local: [Client ID/Secret сохраняются через protected settings API](provider-settings.md); ENV — только first-install seed. Secret передаётся только в защищённом POST администратора, не возвращается в GET/ответах/audit/logs. Публичные method/registration flags — отдельная сохраняемая Auth policy, не ENV override.
 
 | ENV | Default | Значение |
 | --- | --- | --- |
@@ -16,7 +16,7 @@ Optional backend: Google Authorization Code/OIDC с PKCE S256 и nonce. Выкл
 | GOOGLE_LOGIN_IP_ATTEMPTS_PER_MINUTE | 30 | Общие start/callback/link/unlink attempts одного IP |
 | GOOGLE_LOGIN_PROJECT_ATTEMPTS_PER_MINUTE | 1000 | Общие attempts провайдера по всем экземплярам проекта |
 
-Start + callback расходуют минимум две попытки, это admission budgets, не максимальный API RPS. Disabled профиль не требует credentials, не делает provider network requests и не подключает routes. Переключение ENV требует перезапуска.
+Start + callback расходуют минимум две попытки, это admission budgets, не максимальный API RPS. После A6.3c.2 operational callback/budgets определяют наличие adapter/routes, а public policy — допуск метода; отключённый метод не делает provider network requests. Credential updates применяются без перезапуска, pending old-version login/link/MFA требуют нового входа. Callback URI и budgets остаются ENV и требуют согласованного deployment/restart. Таблица ENV выше описывает seed/operational параметры, не override сохранённых settings.
 
 ## API и браузер
 
