@@ -20,6 +20,15 @@ func (l *rejectGuessBudget) Allow(_ context.Context, _ string, count int, _ time
 	return count != 5, nil
 }
 
+func (l *rejectGuessBudget) AllowAll(_ context.Context, budgets []Budget) (bool, error) {
+	allowed := true
+	for _, budget := range budgets {
+		l.counts = append(l.counts, budget.Count)
+		allowed = allowed && budget.Count != 5
+	}
+	return allowed, nil
+}
+
 func TestStepUpGuessBudgetIndependentOfOperations(t *testing.T) {
 	cipher, err := secretbox.NewScoped("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "mfa:v1")
 	if err != nil {

@@ -23,6 +23,10 @@ import (
 
 type mfaTestLimit struct{}
 
+func (mfaTestLimit) AllowAll(context.Context, []mfaservice.Budget) (bool, error) {
+	return true, nil
+}
+
 func (mfaTestLimit) Allow(context.Context, string, int, time.Duration) (bool, error) {
 	return true, nil
 }

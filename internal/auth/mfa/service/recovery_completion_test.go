@@ -88,6 +88,18 @@ func (l *recoveryBudget) Allow(_ context.Context, key string, count int, _ time.
 	return l.used[key] <= count, nil
 }
 
+func (l *recoveryBudget) AllowAll(_ context.Context, budgets []Budget) (bool, error) {
+	for _, budget := range budgets {
+		if l.used[budget.Key] >= budget.Count {
+			return false, nil
+		}
+	}
+	for _, budget := range budgets {
+		l.used[budget.Key]++
+	}
+	return true, nil
+}
+
 func TestRecoveryGuessingBudgetSurvivesReissue(t *testing.T) {
 	cipher, err := secretbox.NewScoped(base64.StdEncoding.EncodeToString(make([]byte, 32)), "mfa:v1")
 	if err != nil {

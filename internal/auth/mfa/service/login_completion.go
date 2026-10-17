@@ -97,22 +97,10 @@ func (s *Login) admitLogin(ctx context.Context, purpose, subject, ip string, cou
 }
 
 func admitFactorUser(ctx context.Context, cipher Cipher, limit Limiter, operations int, user accountdomain.UserID) error {
-	for _, budget := range []struct {
-		key   string
-		count int
-	}{
+	return admitBudgets(ctx, limit, []Budget{
 		{cipher.Digest("user:" + string(user)), operations},
 		{cipher.Digest("login:factor-user:" + string(user)), 5},
-	} {
-		allowed, err := limit.Allow(ctx, budget.key, budget.count, time.Minute)
-		if err != nil {
-			return domain.ErrUnavailable
-		}
-		if !allowed {
-			return domain.ErrLimited
-		}
-	}
-	return nil
+	})
 }
 
 func admitLogin(ctx context.Context, cipher Cipher, limit Limiter, cfg LoginConfig, purpose, subject, ip string, count int) error {
@@ -120,21 +108,20 @@ func admitLogin(ctx context.Context, cipher Cipher, limit Limiter, cfg LoginConf
 	if purpose == "start" {
 		subjectKey = cipher.Digest("user:" + subject)
 	}
-	for _, budget := range []struct {
-		key   string
-		count int
-	}{
+	return admitBudgets(ctx, limit, []Budget{
 		{subjectKey, count},
 		{"login:ip:" + cipher.Digest(ip), cfg.IPLimitPerMinute},
 		{"project", cfg.GlobalLimitPerMinute},
-	} {
-		allowed, err := limit.Allow(ctx, budget.key, budget.count, time.Minute)
-		if err != nil {
-			return domain.ErrUnavailable
-		}
-		if !allowed {
-			return domain.ErrLimited
-		}
+	})
+}
+
+func admitBudgets(ctx context.Context, limit Limiter, budgets []Budget) error {
+	allowed, err := limit.AllowAll(ctx, budgets)
+	if err != nil {
+		return domain.ErrUnavailable
+	}
+	if !allowed {
+		return domain.ErrLimited
 	}
 	return nil
 }

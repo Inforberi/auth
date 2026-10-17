@@ -49,6 +49,12 @@ type Authenticator interface {
 
 type Limiter interface {
 	Allow(context.Context, string, int, time.Duration) (bool, error)
+	AllowAll(context.Context, []Budget) (bool, error)
+}
+
+type Budget struct {
+	Key   string
+	Count int
 }
 
 type Service struct {
@@ -89,19 +95,7 @@ func (s *Service) admit(ctx context.Context, user accountdomain.UserID) error {
 	if s.limit == nil {
 		return domain.ErrUnavailable
 	}
-	for _, budget := range []struct {
-		key   string
-		count int
-	}{
+	return admitBudgets(ctx, s.limit, []Budget{
 		{s.cipher.Digest("user:" + string(user)), s.userLimit}, {"project", s.globalLimit},
-	} {
-		allowed, err := s.limit.Allow(ctx, budget.key, budget.count, time.Minute)
-		if err != nil {
-			return domain.ErrUnavailable
-		}
-		if !allowed {
-			return domain.ErrLimited
-		}
-	}
-	return nil
+	})
 }

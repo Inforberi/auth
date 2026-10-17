@@ -30,6 +30,15 @@ func (l *limitStub) Allow(_ context.Context, key string, count int, _ time.Durat
 	return l.allowed, l.err
 }
 
+func (l *limitStub) AllowAll(_ context.Context, budgets []Budget) (bool, error) {
+	for _, budget := range budgets {
+		l.calls++
+		l.keys = append(l.keys, budget.Key)
+		l.counts = append(l.counts, budget.Count)
+	}
+	return l.allowed, l.err
+}
+
 type repositoryStub struct {
 	Repository
 	proof     Proof

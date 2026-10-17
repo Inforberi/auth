@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
 func TestRedisMFALimits(t *testing.T) {
@@ -50,10 +52,15 @@ func TestRedisMFALimits(t *testing.T) {
 	if allowed, err := limiter.Allow(t.Context(), "mfa-test-other-browser", 5, time.Minute); err != nil || !allowed {
 		t.Fatal("other binding shares budget", err)
 	}
+	t.Run("atomic admission", func(t *testing.T) { checkAtomicAdmission(t, db, limiter) })
+	t.Run("random token flood", func(t *testing.T) { checkMFAFlood(t, db, limiter) })
 	if err := db.Close(); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := limiter.Allow(t.Context(), "unavailable", 5, time.Minute); err == nil {
 		t.Fatal("Redis error ignored")
+	}
+	if allowed, err := limiter.AllowAll(t.Context(), []service.Budget{{Key: "unavailable", Count: 5}}); err == nil || allowed {
+		t.Fatal("Redis batch failure opened admission")
 	}
 }
