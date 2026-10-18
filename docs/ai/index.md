@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | План и результаты | [implementation](../planning/implementation.md), [roadmap](../planning/roadmap.md), [history](../planning/history.md) | В implementation — текущий выпуск A1–A8; history читать только для нужного прошлого решения |
 | Архитектура и запуск | [architecture](../architecture.md), [ADR](../adr/) | `cmd/auth`, `internal/app`, `internal/config`, `internal/server/http` |
+| Независимые проекты — до UI | [multi-project MP1–MP8](../planning/multi-project.md), [ADR005](../adr/005-independent-projects.md), [каталог](../features/project-catalog.md) | internal/platform/project/{domain,repository/postgres}, migrations/platform; process/project split и admin bridge — ADR005, runtime ещё однопроектный |
 | API и ошибки | [contract](../api/contract.md), [руководство интегратора](../auth-guide.md) | `internal/transport/http/router`, `httpx`, фичевые `transport/http`; generated — `docs/api/generated` |
 | Схема и транзакции | [schema](../schema.md), [ADR 002](../adr/002-sessions-and-transactions.md) | `migrations`, фичевые `repository/postgres` |
 | Sessions/security | [auth-security](../planning/auth-security.md), [ADR 002](../adr/002-sessions-and-transactions.md) | `internal/auth/session`, router; для конкретного сценария — его service/repository |
@@ -42,7 +43,7 @@
 | Email OTP | [email-otp](../features/email-otp.md) | `internal/auth/methods/emailotp`, app/auth, delivery runner |
 | Origin/CORS/HTTPS/SMTP | [browser-security](../operations/browser-security.md) | HTTP middleware/router, server, `internal/infra/mailer` |
 | Угрозы и security boundaries | [threat-model](../threat-model.md), нужный [ADR](../adr/) | Проверить границы затронутого сценария, не только HTTP middleware |
-| Нагрузка и ресурсы | [performance](../operations/performance.md) | Hasher/limits, HTTP admission, SQL/Redis, retention/delivery |
+| Нагрузка и ресурсы | [performance](../operations/performance.md), [HTTP baseline/cleanup](../operations/load-baseline.md), [load/rest](../operations/load-rest.md) | Hasher/limits, HTTP admission, SQL/Redis, retention/delivery; Task sandbox:load/load:rest/cleanup, deploy/sandbox/load*_test.go и cleanup* fixtures/observer |
 | Команды и CI | [режим проверок](../planning/implementation.md#режим-проверок-после-уточнения-пользователя) | `Taskfile.yml`, `.github/workflows/ci.yml`, `deploy` |
 
 Под «Account» понимается `internal/auth/account`, под «Password» — `internal/auth/methods/password`. Путь с `*` — ориентир поиска, не отдельный пакет. Правила инструментов и актуализации — в AGENTS; подробные статусы сюда не копировать.
