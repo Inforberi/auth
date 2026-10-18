@@ -11,6 +11,8 @@
 
 ## Согласованный следующий этап — multi-project
 
+Плановое уточнение18 октября: [A6.3m/A7 — выбор обязательности MFA](../planning/implementation.md#настраиваемая-обязательность-mfa--a63m--a7). Владелец платформы выбирает required/optional и для её администраторов; проекты независимо — optional/required-all/required-roles; личный фактор управляется отдельно и не отключается сменой общей политики. Backend/enforcement/SQL guards и приёмка до UI, UI в A7. Учитывать при проектировании MP2.5; **сейчас код не изменён и platform MFA обязательна**, optional flow закрыт до полной реализации. Ближайший функциональный этап остаётся MP2.5/MP2.6.
+
 Далее MP2.5/MP2.6: защищённый platform management API — list/detail и управляющие команды с актуальной platform session/permissions/fresh proofs, optimistic version/idempotency/audit. Не открывать internal Transition без authority locks; before replay тоже проверять права. Реальные begin/fail/finish остаются trusted executor MP3, не клиентскими командами. Затем typed bridge MP2.7 по [ADR005](../adr/005-independent-projects.md), закрытый до SQL authority/audit/receipt/revoke tests; AuthorizeRead их не заменяет. MP2.4 local recovery проверен, production identity/grants/операторский runbook gates остаются. Полный runtime/registry/общие budgets/fleet scheduler ещё впереди, New не запускать N раз. Затем provisioning/изоляция/эксплуатация → cross-project приёмка → предельный RPS/ресурсы MP8 → UI A7. SSO отложен; existing Auth БД автоматически не переносить и ключи не менять. До очистки project_events определить retention/idempotency horizon в MP6, не применять Auth180d policy.
 
 ## Ограничения приёмки — не отменены новым порядком
