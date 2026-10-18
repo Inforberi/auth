@@ -74,6 +74,14 @@ tasks:
         cmds:
             - AUTH_SANDBOX_ROTATION=1 go test ./deploy/sandbox -run '^TestJWTRotation$' -count=1 -v -timeout=5m
 
+    sandbox:admin:
+        desc: Проверить через HTTPS пользователей, приглашения, временные пароли и роли sandbox
+        preconditions:
+            - sh: test -f tmp/sandbox/admin-setup.json -a -f tmp/sandbox/jwt/private.pem
+              msg: Нужен подготовленный JWT sandbox и тестовый администратор
+        cmds:
+            - AUTH_SANDBOX_ADMIN=1 go test -race ./deploy/sandbox -run '^TestAdminAcceptance$' -count=1 -v -timeout=5m
+
     # Разработка — API с Air, PostgreSQL, Redis и Mailpit
     dev:up:
         desc: Запустить разработку с автоматической пересборкой
