@@ -66,6 +66,14 @@ tasks:
                 --retry-max-time 45 --max-time 3 --cacert tmp/sandbox/tls.crt https://localhost:18443/health/ready
             - AUTH_SANDBOX_ACCEPTANCE=1 go test ./deploy/sandbox -run '^TestJWTAcceptance$' -count=1 -v -timeout=3m
 
+    sandbox:jwt:rotation:
+        desc: Проверить ротацию JWT, срок доверия к JWKS и восстановление sandbox API
+        preconditions:
+            - sh: test -f tmp/sandbox/jwt/private.pem -a -f tmp/sandbox/jwt/jwks.json
+              msg: Сначала подготовьте работающий JWT sandbox командой task sandbox:jwt
+        cmds:
+            - AUTH_SANDBOX_ROTATION=1 go test ./deploy/sandbox -run '^TestJWTRotation$' -count=1 -v -timeout=5m
+
     # Разработка — API с Air, PostgreSQL, Redis и Mailpit
     dev:up:
         desc: Запустить разработку с автоматической пересборкой

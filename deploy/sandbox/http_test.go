@@ -153,10 +153,10 @@ func consume(t *testing.T, consumer *authjwt.Consumer, token, permission string,
 	}
 }
 
-func dockerDependency(t *testing.T, action, service string) {
+func sandboxContainer(t *testing.T, service string) string {
 	t.Helper()
-	if service != "redis" && service != "postgres" {
-		t.Fatal("only sandbox dependencies may be stopped")
+	if service != "redis" && service != "postgres" && service != "api" {
+		t.Fatal("only sandbox API or dependencies may be stopped")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
@@ -164,7 +164,15 @@ func dockerDependency(t *testing.T, action, service string) {
 	if err != nil || strings.TrimSpace(string(label)) != "auth-sandbox" {
 		t.Fatal("refusing dependency operation outside auth-sandbox")
 	}
-	if err := exec.CommandContext(ctx, "docker", action, "auth-sandbox-"+service+"-1").Run(); err != nil {
+	return "auth-sandbox-" + service + "-1"
+}
+
+func dockerDependency(t *testing.T, action, service string) {
+	t.Helper()
+	container := sandboxContainer(t, service)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	if err := exec.CommandContext(ctx, "docker", action, container).Run(); err != nil {
 		t.Fatal("sandbox dependency command failed", action, service)
 	}
 }

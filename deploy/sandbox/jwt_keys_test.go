@@ -49,20 +49,9 @@ func TestPrepareJWT(t *testing.T) {
 	if existing != 0 {
 		t.Fatal("partial JWT bundle; inspect tmp/sandbox/jwt, do not overwrite keys automatically")
 	}
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	der, err := x509.MarshalPKCS8PrivateKey(key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	writePrivate(t, filepath.Join(dir, "private.pem"), pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}))
-	coordinate := func(b []byte) string { return base64.RawURLEncoding.EncodeToString(b) }
-	writeJSON(t, filepath.Join(dir, "jwks.json"), map[string]any{"keys": []any{map[string]string{
-		"kty": "EC", "crv": "P-256", "alg": "ES256", "use": "sig", "kid": "sandbox-1",
-		"x": coordinate(key.X.FillBytes(make([]byte, 32))), "y": coordinate(key.Y.FillBytes(make([]byte, 32))),
-	}}})
+	private, public := syntheticSigningKey(t, "sandbox-1")
+	writePrivate(t, filepath.Join(dir, "private.pem"), private)
+	writeJSON(t, filepath.Join(dir, "jwks.json"), map[string]any{"keys": []any{public}})
 	writeJSON(t, filepath.Join(dir, "resources.json"), map[string]any{"resources": []any{
 		map[string]any{"audience": "sandbox-strict", "mode": "strict", "permissions": []string{"sandbox.records.read", "sandbox.records.write", "accounts.users.read"}},
 		map[string]any{"audience": "sandbox-local", "mode": "local", "permissions": []string{"sandbox.records.read"}},
@@ -77,6 +66,24 @@ func TestPrepareJWT(t *testing.T) {
 	writeJSON(t, filepath.Join(dir, "clients.json"), map[string]any{"clients": []any{map[string]any{
 		"id": "sandbox-consumer", "secretHashes": []string{hex.EncodeToString(hash[:])}, "audiences": []string{"sandbox-strict"},
 	}}})
+}
+
+func syntheticSigningKey(t *testing.T, kid string) ([]byte, map[string]string) {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	der, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coordinate := func(b []byte) string { return base64.RawURLEncoding.EncodeToString(b) }
+	public := map[string]string{
+		"kty": "EC", "crv": "P-256", "alg": "ES256", "use": "sig", "kid": kid,
+		"x": coordinate(key.X.FillBytes(make([]byte, 32))), "y": coordinate(key.Y.FillBytes(make([]byte, 32))),
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}), public
 }
 
 func writePrivate(t *testing.T, path string, data []byte) {
