@@ -33,6 +33,8 @@ Repository принимает caller-owned pool и ожидаемый realm UUID
 
 ## Проверка доступа
 
+Предварительный runtime split выполнен отдельно: `app/auth/app.go` открывает standalone dependencies и hasher, `realm.go` собирает существующие фичи без открытия pool/Redis/logger/hasher/listener, `run.go` управляет background lifecycle. Это пока **не operator profile**: нет второго опубликованного realm, отдельных Redis/key namespaces или fleet registry. JWT no-retry Redis client ещё принадлежит realm. Следующие шаги — изоляция и минимальная operator сборка, не вызов полного New на каждый проект.
+
 `AuthorizeRead` делает один ограниченный SQL-запрос без положительного кеша. Требует ожидаемый initialized realm, platform permission, активного неудалённого пользователя, актуальный auth_version, живую browser/password session с действующими role revision bindings, password/MFA proofs не из будущего и существующие password/TOTP credentials. Driver details не возвращаются, отмена сохраняется в безопасной ошибке.
 
 Это **snapshot чтения**, не разрешение следующей мутации. Изменения проектов/bridge требуют locks до commit, свежие proofs, audit/receipt и concurrency/revoke/lost-reply проверки. Маршруты этим блоком не открыты. Login/MFA/recovery должны использовать существующий Auth стек; platform HTTP wiring и recovery drill остаются открытыми. Reset пароля не выдаёт grants, не повторяет bootstrap и не обходит MFA.

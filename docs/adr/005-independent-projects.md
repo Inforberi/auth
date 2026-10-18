@@ -40,9 +40,9 @@ Platform management — отдельный доверенный сценарий
 | Область сейчас | Проверенный источник | Целевой owner / изменение |
 | --- | --- | --- |
 | Вход процесса, config, App.Run | `cmd/auth/main.go`, `internal/config/config.go` | Process owns config/logger/server/shared ceilings; не запускать отдельный listener для каждого проекта |
-| SQL/Redis/logger lifecycle | `internal/app/auth/run.go`: resources.open/close | Один stdlog redirect и shared Redis clients; отдельные ограниченные SQL pools/runtime, отдельный pool каталога |
-| Сборка всех фич | `internal/app/auth/app.go`: New | Разделить opening process resources и сборку project handlers/services; не вызывать полный New N раз |
-| Hash concurrency | app.go: hasher.NewBounded | Один общий bounded hasher/process + project admission, иначе N runtimes умножают hash memory slots |
+| SQL/Redis/logger lifecycle | После MP2.3-runtime-split: `internal/app/auth/app.go`: resources.open, run.go: resources.close | Один stdlog redirect и shared Redis clients; отдельные ограниченные SQL pools/runtime, отдельный pool каталога |
+| Сборка всех фич | После MP2.3-runtime-split: `internal/app/auth/realm.go`: assembleRealm; app.go: standalone New | Assembly получает borrowed pool/Redis/logger/hasher, listener остаётся у standalone owner; не вызывать полный New N раз. Operator profile/изоляция ещё не подключены |
+| Hash concurrency | app.go: hasher.NewBounded → realmDependencies.hash | Один injected bounded hasher/process; project admission ещё впереди, N runtimes не должны создавать собственные hash slots |
 | HTTP admission/health | `internal/transport/http/router/router.go`: New | Общий admission до выбора проекта; project router не заменяет общий потолок и не создаёт N global probes |
 | Access/Auth/provider/SMTP/retention settings | `internal/app/auth/{settings,provider_settings,smtp}.go` | Проектный pool и immutable snapshot/runtime capability; не мутировать shared config и не seed всех одним deployment secret |
 | Session и native refresh | app.go: sessionpostgres.New, token.go | SQL project authority сохраняется; Redis session adapter существует, но не включён App как authority/cache |
@@ -50,7 +50,7 @@ Platform management — отдельный доверенный сценарий
 | JWT/client manifests | `internal/app/auth/token.go`: assembleTokens | Project issuer/key/resource/consumer source; bounded shared no-retry Redis client при совместимой policy, не отдельный8-connection pool каждому runtime |
 | Key/payload isolation | `internal/infra/secretbox/cipher.go`: NewScoped/Seal/Open | Отдельный project key, project+purpose+version context; текущая AAD — purpose, поэтому нужна явная миграция, не молчаливая замена scope |
 | OIDC clients/письма/MFA | `internal/app/auth/{oidc,mfa,email_otp,smtp}.go` | Project credentials/cipher/URLs, context cancel и transport ownership; без fallback на соседа |
-| Background и shutdown | run.go: serveAuth/startBackground/runWithDelivery | Server lifecycle отдельно, bounded fair project jobs с cancel/join; outbox живёт и без HTTP traffic |
+| Background и shutdown | После MP2.3-runtime-split: run.go: realm.run/startBackground/runWithDelivery | Realm lifecycle без listener, server drain → worker cancel/join → clients cleanup; fair bounded fleet scheduling ещё впереди, outbox живёт и без HTTP traffic |
 | Схема | `migrations/000001_init.up.sql` | Существующие таблицы schema auth; каталог — отдельные миграции, project schema versions/grants отдельно |
 
 Это targeted source audit, не нагрузочная/SQL/fleet проверка. Redis session legacy files не подключать ради симметрии; сначала определить их реальных consumers при затронутом рефакторинге. В токен-лимитах есть literal `project` key и статические hash tags: tenant ID требуется в полном ключе/hash-tag контракте, а не только в digest client ID. Автоматическую Redis Cluster поддержку этим ADR не объявлять.

@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP2.3-runtime-split, 18 октября.** Отделены standalone dependencies/hasher/server от assembly realm и background lifecycle; API/authority не менялись. Устранён typed-nil email OTP worker при выключенном адаптере. `task check` lint0, router contracts и targeted race PASS; [evidence](history.md#результат-mp23-runtime-split--18-октября-2026). Operator profile/routes/Redis/key isolation/process-wide admission/fleet scheduler остаются открытыми, полные App.New на каждый realm не запускать.
+
 - [x] **MP2.3/MP2.4-foundation, 18 октября.** [Оператор платформы](../features/platform-operators.md): отдельные realm/permissions/audit, атомарный owner через существующий Auth setup, uncached read authority. `task check` lint0, PostgreSQL18.6 setup/rollback/concurrency/revoke/catalog regression PASS. [Evidence](history.md#результат-mp23mp24-foundation--18-октября-2026). Runtime/HTTP/login/recovery/Redis isolation и MP2 целиком открыты; следующий шаг — сборка и безопасная публикация operator Auth, без второго стека/полного App.New на realm.
 
 - [x] **MP2.1-code — read foundation, 18 октября.** [Каталог](../features/project-catalog.md): отдельная platform migration, bounded identity/state/origin domain и Read/Resolve/List с uncached ready-only exact lookup, keyset limit1–100 и безопасными ошибками. Formatter/unit/final task check lint0 PASS. Публичного API/operator authority/provisioning/переключения Auth runtime нет.

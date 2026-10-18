@@ -2,199 +2,113 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	accesshttp "github.com/Inforberi/financial-intelligence/internal/access/transport/http"
-	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
+	accessapp "github.com/Inforberi/financial-intelligence/internal/app/access"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
-	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
-	passwordredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/redis"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
-	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
-	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
-	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
-	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
-	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
-	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
-	"github.com/Inforberi/financial-intelligence/internal/transport/http/router"
+	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
+	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
+	redisclient "github.com/Inforberi/financial-intelligence/internal/infra/redis"
+	httpserver "github.com/Inforberi/financial-intelligence/internal/server/http"
 )
 
-func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
-	runtimeConfig := *cfg
-	cfg = &runtimeConfig
-	resources := &resources{}
-	defer func() {
-		if err != nil {
-			resources.close()
-		}
-	}()
-	pool, rdb, log, err := resources.open(ctx, cfg)
-	if err != nil {
-		return nil, err
-	}
-	access, policy, providers, err := assembleAccessPolicy(ctx, pool, cfg)
-	if err != nil {
-		return nil, fmt.Errorf("assemble access and auth policy: %w", err)
-	}
-	now := clock.UTCClock{}
-	tokenGen := tokengenerate.New()
-	mail, smtpSettings, err := assembleSMTP(ctx, pool, rdb, cfg, log)
-	if err != nil {
-		return nil, fmt.Errorf("assemble SMTP settings: %w", err)
-	}
-	accountSvc, accountRepo, err := assembleAccount(pool, rdb, mail, cfg.Account, accountpostgres.DeliveryConfig{EmailChanges: cfg.EmailChange.Enabled, Invitations: cfg.Invitation.Enabled, EmailBinding: cfg.EmailBinding.Enabled})
-	if err != nil {
-		return nil, fmt.Errorf("assemble account: %w", err)
-	}
-	passwordRepo := assembleRegistration(pool, accountSvc, accountRepo)
-	emailBinding, err := assembleEmailBinding(accountRepo, rdb, cfg, log)
-	if err != nil {
-		return nil, fmt.Errorf("assemble email binding: %w", err)
-	}
-	retentionSettings, err := assembleRetentionSettings(ctx, pool, cfg.Retention)
-	if err != nil {
-		return nil, fmt.Errorf("assemble retention settings: %w", err)
-	}
-	retentionSvc := accountservice.NewRetention(accountRepo, cfg.Retention).WithSettings(retentionSettings)
-	argonHash := hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), cfg.Capacity.HashConcurrency)
-	setup, err := assembleSetup(accountRepo, rdb, mail, argonHash, cfg, log)
-	if err != nil {
-		return nil, fmt.Errorf("assemble setup: %w", err)
-	}
-	sessionRepo := sessionpostgres.New(pool)
-	sessionSvc := sessionservice.New(now, sessionRepo, tokenGen, cfg.Session)
-	mfa, err := assembleMFA(ctx, pool, rdb, sessionSvc, tokenGen, mail, cfg, log)
-	if err != nil {
-		return nil, fmt.Errorf("assemble MFA: %w", err)
-	}
-	loginSvc := mfa.sessions
-	emailOTP, err := assembleEmailOTP(pool, rdb, mail, loginSvc, tokenGen, cfg, log)
-	if err != nil {
-		return nil, fmt.Errorf("assemble email OTP: %w", err)
-	}
-	resetCipher, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "password-reset:v1")
-	if err != nil {
-		return nil, err
-	}
-	passwordLimits := passwordredis.New(rdb)
-	loginLimit := passwordservice.NewLoginLimit(passwordLimits, resetCipher, cfg.Capacity)
-	passwordSvc := passwordservice.New(passwordRepo, loginSvc, argonHash, loginLimit).WithPublicPolicy(func(ctx context.Context, registration bool) error {
-		return policy.CheckPublic(ctx, "password", registration)
-	})
-	recoverySvc := passwordservice.NewRecovery(passwordRepo, resetCipher, passwordLimits, mail, argonHash, cfg.Password)
-	tokens, err := assembleTokens(ctx, pool, rdb, cfg, nativeLoginDependencies{password: passwordSvc, mfa: mfa, email: emailOTP}, access.Catalog(), cfg.Account.EncryptionKey, resources, log)
-	if err != nil {
-		return nil, fmt.Errorf("assemble JWT: %w", err)
-	}
-	passwordHandler := passwordhttp.New(passwordSvc,
-		log.With(zap.String("feature", "password_auth"), zap.String("layer", "transport")))
-	middleware := sessionhttp.New(sessionSvc, log)
-	telegram, closeTelegram, err := assembleTelegram(ctx, cfg, accountRepo, rdb, loginSvc, policy, providers, log)
-	if err != nil {
-		return nil, fmt.Errorf("assemble telegram: %w", err)
-	}
-	resources.add(closeTelegram)
-	google, closeGoogle, err := assembleGoogle(ctx, cfg, accountRepo, rdb, loginSvc, policy, providers, log)
-	if err != nil {
-		return nil, fmt.Errorf("assemble Google: %w", err)
-	}
-	resources.add(closeGoogle)
-	var emailChange *accounthttp.EmailChangeHandler
-	var protectedRecovery *passwordhttp.ProtectedRecoveryHandler
-	var activation *passwordhttp.ActivationHandler
-	var temporary *passwordservice.TemporaryPasswordService
-	var temporaryHandler *passwordhttp.TemporaryPasswordHandler
-	var temporaryAdmin *passwordhttp.TemporaryAdminHandler
-	if cfg.TemporaryPassword.Enabled {
-		temporaryRepo := passwordpostgres.NewTemporaryPassword(pool, accountRepo.ProvisionInTransaction)
-		temporary = passwordservice.NewTemporaryPassword(temporaryRepo, argonHash, passwordLimits, resetCipher.Digest, loginLimit, cfg.TemporaryPassword)
-		temporaryHandler = passwordhttp.NewTemporaryPassword(temporary, log)
-		temporaryAdmin = passwordhttp.NewTemporaryAdmin(temporary, log)
-	}
-	var provisioning *accountservice.ProvisionService
-	var provisioningHandler *accounthttp.ProvisioningHandler
-	if cfg.Invitation.Enabled {
-		provisioning = accountservice.NewProvisioning(accountRepo, accountSvc, cfg.Invitation)
-		provisioningHandler = accounthttp.NewProvisioning(provisioning, log)
-		activation = passwordhttp.NewActivation(passwordservice.NewActivation(accountRepo, recoverySvc, cfg.Invitation), log)
-	}
-	if cfg.EmailChange.Enabled {
-		changeSvc := accountservice.NewEmailChange(accountRepo, argonHash, accountSvc, cfg.EmailChange, cfg.Session.FreshAuthTTL)
-		emailChange = accounthttp.NewEmailChange(changeSvc, log)
-		protectedRecovery = passwordhttp.NewProtectedRecovery(passwordservice.NewProtectedRecovery(accountRepo, recoverySvc), log)
-	}
-
-	var mailTest *dev.MailTestHandler
-	if cfg.Logger.Env == "dev" {
-		mailTest = dev.NewMailTest(mail, log)
-	}
-	handler := router.New(router.Handlers{
-		Tokens:            tokens.handler,
-		NativeTokens:      tokens.native,
-		Introspection:     tokens.introspection,
-		UserDirectory:     accounthttp.NewUserDirectory(accountservice.NewUserDirectory(accountRepo), log),
-		UserLifecycle:     accounthttp.NewUserLifecycle(accountservice.NewUserLifecycle(accountRepo), log),
-		Provisioning:      provisioningHandler,
-		TemporaryAdmin:    temporaryAdmin,
-		Access:            accesshttp.New(access.Service, log),
-		AuthSettings:      settingshttp.NewWithTokenDeployment(policy, cfg.AvailableAuthMethods(), tokens.deployment, log),
-		SMTPSettings:      smtpSettings,
-		ProviderSettings:  settingshttp.NewProviders(providers, log),
-		RetentionSettings: settingshttp.NewRetention(retentionSettings, log),
-		Setup:             setup,
-		EmailBinding:      emailBinding,
-		MFA:               mfa.handler,
-		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
-		Activity:          sessionhttp.NewActivity(sessionservice.NewActivity(sessionRepo), log),
-		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessionRepo, tokenGen), log),
-		Reauthentication:  passwordhttp.NewReauthentication(passwordservice.NewReauthentication(passwordRepo, sessionRepo, argonHash, loginLimit, tokenGen, cfg.Session.FreshAuthTTL), log),
-		Recovery:          passwordhttp.NewRecovery(recoverySvc, log),
-		Account:           accounthttp.New(accountSvc, log),
-		EmailChange:       emailChange,
-		ProtectedRecovery: protectedRecovery,
-		Activation:        activation,
-		TemporaryPassword: temporaryHandler,
-		Telegram:          telegram,
-		Google:            google,
-		EmailOTP:          emailOTP.handler,
-		PasswordHandler:   passwordHandler,
-		Middleware:        middleware,
-		MailTest:          mailTest,
-		Config:            cfg,
-		Logger:            log,
-		ReadyCheck: func(ctx context.Context) error {
-			if err := pool.Ping(ctx); err != nil {
-				return err
-			}
-			return rdb.Ping(ctx).Err()
-		},
-	})
-	return &App{
-		Access:             access,
-		Provisioning:       provisioning,
-		TemporaryPasswords: temporary,
-		resources:          resources,
-		serve:              serveAuth(log, cfg.Server, handler, retentionSvc, recoverySvc, accountSvc, mfa.delivery, emailOTP.delivery),
-	}, nil
+// These dependencies are borrowed. Realm cleanup never closes their process owner.
+type realmDependencies struct {
+	pool  *pgxpool.Pool
+	redis *redis.Client
+	log   *zap.Logger
+	hash  *hasher.Bounded
 }
 
-func assembleRegistration(pool *pgxpool.Pool, service *accountservice.Service, repo *accountpostgres.Repository) *passwordpostgres.PasswordRepo {
-	return passwordpostgres.NewWithRegistration(pool, func(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, emailID accountdomain.AddressID, email string) error {
-		prepared, err := service.PrepareVerification(email)
+func (d realmDependencies) validate() error {
+	if d.pool == nil || d.redis == nil || d.log == nil || d.hash == nil {
+		return errors.New("auth realm requires pool, Redis, logger and shared hasher")
+	}
+	return nil
+}
+
+func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
+	owned := &resources{}
+	defer func() {
 		if err != nil {
-			return err
+			owned.close()
 		}
-		return repo.QueueInTransaction(ctx, tx, user, emailID, prepared)
+	}()
+	pool, rdb, log, err := owned.open(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	if cfg.Capacity.HashConcurrency < 1 {
+		return nil, errors.New("password hash concurrency must be positive")
+	}
+	deps := realmDependencies{
+		pool: pool, redis: rdb, log: log,
+		hash: hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), cfg.Capacity.HashConcurrency),
+	}
+	assembled, err := assembleRealm(ctx, cfg, deps)
+	if err != nil {
+		return nil, err
+	}
+	owned.add(assembled.resources.close)
+	return standalone(assembled, owned, log, cfg.Server), nil
+}
+
+func standalone(assembled *realm, owned *resources, log *zap.Logger, cfg httpserver.Config) *App {
+	return &App{
+		Access: assembled.Access, Provisioning: assembled.Provisioning, TemporaryPasswords: assembled.TemporaryPasswords,
+		resources: owned,
+		serve: func(ctx context.Context) error {
+			return assembled.run(ctx, log, func(ctx context.Context) error {
+				return httpserver.Run(ctx, log, cfg, assembled.handler)
+			})
+		},
+	}
+}
+
+type realm struct {
+	Access             *accessapp.App
+	Provisioning       *accountservice.ProvisionService
+	TemporaryPasswords *passwordservice.TemporaryPasswordService
+	handler            http.Handler
+	retention          retentionWorker
+	workers            []deliveryWorker
+	resources          *resources
+}
+
+func (r *resources) open(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, *redis.Client, *zap.Logger, error) {
+	log := logger.CreateLogger(cfg.Logger)
+	r.add(func() {
+		if err := log.Sync(); err != nil {
+			return // stdout/stderr may not support fsync; no buffered logger remains.
+		}
 	})
+	r.add(zap.RedirectStdLog(log))
+
+	pool, err := postgres.New(ctx, cfg.Postgres)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("create postgres pool: %w", err)
+	}
+	r.add(pool.Close)
+	log.Info("postgres pool created successfully")
+
+	rdb, err := redisclient.New(ctx, cfg.Redis)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("init redis: %w", err)
+	}
+	r.add(func() {
+		if err := rdb.Close(); err != nil {
+			log.Error("failed to close Redis")
+		}
+	})
+	log.Info("redis created successfully")
+	return pool, rdb, log, nil
 }

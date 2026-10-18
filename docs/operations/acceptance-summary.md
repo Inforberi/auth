@@ -1,5 +1,7 @@
 # Краткий отчёт по проверкам
 
+18 октября, MP2.3-runtime-split: feature assembly отделена от standalone resources/listener; исправлен nil email OTP worker. Final `task check` lint0, router contracts и App/hasher race PASS. Live SQL/Redis/HTTPS/multi-realm/load в этом блоке NOT RUN; [evidence](../planning/history.md#результат-mp23-runtime-split--18-октября-2026). Pre-ui/MP2 целиком остаются открытыми.
+
 18 октября, MP2.3/MP2.4 foundation: `task check` PASS/lint0, real PostgreSQL18.6 operator setup/atomic rollback/single-owner/SQL authority PASS0.26s, catalog regression PASS. Fixture БД/scratch удалены, PostgreSQL возвращён в stopped. Runtime/HTTP/login/recovery/Redis isolation/race/load/bridge NOT RUN; [результат](../planning/history.md#результат-mp23mp24-foundation--18-октября-2026).
 
 Обновлено 18 октября 2026. Ветка `feat/register-ai`, load baseline/cleanup-drain проверены на HEAD `cf06502` + новые test/docs changes. Предыдущие lifecycle/freshness/MFA evidence получены на HEAD87d306c + dirty blocks, затем зафиксированы2286f22/b3e870a/cf06502; прошлые snapshots — в history. Один локальный `auth-sandbox`: production App, PostgreSQL18.6, Redis8.2, Mailpit, прямой HTTPS с проверкой CA. Не production sign-off.

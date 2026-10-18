@@ -1,15 +1,15 @@
 # Текущий шаг
 
-Обновлено 18 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), последний результат — [operator foundation/history](../planning/history.md#результат-mp23mp24-foundation--18-октября-2026), прежние измерения — [отчёт](../operations/acceptance-summary.md). Commits/staging проверять через Git.
+Обновлено 18 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), последний результат — [runtime split/history](../planning/history.md#результат-mp23-runtime-split--18-октября-2026), прежние измерения — [отчёт](../operations/acceptance-summary.md). Commits/staging проверять через Git.
 
-## Последний результат — MP2.3/MP2.4 foundation
+## Последний результат — MP2.3-runtime-split
 
-- [Оператор платформы](../features/platform-operators.md): отдельные realm/permissions/audit, существующий SetupService, атомарный первый владелец с email/TOTP, single-winner и committed failed attempts. `AuthorizeRead` проверяет current SQL authority, но не разрешает мутации/bridge. `task check` PASS/lint0; real TestPlatformOperatorsPostgres PASS0.26s на PostgreSQL18.6/Linux arm64, catalog regression PASS. Runtime/HTTP/ENV не подключены; MP2.3/MP2.4 целиком открыты, platform login/recovery/Redis isolation/race/load NOT RUN.
-- Временно запущен только остановленный sandbox PostgreSQL; новая auth_platform_test прошла up/down, обе fixture-схемы удалены. БД удалена без FORCE, count0/auth count1; семь scratch-файлов и пустые каталоги убраны, PostgreSQL возвращён в stopped. Рабочая Auth/ENV/Redis не менялись. MP2.1 закрыт ранее. Актуальные commits/staging проверять через Git.
+- `app/auth/app.go` — standalone resources/shared hasher/server; `realm.go` — feature assembly из borrowed dependencies с собственным clients cleanup; `run.go` — workers lifecycle без listener. Сохранены API/SQL authority/server drain → workers join → realm clients → process dependencies. Исправлен typed-nil email OTP worker при выключенном адаптере.
+- Formatter, targeted router contracts, final `task check` PASS/lint0, targeted race App/hasher PASS. Новые tests — fake workers/hasher, не live multi-realm. Docker/SQL/Redis/HTTPS/load в этом блоке NOT RUN, ENV/схемы/рабочие данные не менялись. [Operator foundation](../features/platform-operators.md) и MP2.1 SQL закрыты ранее; результат operator SQL0.26s — предыдущий блок, не повторялся. Актуальные commits/staging проверять через Git.
 
 ## Согласованный следующий этап — multi-project
 
-Далее закончить MP2.3–MP2.4: подключение operator realm к сборке существующего Auth (отделить process-owned ресурсы, не создавать полный App.New на каждый realm), отдельные origin/cookie/Redis/key namespaces и grants, защищённые setup/password/MFA routes, login/recovery SQL/HTTP приёмка. Затем MP2.2/MP2.5–MP2.7: transitions и management API, одна platform session по [ADR005](../adr/005-independent-projects.md). Bridge закрыт до SQL authority/audit/receipt/revoke tests; AuthorizeRead их не заменяет. Затем provisioning/изоляция/эксплуатация → cross-project приёмка → предельный RPS/ресурсы MP8 → UI A7. SSO отложен, пользователей не объединять.
+Далее закончить MP2.3–MP2.4: отдельные origin/cookie/Redis/key namespaces и grants, минимальный operator profile существующего Auth и защищённые setup/password/MFA routes, login/recovery SQL/HTTP приёмка. Runtime split — prerequisite, не завершённый platform runtime: assembleRealm пока private, JWT no-retry client всё ещё realm-owned, process-wide admission/общие client budgets и fleet scheduler не реализованы; полный App.New на каждый realm не запускать. Затем MP2.2/MP2.5–MP2.7: transitions и management API, одна platform session по [ADR005](../adr/005-independent-projects.md). Bridge закрыт до SQL authority/audit/receipt/revoke tests; AuthorizeRead их не заменяет. Затем provisioning/изоляция/эксплуатация → cross-project приёмка → предельный RPS/ресурсы MP8 → UI A7. SSO отложен, пользователей не объединять.
 
 ## Ограничения приёмки — не отменены новым порядком
 

@@ -3,23 +3,16 @@ package auth
 import (
 	"context"
 	"errors"
-	"fmt"
-	"net/http"
 	"sync"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	accessapp "github.com/Inforberi/financial-intelligence/internal/app/access"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/config"
-	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
-	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
-	redisclient "github.com/Inforberi/financial-intelligence/internal/infra/redis"
-	httpserver "github.com/Inforberi/financial-intelligence/internal/server/http"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
 type App struct {
@@ -60,38 +53,26 @@ func (r *resources) close() {
 	})
 }
 
-func (r *resources) open(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, *redis.Client, *zap.Logger, error) {
-	log := logger.CreateLogger(cfg.Logger)
-	r.add(func() {
-		if err := log.Sync(); err != nil {
-			return // stdout/stderr may not support fsync; no buffered logger remains.
-		}
-	})
-	r.add(zap.RedirectStdLog(log))
-
-	pool, err := postgres.New(ctx, cfg.Postgres)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("create postgres pool: %w", err)
-	}
-	r.add(pool.Close)
-	log.Info("postgres pool created successfully")
-
-	rdb, err := redisclient.New(ctx, cfg.Redis)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("init redis: %w", err)
-	}
-	r.add(func() {
-		if err := rdb.Close(); err != nil {
-			log.Error("failed to close Redis")
-		}
-	})
-	log.Info("redis created successfully")
-
-	return pool, rdb, log, nil
-}
-
 type deliveryWorker interface {
 	RunDelivery(context.Context, func(error))
+}
+
+func realmDeliveryWorkers(recovery *passwordservice.RecoveryService, account *accountservice.Service, mfa *mfaservice.RecoveryDelivery, email *otpservice.Delivery) []deliveryWorker {
+	var workers []deliveryWorker
+	// Check concrete pointers before conversion: a typed nil is a non-nil interface.
+	if recovery != nil {
+		workers = append(workers, recovery)
+	}
+	if account != nil {
+		workers = append(workers, account)
+	}
+	if mfa != nil {
+		workers = append(workers, mfa)
+	}
+	if email != nil {
+		workers = append(workers, email)
+	}
+	return workers
 }
 
 func startDelivery(ctx context.Context, service deliveryWorker, log *zap.Logger,
@@ -126,21 +107,20 @@ func runWithDelivery(ctx context.Context, log *zap.Logger, serve func(context.Co
 	return serve(ctx)
 }
 
-func serveAuth(log *zap.Logger, cfg httpserver.Config, handler http.Handler, retention *accountservice.RetentionService, workers ...deliveryWorker) func(context.Context) error {
-	active := make([]deliveryWorker, 0, len(workers))
-	for _, worker := range workers {
+type retentionWorker interface {
+	RunRetention(context.Context, func(error))
+}
+
+func (r *realm) run(ctx context.Context, log *zap.Logger, serve func(context.Context) error) error {
+	active := make([]deliveryWorker, 0, len(r.workers))
+	for _, worker := range r.workers {
 		if worker != nil {
 			active = append(active, worker)
 		}
 	}
-	return func(ctx context.Context) error {
-		stopRetention := startBackground(ctx, func(ctx context.Context) {
-			retention.RunRetention(ctx, func(error) { log.Warn("retention processing failed") })
-		})
-		defer stopRetention()
-		serve := func(ctx context.Context) error {
-			return httpserver.Run(ctx, log, cfg, handler)
-		}
-		return runWithDelivery(ctx, log, serve, active...)
-	}
+	stopRetention := startBackground(ctx, func(ctx context.Context) {
+		r.retention.RunRetention(ctx, func(error) { log.Warn("retention processing failed") })
+	})
+	defer stopRetention()
+	return runWithDelivery(ctx, log, serve, active...)
 }
