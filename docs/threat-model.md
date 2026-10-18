@@ -28,6 +28,23 @@
 
 ## Release gate
 
+### Multi-project — дополнение MP1, 18 октября 2026
+
+[ADR005](adr/005-independent-projects.md) — целевое решение, пока без runtime реализации. Независимые БД изолируют данные, не общие process/catalog/Redis/server ресурсы. Одна сессия platform operator для управления всеми проектами — отдельная доверенная административная граница, не SSO и не принятие platform credentials на пользовательском project API.
+
+| Угроза | Требование | Отрицательная проверка |
+| --- | --- | --- |
+| Host/header/ID выбирает чужую/default БД | Exact зарегистрированный origin, authoritative catalog до runtime lease, no fallback | Unknown/disabled host, spoofed forwarded headers, UUID/kid collision; MP1/MP5/MP7 |
+| Platform actor притворяется project user | Отдельный typed bridge, current platform session/permission/fresh password/MFA, target binding | Project admin вызывает platform API, platform cookie на project API, подмена actor/target; MP2/MP5 |
+| Отзыв operator authority между БД | Bounded blocking platform SQL guard через project commit, единый lock order, target audit/receipt | Revoke actor/session/factor/role во время mutation, timeout/deadlock/lost final platform update; bridge закрыт без tests |
+| Неполная/повторная подготовка использует чужую БД | Ownership/generation/schema checks, idempotent progress, no auto DROP | Collision технического имени, retry после commit, restart executor, stale binding; MP3/MP6 |
+| Shared Redis/cipher/JWKS смешивает проекты | Immutable realm/purpose namespace, per-project key/context/issuer/consumer trust | Чужой OTP/OIDC/MFA/reset/refresh/ciphertext, одинаковый kid, untrusted issuer URL; MP5/MP7 |
+| N проектов умножают pools/hash slots/workers | Process-wide ceilings, bounded runtime leases/fair jobs, отдельный бюджет platform | Cold-open storm, eviction active runtime, idle projects/noisy neighbor, shared dependency failure; MP4/MP8 |
+| Provisioning credential или UI раскрывает все БД | Отдельный privileged executor, limited runtime roles, encrypted secrets/root вне каталога | Runtime create/read neighbor denial, SSRF target/SQL identifier injection, DSN/log/DTO leak; MP3/MP7 |
+| Cutover ломает MFA/возвращает old credentials | Preserve/re-encrypt durable secrets, explicit revoke/trust switch/Redis drain, writers fence | Старый cookie/local JWT/refresh после cutover, TOTP/outbox decryption, stale old deployment; MP6 |
+
+Недоступность каталога не разрешает cached positive authorization. Suspension закрывает новые admission, но не объявляется отменой уже начатых транзакций или мгновенным отзывом offline JWT. Platform audit и project commit не атомарны между БД: project mutation+audit+receipt атомарны локально, финальный platform outcome восстанавливается по receipt. Скрытая потеря audit/двойная выдача secret при retry — release blocker, не «успешный failover».
+
 Все baseline P0 session/credential defects закрываются в 5/6 до внешнего трафика. До административных API необходима 13.1. Auth-only, entitlements-only и billing-enabled проверяются как разные поддерживаемые профили; выключенная интеграция не объявляется протестированной. Содержательные concurrency/negative tests добавляются вместе с затронутым модулем, без полного infrastructure drill после каждого изменения документации.
 
 SMTP delivery и external provider sandbox требуют отдельных staging checks. Linux/architecture coverage, нагрузка, retention/RPO/RTO и secret provisioning фиксируются в 14; локальный dev smoke не заменяет эти проверки. Operational recovery имеет документированный owner и порядок действий при compromise/DB failure/backup restore.

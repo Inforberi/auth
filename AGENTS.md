@@ -35,6 +35,6 @@
 
 ## Границы изменений
 
-- Текущий выпуск — Auth, пользователи, роли/permissions, MFA и UI. Приоритет — [текущий scope](docs/planning/implementation.md#текущий-выпуск-auth-роли-и-ui). Оплата, entitlements/квоты, общий SSO, multi-app/организации, Mini Apps/Stars и passkeys отложены: не создавать для них schema/routes/workers/settings/заглушки.
+- Текущий выпуск — Auth, пользователи, роли/permissions, MFA, независимые проекты с отдельными БД и UI. [Multi-project](docs/planning/multi-project.md) — следующий функциональный этап до UI; обычные проверки выполнять по подэтапам, предельный RPS и длительные ресурсные прогоны — после реализации в MP8 перед UI. Приоритет — [текущий scope](docs/planning/implementation.md#текущий-выпуск-auth-роли-и-ui). Оплата, entitlements/квоты, общий SSO, multi-app/организации, Mini Apps/Stars и passkeys отложены: не создавать для них schema/routes/workers/settings/заглушки. Multi-project не разрешает реализацию SSO.
 - Запрос на план/анализ не разрешает реализацию. Следовать согласованному этапу; не публиковать flow до готовности security prerequisites. Рефакторинг не должен скрыто менять API или гарантии.
 - Сохранять пользовательские правки и staging. Коммит — только по запросу. Не сбрасывать рабочую БД, не менять реальные env/secrets и не выполнять prod deploy/restore ради проверки без явного разрешения.
