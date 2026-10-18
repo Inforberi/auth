@@ -1,5 +1,7 @@
 # Карта проекта
 
+Project lifecycle: [контракт](../features/project-lifecycle.md), `internal/platform/project/domain/transition.go`, `repository/postgres/transition.go`, `migrations/platform/transitions_test.go`; caller-owned transaction после authority locks, atomic audit/receipt. HTTP/executor не подключены.
+
 Multi-project operator foundation: [контракт и ограничения](../features/platform-operators.md), `internal/platform/operator`, `migrations/platform/000002_operators.*`; использует Auth setup, не отдельный login stack.
 
 Opt-in operator Auth: [platform-login](../features/platform-login.md), `app/auth/operator.go`, `router/operator.go`, `config/platform.go`, operator repository `runtime.go`, `deploy/platform-runtime-grants.sql`; один профиль/listener, не fleet dispatcher.

@@ -31,3 +31,24 @@ CREATE TABLE platform.projects (
 CREATE INDEX projects_page ON platform.projects(created_at DESC,id DESC);
 CREATE INDEX projects_phase_page ON platform.projects(phase,created_at DESC,id DESC);
 REVOKE ALL ON platform.projects FROM PUBLIC;
+
+CREATE TABLE platform.project_events (
+  project_id UUID NOT NULL REFERENCES platform.projects(id),
+  operation_id UUID NOT NULL CHECK (operation_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  action TEXT NOT NULL CHECK (action IN ('begin_preparation','fail_preparation','finish_preparation','retry','suspend','resume')),
+  actor_kind TEXT NOT NULL CHECK (actor_kind IN ('operator','provisioner')),
+  actor_id UUID NOT NULL CHECK (actor_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  reason TEXT NOT NULL CHECK (octet_length(reason) BETWEEN 1 AND 500 AND reason=btrim(reason) AND reason !~ '[[:cntrl:]]'),
+  from_state TEXT NOT NULL CHECK (from_state IN ('enabled','suspended')),
+  from_phase TEXT NOT NULL CHECK (from_phase IN ('pending','provisioning','failed','ready')),
+  from_version BIGINT NOT NULL CHECK (from_version > 0),
+  from_generation BIGINT NOT NULL CHECK (from_generation > 0),
+  to_state TEXT NOT NULL CHECK (to_state IN ('enabled','suspended')),
+  to_phase TEXT NOT NULL CHECK (to_phase IN ('pending','provisioning','failed','ready')),
+  to_version BIGINT NOT NULL CHECK (to_version=from_version+1),
+  to_generation BIGINT NOT NULL CHECK (to_generation=from_generation+1),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(project_id,operation_id)
+);
+CREATE INDEX project_events_page ON platform.project_events(project_id,created_at DESC,operation_id DESC);
+REVOKE ALL ON platform.project_events FROM PUBLIC;

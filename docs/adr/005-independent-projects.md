@@ -20,6 +20,31 @@
 
 Platform catalog/Redis — общие зависимости: при их отказе соответствующие защищённые сценарии fail-closed, без cached authorization/безлимитного SQL fallback. Общий `/health/ready` не обходит все project DB; проверяет необходимые platform dependencies. Отказ одной проектной БД даёт проектный503 и диагностическое состояние, не автоматически общую not-ready для всех. Pool opening не выполняется для каждого HTTP request.
 
+## 2.1. Lifecycle проекта — MP2.2
+
+Сохраняются две оси, не дополнительные booleans: `desired_state=enabled|suspended` и `phase=pending|provisioning|failed|ready`. Новый проект — enabled/pending; запросы допускаются только enabled/ready. Availability SQL/Redis — отдельный диагностический результат: timeout/outage не переводит ready в failed/pending и не запускает повторное создание.
+
+Полная матрица разрешённых команд; все остальные сочетания отвергаются:
+
+| Команда | Кто задаёт | До | После |
+| --- | --- | --- | --- |
+| begin_preparation | Trusted executor | enabled/pending | enabled/provisioning |
+| fail_preparation | Trusted executor | enabled или suspended / provisioning | То же desired state / failed |
+| finish_preparation | Trusted executor | enabled или suspended / provisioning | То же desired state / ready; binding/schema metadata обязательны |
+| retry | Platform operator | enabled/failed | enabled/pending |
+| suspend | Platform operator | enabled / любая известная phase | suspended / прежняя phase |
+| resume | Platform operator | suspended / любая известная phase | enabled / прежняя phase |
+
+Начатая подготовка может закончиться при suspension, но не включает проект: desired state сохраняется. Stale executor после любого изменения получает conflict; будущий executor обязан заново сверить текущее состояние и принадлежность ресурсов, не подставлять новую version автоматически. Пока suspended, новые begin/retry запрещены; resume failed-проекта оставляет failed и требует явного retry. Ready нельзя превратить в повторное создание. Присутствие binding — не доказательство доступности/принадлежности БД: реальную проверку до finish обеспечивает MP3, не клиентский флаг.
+
+Каждая принятая lifecycle-команда увеличивает `version` и `generation` ровно на1. Первая — optimistic catalog revision, вторая — epoch для будущего runtime/lease; будущие изменения display metadata могут менять только version. Смена epoch сама по себе не отзывает SQL-сессии/внешний JWT и не реализует fleet drain: это отдельные guards MP4/MP7. Максимальное BIGINT значение не переполняется, операция отвергается.
+
+Persistence участвует в **Read Committed транзакции вызывающего приложения**. Порядок для будущего API: platform authority/fresh-proof locks → project row FOR UPDATE → проверка operation receipt → expected version/generation → domain transition → один UPDATE+audit INSERT statement → commit. Нельзя публиковать эту persistence функцию без актуальной авторизации. Actor kind/UUID — audit attribution от доверенного сервера, не клиентское доказательство прав. HTTP/service/executor в MP2.2 не подключаются ради заглушек.
+
+`platform.project_events` хранит project/operation UUID, actor kind/UUID, причину без secrets, before/after state/phase/version/generation и время. Пара `(project_id,operation_id)` уникальна; точный повтор возвращает исходный receipt даже после последующих переходов, не новый текущий статус. Другой payload/actor/expected revision под тем же ID — conflict. Новый ID при уже достигнутом desired state — invalid transition, без лишних UPDATE/audit. Ошибка аудита откатывает изменение состояния. Caller возвращает receipt только после успешного commit; при неизвестном исходе повторяет ту же команду, не генерирует новый ID вслепую. Проверка актуальных полномочий нужна и перед replay.
+
+Аудит и receipt пока не удаляются: срок их хранения/окно идемпотентности нужно определить до очистки, не применять автоматически Auth audit retention180d. Runtime management grants в MP2.5 должны быть append-only для событий. Source schema расширяется в первоначальной catalog migration для новых платформенных БД; существующей установленной БД требуется отдельный controlled upgrade, не down/reset и не утверждение, что старая migration повторно исполнится.
+
 ## 3. Одна сессия оператора, без пользовательского SSO
 
 Оператор входит на platform origin, проходит MFA/fresh proof и управляет любым разрешённым проектом через platform endpoints с явно указанным target ID. Пользовательский project origin не принимает платформенную cookie/Bearer и не создаёт project session для оператора. Project super-admin не получает platform rights. Cookie `__Host-session` может иметь прежнее имя на разных origins: Domain не задаётся, Path=/, HTTPS; Origin/CORS/CSRF policy остаётся exact и project-specific.

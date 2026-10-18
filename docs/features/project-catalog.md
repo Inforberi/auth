@@ -1,5 +1,7 @@
 # Каталог независимых проектов — MP2.1 foundation
 
+MP2.2: добавлены [внутренние lifecycle transitions](project-lifecycle.md) и atomic event/receipt table. Read-model ниже сохраняется; management HTTP/runtime/provisioning пока не подключены.
+
 Следующий результат: [operator foundation MP2.3/MP2.4](platform-operators.md) реализован отдельно. Упоминания отсутствующего operator ниже относятся к первоначальному MP2.1; runtime/management API/bridge по-прежнему не подключены.
 
 18 октября 2026. Реализована внутренняя read-модель каталога и отдельная SQL migration. Это не готовая платформа: текущий Auth runtime не переключён, операторы/management API/provisioning/admin bridge ещё не подключены. [ADR005](../adr/005-independent-projects.md), [порядок MP2–MP8](../planning/multi-project.md).
@@ -20,7 +22,7 @@
 | phase | pending / provisioning / failed / ready | Готовность подготовки, не результат health probe |
 | admission | enabled AND ready | Unknown/пустое состояние не допускается |
 
-Новый ряд по умолчанию pending/enabled и не допускает запросы. Ready требует непустых storage binding/schema metadata. SQL constraints задают допустимые значения/целостность, но не заменяют actor/version/state-transition guards будущих mutating use cases. Изменения slug/origin/versions пока не опубликованы: правила immutable identity и переходов должны быть enforced в будущих операциях, не считаются уже реализованными только из-за read-модели.
+Новый ряд по умолчанию pending/enabled и не допускает запросы. Ready требует непустых storage binding/schema metadata. SQL constraints задают допустимые значения/целостность, но не заменяют текущие actor/version/state-transition guards. Внутренний Transition обеспечивает матрицу/version/generation/audit/replay в caller-owned transaction; авторизация публичных мутаций ещё не подключена. Изменения slug/origin не опубликованы; identity этой операцией не меняется.
 
 Slug1–63 ASCII символа, starts-letter, без trailing hyphen и reserved admin/api/auth/console/platform/www. Display name — непустой UTF-8 до200bytes, без controls, trim выполняется в domain. Canonical origin — exact HTTPS DNS host с optional non-default port; без credentials/path/query/fragment/IP/uppercase/trailing dot. Syntax validation не доказывает владение доменом и не выбирает trusted auth-domain: регистрацию/binding проверит platform service.
 

@@ -4,6 +4,8 @@
 
 ## Профиль и границы
 
+MP2.2: [lifecycle проектов](features/project-lifecycle.md) — domain matrix и `project/repository/postgres.Transition` в caller-owned Read Committed transaction, чтобы будущий platform service удерживал authority locks до того же commit. Audit/receipt находятся в platform catalog; нет своего worker/server/HTTP или универсального workflow. Health отделён от lifecycle; реальные storage checks и runtime generation leases принадлежат MP3/MP4.
+
 MP2.3-operator-profile: [вход платформы](features/platform-login.md) выбирается через PLATFORM_ENABLED (default false). `app/auth/operator.go` собирает прежние Auth сервисы, `router/operator.go` публикует только setup/admin password+MFA/recovery/self-session allowlist на exact HTTPS authority. Matching SQL marker/restricted grants обязательны до assembly writes; fixed platform scope, без JWT/public registration/проектных admin API. Local SQL/Redis/TLS и unit/race PASS; lost-all-factors operational recovery и несколько проектов/dispatcher остаются открытыми.
 
 MP2.3-realm-scope: [Redis/crypto isolation](features/realm-isolation.md) использует trusted kind+UUID+purpose. Все активные Redis constructors и cipher creation assembly получают scope; standalone явно legacy, нулевой scope запрещён. Новых HTTP routes/SQL schema/ENV нет. Independent key provisioning, storage identity, exact origin, grants и recovery новых realm остаются будущими gates; это не опубликованная multi-project платформа.

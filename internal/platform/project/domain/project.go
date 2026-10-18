@@ -47,3 +47,7 @@ func (p Project) AdmitsRequests() bool {
 func (p Phase) Valid() bool {
 	return p == Pending || p == Provisioning || p == Failed || p == Ready
 }
+
+func (s DesiredState) Valid() bool {
+	return s == Enabled || s == Suspended
+}
