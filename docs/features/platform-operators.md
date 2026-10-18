@@ -1,0 +1,46 @@
+# Оператор платформы — основа MP2.3–MP2.4
+
+18 октября 2026. Реализованы SQL realm, первый владелец и проверка платформенных прав. HTTP API, platform runtime и cross-project bridge **не подключены**. Текущая установка остаётся однопроектной; [ADR005](../adr/005-independent-projects.md), [план](../planning/multi-project.md).
+
+## Граница полномочий
+
+Платформенная БД использует существующую schema `auth` для операторов и `platform` для каталога и полномочий. В каждой проектной БД будет независимая `auth`; общих пользователей/SSO нет.
+
+`internal/platform/operator/domain` задаёт realm ID, principal и шесть точных permissions:
+
+| Permission | Будущее назначение |
+| --- | --- |
+| `platform.projects.read` | Список и карточка проекта |
+| `platform.projects.manage` | Создание и изменение состояния проекта |
+| `platform.project_users.manage` | Пользователи целевого проекта |
+| `platform.project_access.manage` | Роли и назначения целевого проекта |
+| `platform.project_settings.manage` | Настройки целевого проекта |
+| `platform.operators.manage` | Операторы платформы |
+
+Это не готовые endpoints. Права хранятся в `platform.operator_permissions`, не в проектном `auth.role_permissions`. Даже super-admin с одноимённой Auth permission не получает платформенного доступа. Сейчас все шесть прав получает только первый владелец; API делегирования отсутствует.
+
+Repository принимает caller-owned pool и ожидаемый realm UUID из доверенной конфигурации установки, не из HTTP. UUID создаётся migration; будущая сборка должна сверить его до публикации маршрутов. Отдельные origins, cookies, Redis/key namespaces и runtime grants ещё предстоит подключить — UUID их не заменяет.
+
+## Первый владелец
+
+Порядок в **новой платформенной БД**: Auth `migrations/000001_init.up.sql` → `platform/000001_catalog.up.sql` → `platform/000002_operators.up.sql`. Последняя отвергает используемый Auth realm: существующих пользователей, начатый setup или системный super-admin. Автоматического повышения администратора существующего проекта нет. Текущие migration-команды не переключены на этот набор.
+
+Существующий `account/service.SetupService` получает операторский repository. Сохраняются bootstrap secret, limiter contract, Argon2id, подтверждение почты, TOTP, шифрование pending payload и десять recovery-кодов. Второй стек аутентификации не добавлен.
+
+Завершение — одна Read Committed транзакция: access lock → realm row lock → Auth setup singleton → Auth administrator/TOTP/recovery → платформенные permissions/audit → initialized marker. Ошибка платформенной записи откатывает также Auth пользователя. Неверное доказательство фиксирует расход попытки; сроки и максимум сохраняет прежний setup. Сессия не выдаётся. Повторное/конкурентное завершение допускает одного владельца.
+
+Общий `CompleteSetupInTransaction` — прежняя Auth операция с внешним владельцем транзакции; обычный проектный `CompleteSetup` также пользуется ей. Это не система произвольных hooks.
+
+## Проверка доступа
+
+`AuthorizeRead` делает один ограниченный SQL-запрос без положительного кеша. Требует ожидаемый initialized realm, platform permission, активного неудалённого пользователя, актуальный auth_version, живую browser/password session с действующими role revision bindings, password/MFA proofs не из будущего и существующие password/TOTP credentials. Driver details не возвращаются, отмена сохраняется в безопасной ошибке.
+
+Это **snapshot чтения**, не разрешение следующей мутации. Изменения проектов/bridge требуют locks до commit, свежие proofs, audit/receipt и concurrency/revoke/lost-reply проверки. Маршруты этим блоком не открыты. Login/MFA/recovery должны использовать существующий Auth стек; platform HTTP wiring и recovery drill остаются открытыми. Reset пароля не выдаёт grants, не повторяет bootstrap и не обходит MFA.
+
+## Проверки
+
+`task check` PASS, lint0. Реальный `TestPlatformOperatorsPostgres` PASS0.26s на PostgreSQL18.6/Linux arm64: SetupService с Argon2id/email/TOTP, учёт неверного кода, audit rollback, конкурентный first-owner, отсутствие сессии после setup, grants/marker/recovery rows. SQL authority проверена при revoke/expiry/block/auth_version/proof/role revision/permission changes, чужом realm, одноимённом Auth permission, PUBLIC ACL и cancellation. Session authority fixture вставляется SQL — это **не HTTP login**.
+
+Catalog regression/up/down также PASS. Fixture удалена, рабочая Auth не менялась; [evidence](../planning/history.md#результат-mp23mp24-foundation--18-октября-2026).
+
+NOT RUN: platform HTTPS/login/recovery/browser, Redis realm isolation, runtime grants, race/fleet/load/GC, cross-project bridge. MP2.3/MP2.4 целиком не закрыты.

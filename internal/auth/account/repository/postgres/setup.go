@@ -71,29 +71,9 @@ func (r *Repository) SaveSetup(ctx context.Context, operator, request string, pa
 func (r *Repository) CompleteSetup(ctx context.Context, operator, request string, check service.SetupCheck) error {
 	rejected := false
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
-		if err := lockSetup(ctx, tx); err != nil {
-			return err
-		}
-		var payload []byte
-		var now time.Time
-		err := tx.QueryRow(ctx, `SELECT payload,clock_timestamp() FROM auth.initial_setup WHERE singleton
-			AND operator_hash=$1 AND request_hash=$2 AND expires_at>clock_timestamp() AND attempts<5`, operator, request).Scan(&payload, &now)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.ErrSetupInvalid
-		}
-		if err != nil {
-			return err
-		}
-		account, err := check(payload, now)
-		if errors.Is(err, domain.ErrSetupInvalid) {
-			rejected = true
-			_, err := tx.Exec(ctx, `UPDATE auth.initial_setup SET attempts=attempts+1 WHERE singleton`)
-			return err
-		}
-		if err != nil {
-			return err
-		}
-		return commitInitialAdministrator(ctx, tx, account)
+		var err error
+		_, rejected, err = CompleteSetupInTransaction(ctx, tx, operator, request, check)
+		return err
 	})
 	if err != nil {
 		return err
@@ -102,4 +82,35 @@ func (r *Repository) CompleteSetup(ctx context.Context, operator, request string
 		return domain.ErrSetupInvalid
 	}
 	return nil
+}
+
+// CompleteSetupInTransaction lets platform bootstrap persist its authority atomically
+// with the Auth administrator. A rejected proof must be committed to count the attempt;
+// every non-nil error requires rollback. The caller owns the transaction.
+func CompleteSetupInTransaction(ctx context.Context, tx pgx.Tx, operator, request string, check service.SetupCheck) (*domain.SetupAccount, bool, error) {
+	if err := lockSetup(ctx, tx); err != nil {
+		return nil, false, err
+	}
+	var payload []byte
+	var now time.Time
+	err := tx.QueryRow(ctx, `SELECT payload,clock_timestamp() FROM auth.initial_setup WHERE singleton
+		AND operator_hash=$1 AND request_hash=$2 AND expires_at>clock_timestamp() AND attempts<5`, operator, request).Scan(&payload, &now)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, domain.ErrSetupInvalid
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	account, err := check(payload, now)
+	if errors.Is(err, domain.ErrSetupInvalid) {
+		_, err := tx.Exec(ctx, `UPDATE auth.initial_setup SET attempts=attempts+1 WHERE singleton`)
+		return nil, true, err
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	if account == nil {
+		return nil, false, domain.ErrDependencyUnavailable
+	}
+	return account, false, commitInitialAdministrator(ctx, tx, account)
 }
