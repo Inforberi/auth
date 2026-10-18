@@ -16,6 +16,7 @@ import (
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
+	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	redisclient "github.com/Inforberi/financial-intelligence/internal/infra/redis"
@@ -39,6 +40,9 @@ func (d realmDependencies) validate() error {
 }
 
 func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
+	if err := cfg.ValidatePlatform(); err != nil {
+		return nil, err
+	}
 	owned := &resources{}
 	defer func() {
 		if err != nil {
@@ -57,7 +61,16 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 		scope: realmscope.Legacy(),
 		hash:  hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), cfg.Capacity.HashConcurrency),
 	}
-	assembled, err := assembleRealm(ctx, cfg, deps)
+	var assembled *realm
+	if cfg.Platform.Enabled {
+		deps.scope, err = realmscope.New("platform", cfg.Platform.RealmID)
+		if err != nil {
+			return nil, err
+		}
+		assembled, err = assembleOperator(ctx, cfg, deps, mailer.New(cfg.MailSender))
+	} else {
+		assembled, err = assembleRealm(ctx, cfg, deps)
+	}
 	if err != nil {
 		return nil, err
 	}

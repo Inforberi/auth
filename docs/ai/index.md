@@ -2,6 +2,8 @@
 
 Multi-project operator foundation: [контракт и ограничения](../features/platform-operators.md), `internal/platform/operator`, `migrations/platform/000002_operators.*`; использует Auth setup, не отдельный login stack.
 
+Opt-in operator Auth: [platform-login](../features/platform-login.md), `app/auth/operator.go`, `router/operator.go`, `config/platform.go`, operator repository `runtime.go`, `deploy/platform-runtime-grants.sql`; один профиль/listener, не fleet dispatcher.
+
 Сборка Auth: `internal/app/auth/app.go` — standalone resources/server; `realm.go` — feature assembly с borrowed dependencies; `run.go` — background lifecycle. Второй realm пока не публикуется.
 
 Redis/crypto scope: [контракт и проверки](../features/realm-isolation.md), `internal/infra/realmscope`, `app/auth/realm_security.go`, feature `repository/redis/*`. Standalone — explicit legacy, не default для новой платформы.

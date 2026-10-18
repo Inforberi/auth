@@ -15,7 +15,6 @@ import (
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
@@ -26,7 +25,7 @@ type mfaApp struct {
 	delivery *mfaservice.RecoveryDelivery
 }
 
-func (s realmSecurity) assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, sessions *sessionservice.SessionService, tokens *tokengenerate.TokenManager, mail *mailer.Mailer, cfg *config.Config, log *zap.Logger) (*mfaApp, error) {
+func (s realmSecurity) assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, sessions *sessionservice.SessionService, tokens *tokengenerate.TokenManager, mail mfaservice.RecoveryMailer, cfg *config.Config, log *zap.Logger) (*mfaApp, error) {
 	repo := mfapostgres.NewWithEmailProof(pool, cfg.EmailOTP.ReauthenticationEnabled)
 	cipher, err := s.cipher(cfg.Account.EncryptionKey, "mfa:v1")
 	if err != nil {

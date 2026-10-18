@@ -62,7 +62,7 @@ type Handlers struct {
 	ReadyCheck        func(context.Context) error
 }
 
-func New(h Handlers) *chi.Mux {
+func baseRouter(h Handlers) *chi.Mux {
 	r := chi.NewRouter()
 
 	log := h.Logger
@@ -82,6 +82,11 @@ func New(h Handlers) *chi.Mux {
 	}
 	r.Use(requestmiddleware.Admission(capacity))
 	r.Use(requestmiddleware.ClientIP(proxy))
+	return r
+}
+
+func New(h Handlers) *chi.Mux {
+	r := baseRouter(h)
 	r.Get("/health/live", live)
 	r.Get("/health/ready", readiness(h.ReadyCheck))
 

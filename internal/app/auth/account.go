@@ -12,10 +12,9 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	mfatotp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 )
 
-func (s realmSecurity) assembleAccount(pool *pgxpool.Pool, redis *redis.Client, mail *mailer.Mailer, cfg accountservice.Config, delivery accountpostgres.DeliveryConfig) (*accountservice.Service, *accountpostgres.Repository, error) {
+func (s realmSecurity) assembleAccount(pool *pgxpool.Pool, redis *redis.Client, mail accountservice.Mailer, cfg accountservice.Config, delivery accountpostgres.DeliveryConfig) (*accountservice.Service, *accountpostgres.Repository, error) {
 	cipher, err := s.cipher(cfg.EncryptionKey, "email-verification:v1")
 	if err != nil {
 		return nil, nil, err
@@ -45,7 +44,7 @@ func (s realmSecurity) assembleEmailBinding(repo *accountpostgres.Repository, rd
 	return accounthttp.NewEmailBinding(svc, log), nil
 }
 
-func (s realmSecurity) assembleSetup(repo *accountpostgres.Repository, rdb *redis.Client, mail *mailer.Mailer, hash *hasher.Bounded, cfg *config.Config, log *zap.Logger) (*accounthttp.SetupHandler, error) {
+func (s realmSecurity) assembleSetup(repo accountservice.SetupRepository, rdb *redis.Client, mail accountservice.Mailer, hash *hasher.Bounded, cfg *config.Config, log *zap.Logger) (*accounthttp.SetupHandler, error) {
 	if !cfg.InitialSetup.Enabled {
 		return nil, nil
 	}

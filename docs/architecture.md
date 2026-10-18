@@ -4,6 +4,8 @@
 
 ## Профиль и границы
 
+MP2.3-operator-profile: [вход платформы](features/platform-login.md) выбирается через PLATFORM_ENABLED (default false). `app/auth/operator.go` собирает прежние Auth сервисы, `router/operator.go` публикует только setup/admin password+MFA/recovery/self-session allowlist на exact HTTPS authority. Matching SQL marker/restricted grants обязательны до assembly writes; fixed platform scope, без JWT/public registration/проектных admin API. Local SQL/Redis/TLS и unit/race PASS; lost-all-factors operational recovery и несколько проектов/dispatcher остаются открытыми.
+
 MP2.3-realm-scope: [Redis/crypto isolation](features/realm-isolation.md) использует trusted kind+UUID+purpose. Все активные Redis constructors и cipher creation assembly получают scope; standalone явно legacy, нулевой scope запрещён. Новых HTTP routes/SQL schema/ENV нет. Independent key provisioning, storage identity, exact origin, grants и recovery новых realm остаются будущими gates; это не опубликованная multi-project платформа.
 
 MP2.3-runtime-split: `internal/app/auth/app.go` — standalone resources/hasher/server composition; `realm.go` — существующая feature assembly с borrowed dependencies и собственными clients; `run.go` — background lifecycle/cleanup. HTTP routes/SQL authority не менялись; отключённый email OTP не добавляет typed-nil worker. Это проверенный single-runtime prerequisite: router contracts/task check/race PASS, но новые operator HTTP/realm namespaces/process admission/fleet scheduler ещё не реализованы.

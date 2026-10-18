@@ -36,7 +36,7 @@ func (c SetupConfig) Validate() error {
 
 type SetupCheck func([]byte, time.Time) (*domain.SetupAccount, error)
 
-type setupRepository interface {
+type SetupRepository interface {
 	CheckSetupOpen(context.Context) error
 	SaveSetup(context.Context, string, string, []byte) (time.Time, error)
 	CompleteSetup(context.Context, string, string, SetupCheck) error
@@ -47,7 +47,7 @@ type setupHasher interface {
 }
 
 type SetupService struct {
-	repo                 setupRepository
+	repo                 SetupRepository
 	limiter              Limiter
 	cipher, factorCipher Cipher
 	mail                 Mailer
@@ -57,7 +57,7 @@ type SetupService struct {
 	issuer               string
 }
 
-func NewSetup(repo setupRepository, limits Limiter, cipher, factorCipher Cipher, mail Mailer, hash setupHasher, code mfaservice.Authenticator, cfg SetupConfig, issuer string) (*SetupService, error) {
+func NewSetup(repo SetupRepository, limits Limiter, cipher, factorCipher Cipher, mail Mailer, hash setupHasher, code mfaservice.Authenticator, cfg SetupConfig, issuer string) (*SetupService, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}

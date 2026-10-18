@@ -23,6 +23,7 @@ import (
 )
 
 type Config struct {
+	Platform           PlatformConfig
 	Access             accesssettings.Config
 	Browser            requestmiddleware.OriginConfig
 	HTTP               requestmiddleware.CapacityConfig

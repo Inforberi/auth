@@ -12,7 +12,6 @@ import (
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
@@ -24,7 +23,7 @@ type passwordApp struct {
 	loginLimit *passwordservice.LoginLimit
 }
 
-func (s realmSecurity) assemblePassword(repo *passwordpostgres.PasswordRepo, rdb *redis.Client, sessions *sessionservice.Login, hash *hasher.Bounded, policy *settingsservice.Service, mail *mailer.Mailer, cfg *config.Config) (*passwordApp, error) {
+func (s realmSecurity) assemblePassword(repo *passwordpostgres.PasswordRepo, rdb *redis.Client, sessions *sessionservice.Login, hash *hasher.Bounded, policy *settingsservice.Service, mail passwordservice.RecoveryMailer, cfg *config.Config) (*passwordApp, error) {
 	cipher, err := s.cipher(cfg.Account.EncryptionKey, "password-reset:v1")
 	if err != nil {
 		return nil, err

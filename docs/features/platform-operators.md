@@ -1,6 +1,6 @@
 # Оператор платформы — основа MP2.3–MP2.4
 
-18 октября 2026. Реализованы SQL realm, первый владелец и проверка платформенных прав. HTTP API, platform runtime и cross-project bridge **не подключены**. Текущая установка остаётся однопроектной; [ADR005](../adr/005-independent-projects.md), [план](../planning/multi-project.md).
+18 октября 2026. Реализованы SQL realm, первый владелец, проверка прав и [opt-in операторский Auth profile](platform-login.md). Management API и cross-project bridge **не подключены**. По умолчанию runtime остаётся standalone; [ADR005](../adr/005-independent-projects.md), [план](../planning/multi-project.md).
 
 ## Граница полномочий
 
@@ -19,7 +19,7 @@
 
 Это не готовые endpoints. Права хранятся в `platform.operator_permissions`, не в проектном `auth.role_permissions`. Даже super-admin с одноимённой Auth permission не получает платформенного доступа. Сейчас все шесть прав получает только первый владелец; API делегирования отсутствует.
 
-Repository принимает caller-owned pool и ожидаемый realm UUID из доверенной конфигурации установки, не из HTTP. UUID создаётся migration; будущая сборка должна сверить его до публикации маршрутов. [Redis/crypto scope-контракт](realm-isolation.md) реализован и проверен отдельно; реальные operator origins/cookies/keys/grants и runtime ещё не подключены — UUID/namespace их не заменяют.
+Repository принимает caller-owned pool и ожидаемый realm UUID из доверенной конфигурации установки, не из HTTP. UUID создаётся migration; operator profile сверяет marker и runtime grants до открытия маршрутов. [Redis/crypto scope](realm-isolation.md), exact HTTPS Host/Origin и host-only cookies подключены в opt-in profile и проверены локально; provisioning независимых project keys/fleet/реальный ingress ещё не реализованы.
 
 ## Первый владелец
 
@@ -33,7 +33,7 @@ Repository принимает caller-owned pool и ожидаемый realm UUID
 
 ## Проверка доступа
 
-Предварительный runtime split выполнен отдельно: `app/auth/app.go` открывает standalone dependencies и hasher, `realm.go` собирает существующие фичи без открытия pool/Redis/logger/hasher/listener, `run.go` управляет background lifecycle. [Scope foundation](realm-isolation.md) подключён к codecs/adapters, но это пока **не operator profile**: нет второго опубликованного realm, independent keys/runtime grants/exact origin или fleet registry. JWT no-retry Redis client ещё принадлежит realm. Следующий шаг — минимальная operator сборка, не вызов полного New на каждый проект.
+Runtime split: `app/auth/app.go` открывает общие dependencies/hasher и выбирает одну assembly — прежнюю `realm.go` либо opt-in `operator.go`. `run.go` управляет background lifecycle. Operator profile использует matching platform scope и restricted pool, не создаёт второй Auth стек/JWT clients и не подменяет пользователя проекта. Несколько проектов/fleet registry/dispatcher ещё впереди; полный New на каждый проект не запускать.
 
 `AuthorizeRead` делает один ограниченный SQL-запрос без положительного кеша. Требует ожидаемый initialized realm, platform permission, активного неудалённого пользователя, актуальный auth_version, живую browser/password session с действующими role revision bindings, password/MFA proofs не из будущего и существующие password/TOTP credentials. Driver details не возвращаются, отмена сохраняется в безопасной ошибке.
 
@@ -45,4 +45,4 @@ Repository принимает caller-owned pool и ожидаемый realm UUID
 
 Catalog regression/up/down также PASS. Fixture удалена, рабочая Auth не менялась; [evidence](../planning/history.md#результат-mp23mp24-foundation--18-октября-2026).
 
-NOT RUN: platform HTTPS/login/recovery/browser, Redis realm isolation, runtime grants, race/fleet/load/GC, cross-project bridge. MP2.3/MP2.4 целиком не закрыты.
+Дополнительный [operator profile](platform-login.md) прошёл local restricted SQL/Redis/TLS setup/login/password recovery/revoke и targeted unit race. NOT RUN: реальный browser/SMTP/ingress, two-runtime isolation, scoped emergency/lost-factor tooling, fleet/load/GC и cross-project bridge. MP2.3/MP2.4 целиком не закрыты.

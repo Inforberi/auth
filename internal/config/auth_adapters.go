@@ -8,6 +8,9 @@ import (
 
 // Deployment validation precedes opening SQL; saved provider switches are not available yet.
 func (cfg Config) ValidateDeployment() error {
+	if err := cfg.ValidatePlatform(); err != nil {
+		return err
+	}
 	cfg.Google.Enabled = false
 	cfg.Telegram.Enabled = false
 	cfg.EmailOTP.Enabled = false
