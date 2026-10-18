@@ -39,15 +39,17 @@ func TestOperatorProfileSQLHTTPS(t *testing.T) {
 	if err := wrong.CheckRuntime(ctx, true); err == nil {
 		t.Fatal("foreign platform marker accepted")
 	}
-	if _, err := admin.Exec(ctx, `REVOKE INSERT ON platform.operator_audit FROM auth_platform_operator_test`); err != nil {
-		t.Fatal(err)
-	}
-	missingGrant := repo.CheckRuntime(ctx, true)
-	if _, err := admin.Exec(ctx, `GRANT INSERT ON platform.operator_audit TO auth_platform_operator_test`); err != nil {
-		t.Fatal(err)
-	}
-	if missingGrant == nil {
-		t.Fatal("partial runtime privileges accepted")
+	for _, privilege := range []string{"INSERT ON platform.operator_audit", "SELECT ON platform.projects"} {
+		if _, err := admin.Exec(ctx, "REVOKE "+privilege+" FROM "+operatorFixtureRole); err != nil {
+			t.Fatal(err)
+		}
+		missingGrant := repo.CheckRuntime(ctx, true)
+		if _, err := admin.Exec(ctx, "GRANT "+privilege+" TO "+operatorFixtureRole); err != nil {
+			t.Fatal(err)
+		}
+		if missingGrant == nil {
+			t.Fatal("partial runtime privileges accepted")
+		}
 	}
 	for _, privilege := range []string{"UPDATE ON platform.operator_audit", "UPDATE(id) ON platform.operator_realm", "CREATE ON SCHEMA auth"} {
 		if _, err := admin.Exec(ctx, "GRANT "+privilege+" TO "+operatorFixtureRole); err != nil {
@@ -137,6 +139,7 @@ func TestOperatorProfileSQLHTTPS(t *testing.T) {
 	if err := repo.AuthorizeRead(ctx, actor, operatordomain.ProjectsRead); err != nil {
 		t.Fatal("issued operator session lacks current authority", err)
 	}
+	operatorCatalogReadDrill(t, admin, h, user, session)
 	h.call("GET", "/api/v1/auth/me", nil, []*http.Cookie{{Name: sessionhttp.SessionCookieName, Value: strings.Repeat("A", 43)}}, 401)
 	workerCtx, cancel := context.WithCancel(ctx)
 	done := make(chan error, 1)
@@ -157,6 +160,7 @@ func TestOperatorProfileSQLHTTPS(t *testing.T) {
 	}
 	h.call("POST", "/api/v1/auth/reset-password", map[string]string{"token": match[1], "newPassword": "Newpassword2", "confirmPassword": "Newpassword2"}, nil, 200)
 	h.call("GET", "/api/v1/auth/me", nil, []*http.Cookie{session}, 401)
+	h.call("GET", "/api/v1/platform/projects", nil, []*http.Cookie{session}, 401)
 	if err := repo.AuthorizeRead(ctx, actor, operatordomain.ProjectsRead); !errors.Is(err, operatordomain.ErrForbidden) {
 		t.Fatal("reset did not revoke platform authority", err)
 	}

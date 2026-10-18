@@ -1,6 +1,6 @@
 # Оператор платформы — основа MP2.3–MP2.4
 
-18 октября 2026. Реализованы SQL realm, первый владелец, проверка прав и [opt-in операторский Auth profile](platform-login.md). Management API и cross-project bridge **не подключены**. По умолчанию runtime остаётся standalone; [ADR005](../adr/005-independent-projects.md), [план](../planning/multi-project.md).
+18 октября 2026. Реализованы SQL realm, первый владелец, проверка прав, [opt-in операторский Auth profile](platform-login.md) и [read API каталога](platform-projects-api.md). Management mutations и cross-project bridge **не подключены**. По умолчанию runtime остаётся standalone; [ADR005](../adr/005-independent-projects.md), [план](../planning/multi-project.md).
 
 ## Граница полномочий
 
@@ -8,7 +8,7 @@
 
 `internal/platform/operator/domain` задаёт realm ID, principal и шесть точных permissions:
 
-| Permission | Будущее назначение |
+| Permission | Назначение |
 | --- | --- |
 | `platform.projects.read` | Список и карточка проекта |
 | `platform.projects.manage` | Создание и изменение состояния проекта |
@@ -17,7 +17,7 @@
 | `platform.project_settings.manage` | Настройки целевого проекта |
 | `platform.operators.manage` | Операторы платформы |
 
-Это не готовые endpoints. Права хранятся в `platform.operator_permissions`, не в проектном `auth.role_permissions`. Даже super-admin с одноимённой Auth permission не получает платформенного доступа. Сейчас все шесть прав получает только первый владелец; API делегирования отсутствует.
+Подключены только GET list/detail проектов; остальные endpoints этой таблицей не объявляются готовыми. Права хранятся в `platform.operator_permissions`, не в проектном `auth.role_permissions`. Даже super-admin с одноимённой Auth permission не получает платформенного доступа. Сейчас все шесть прав получает только первый владелец; API делегирования отсутствует.
 
 Repository принимает caller-owned pool и ожидаемый realm UUID из доверенной конфигурации установки, не из HTTP. UUID создаётся migration; operator profile сверяет marker и runtime grants до открытия маршрутов. [Redis/crypto scope](realm-isolation.md), exact HTTPS Host/Origin и host-only cookies подключены в opt-in profile и проверены локально; provisioning независимых project keys/fleet/реальный ingress ещё не реализованы.
 
@@ -37,7 +37,7 @@ Runtime split: `app/auth/app.go` открывает общие dependencies/hash
 
 `AuthorizeRead` делает один ограниченный SQL-запрос без положительного кеша. Требует ожидаемый initialized realm, platform permission, активного неудалённого пользователя, актуальный auth_version, живую browser/password session с действующими role revision bindings, password/MFA proofs не из будущего и существующие password/TOTP credentials. Driver details не возвращаются, отмена сохраняется в безопасной ошибке.
 
-Это **snapshot чтения**, не разрешение следующей мутации. Изменения проектов/bridge требуют locks до commit, свежие proofs, audit/receipt и concurrency/revoke/lost-reply проверки. Management маршруты этим блоком не открыты. Login/MFA и [platform recovery](platform-recovery.md) используют существующий Auth стек. Reset пароля не выдаёт grants, не повторяет bootstrap и не обходит MFA.
+Это **snapshot чтения**, не разрешение следующей мутации. Изменения проектов/bridge требуют locks до commit, свежие proofs, audit/receipt и concurrency/revoke/lost-reply проверки. Маршруты управления состоянием/создания проектов и bridge ещё не открыты. Login/MFA и [platform recovery](platform-recovery.md) используют существующий Auth стек. Reset пароля не выдаёт grants, не повторяет bootstrap и не обходит MFA.
 
 ## Проверки
 

@@ -1,5 +1,7 @@
 # Каталог независимых проектов — MP2.1 foundation
 
+MP2.5-read: [список и карточка](platform-projects-api.md) подключены только к операторскому профилю, с current platform read permission и безопасным DTO. List/cursor/page consumer types теперь в project/service; SQL/keyset/bounds сохранены. Публичные мутации и physical provisioning не подключены.
+
 MP2.2: добавлены [внутренние lifecycle transitions](project-lifecycle.md) и atomic event/receipt table. Read-model ниже сохраняется; management HTTP/runtime/provisioning пока не подключены.
 
 Следующий результат: [operator foundation MP2.3/MP2.4](platform-operators.md) реализован отдельно. Упоминания отсутствующего operator ниже относятся к первоначальному MP2.1; runtime/management API/bridge по-прежнему не подключены.
@@ -36,7 +38,7 @@ Slug1–63 ASCII символа, starts-letter, без trailing hyphen и reserv
 
 Каждый метод ограничен2s с учётом caller context; rows закрываются/Err проверяется. Connection/SQL/scan failure → ErrUnavailable без raw driver details, cancellation остаётся доступна через errors.Is. Resolve не является аутентификацией пользователя и не заменяет storage identity/generation/schema check будущего runtime registry. Caller обязан проверять error до использования результата.
 
-Read/List не содержат platform authorization: это внутренние persistence операции, пока без service/HTTP wiring. Они не должны публиковаться напрямую до отдельной operator realm/current SQL authority. Binding не является публичной карточкой: будущие HTTP DTO явно исключают storage metadata/credential references. Reserved operator origin/host policy и односессионный admin bridge остаются будущими guards.
+Read/List не содержат platform authorization: это внутренние persistence операции. Project Catalog service проверяет отдельную operator SQL authority перед чтением; наружу идут явные HTTP DTO без storage metadata/credential references. Binding не является публичной карточкой. Operator origin/Host policy подключена в отдельном профиле; односессионный admin bridge/guards мутаций остаются будущими этапами.
 
 Индексы: unique ID/slug/origin; created_at/id для страницы и phase/created_at/id для фильтра. Схема/table не выдаёт privileges PUBLIC; реальные роли/grants создаются отдельно после operator authority. Числа пропускной способности не измерялись.
 

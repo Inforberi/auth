@@ -21,11 +21,13 @@ import (
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
+	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
 type Handlers struct {
+	Projects          *projecthttp.Handler
 	Introspection     *tokenhttp.IntrospectionHandler
 	NativeTokens      *tokenhttp.NativeHandler
 	Tokens            *tokenhttp.Handler

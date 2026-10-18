@@ -1,6 +1,6 @@
 # Вход оператора платформы — MP2.3 operator profile
 
-18 октября 2026. Добавлен отдельный **opt-in профиль одного platform runtime**, переиспользующий существующий Auth. Это ещё не диспетчер нескольких проектов, management API или UI. Текущий standalone остаётся профилем по умолчанию. [Realm/permissions](platform-operators.md), [Redis/crypto scope](realm-isolation.md), [план](../planning/multi-project.md).
+18 октября 2026. Добавлен отдельный **opt-in профиль одного platform runtime**, переиспользующий существующий Auth. Подключено [чтение каталога проектов](platform-projects-api.md); management mutations, диспетчер нескольких проектов и UI ещё не реализованы. Текущий standalone остаётся профилем по умолчанию. [Realm/permissions](platform-operators.md), [Redis/crypto scope](realm-isolation.md), [план](../planning/multi-project.md).
 
 ## Конфигурация и запуск
 
@@ -33,6 +33,7 @@ Runtime использует прежний Auth DML/retention контракт,
 | First owner | POST `/api/v1/setup/start`, `/api/v1/setup/complete`; только при INITIAL_SETUP_ENABLED и с X-Setup-Token |
 | Password + MFA | POST `/api/v1/admin/auth/login/email` → POST `/api/v1/auth/mfa/login/complete` |
 | Password recovery | POST `/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password` |
+| Каталог платформы, чтение | GET `/api/v1/platform/projects`, `/api/v1/platform/projects/{id}`; current platform.projects.read, no session refresh, без binding/secrets |
 | Свои сессии | GET `/api/v1/auth/me`, `/api/v1/auth/sessions`; POST logout/logout-all; DELETE `/api/v1/auth/sessions/{id}` |
 | Сроки/смена сессии | POST `/api/v1/auth/session/activity`, `/api/v1/auth/session/rotate` |
 | Fresh password | POST `/api/v1/auth/reauthenticate/password`, `/api/v1/auth/change-password` |

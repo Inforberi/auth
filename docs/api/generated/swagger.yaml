@@ -955,6 +955,38 @@ definitions:
     required:
     - idempotencyKey
     type: object
+  project_http.ProjectPageResponse:
+    properties:
+      nextCursor:
+        type: string
+      projects:
+        items:
+          $ref: '#/definitions/project_http.ProjectResponse'
+        type: array
+    type: object
+  project_http.ProjectResponse:
+    properties:
+      createdAt:
+        type: string
+      desiredState:
+        type: string
+      generation:
+        type: integer
+      id:
+        type: string
+      name:
+        type: string
+      origin:
+        type: string
+      phase:
+        type: string
+      slug:
+        type: string
+      updatedAt:
+        type: string
+      version:
+        type: integer
+    type: object
   provider_settings_http.SettingsResponse:
     properties:
       clientId:
@@ -5603,6 +5635,112 @@ paths:
       summary: Check an access JWT against current session authority
       tags:
       - Tokens
+  /api/v1/platform/projects:
+    get:
+      description: Platform deployment only. Requires its current browser session
+        and platform.projects.read; a project role or JWT is not platform authority.
+        No session refresh, fresh-proof renewal or storage probes. Newest createdAt/UUID
+        first, exclusive opaque cursor bound to phase filter. No credentials, binding
+        references, database names, offset or total count.
+      parameters:
+      - description: Optional for GET; if supplied, must be the exact platform HTTPS
+          origin
+        in: header
+        name: Origin
+        type: string
+      - description: Opaque nextCursor from the previous page; retain the same phase
+          filter
+        in: query
+        name: before
+        type: string
+      - description: Preparation phase, not health
+        enum:
+        - pending
+        - provisioning
+        - failed
+        - ready
+        in: query
+        name: phase
+        type: string
+      - default: 50
+        description: Page size 1..100, default 50
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/project_http.ProjectPageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: List independent projects
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}:
+    get:
+      description: Platform deployment only. Requires its current browser session
+        and platform.projects.read. Returns stored lifecycle metadata, not storage
+        readiness or credentials. Pending, failed and suspended projects remain visible
+        to an authorized operator. Does not open the project DB, renew a session or
+        expose storage target/database/credential references.
+      parameters:
+      - description: Optional for GET; if supplied, must be the exact platform HTTPS
+          origin
+        in: header
+        name: Origin
+        type: string
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/project_http.ProjectResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read an independent project
+      tags:
+      - Platform Projects
   /api/v1/setup/complete:
     post:
       consumes:

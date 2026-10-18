@@ -23,6 +23,7 @@ const (
 
 var (
 	ErrInvalidProject = errors.New("invalid project")
+	ErrInvalidPage    = errors.New("invalid project page")
 	ErrNotFound       = errors.New("project not found")
 	ErrUnavailable    = errors.New("project catalog unavailable")
 )

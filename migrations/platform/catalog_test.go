@@ -13,6 +13,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 	catalog "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/service"
 )
 
 const firstID domain.ID = "1c82c477-3a57-4823-8c49-a476550d8a21"
@@ -136,19 +137,19 @@ func TestPlatformCatalogPostgres(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		page, err := repo.List(ctx, catalog.ListQuery{Limit: 2})
+		page, err := repo.List(ctx, service.ListQuery{Limit: 2})
 		if err != nil || len(page.Projects) != 2 || page.Next == nil {
 			t.Fatal("missing bounded first page")
 		}
-		next, err := repo.List(ctx, catalog.ListQuery{Limit: 2, Before: page.Next})
+		next, err := repo.List(ctx, service.ListQuery{Limit: 2, Before: page.Next})
 		if err != nil || len(next.Projects) != 1 || next.Next != nil || next.Projects[0].ID != firstID {
 			t.Fatal("timestamp tie pagination skipped or repeated projects")
 		}
-		filtered, err := repo.List(ctx, catalog.ListQuery{Limit: 2, Phase: domain.Pending})
+		filtered, err := repo.List(ctx, service.ListQuery{Limit: 2, Phase: domain.Pending})
 		if err != nil || len(filtered.Projects) != 2 || filtered.Next != nil {
 			t.Fatal("phase filter mismatch")
 		}
-		unknown, err := repo.List(ctx, catalog.ListQuery{Limit: 1, Phase: domain.Provisioning})
+		unknown, err := repo.List(ctx, service.ListQuery{Limit: 1, Phase: domain.Provisioning})
 		if err != nil || len(unknown.Projects) != 0 || unknown.Next != nil {
 			t.Fatal("empty page is not stable")
 		}

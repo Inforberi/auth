@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// NewOperator publishes only self-service operator authentication, never project administration.
+// NewOperator keeps platform routes separate from ordinary project administration.
 func NewOperator(h Handlers) (http.Handler, error) {
 	if h.Config == nil || !h.Config.Platform.Enabled || h.PasswordHandler == nil || h.MFA == nil || h.Middleware == nil || h.Session == nil || h.Recovery == nil || h.ReadyCheck == nil {
 		return nil, errors.New("incomplete operator HTTP profile")
@@ -37,6 +37,13 @@ func NewOperator(h Handlers) (http.Handler, error) {
 	r.Route("/api/v1", func(r chi.Router) {
 		setupRoutes(r, h)
 		administrativeLoginRoutes(r, h)
+		if h.Projects != nil {
+			r.Route("/platform", func(r chi.Router) {
+				r.Use(browserProtection(h), h.Middleware.NoRefreshAuth)
+				r.Get("/projects", h.Projects.List)
+				r.Get("/projects/{id}", h.Projects.Read)
+			})
+		}
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(browserProtection(h))
 			r.Post("/forgot-password", h.Recovery.Forgot)

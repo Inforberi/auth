@@ -30,6 +30,7 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 		AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace ns ON ns.oid=c.relnamespace
 			WHERE ns.nspname IN ('auth','platform') AND c.relkind IN ('r','p','v','S') AND pg_has_role(current_user,c.relowner,'MEMBER'))
 		AND NOT EXISTS(SELECT 1 FROM (VALUES
+			('platform.projects','SELECT'),
 			('platform.operator_realm','SELECT'),('platform.operator_permissions','SELECT'),('platform.operator_permissions','INSERT'),
 			('platform.operator_audit','SELECT'),('platform.operator_audit','INSERT')) required(relation,privilege)
 			WHERE NOT has_table_privilege(current_user,required.relation,required.privilege))

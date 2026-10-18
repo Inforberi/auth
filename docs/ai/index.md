@@ -1,5 +1,7 @@
 # Карта проекта
 
+Platform catalog read API: [контракт](../features/platform-projects-api.md), `project/service/{catalog,list,read}`, `project/transport/http/{catalog,list_projects,read_project}`, `router/operator.go`, `app/auth/operator_catalog_test.go`. Consumer list types в service, same SQL pool; мутации ещё закрыты.
+
 Project lifecycle: [контракт](../features/project-lifecycle.md), `internal/platform/project/domain/transition.go`, `repository/postgres/transition.go`, `migrations/platform/transitions_test.go`; caller-owned transaction после authority locks, atomic audit/receipt. HTTP/executor не подключены.
 
 Multi-project operator foundation: [контракт и ограничения](../features/platform-operators.md), `internal/platform/operator`, `migrations/platform/000002_operators.*`; использует Auth setup, не отдельный login stack.

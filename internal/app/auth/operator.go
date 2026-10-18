@@ -20,6 +20,9 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
 	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/platform/operator/repository/postgres"
+	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
+	projectservice "github.com/Inforberi/financial-intelligence/internal/platform/project/service"
+	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/router"
 )
 
@@ -69,6 +72,7 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 	}
 	handler, err := router.NewOperator(router.Handlers{
 		Config: cfg, Logger: deps.log, Setup: setup, MFA: mfa.handler,
+		Projects:         projecthttp.New(projectservice.New(projectpostgres.New(deps.pool), operator), deps.log),
 		PasswordHandler:  passwordhttp.New(password.service, deps.log),
 		Recovery:         passwordhttp.NewRecovery(password.recovery, deps.log),
 		Middleware:       sessionhttp.New(svc, deps.log),

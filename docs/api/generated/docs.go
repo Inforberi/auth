@@ -5997,6 +5997,148 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/platform/projects": {
+            "get": {
+                "description": "Platform deployment only. Requires its current browser session and platform.projects.read; a project role or JWT is not platform authority. No session refresh, fresh-proof renewal or storage probes. Newest createdAt/UUID first, exclusive opaque cursor bound to phase filter. No credentials, binding references, database names, offset or total count.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "List independent projects",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Optional for GET; if supplied, must be the exact platform HTTPS origin",
+                        "name": "Origin",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Opaque nextCursor from the previous page; retain the same phase filter",
+                        "name": "before",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "pending",
+                            "provisioning",
+                            "failed",
+                            "ready"
+                        ],
+                        "type": "string",
+                        "description": "Preparation phase, not health",
+                        "name": "phase",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Page size 1..100, default 50",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.ProjectPageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}": {
+            "get": {
+                "description": "Platform deployment only. Requires its current browser session and platform.projects.read. Returns stored lifecycle metadata, not storage readiness or credentials. Pending, failed and suspended projects remain visible to an authorized operator. Does not open the project DB, renew a session or expose storage target/database/credential references.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Read an independent project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Optional for GET; if supplied, must be the exact platform HTTPS origin",
+                        "name": "Origin",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.ProjectResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/setup/complete": {
             "post": {
                 "description": "Consumes installation proof and pending intent with email and TOTP codes. Atomically creates account, verified contact, factor, recovery codes, system grant and durable initialized marker. Returns recovery codes once; does not issue a session. Setup stays closed after restart or loss of administrator.",
@@ -7667,6 +7809,55 @@ const docTemplate = `{
             "properties": {
                 "idempotencyKey": {
                     "type": "string"
+                }
+            }
+        },
+        "project_http.ProjectPageResponse": {
+            "type": "object",
+            "properties": {
+                "nextCursor": {
+                    "type": "string"
+                },
+                "projects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/project_http.ProjectResponse"
+                    }
+                }
+            }
+        },
+        "project_http.ProjectResponse": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "desiredState": {
+                    "type": "string"
+                },
+                "generation": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "origin": {
+                    "type": "string"
+                },
+                "phase": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },

@@ -18,6 +18,8 @@ import (
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/config"
+	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
@@ -49,6 +51,12 @@ func TestSwaggerMatchesRoutes(t *testing.T) {
 			for path, methods := range doc.Paths {
 				for method := range methods {
 					present := routes[method+" "+path]
+					if strings.HasPrefix(path, "/api/v1/platform/") {
+						if present {
+							t.Fatal("standalone exposes a platform route")
+						}
+						continue // Covered against the distinct operator profile below.
+					}
 					if env == "prod" && path == "/api/v1/dev/send-mail" {
 						if present {
 							t.Fatal("dev route exposed in production")
@@ -64,12 +72,55 @@ func TestSwaggerMatchesRoutes(t *testing.T) {
 	}
 }
 
+func TestSwaggerMatchesPlatformRoutes(t *testing.T) {
+	doc := readAPI(t)
+	h := contractHandlers("prod")
+	h.Config = &config.Config{Platform: config.PlatformConfig{Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example"}}
+	h.Config.MFA.Enabled, h.Config.MFA.RecoveryEnabled, h.Config.InitialSetup.Enabled = true, true, true
+	h.Config.Browser.AllowedOrigins = []string{h.Config.Platform.Origin}
+	h.Config.Server.TLSCertFile, h.Config.Server.TLSKeyFile = "tls.crt", "tls.key"
+	h.Config.Password.ResetURL = h.Config.Platform.Origin + "/reset"
+	h.Projects = projecthttp.New(&operatorReadCatalog{}, zap.NewNop())
+	handler, err := NewOperator(h)
+	if err != nil {
+		t.Fatal(err)
+	}
+	router, ok := handler.(chi.Routes)
+	if !ok {
+		t.Fatal("operator is not a chi router")
+	}
+	routes := make(map[string]bool)
+	if err := chi.Walk(router, func(method, path string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+		if method == http.MethodOptions {
+			return nil
+		}
+		routes[strings.ToLower(method)+" "+path] = true
+		if _, ok := doc.Paths[path][strings.ToLower(method)]; !ok {
+			t.Errorf("undocumented operator route: %s %s", method, path)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for path, methods := range doc.Paths {
+		if strings.HasPrefix(path, "/api/v1/platform/") {
+			for method := range methods {
+				if !routes[method+" "+path] {
+					t.Errorf("documented platform route missing: %s %s", method, path)
+				}
+			}
+		}
+	}
+}
+
 func TestSwaggerMatchesDTOs(t *testing.T) {
 	doc := readAPI(t)
 	for _, tc := range []struct {
 		name string
 		dto  any
 	}{
+		{"project_http.ProjectResponse", projecthttp.ProjectResponse{}},
+		{"project_http.ProjectPageResponse", projecthttp.ProjectPageResponse{Projects: []projecthttp.ProjectResponse{}}},
 		{"token_http.IntrospectionRequest", tokenhttp.IntrospectionRequest{}},
 		{"token_http.IntrospectionResponse", tokenhttp.IntrospectionResponse{Active: true, Issuer: "issuer", Subject: "user", SessionID: "session", ID: "token", Audience: "orders", ExpiresAt: 1, Scope: "orders.read"}},
 		{"token_http.ExchangeRequest", tokenhttp.ExchangeRequest{Scope: []accessdomain.PermissionKey{}}},
