@@ -24,6 +24,7 @@ type adminRole struct {
 	Key         string   `json:"key"`
 	Version     int64    `json:"version"`
 	System      bool     `json:"system"`
+	MFARequired bool     `json:"mfaRequired"`
 	Permissions []string `json:"permissions"`
 }
 
