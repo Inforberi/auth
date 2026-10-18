@@ -14,12 +14,12 @@ import (
 	googleclient "github.com/Inforberi/financial-intelligence/internal/integrations/google"
 )
 
-func assembleGoogle(ctx context.Context, cfg *config.Config, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, policy *settingsservice.Service, providers *settingsservice.Providers, log *zap.Logger) (*googlehttp.Handler, func(), error) {
+func (s realmSecurity) assembleGoogle(ctx context.Context, cfg *config.Config, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, policy *settingsservice.Service, providers *settingsservice.Providers, log *zap.Logger) (*googlehttp.Handler, func(), error) {
 	if !cfg.Google.Enabled {
 		return nil, nil, nil
 	}
 	client := googleclient.New(ctx, cfg.Google)
-	service, err := assembleOIDC(cfg, cfg.Google.FlowConfig(), client, accounts, rdb, sessions, policy, providers)
+	service, err := s.assembleOIDC(cfg, cfg.Google.FlowConfig(), client, accounts, rdb, sessions, policy, providers)
 	if err != nil {
 		return nil, nil, err
 	}

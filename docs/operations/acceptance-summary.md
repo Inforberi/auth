@@ -1,5 +1,7 @@
 # Краткий отчёт по проверкам
 
+18 октября, MP2.3-realm-scope: crypto/Redis namespace и explicit legacy compatibility; final task check lint0/targeted unit race PASS, real Redis8.2.6 DB15 isolation/TTL/MFA concurrency/JWT/OIDC consume/cancellation PASS0.01s. Scratch/точные fixture keys удалены, DB15/DB0 counts0, Redis возвращён в stopped. Исправлен simple limiter bool при error. Full multi-realm HTTP/SQL/origin/grants/keys/recovery/Cluster/load NOT RUN; [evidence](../planning/history.md#результат-mp23-realm-scope--18-октября-2026).
+
 18 октября, MP2.3-runtime-split: feature assembly отделена от standalone resources/listener; исправлен nil email OTP worker. Final `task check` lint0, router contracts и App/hasher race PASS. Live SQL/Redis/HTTPS/multi-realm/load в этом блоке NOT RUN; [evidence](../planning/history.md#результат-mp23-runtime-split--18-октября-2026). Pre-ui/MP2 целиком остаются открытыми.
 
 18 октября, MP2.3/MP2.4 foundation: `task check` PASS/lint0, real PostgreSQL18.6 operator setup/atomic rollback/single-owner/SQL authority PASS0.26s, catalog regression PASS. Fixture БД/scratch удалены, PostgreSQL возвращён в stopped. Runtime/HTTP/login/recovery/Redis isolation/race/load/bridge NOT RUN; [результат](../planning/history.md#результат-mp23mp24-foundation--18-октября-2026).

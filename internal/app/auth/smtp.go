@@ -17,11 +17,10 @@ import (
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
-	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
-func assembleSMTP(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, cfg *config.Config, log *zap.Logger) (*mailer.Mailer, *settingshttp.SMTPHandler, error) {
-	cipher, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "smtp-settings:v1")
+func (s realmSecurity) assembleSMTP(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, cfg *config.Config, log *zap.Logger) (*mailer.Mailer, *settingshttp.SMTPHandler, error) {
+	cipher, err := s.cipher(cfg.Account.EncryptionKey, "smtp-settings:v1")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -29,10 +28,14 @@ func assembleSMTP(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, cf
 	if strings.TrimSpace(cfg.SMTPAllowedTargets) == "" {
 		allowed = []string{net.JoinHostPort(cfg.MailSender.SMTPHost, cfg.MailSender.SMTPPort)}
 	}
+	limits, err := settingsredis.NewSMTPScoped(rdb, s.scope)
+	if err != nil {
+		return nil, nil, err
+	}
 	svc, err := settingsservice.NewSMTP(settingspostgres.New(pool), cipher,
 		func(ctx context.Context, c settingsdomain.SMTPConfig, password string) error {
 			return mailer.CheckContext(ctx, smtpMailerConfig(c, password))
-		}, settingsredis.NewSMTP(rdb), allowed, cfg.Logger.Env == "prod")
+		}, limits, allowed, cfg.Logger.Env == "prod")
 	if err != nil {
 		return nil, nil, err
 	}

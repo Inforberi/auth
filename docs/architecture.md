@@ -4,6 +4,8 @@
 
 ## Профиль и границы
 
+MP2.3-realm-scope: [Redis/crypto isolation](features/realm-isolation.md) использует trusted kind+UUID+purpose. Все активные Redis constructors и cipher creation assembly получают scope; standalone явно legacy, нулевой scope запрещён. Новых HTTP routes/SQL schema/ENV нет. Independent key provisioning, storage identity, exact origin, grants и recovery новых realm остаются будущими gates; это не опубликованная multi-project платформа.
+
 MP2.3-runtime-split: `internal/app/auth/app.go` — standalone resources/hasher/server composition; `realm.go` — существующая feature assembly с borrowed dependencies и собственными clients; `run.go` — background lifecycle/cleanup. HTTP routes/SQL authority не менялись; отключённый email OTP не добавляет typed-nil worker. Это проверенный single-runtime prerequisite: router contracts/task check/race PASS, но новые operator HTTP/realm namespaces/process admission/fleet scheduler ещё не реализованы.
 
 MP2.3/MP2.4-foundation: [оператор платформы](features/platform-operators.md) находится в `internal/platform/operator/{domain,repository/postgres}`. Новая platform migration отделяет realm/grants/audit от проектных ролей; первый владелец создаётся атомарно через существующий Auth SetupService. SQL snapshot чтения прав не заменяет guard мутации/bridge. `task check` и реальный SQL setup/authority PASS; runtime/HTTP/login/recovery/origin/Redis/key isolation остаются открытыми.

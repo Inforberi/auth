@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP2.3-realm-scope, 18 октября.** [Контракт](../features/realm-isolation.md): trusted kind/UUID scope всех активных Redis adapters/ciphers, explicit legacy compatibility, no zero-scope/fallback. Crypto/digest isolation и legacy unit PASS; real Redis8.2.6 DB15 budgets/MFA concurrency/JWT/OIDC consume/TTL/legacy/cancellation PASS0.01s; final task check lint0 и targeted unit race PASS. Устранён неоднозначный allowed=true+Redis error. [Evidence](history.md#результат-mp23-realm-scope--18-октября-2026). Operator HTTP/origin/grants/independent keys/recovery ещё не подключены.
+
 - [x] **MP2.3-runtime-split, 18 октября.** Отделены standalone dependencies/hasher/server от assembly realm и background lifecycle; API/authority не менялись. Устранён typed-nil email OTP worker при выключенном адаптере. `task check` lint0, router contracts и targeted race PASS; [evidence](history.md#результат-mp23-runtime-split--18-октября-2026). Operator profile/routes/Redis/key isolation/process-wide admission/fleet scheduler остаются открытыми, полные App.New на каждый realm не запускать.
 
 - [x] **MP2.3/MP2.4-foundation, 18 октября.** [Оператор платформы](../features/platform-operators.md): отдельные realm/permissions/audit, атомарный owner через существующий Auth setup, uncached read authority. `task check` lint0, PostgreSQL18.6 setup/rollback/concurrency/revoke/catalog regression PASS. [Evidence](history.md#результат-mp23mp24-foundation--18-октября-2026). Runtime/HTTP/login/recovery/Redis isolation и MP2 целиком открыты; следующий шаг — сборка и безопасная публикация operator Auth, без второго стека/полного App.New на realm.

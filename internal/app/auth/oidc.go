@@ -13,20 +13,24 @@ import (
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 	oidcclient "github.com/Inforberi/financial-intelligence/internal/integrations/oidc"
 )
 
-func assembleOIDC(cfg *config.Config, flow oidcservice.Config, client *oidcclient.Client, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, policy *settingsservice.Service, providers *settingsservice.Providers) (*oidcservice.Service, error) {
+func (s realmSecurity) assembleOIDC(cfg *config.Config, flow oidcservice.Config, client *oidcclient.Client, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, policy *settingsservice.Service, providers *settingsservice.Providers) (*oidcservice.Service, error) {
 	method := settingsdomain.PrimaryMethod("oidc", flow.Issuer)
-	cipher, err := secretbox.NewScoped(cfg.Account.EncryptionKey, method+"-login:v1")
+	cipher, err := s.cipher(cfg.Account.EncryptionKey, method+"-login:v1")
 	if err != nil {
 		client.Close()
 		return nil, err
 	}
 	flow.CheckPolicy = func(ctx context.Context) error { return policy.CheckPublic(ctx, method, false) }
-	service := oidcservice.New(flow, oidcredis.New(rdb, cipher, "auth:"+method), client,
+	repo, err := oidcredis.NewScoped(rdb, cipher, method, s.scope)
+	if err != nil {
+		client.Close()
+		return nil, err
+	}
+	service := oidcservice.New(flow, repo, client,
 		accountservice.NewIdentityResolution(accounts), sessions, tokengenerate.New(),
 		accountservice.NewIdentityManagement(accounts, cfg.Session.FreshAuthTTL))
 	return service.WithProviderSource(func(ctx context.Context) (oidcservice.Provider, int64, error) {

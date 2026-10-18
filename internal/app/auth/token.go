@@ -17,7 +17,6 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/signing"
 	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
@@ -29,7 +28,7 @@ type tokenApp struct {
 	deployment    settingsdomain.TokenDeployment
 }
 
-func assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client, deployment *config.Config, login nativeLoginDependencies, catalog accesssettings.Catalog, root string, owned *resources, log *zap.Logger) (tokenApp, error) {
+func (s realmSecurity) assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client, deployment *config.Config, login nativeLoginDependencies, catalog accesssettings.Catalog, root string, owned *resources, log *zap.Logger) (tokenApp, error) {
 	native, err := deployment.NativeJWTPolicy()
 	if err != nil {
 		return tokenApp{}, err
@@ -49,7 +48,7 @@ func assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client,
 	if err != nil {
 		return tokenApp{}, err
 	}
-	digest, err := secretbox.NewScoped(root, "jwt-issuance-limits:v1")
+	digest, err := s.cipher(root, "jwt-issuance-limits:v1")
 	if err != nil {
 		return tokenApp{}, err
 	}
@@ -64,10 +63,10 @@ func assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client,
 			log.Warn("JWT Redis client close failed")
 		}
 	})
-	limiter, err := tokenredis.New(client, digest, tokenredis.Limits{
+	limiter, err := tokenredis.NewScoped(client, digest, tokenredis.Limits{
 		ActorPerMinute:   cfg.ActorPerMinute,
 		SessionPerMinute: cfg.SessionPerMinute, IPPerMinute: cfg.IPPerMinute, ProjectPerMinute: cfg.ProjectPerMinute,
-	})
+	}, s.scope)
 	if err != nil {
 		return tokenApp{}, err
 	}

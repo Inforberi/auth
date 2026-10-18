@@ -27,17 +27,18 @@ import (
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
 	"github.com/Inforberi/financial-intelligence/internal/config"
+	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
 func TestDisabledTokensDoNotOpenResources(t *testing.T) {
 	owned := &resources{}
-	handler, err := assembleTokens(context.Background(), nil, nil, &config.Config{JWT: settings.Config{PrivateKeyFile: "/not-readable", KeySetFile: "/not-readable", ResourceFile: "/not-readable", IntrospectionClientFile: "/not-readable"}},
+	handler, err := (realmSecurity{scope: realmscope.Legacy()}).assembleTokens(context.Background(), nil, nil, &config.Config{JWT: settings.Config{PrivateKeyFile: "/not-readable", KeySetFile: "/not-readable", ResourceFile: "/not-readable", IntrospectionClientFile: "/not-readable"}},
 		nativeLoginDependencies{}, accesssettings.Catalog{}, "", owned, zap.NewNop())
 	if err != nil || (handler.handler != nil || handler.service != nil || handler.native != nil || handler.introspection != nil) || len(owned.closers) != 0 {
 		t.Fatal("disabled JWT opened resources", err)
 	}
-	if _, err := assembleTokens(context.Background(), nil, nil, &config.Config{JWT: settings.Config{Enabled: true}}, nativeLoginDependencies{}, accesssettings.Catalog{}, "", owned, zap.NewNop()); err == nil {
+	if _, err := (realmSecurity{scope: realmscope.Legacy()}).assembleTokens(context.Background(), nil, nil, &config.Config{JWT: settings.Config{Enabled: true}}, nativeLoginDependencies{}, accesssettings.Catalog{}, "", owned, zap.NewNop()); err == nil {
 		t.Fatal("enabled invalid profile accepted")
 	}
 }
@@ -56,7 +57,7 @@ func TestNativeTokenAssemblyRejectsDeploymentBeforeResources(t *testing.T) {
 			want = "JWT_ENABLED"
 		}
 		owned := &resources{}
-		handler, err := assembleTokens(t.Context(), nil, nil, &cfg, nativeLoginDependencies{}, accesssettings.Catalog{}, "", owned, zap.NewNop())
+		handler, err := (realmSecurity{scope: realmscope.Legacy()}).assembleTokens(t.Context(), nil, nil, &cfg, nativeLoginDependencies{}, accesssettings.Catalog{}, "", owned, zap.NewNop())
 		if (handler.handler != nil || handler.service != nil || handler.native != nil) || err == nil || !strings.Contains(err.Error(), want) || len(owned.closers) != 0 {
 			t.Fatal("invalid native deployment reached JWT files/Redis", handler, err)
 		}
@@ -116,7 +117,7 @@ func TestTokenAssemblyRedis(t *testing.T) {
 	}
 	owned := &resources{}
 	t.Cleanup(owned.close)
-	handler, err := assembleTokens(t.Context(), nil, base, deployment, nativeLoginDependencies{password: &passwordservice.PasswordService{}, mfa: &mfaApp{login: &mfaservice.Login{}}, email: &emailOTPApp{}}, catalog, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", owned, zap.NewNop())
+	handler, err := (realmSecurity{scope: realmscope.Legacy()}).assembleTokens(t.Context(), nil, base, deployment, nativeLoginDependencies{password: &passwordservice.PasswordService{}, mfa: &mfaApp{login: &mfaservice.Login{}}, email: &emailOTPApp{}}, catalog, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", owned, zap.NewNop())
 	if err != nil || handler.handler == nil || handler.native == nil || handler.introspection == nil || len(owned.closers) != 1 {
 		t.Fatal("JWT assembly failed", err)
 	}

@@ -12,7 +12,6 @@ import (
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
-	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
@@ -22,15 +21,19 @@ type emailOTPApp struct {
 	delivery *otpservice.Delivery
 }
 
-func assembleEmailOTP(pool *pgxpool.Pool, redis *redis.Client, mail *mailer.Mailer, sessions *sessionservice.Login, tokens *tokengenerate.TokenManager, cfg *config.Config, log *zap.Logger) (*emailOTPApp, error) {
+func (s realmSecurity) assembleEmailOTP(pool *pgxpool.Pool, redis *redis.Client, mail *mailer.Mailer, sessions *sessionservice.Login, tokens *tokengenerate.TokenManager, cfg *config.Config, log *zap.Logger) (*emailOTPApp, error) {
 	if !cfg.EmailOTP.Enabled && !cfg.EmailOTP.ReauthenticationEnabled {
 		return &emailOTPApp{}, nil
 	}
-	cipher, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "email-login:v1")
+	cipher, err := s.cipher(cfg.Account.EncryptionKey, "email-login:v1")
 	if err != nil {
 		return nil, err
 	}
 	repo := otppostgres.New(pool)
-	service := otpservice.New(repo, cipher, passwordredis.New(redis), sessions, tokens, cfg.EmailOTP)
+	limits, err := passwordredis.NewScoped(redis, s.scope)
+	if err != nil {
+		return nil, err
+	}
+	service := otpservice.New(repo, cipher, limits, sessions, tokens, cfg.EmailOTP)
 	return &emailOTPApp{service: service, handler: otphttp.New(service, log), delivery: otpservice.NewDelivery(repo, cipher, mail)}, nil
 }

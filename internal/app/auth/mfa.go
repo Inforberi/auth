@@ -16,7 +16,6 @@ import (
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
-	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
@@ -27,9 +26,9 @@ type mfaApp struct {
 	delivery *mfaservice.RecoveryDelivery
 }
 
-func assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, sessions *sessionservice.SessionService, tokens *tokengenerate.TokenManager, mail *mailer.Mailer, cfg *config.Config, log *zap.Logger) (*mfaApp, error) {
+func (s realmSecurity) assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, sessions *sessionservice.SessionService, tokens *tokengenerate.TokenManager, mail *mailer.Mailer, cfg *config.Config, log *zap.Logger) (*mfaApp, error) {
 	repo := mfapostgres.NewWithEmailProof(pool, cfg.EmailOTP.ReauthenticationEnabled)
-	cipher, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "mfa:v1")
+	cipher, err := s.cipher(cfg.Account.EncryptionKey, "mfa:v1")
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +53,10 @@ func assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, ses
 			return nil, err
 		}
 	}
-	limits := mfaredis.New(rdb)
+	limits, err := mfaredis.NewScoped(rdb, s.scope)
+	if err != nil {
+		return nil, err
+	}
 	management, err := mfaservice.NewConfigured(repo, cipher, mfatotp.Authenticator{}, limits, tokens, cfg.MFA)
 	if err != nil {
 		return nil, err

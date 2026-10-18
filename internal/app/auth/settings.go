@@ -13,7 +13,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
-func assembleAccessPolicy(ctx context.Context, pool *pgxpool.Pool, cfg *config.Config) (*accessapp.App, *settingsservice.Service, *settingsservice.Providers, error) {
+func (s realmSecurity) assembleAccessPolicy(ctx context.Context, pool *pgxpool.Pool, cfg *config.Config) (*accessapp.App, *settingsservice.Service, *settingsservice.Providers, error) {
 	access, err := accessapp.New(ctx, pool, cfg.Access, cfg.MFA.Enabled)
 	if err != nil {
 		return nil, nil, nil, err
@@ -23,7 +23,7 @@ func assembleAccessPolicy(ctx context.Context, pool *pgxpool.Pool, cfg *config.C
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	providers, err := assembleProviderSettings(ctx, pool, cfg, snapshot.Policy)
+	providers, err := s.assembleProviderSettings(ctx, pool, cfg, snapshot.Policy)
 	if err != nil {
 		return nil, nil, nil, err
 	}

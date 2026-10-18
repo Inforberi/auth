@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
+	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
@@ -21,6 +23,17 @@ type Repository struct {
 
 func New(db *redis.Client, cipher *secretbox.Cipher, prefix string) *Repository {
 	return &Repository{db: db, cipher: cipher, prefix: prefix}
+}
+
+func NewScoped(db *redis.Client, cipher *secretbox.Cipher, method string, scope realmscope.Scope) (*Repository, error) {
+	if method != "google" && method != "telegram" {
+		return nil, errors.New("invalid OIDC method")
+	}
+	prefix, err := scope.RedisPrefix("oidc-"+method, "auth:"+method)
+	if err != nil {
+		return nil, err
+	}
+	return New(db, cipher, strings.TrimSuffix(prefix, ":")), nil
 }
 
 func (r *Repository) Save(ctx context.Context, state, binding string, flow domain.Flow) error {

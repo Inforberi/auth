@@ -8,11 +8,23 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 )
 
-type Limiter struct{ client *redis.Client }
+type Limiter struct {
+	client *redis.Client
+	prefix string
+}
 
-func New(client *redis.Client) *Limiter { return &Limiter{client: client} }
+func New(client *redis.Client) *Limiter { return &Limiter{client: client, prefix: "auth:mfa:limit:"} }
+
+func NewScoped(client *redis.Client, scope realmscope.Scope) (*Limiter, error) {
+	prefix, err := scope.RedisPrefix("mfa-limit", "auth:mfa:limit:")
+	if err != nil {
+		return nil, err
+	}
+	return &Limiter{client: client, prefix: prefix}, nil
+}
 
 const limitScript = `
 local count = redis.call('INCR', KEYS[1])
@@ -21,8 +33,8 @@ return count
 `
 
 func (l *Limiter) Allow(ctx context.Context, key string, count int, window time.Duration) (bool, error) {
-	current, err := l.client.Eval(ctx, limitScript, []string{"auth:mfa:limit:" + key}, window.Milliseconds()).Int64()
-	return current <= int64(count), err
+	current, err := l.client.Eval(ctx, limitScript, []string{l.prefix + key}, window.Milliseconds()).Int64()
+	return err == nil && current <= int64(count), err
 }
 
 const admissionScript = `
@@ -51,7 +63,7 @@ func (l *Limiter) AllowAll(ctx context.Context, budgets []service.Budget) (bool,
 		if budget.Key == "" || len(budget.Key) > 256 || budget.Count < 1 || uint64(budget.Count) > 1<<53-1 {
 			return false, errors.New("invalid MFA admission budget")
 		}
-		keys[i], counts[i] = "auth:mfa:limit:"+budget.Key, budget.Count
+		keys[i], counts[i] = l.prefix+budget.Key, budget.Count
 		for j := 0; j < i; j++ {
 			if keys[j] == keys[i] {
 				return false, errors.New("duplicate MFA admission budget")

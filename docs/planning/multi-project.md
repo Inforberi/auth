@@ -52,6 +52,10 @@ SSO, регистрация нескольких приложений внутр
 
 ## MP2. Каталог и управление платформой
 
+Согласованная граница: Redis остаётся обязательной зависимостью текущего выпуска; SQL-only режим и автоматический fallback не добавляем. Realm namespaces не означают независимость ресурсов/отказов общего Redis.
+
+- [x] MP2.3-realm-scope, 18 октября. [Scope-контракт](../features/realm-isolation.md): trusted platform/project UUID в активных Redis adapters/cipher purposes/HMAC, explicit legacy без смены ключей текущей установки, zero scope rejected. Realm/purpose входят в Lua hash tags, включая literal global/project budgets. Unit crypto/legacy/invalid scope, real Redis8.2.6 DB15 budget/MFA concurrency/JWT/OIDC consume/TTL/cancellation PASS0.01s, final task check lint0/targeted unit race PASS. Тестовые ключи/scratch удалены, Redis возвращён в stopped. Второй runtime/HTTP/origin/SQL identity/grants/independent keys/operational recovery ещё не подключены, их gate этим не закрыт.
+
 - [x] MP2.1-code. 18 октября: [основа каталога](../features/project-catalog.md) — отдельная migration platform.projects, domain states/identity/origin и read repository Read/Resolve/List с keyset bounds. Unit/task check lint0 PASS, текущий Auth не подключён к каталогу, публичных ручек нет.
 - [x] MP2.1-sql. 18 октября: реальный PostgreSQL18.6, opt-in catalog test PASS0.12s в новой auth_platform_test. Up/down/constraints/admission/keyset/phase filter/indexes2048rows/PUBLIC ACL/cancellation проверены. Fixture БД/scratch удалены, auth сохранена, PostgreSQL возвращён в initial stopped состояние; [evidence](history.md#результат-mp21-sql--18-октября-2026). HTTP/operator/bridge/provisioning этим не реализованы.
 

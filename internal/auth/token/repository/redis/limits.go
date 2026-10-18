@@ -10,6 +10,7 @@ import (
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/service"
+	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
@@ -27,12 +28,17 @@ func DefaultLimits() Limits {
 type Digester interface{ Digest(string) string }
 
 type Limiter struct {
-	client *redis.Client
-	digest Digester
-	limits Limits
+	client                                            *redis.Client
+	digest                                            Digester
+	limits                                            Limits
+	issuancePrefix, lookupPrefix, introspectionPrefix string
 }
 
 func New(client *redis.Client, digest Digester, limits Limits) (*Limiter, error) {
+	return NewScoped(client, digest, limits, realmscope.Legacy())
+}
+
+func NewScoped(client *redis.Client, digest Digester, limits Limits, scope realmscope.Scope) (*Limiter, error) {
 	if client == nil || digest == nil {
 		return nil, authjwt.ErrConfiguration
 	}
@@ -41,7 +47,19 @@ func New(client *redis.Client, digest Digester, limits Limits) (*Limiter, error)
 			return nil, authjwt.ErrConfiguration
 		}
 	}
-	return &Limiter{client: client, digest: digest, limits: limits}, nil
+	issuance, err := scope.RedisPrefix("jwt-issuance", "auth:{jwt-issuance}:")
+	if err != nil {
+		return nil, err
+	}
+	lookup, err := scope.RedisPrefix("jwt-refresh-lookup", "auth:{jwt-refresh-lookup}:")
+	if err != nil {
+		return nil, err
+	}
+	introspection, err := scope.RedisPrefix("jwt-introspection", "auth:{jwt-introspection}:")
+	if err != nil {
+		return nil, err
+	}
+	return &Limiter{client: client, digest: digest, limits: limits, issuancePrefix: issuance, lookupPrefix: lookup, introspectionPrefix: introspection}, nil
 }
 
 const issuanceBudget = `
@@ -59,7 +77,7 @@ func (l *Limiter) Allow(ctx context.Context, input service.ExchangeInput) error 
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 	// One slot and one bounded script: rejected budgets do not allocate more keys or prolong TTLs.
-	const prefix = "auth:{jwt-issuance}:"
+	prefix := l.issuancePrefix
 	keys := []string{
 		prefix + "actor:" + l.digest.Digest(string(input.Actor.UserID)),
 		prefix + "session:" + l.digest.Digest(input.SessionID),
@@ -81,7 +99,7 @@ func (l *Limiter) Allow(ctx context.Context, input service.ExchangeInput) error 
 func (l *Limiter) AllowCredentialLookup(ctx context.Context, ip string) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	const prefix = "auth:{jwt-refresh-lookup}:"
+	prefix := l.lookupPrefix
 	allowed, err := l.client.Eval(ctx, issuanceBudget, []string{prefix + "ip:" + l.digest.Digest(ip), prefix + "project"}, l.limits.IPPerMinute, l.limits.ProjectPerMinute).Int64()
 	if err != nil {
 		return fmt.Errorf("%w: %w", domain.ErrUnavailable, err)
@@ -95,7 +113,7 @@ func (l *Limiter) AllowCredentialLookup(ctx context.Context, ip string) error {
 func (l *Limiter) AllowNative(ctx context.Context, user accountdomain.UserID, ip string) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	const prefix = "auth:{jwt-issuance}:"
+	prefix := l.issuancePrefix
 	keys := []string{prefix + "actor:" + l.digest.Digest(string(user)), prefix + "ip:" + l.digest.Digest(ip), prefix + "project"}
 	allowed, err := l.client.Eval(ctx, issuanceBudget, keys, l.limits.ActorPerMinute, l.limits.IPPerMinute, l.limits.ProjectPerMinute).Int64()
 	if err != nil {

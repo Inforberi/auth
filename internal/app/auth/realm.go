@@ -14,7 +14,6 @@ import (
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
-	passwordredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/redis"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
@@ -23,7 +22,6 @@ import (
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
-	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/router"
@@ -42,22 +40,23 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 		return nil, err
 	}
 	pool, rdb, log, argonHash := deps.pool, deps.redis, deps.log, deps.hash
-	access, policy, providers, err := assembleAccessPolicy(ctx, pool, cfg)
+	security := realmSecurity{scope: deps.scope}
+	access, policy, providers, err := security.assembleAccessPolicy(ctx, pool, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("assemble access and auth policy: %w", err)
 	}
 	now := clock.UTCClock{}
 	tokenGen := tokengenerate.New()
-	mail, smtpSettings, err := assembleSMTP(ctx, pool, rdb, cfg, log)
+	mail, smtpSettings, err := security.assembleSMTP(ctx, pool, rdb, cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble SMTP settings: %w", err)
 	}
-	accountSvc, accountRepo, err := assembleAccount(pool, rdb, mail, cfg.Account, accountpostgres.DeliveryConfig{EmailChanges: cfg.EmailChange.Enabled, Invitations: cfg.Invitation.Enabled, EmailBinding: cfg.EmailBinding.Enabled})
+	accountSvc, accountRepo, err := security.assembleAccount(pool, rdb, mail, cfg.Account, accountpostgres.DeliveryConfig{EmailChanges: cfg.EmailChange.Enabled, Invitations: cfg.Invitation.Enabled, EmailBinding: cfg.EmailBinding.Enabled})
 	if err != nil {
 		return nil, fmt.Errorf("assemble account: %w", err)
 	}
 	passwordRepo := assembleRegistration(pool, accountSvc, accountRepo)
-	emailBinding, err := assembleEmailBinding(accountRepo, rdb, cfg, log)
+	emailBinding, err := security.assembleEmailBinding(accountRepo, rdb, cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble email binding: %w", err)
 	}
@@ -66,44 +65,38 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 		return nil, fmt.Errorf("assemble retention settings: %w", err)
 	}
 	retentionSvc := accountservice.NewRetention(accountRepo, cfg.Retention).WithSettings(retentionSettings)
-	setup, err := assembleSetup(accountRepo, rdb, mail, argonHash, cfg, log)
+	setup, err := security.assembleSetup(accountRepo, rdb, mail, argonHash, cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble setup: %w", err)
 	}
 	sessionRepo := sessionpostgres.New(pool)
 	sessionSvc := sessionservice.New(now, sessionRepo, tokenGen, cfg.Session)
-	mfa, err := assembleMFA(ctx, pool, rdb, sessionSvc, tokenGen, mail, cfg, log)
+	mfa, err := security.assembleMFA(ctx, pool, rdb, sessionSvc, tokenGen, mail, cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble MFA: %w", err)
 	}
 	loginSvc := mfa.sessions
-	emailOTP, err := assembleEmailOTP(pool, rdb, mail, loginSvc, tokenGen, cfg, log)
+	emailOTP, err := security.assembleEmailOTP(pool, rdb, mail, loginSvc, tokenGen, cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble email OTP: %w", err)
 	}
-	resetCipher, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "password-reset:v1")
+	password, err := security.assemblePassword(passwordRepo, rdb, loginSvc, argonHash, policy, mail, cfg)
 	if err != nil {
 		return nil, err
 	}
-	passwordLimits := passwordredis.New(rdb)
-	loginLimit := passwordservice.NewLoginLimit(passwordLimits, resetCipher, cfg.Capacity)
-	passwordSvc := passwordservice.New(passwordRepo, loginSvc, argonHash, loginLimit).WithPublicPolicy(func(ctx context.Context, registration bool) error {
-		return policy.CheckPublic(ctx, "password", registration)
-	})
-	recoverySvc := passwordservice.NewRecovery(passwordRepo, resetCipher, passwordLimits, mail, argonHash, cfg.Password)
-	tokens, err := assembleTokens(ctx, pool, rdb, cfg, nativeLoginDependencies{password: passwordSvc, mfa: mfa, email: emailOTP}, access.Catalog(), cfg.Account.EncryptionKey, owned, log)
+	tokens, err := security.assembleTokens(ctx, pool, rdb, cfg, nativeLoginDependencies{password: password.service, mfa: mfa, email: emailOTP}, access.Catalog(), cfg.Account.EncryptionKey, owned, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble JWT: %w", err)
 	}
-	passwordHandler := passwordhttp.New(passwordSvc,
+	passwordHandler := passwordhttp.New(password.service,
 		log.With(zap.String("feature", "password_auth"), zap.String("layer", "transport")))
 	middleware := sessionhttp.New(sessionSvc, log)
-	telegram, closeTelegram, err := assembleTelegram(ctx, cfg, accountRepo, rdb, loginSvc, policy, providers, log)
+	telegram, closeTelegram, err := security.assembleTelegram(ctx, cfg, accountRepo, rdb, loginSvc, policy, providers, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble telegram: %w", err)
 	}
 	owned.add(closeTelegram)
-	google, closeGoogle, err := assembleGoogle(ctx, cfg, accountRepo, rdb, loginSvc, policy, providers, log)
+	google, closeGoogle, err := security.assembleGoogle(ctx, cfg, accountRepo, rdb, loginSvc, policy, providers, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble Google: %w", err)
 	}
@@ -116,7 +109,7 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 	var temporaryAdmin *passwordhttp.TemporaryAdminHandler
 	if cfg.TemporaryPassword.Enabled {
 		temporaryRepo := passwordpostgres.NewTemporaryPassword(pool, accountRepo.ProvisionInTransaction)
-		temporary = passwordservice.NewTemporaryPassword(temporaryRepo, argonHash, passwordLimits, resetCipher.Digest, loginLimit, cfg.TemporaryPassword)
+		temporary = passwordservice.NewTemporaryPassword(temporaryRepo, argonHash, password.limits, password.cipher.Digest, password.loginLimit, cfg.TemporaryPassword)
 		temporaryHandler = passwordhttp.NewTemporaryPassword(temporary, log)
 		temporaryAdmin = passwordhttp.NewTemporaryAdmin(temporary, log)
 	}
@@ -125,12 +118,12 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 	if cfg.Invitation.Enabled {
 		provisioning = accountservice.NewProvisioning(accountRepo, accountSvc, cfg.Invitation)
 		provisioningHandler = accounthttp.NewProvisioning(provisioning, log)
-		activation = passwordhttp.NewActivation(passwordservice.NewActivation(accountRepo, recoverySvc, cfg.Invitation), log)
+		activation = passwordhttp.NewActivation(passwordservice.NewActivation(accountRepo, password.recovery, cfg.Invitation), log)
 	}
 	if cfg.EmailChange.Enabled {
 		changeSvc := accountservice.NewEmailChange(accountRepo, argonHash, accountSvc, cfg.EmailChange, cfg.Session.FreshAuthTTL)
 		emailChange = accounthttp.NewEmailChange(changeSvc, log)
-		protectedRecovery = passwordhttp.NewProtectedRecovery(passwordservice.NewProtectedRecovery(accountRepo, recoverySvc), log)
+		protectedRecovery = passwordhttp.NewProtectedRecovery(passwordservice.NewProtectedRecovery(accountRepo, password.recovery), log)
 	}
 
 	var mailTest *dev.MailTestHandler
@@ -156,8 +149,8 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
 		Activity:          sessionhttp.NewActivity(sessionservice.NewActivity(sessionRepo), log),
 		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessionRepo, tokenGen), log),
-		Reauthentication:  passwordhttp.NewReauthentication(passwordservice.NewReauthentication(passwordRepo, sessionRepo, argonHash, loginLimit, tokenGen, cfg.Session.FreshAuthTTL), log),
-		Recovery:          passwordhttp.NewRecovery(recoverySvc, log),
+		Reauthentication:  passwordhttp.NewReauthentication(passwordservice.NewReauthentication(passwordRepo, sessionRepo, argonHash, password.loginLimit, tokenGen, cfg.Session.FreshAuthTTL), log),
+		Recovery:          passwordhttp.NewRecovery(password.recovery, log),
 		Account:           accounthttp.New(accountSvc, log),
 		EmailChange:       emailChange,
 		ProtectedRecovery: protectedRecovery,
@@ -185,7 +178,7 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 		resources:          owned,
 		handler:            handler,
 		retention:          retentionSvc,
-		workers:            realmDeliveryWorkers(recoverySvc, accountSvc, mfa.delivery, emailOTP.delivery),
+		workers:            realmDeliveryWorkers(password.recovery, accountSvc, mfa.delivery, emailOTP.delivery),
 	}, nil
 }
 

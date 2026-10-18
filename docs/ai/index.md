@@ -4,6 +4,8 @@ Multi-project operator foundation: [контракт и ограничения](
 
 Сборка Auth: `internal/app/auth/app.go` — standalone resources/server; `realm.go` — feature assembly с borrowed dependencies; `run.go` — background lifecycle. Второй realm пока не публикуется.
 
+Redis/crypto scope: [контракт и проверки](../features/realm-isolation.md), `internal/infra/realmscope`, `app/auth/realm_security.go`, feature `repository/redis/*`. Standalone — explicit legacy, не default для новой платформы.
+
 Обязательные правила — [AGENTS.md](../../AGENTS.md), ближайший шаг — [current-task](current-task.md). Ниже маршрутизация, не перечень обязательного чтения. Выбрать нужную тему, прочитать связный раздел с ограничениями и проверить код.
 
 | Тема | Источник | Где искать |

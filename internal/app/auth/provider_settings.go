@@ -9,15 +9,14 @@ import (
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
-func assembleProviderSettings(ctx context.Context, pool *pgxpool.Pool, cfg *config.Config, policy settingsdomain.Policy) (*settingsservice.Providers, error) {
-	google, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "provider-google:v1")
+func (s realmSecurity) assembleProviderSettings(ctx context.Context, pool *pgxpool.Pool, cfg *config.Config, policy settingsdomain.Policy) (*settingsservice.Providers, error) {
+	google, err := s.cipher(cfg.Account.EncryptionKey, "provider-google:v1")
 	if err != nil {
 		return nil, err
 	}
-	telegram, err := secretbox.NewScoped(cfg.Account.EncryptionKey, "provider-telegram:v1")
+	telegram, err := s.cipher(cfg.Account.EncryptionKey, "provider-telegram:v1")
 	if err != nil {
 		return nil, err
 	}

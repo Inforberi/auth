@@ -19,12 +19,13 @@ import (
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
+	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 )
 
 func TestRealmRequiresBorrowedDependencies(t *testing.T) {
 	// Only dependency validation runs here; empty adapters must never receive a call.
-	complete := realmDependencies{pool: &pgxpool.Pool{}, redis: &redis.Client{}, log: zap.NewNop(), hash: hasher.NewBounded(&blockingHash{}, 1)}
-	for _, missing := range []string{"pool", "redis", "logger", "hasher"} {
+	complete := realmDependencies{pool: &pgxpool.Pool{}, redis: &redis.Client{}, log: zap.NewNop(), hash: hasher.NewBounded(&blockingHash{}, 1), scope: realmscope.Legacy()}
+	for _, missing := range []string{"pool", "redis", "logger", "hasher", "scope"} {
 		t.Run(missing, func(t *testing.T) {
 			deps := complete
 			switch missing {
@@ -36,6 +37,8 @@ func TestRealmRequiresBorrowedDependencies(t *testing.T) {
 				deps.log = nil
 			case "hasher":
 				deps.hash = nil
+			case "scope":
+				deps.scope = realmscope.Scope{}
 			}
 			writer, flags, prefix := stdlog.Writer(), stdlog.Flags(), stdlog.Prefix()
 			assembled, err := assembleRealm(t.Context(), &config.Config{}, deps)

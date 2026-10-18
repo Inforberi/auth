@@ -19,7 +19,7 @@
 
 Это не готовые endpoints. Права хранятся в `platform.operator_permissions`, не в проектном `auth.role_permissions`. Даже super-admin с одноимённой Auth permission не получает платформенного доступа. Сейчас все шесть прав получает только первый владелец; API делегирования отсутствует.
 
-Repository принимает caller-owned pool и ожидаемый realm UUID из доверенной конфигурации установки, не из HTTP. UUID создаётся migration; будущая сборка должна сверить его до публикации маршрутов. Отдельные origins, cookies, Redis/key namespaces и runtime grants ещё предстоит подключить — UUID их не заменяет.
+Repository принимает caller-owned pool и ожидаемый realm UUID из доверенной конфигурации установки, не из HTTP. UUID создаётся migration; будущая сборка должна сверить его до публикации маршрутов. [Redis/crypto scope-контракт](realm-isolation.md) реализован и проверен отдельно; реальные operator origins/cookies/keys/grants и runtime ещё не подключены — UUID/namespace их не заменяют.
 
 ## Первый владелец
 
@@ -33,7 +33,7 @@ Repository принимает caller-owned pool и ожидаемый realm UUID
 
 ## Проверка доступа
 
-Предварительный runtime split выполнен отдельно: `app/auth/app.go` открывает standalone dependencies и hasher, `realm.go` собирает существующие фичи без открытия pool/Redis/logger/hasher/listener, `run.go` управляет background lifecycle. Это пока **не operator profile**: нет второго опубликованного realm, отдельных Redis/key namespaces или fleet registry. JWT no-retry Redis client ещё принадлежит realm. Следующие шаги — изоляция и минимальная operator сборка, не вызов полного New на каждый проект.
+Предварительный runtime split выполнен отдельно: `app/auth/app.go` открывает standalone dependencies и hasher, `realm.go` собирает существующие фичи без открытия pool/Redis/logger/hasher/listener, `run.go` управляет background lifecycle. [Scope foundation](realm-isolation.md) подключён к codecs/adapters, но это пока **не operator profile**: нет второго опубликованного realm, independent keys/runtime grants/exact origin или fleet registry. JWT no-retry Redis client ещё принадлежит realm. Следующий шаг — минимальная operator сборка, не вызов полного New на каждый проект.
 
 `AuthorizeRead` делает один ограниченный SQL-запрос без положительного кеша. Требует ожидаемый initialized realm, platform permission, активного неудалённого пользователя, актуальный auth_version, живую browser/password session с действующими role revision bindings, password/MFA proofs не из будущего и существующие password/TOTP credentials. Driver details не возвращаются, отмена сохраняется в безопасной ошибке.
 
