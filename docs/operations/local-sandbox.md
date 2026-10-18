@@ -108,6 +108,36 @@ Cleanup снимает назначение созданной роли и во�
 
 NOT RUN этим блоком: actual delete обычного пользователя, invitation/temporary reissue, истечение fresh proof по времени, role-required MFA enrollment, выдача special super-admin, browser/external SMTP, fleet/load/GC. Локальный PASS не закрывает весь pre-ui gate.
 
+## Перевыдача и удаление — pre-ui-lifecycle-local
+
+```sh
+task sandbox:lifecycle
+```
+
+Те же prerequisites, temporary deployment и восстановление профиля, что у `sandbox:admin`. Не запускать эти live-команды параллельно: они управляют одним sandbox API. Обычный `go test` сценарий пропускает; race detector включён у test-client/SDK, не у отдельного API binary.
+
+Создаются два новых пользователя этого прогона: invitation и temporary password. Немедленная перевыдача должна вернуть cooldown conflict; затем тест ждёт реальные61s, не меняя deployment cooldown. Для приглашения проверяются новый token через Mailpit, replay команды и отказ старой ссылке. Для временного пароля — одноразовая выдача нового секрета, неизменный expiry при replay без plaintext, отказ старому паролю и уже начатому setup, успешная смена по новому proof. Секреты не печатаются, почтовый поиск ограничен уникальным адресом и пропускает прежний token.
+
+После активации обоим новым пользователям через API назначается отдельная роль с `accounts.users.read`, выдаются cookie/JWT/native refresh и удаляются **только эти UUID**. Проверяются strict JWT/session/refresh/login denial, stale deletion version, idempotent delete с tombstone version и запрет unblock. Удаление — существующий tombstone workflow, не полное PII erasure и не физический purge. Local JWT с автономной проверкой не получает немедленного отзыва: текущий тест проверяет strict consumer.
+
+На успешном прогоне остаются два tombstone с историческими связями синтетической роли, без действующего доступа. Назначения tombstone не снимаются через API: удалённый target не допускает таких mutations. На сбое cleanup снимает созданное назначение у ещё не удалённого пользователя и восстанавливает deployment; activation может остаться pending/active для диагностики. SIGKILL/timeout cleanup не гарантируют: восстановить профиль и точечно проверить IDs, не сбрасывая volumes/Redis. Рабочие аккаунты не удаляются. Нагрузка, retention throughput, конкурентные lost replies/fleet и внешние интеграции здесь не измеряются.
+
+## Fresh-auth и MFA роли — pre-ui-freshness-mfa-local
+
+```sh
+task sandbox:security
+```
+
+Нужны тот же JWT sandbox/admin TOTP/Mailpit и отсутствие параллельных sandbox acceptance runners. Opt-in `AUTH_SANDBOX_SECURITY=1`, общий timeout10m; обычный `go test` не ждёт security deadlines. Тест длится чуть больше пяти минут: используется настоящий SQL freshness window5min, без UPDATE timestamps/ускорения часов/ослабления TTL. Race detector у client/SDK, не у отдельного API binary.
+
+На новом invitation account и custom role с `accounts.users.read` проверяется optional→required MFA. Ранее выданные cookie и ещё живые strict JWT/native authority должны закрыться. Password-only login даёт limited enrollment challenge, не session; без browser binding enrollment отклоняется. Enrollment/confirmation не выполняют вход, confirmation одноразовая; последующий вход требует TOTP. Отключение фактора при required role запрещено. Возврат роли к optional не удаляет фактор; перед штатным удалением только нового synthetic factor тест ждёт реальное61s окно общего MFA user budget5/min (enrollment/replay/deny тоже расходуют попытки), затем снимает назначение. Лимит не повышается и Redis не сбрасывается. Секрет/codes существуют только в памяти runner и не печатаются/не сохраняются в файлах.
+
+Отдельная administrative session остаётся прежней на протяжении реальных пяти минут. До deadline мутация проходит; после него `/me`/role read доступны, но role mutation требует fresh-auth. Password reauthentication обновляет только primary proof; до отдельного MFA step-up мутация всё ещё запрещена. После step-up та же мутация проходит. Этот aging scenario не выдаётся за проверку ещё живого JWT после пяти минут: sandbox JWT TTL1m; отзыв неистёкших JWT проверяется раньше, на включении role MFA.
+
+Cleanup role-сценария выполняется до долгого ожидания, пока admin proofs ещё свежие; original deployment восстанавливается в конце. На успехе новый пользователь active/без роли и фактора, тестовые роли неназначены; системный admin не меняется, кроме штатных sessions/proofs/audit/TOTP last-step. Если enrollment прерван, фактор может остаться только у этого нового synthetic account; SIGKILL/timeout не гарантируют cleanup — сначала восстановить профиль, затем точечно проверить созданные IDs, без сброса БД/Redis.
+
+Нет проверки точной микросекунды границы5min, clock-skew/fleet/lock-contention/реального authenticator/browser и отсутствия утечек под нагрузкой. Это отдельные gates, не следствие одного локального PASS.
+
 ## Ротация и недоступность JWKS — J7.5-local
 
 ```bash
