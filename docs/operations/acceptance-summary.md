@@ -1,10 +1,12 @@
 # Краткий отчёт по проверкам
 
+18 октября, MP2.3/MP2.4 foundation: `task check` PASS/lint0, real PostgreSQL18.6 operator setup/atomic rollback/single-owner/SQL authority PASS0.26s, catalog regression PASS. Fixture БД/scratch удалены, PostgreSQL возвращён в stopped. Runtime/HTTP/login/recovery/Redis isolation/race/load/bridge NOT RUN; [результат](../planning/history.md#результат-mp23mp24-foundation--18-октября-2026).
+
 Обновлено 18 октября 2026. Ветка `feat/register-ai`, load baseline/cleanup-drain проверены на HEAD `cf06502` + новые test/docs changes. Предыдущие lifecycle/freshness/MFA evidence получены на HEAD87d306c + dirty blocks, затем зафиксированы2286f22/b3e870a/cf06502; прошлые snapshots — в history. Один локальный `auth-sandbox`: production App, PostgreSQL18.6, Redis8.2, Mailpit, прямой HTTPS с проверкой CA. Не production sign-off.
 
 | Проверка | Результат |
 | --- | --- |
-| Каталог проектов MP2.1-code | Domain/read repository и отдельная platform migration добавлены без runtime wiring. Formatter/unit/task check lint0 PASS. Реальный SQL integration **NOT RUN**: при последней попытке Docker daemon недоступен, локального PostgreSQL нет; fixture БД не создана. Состояние «стенд оставлен работающим» ниже относится к прежнему snapshot после load/cleanup, не гарантирует текущую доступность. [Граница реализации](../features/project-catalog.md) |
+| Каталог проектов MP2.1 | Formatter/unit/task check lint0 PASS. Реальный SQL integration PASS0.12s на PostgreSQL18.6: up/down/constraints/admission/keyset/indexes2048rows/PUBLIC ACL/cancellation. Новая fixture БД/scratch удалены, auth сохранена, PostgreSQL возвращён в исходное stopped состояние. HTTP/runtime/operator/bridge не подключены; «стенд оставлен работающим» ниже — прежний snapshot, не текущая доступность. [Граница реализации](../features/project-catalog.md) |
 | Повторные load/rest наблюдения | Два90s/75s цикла в пределах local gates:8993 HTTP200/0 drops,49.95–49.96RPS,max route-window p99≤31.30ms. Rest RSS230.88/229.29MiB, active scheduler G descriptors23/24. Третий цикл прерван по запросу, full runner не PASS; GC summary/полный leak analysis не выполнены. [Протокол и ограничения](load-rest.md) |
 | Auth baseline J7.3 | PASS: register, первый admin/email/TOTP, cookie/password/MFA, email verification/email OTP с Mailpit, admin/ordinary rights, hostile Origin, logout и Redis fail-closed/recovery |
 | JWT issuance J7.4 | PASS: отдельные ES256/JWKS/service verifier; cookie exchange и native password/MFA дают credentials только после нужных proofs; outputs no-store, без Set-Cookie |

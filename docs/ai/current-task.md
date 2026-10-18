@@ -1,15 +1,15 @@
 # Текущий шаг
 
-Обновлено 18 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), последний результат — [MP2.1-code/history](../planning/history.md#результат-mp21-code--18-октября-2026), прежние измерения — [отчёт](../operations/acceptance-summary.md). Commits/staging проверять через Git.
+Обновлено 18 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), последний результат — [operator foundation/history](../planning/history.md#результат-mp23mp24-foundation--18-октября-2026), прежние измерения — [отчёт](../operations/acceptance-summary.md). Commits/staging проверять через Git.
 
-## Последний результат — MP2.1-code, основа каталога
+## Последний результат — MP2.3/MP2.4 foundation
 
-- [Каталог](../features/project-catalog.md): internal/platform/project domain + read repository, отдельная migrations/platform. Exact ready/enabled origin resolve без fallback, UUID/slug/name/origin bounds, keyset1–100, private binding отдельно от списка,2s bounds/rows cleanup/safe errors. Gofmt/unit/final task check PASS/lint0, SQL integration test написан/скомпилирован. App/HTTP/ENV/Auth schema не менялись, service/transport заглушек нет.
-- **SQL NOT RUN:** Docker daemon недоступен, local postgres/initdb/psql нет. Inspect упал до CREATE DATABASE, fixture БД не создана, рабочие данные/containers не тронуты; Docker не запускался автоматически. В обычном task check integration пропущен, не SQL PASS. MP2.1-sql/MP2 открыты; operator realm/management API/provisioning/bridge пока не реализованы. Прежние результаты/fixture/GC/scan ограничения — в history/operations; актуальные commits/staging проверять через Git.
+- [Оператор платформы](../features/platform-operators.md): отдельные realm/permissions/audit, существующий SetupService, атомарный первый владелец с email/TOTP, single-winner и committed failed attempts. `AuthorizeRead` проверяет current SQL authority, но не разрешает мутации/bridge. `task check` PASS/lint0; real TestPlatformOperatorsPostgres PASS0.26s на PostgreSQL18.6/Linux arm64, catalog regression PASS. Runtime/HTTP/ENV не подключены; MP2.3/MP2.4 целиком открыты, platform login/recovery/Redis isolation/race/load NOT RUN.
+- Временно запущен только остановленный sandbox PostgreSQL; новая auth_platform_test прошла up/down, обе fixture-схемы удалены. БД удалена без FORCE, count0/auth count1; семь scratch-файлов и пустые каталоги убраны, PostgreSQL возвращён в stopped. Рабочая Auth/ENV/Redis не менялись. MP2.1 закрыт ранее. Актуальные commits/staging проверять через Git.
 
 ## Согласованный следующий этап — multi-project
 
-Далее закрыть MP2.1-sql реальным прогоном отдельной auth_platform_test fixture на разрешённом PostgreSQL, не Auth БД и не новым независимым стендом ради формальности. После — operator realm/платформенные права/first-run и management API, включая одну platform session для всех проектов по [ADR005](../adr/005-independent-projects.md). Bridge закрыт до SQL authority/audit/receipt/revoke tests. Затем provisioning/изоляция/эксплуатация → cross-project приёмка → предельный RPS/длительные ресурсы MP8 → UI A7. SSO и приложения внутри проекта отложены, пользователей проектов не объединять; текущий runtime однопроектный.
+Далее закончить MP2.3–MP2.4: подключение operator realm к сборке существующего Auth (отделить process-owned ресурсы, не создавать полный App.New на каждый realm), отдельные origin/cookie/Redis/key namespaces и grants, защищённые setup/password/MFA routes, login/recovery SQL/HTTP приёмка. Затем MP2.2/MP2.5–MP2.7: transitions и management API, одна platform session по [ADR005](../adr/005-independent-projects.md). Bridge закрыт до SQL authority/audit/receipt/revoke tests; AuthorizeRead их не заменяет. Затем provisioning/изоляция/эксплуатация → cross-project приёмка → предельный RPS/ресурсы MP8 → UI A7. SSO отложен, пользователей не объединять.
 
 ## Ограничения приёмки — не отменены новым порядком
 

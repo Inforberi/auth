@@ -2,6 +2,26 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+## Результат MP2.3/MP2.4 foundation — 18 октября 2026
+
+Добавлены `internal/platform/operator/{domain,repository/postgres}`, отдельная `000002_operators` platform migration и [контракт](../features/platform-operators.md). Шесть точных SQL permissions не зависят от одноимённых Auth roles. Existing SetupService создаёт Auth owner/TOTP/recovery и platform grants/audit/marker одной транзакцией; общий Auth setup primitive допускает внешний transaction owner, сохраняя wrapper и committed wrong attempts. `AuthorizeRead` — один bounded current SQL snapshot, не mutation guard. Runtime/HTTP/ENV/grants не подключались, обычные project Auth endpoints не менялись.
+
+Проверки: gofmt; targeted Go tests; `task check` PASS/lint0 после исправления одного gofumpt type-group замечания (`/private/tmp/auth-platform-operator-check-final.log`). Первый check имел только это замечание. Context7 сверил transaction ownership pgx/v5.10.0; deferred rollback имеет отдельный ограниченный cleanup context.
+
+SQL: `GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go test -c -o /private/tmp/auth-platform-operators.test ./migrations/platform`; временно запущен существующий stopped auth-sandbox-postgres-1/PostgreSQL18.6. После проверки отсутствия auth_platform_test создана новая БД owner auth. Binary и шесть SQL файлов скопированы в `/tmp/auth-platform-operators.NLNZTV`, запуск из platform subdir через unix socket с `AUTH_PLATFORM_TEST_DATABASE_URL=postgres://auth@/auth_platform_test?host=/var/run/postgresql`, `-test.run '^TestPlatform(Catalog|Operators)Postgres$' -test.v -test.timeout=90s`. **PASS**, operator0.26s и catalog regression; `/private/tmp/auth-platform-operators-sql.log`.
+
+Проверены действующий SetupService/Argon2id/email/TOTP, неверный код/committed attempt, полный rollback Auth при CHECK-failure platform audit, конкурентный single owner, отсутствие session после setup, grants/audit/marker/recovery count. Authority: revoke/expiry/block/auth_version/missing or future proof/stale role revision/missing platform permission/wrong realm/одноимённое Auth permission/PUBLIC ACL/cancellation. Authority session вставлена SQL, не выдавать за HTTP login. Up/down завершены, SQL подтвердил отсутствие auth/platform schemas; новая БД удалена без FORCE, count0 и исходная auth count1. Семь scratch-файлов и пустые каталоги удалены; PostgreSQL возвращён в stopped, остальные контейнеры не запускались.
+
+NOT RUN: platform login/recovery/HTTPS/browser, runtime grants/Redis/key isolation, race/fleet/load/GC, bridge revoke/concurrency/lost-reply. MP2.3/MP2.4 целиком и MP2 остаются открытыми. Рабочие данные/ENV/secrets не менялись; коммит текущего блока не выполнялся.
+
+## Результат MP2.1-sql — 18 октября 2026
+
+Пользователь запустил Docker после прежнего NOT RUN. Проверен compose project auth-sandbox; существующий PostgreSQL оказался stopped, запущен только он. Подтверждены PostgreSQL18.6 (Debian18.6-1.pgdg12+2) и отсутствие auth_platform_test; создана новая disposable БД и scratch `/tmp/auth-platform-catalog.WXM7zt`. Текущий test binary собран GOOS=linux/GOARCH=arm64/CGO_ENABLED=0, скопирован с двумя catalog migration SQL, выполнен через unix socket с AUTH_PLATFORM_TEST_DATABASE_URL только на fixture.
+
+`TestPlatformCatalogPostgres` **PASS0.12s**: constraints, admission, pagination, indexes, no_public_grants, cancellation. Проверены up/down без Auth schema, ready metadata/unique origin, pending/failed/suspended/unknown denial, uncached changes, timestamp tie keyset/phase/empty page, selective indexes на2048 synthetic rows, PUBLIC ACL и возврат acquired connections после cancellation. Лог `/private/tmp/auth-platform-catalog-sql.log`. Это SQL foundation, не проверка operator/runtime/platform admin bridge и не HTTP/capacity/race sign-off.
+
+После teardown отдельный SQL подтвердил отсутствие platform/auth schemas в fixture (`t|t`). DROP DATABASE без FORCE удалил только новую auth_platform_test; проверка count=0 и наличие существующей auth. Три scratch-файла удалены точными путями, пустой каталог удалён. Запущенный нами PostgreSQL возвращён в исходное stopped состояние (Running=false); другие контейнеры/ENV/ключи/реальные данные не менялись. Приёмка обновлена на PASS, MP2.1 закрыт, MP2.2 transitions/operator/API/bridge остаются открытыми. Исходники не изменены; прежний final task check lint0 относится к этой же версии, не повторялся ради docs. Проверки этого блока: live SQL + docs diff/links/status consistency; коммит не выполнялся.
+
 ## Результат MP2.1-code — 18 октября 2026
 
 Добавлены отдельная catalog migration platform.projects, project domain identity/states/origin и bounded read repository Read/Resolve/List. Uncached exact origin+enabled+ready, без fallback; private storage Binding не входит в list Project. Keyset limit1–100/optional phase/limit+1 без total count;2s query bounds/rows.Close/errors.Is cancellation и sanitized driver failures. Domain unit tests и repository prequery/error tests добавлены; код не подключён к Auth App/HTTP, actor guards и runtime/provisioning не объявляются готовыми.

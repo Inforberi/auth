@@ -1,5 +1,7 @@
 # Карта проекта
 
+Multi-project operator foundation: [контракт и ограничения](../features/platform-operators.md), `internal/platform/operator`, `migrations/platform/000002_operators.*`; использует Auth setup, не отдельный login stack.
+
 Обязательные правила — [AGENTS.md](../../AGENTS.md), ближайший шаг — [current-task](current-task.md). Ниже маршрутизация, не перечень обязательного чтения. Выбрать нужную тему, прочитать связный раздел с ограничениями и проверить код.
 
 | Тема | Источник | Где искать |
