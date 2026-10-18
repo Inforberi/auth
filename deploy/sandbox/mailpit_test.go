@@ -8,11 +8,12 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"testing"
 	"time"
 )
 
-func invitationMailToken(t *testing.T, email string) string {
+func invitationMailToken(t *testing.T, email string, previous ...string) string {
 	t.Helper()
 	transport := &http.Transport{MaxConnsPerHost: 2, IdleConnTimeout: 15 * time.Second}
 	t.Cleanup(transport.CloseIdleConnections)
@@ -41,7 +42,7 @@ func invitationMailToken(t *testing.T, email string) string {
 					continue
 				}
 				fragment, err := url.ParseQuery(link.Fragment)
-				if err == nil && fragment.Get("token") != "" {
+				if err == nil && fragment.Get("token") != "" && !slices.Contains(previous, fragment.Get("token")) {
 					return fragment.Get("token")
 				}
 			}

@@ -2,12 +2,14 @@ package sandbox_test
 
 import (
 	"crypto/rand"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 const adminTestPassword = "Sandbox-Users-Test-2026!"
@@ -33,6 +35,7 @@ type adminUserCard struct {
 	EmailVerified             bool        `json:"emailVerified"`
 	PasswordConfigured        bool        `json:"passwordConfigured"`
 	TemporaryPasswordRequired bool        `json:"temporaryPasswordRequired"`
+	DeletedAt                 *time.Time  `json:"deletedAt"`
 	Roles                     []adminRole `json:"roles"`
 }
 
@@ -41,6 +44,12 @@ func TestAdminAcceptance(t *testing.T) {
 		t.Skip("explicit HTTPS users/roles acceptance; run task sandbox:admin")
 	}
 	api, roots := sandboxClient(t, false)
+	enableAdminSandbox(t, api)
+	checkAdminAcceptance(t, api, roots)
+}
+
+func enableAdminSandbox(t *testing.T, api *http.Client) {
+	t.Helper()
 	assertKeyIDs(t, api, "sandbox-1")
 	dir, err := os.MkdirTemp(sandboxDirectory(t), "admin-")
 	if err != nil {
@@ -57,6 +66,10 @@ func TestAdminAcceptance(t *testing.T) {
 		"environment": map[string]string{"INVITATIONS_ENABLED": "true", "TEMPORARY_PASSWORD_ENABLED": "true", "INVITATION_URL": sandboxURL + "/activate-account"},
 	}}})
 	redeploySandboxAPI(t, api, override)
+}
+
+func checkAdminAcceptance(t *testing.T, api *http.Client, roots *x509.CertPool) {
+	t.Helper()
 	suffix := strings.ReplaceAll(adminCommand(t), "-", "")
 	roleInput := map[string]any{"key": "sandbox_reader_" + suffix, "name": "Sandbox reader", "permissions": []string{"accounts.users.read"}}
 
