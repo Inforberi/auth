@@ -48,7 +48,7 @@ Mailpit хранит verification/setup/OTP письма, но не пересы
 
 ## Включённые профили и ограничения
 
-Базовый `sandbox:up` включает password, email OTP, MFA и одноразовую initial setup, без JWT/native. `sandbox:jwt` ниже добавляет JWT/native с отдельными prerequisites и проверками. Google/Telegram, email binding/change/invitations/temporary password и operator MFA recovery на этом стенде не включались.
+Базовый `sandbox:up` включает password, email OTP, MFA и одноразовую initial setup, без JWT/native. `sandbox:jwt` ниже добавляет JWT/native с отдельными prerequisites и проверками. Google/Telegram, email binding/change и operator MFA recovery на этом стенде не включались. Invitations/temporary password включаются только на время `sandbox:admin`, после него снова выключены.
 
 Не приравнивать Mailpit к внешнему SMTP, прямой TLS Auth к реальному ingress, программную генерацию TOTP к человеческому authenticator drill, один Auth instance к fleet. Browser/CORS/Swagger interaction реальным браузером, provider callbacks, key rotation/compromise, mixed/hostile/soak/GC/shutdown и capacity остаются открытыми.
 
@@ -91,3 +91,44 @@ Live тесты в `deploy/sandbox/*_test.go` используют текущи�
 После успешной проверки оба issuance switch оставляются включёнными для дальнейшей работы; данные сохраняются. Повторный `sandbox:up` запускает базовый профиль без JWT override: deployment capability выключится, сохранённая policy не перезапишется. Для повторного включения/проверки — `sandbox:jwt`; `sandbox:down` сохраняет volumes и для JWT-варианта.
 
 Результаты и границы приёмки — [матрица J7](jwt-security-acceptance.md) и [history J7.4](../planning/history.md#результат-j74-local--17-октября-2026). Fleet/rotation/ingress/browser/нагрузка/GC и внешние интеграции остаются отдельными gates.
+
+## Пользователи и роли — pre-ui-admin-local
+
+```sh
+task sandbox:admin
+```
+
+Нужны работающий JWT sandbox, подготовленный администратор/TOTP и Mailpit из профиля выше. Команда явно включает `AUTH_SANDBOX_ADMIN=1` и запускает `TestAdminAcceptance` с `-race`; обычный `go test` пропускает live-тест. Race detector относится к тестовому клиенту/SDK, не к отдельно работающему production API.
+
+Тест временно пересоздаёт только sandbox API с invitations/temporary-password и локальным invitation URL. Отдельный override хранится в новом ignored каталоге `tmp/sandbox/admin-*`; исходные ENV, ключи, policy и volumes не переписываются. Через API создаются два новых пользователя с уникальными адресами и custom role. Активация использует письмо из локального Mailpit, не внешний SMTP. Пароли/коды/токены не печатаются. Разрешения роли — уже доступные администратору `accounts.users.read/manage`, без bootstrap внешних permissions или SQL-назначений.
+
+Проверяются одноразовость activation/temporary secret, обязательная смена временного пароля без выдачи session, отсутствие автоматического email verification, directory/cursor, grant/no-op/edit/revoke, version conflicts, block/unblock и last-admin guards. Расширение роли инвалидирует прежний снимок сессии, сокращение сохраняет вход, но сразу убирает права; strict JWT проверяется через настоящий consumer. После unblock отдельно повторяются сохранённая старая cookie и старый JWT: они не оживают. Незавершённый MFA и обычный public admin login не заменяют private fresh admin proof.
+
+Cleanup снимает назначение созданной роли и возвращает исходный JWT deployment. Новые accounts остаются active без ролей, созданная роль — без назначения: их можно посмотреть позже в UI. Повторные запуски создают новые синтетические записи; это не тест retention/capacity. Если runner принудительно завершён, cleanup не гарантирован: остановить runner, вернуть deployment через `task sandbox:jwt`, проверить созданные IDs и снять только их тестовые назначения через API. Не сбрасывать БД/Redis и не удалять весь `tmp/sandbox`.
+
+NOT RUN этим блоком: actual delete обычного пользователя, invitation/temporary reissue, истечение fresh proof по времени, role-required MFA enrollment, выдача special super-admin, browser/external SMTP, fleet/load/GC. Локальный PASS не закрывает весь pre-ui gate.
+
+## Ротация и недоступность JWKS — J7.5-local
+
+```bash
+task sandbox:jwt:rotation
+```
+
+Нужен уже работающий JWT sandbox с исходным kid `sandbox-1`, существующим Иваном и включённым session exchange. Команда кратковременно останавливает **только API auth-sandbox**; не запускать параллельно другим тестам/ручной работе со стендом. Рабочие проекты не затрагиваются, SQL/Redis/Mailpit не перезапускаются, существующие users/roles/policy и исходные файлы `tmp/sandbox/jwt` не переписываются. Обычные login/exchange создают тестовые session/audit записи и учитываются действующими Redis-лимитами.
+
+В новом ignored временном подкаталоге создаются отдельные synthetic private keys A/B и phase manifests. Исходный sandbox-1 остаётся в verification set во всех фазах. Только временный override меняет signer/JWKS и access TTL3m: срок заведомо больше60s доверия к кешу, чтобы отказ нельзя было объяснить обычным expiry. File mounts readonly, алгоритм/таймеры/admission/retry SDK прежние; новых runtime API/worker/dependency нет.
+
+Порядок проверки:
+
+1. Подписать A и проверить strict/local через настоящие Auth/JWKS/introspection/SQL.
+2. Опубликовать B, дождаться обычного refresh consumers, затем переключить signer на B: старые и новые токены работают в overlap.
+3. Досрочно удалить A из authoritative trust и обновить consumers: ещё не истёкшие A-токены отклоняются, B продолжает работать. Это **отдельная симуляция emergency distrust**, не разрешение удалять planned key до истечения TTL+skew. Полный planned TTL-drain/fleet rollout этим не проверен.
+4. Создать fresh consumer owners и остановить actual sandbox API. Strict даёт503 из-за недоступной online authority; local временно даёт204 с ещё свежим trust. После заведомо неудачного JWKS fetch и истечения исходных60s `Ready`/middleware закрываются с503 при всё ещё действующем JWT.
+5. Запустить API с B и после обычного fetch backoff проверить те же credentials: B снова204 без нового login; A остаётся401.
+6. Cleanup возвращает исходный Compose JWT profile/kid sandbox-1/TTL1m и public set, затем удаляет **только созданный временный подкаталог** с A/B. Исходные private/public manifests не переписываются. При ошибке восстановления артефакты сохраняются для диагностики; не удалять их до восстановления baseline.
+
+Нет TLS proxy или поддельного JWKS server: fetch идёт на actual Auth HTTPS endpoint с CA verification. Поэтому fault означает **весь Auth недоступен**, а не отдельную JWKS-only partition при доступной introspection. Strict stale-trust отдельно наблюдается через публичный `Ready`, не выдаётся за избирательный сетевой эксперимент. Положительные authority decisions не кешируются и strict не переключается в local.
+
+Это single-instance приёмка SDK/deployment механики. Реальный compromise, emergency traffic fencing/operator/fleet, различающиеся JWKS узлы, selective network partitions, нормальное planned TTL-drain, browser/ingress и нагрузка/GC остаются отдельными gates. Возврат исходного **не скомпрометированного** test key — cleanup теста, а не рекомендация возвращать compromised keys в production trust.
+
+При принудительном завершении runner (например, SIGKILL/жёсткий test timeout) cleanup не гарантирован. После остановки runner вернуть штатный профиль и проверить его можно `task sandbox:jwt`; до успешного возврата baseline не удалять временный подкаталог, который ещё может быть смонтирован API. Оставшиеся артефакты такого прерванного прогона проверяются отдельно, без удаления всего `tmp/sandbox/jwt`.

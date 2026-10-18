@@ -1,16 +1,16 @@
 # Текущий шаг
 
-Обновлено 17 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), evidence — [history](../planning/history.md#результат-j74-local--17-октября-2026), краткий [отчёт](../operations/acceptance-summary.md). Commits/staging проверять через Git.
+Обновлено 17 октября 2026. Статусы — [implementation](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui), evidence — [history](../planning/history.md#результат-pre-ui-admin-local--17-октября-2026), краткий [отчёт](../operations/acceptance-summary.md). Commits/staging проверять через Git.
 
-## Последний результат — J7.4-local
+## Последний результат — pre-ui-admin-local
 
-- На существующем [auth-sandbox](../operations/local-sandbox.md#jwt-профили--j74-local) включены JWT/native: отдельный ES256 key/public JWKS/resources/service identity, strict/local audience, access TTL1m, native P60/B200/I1m. Обычные ENV-примеры unchanged. Тестовая роль SQL fixture даёт Ивану только sandbox.records.read; существующие accounts/password/TOTP/volumes сохранены. Capability — JWT override, сохранённые switches включены через admin HTTPS + fresh password/TOTP.
-- `task sandbox:jwt`: 10 live сценариев PASS, 121.17s (ожидания TOTP/expiry, не benchmark). Cookie exchange, consumer/scope/mode/credentials, native password/MFA/refresh/replay/logout, settings switches, actual SQL/Redis stop→fail-closed503/live200→recovery и реальный expiry strict/local401. Consumer handler in-process, JWKS/introspection к actual production App по TLS с явным CA; не внешний data-backend/ingress. No runtime Go/API/dependency/schema changes в этом блоке.
-- Sandbox оставлен работающим с JWT/native и обоими issuance switches=true. Task sandbox:up возвращает базовый deployment без JWT override, не перезаписывая saved policy; sandbox:down сохраняет volumes. В API монтируются только нужные readonly TLS/JWT/catalog files, не raw consumer secret/admin TOTP/cookie artifacts. Реальные ENV/DB/secrets/чужие контейнеры не тронуты. Полный отчёт и команды — по ссылкам выше; коммит только по запросу.
+- `task sandbox:admin` на существующем [sandbox](../operations/local-sandbox.md#пользователи-и-роли--pre-ui-admin-local): PASS62.51s с `-race` для test-client/SDK, не server binary. Приглашение/Mailpit→activation/replay, temporary provision/idempotency→mandatory setup→login, custom role grant/edit/revoke, directory/cursor, block/unblock/stale versions и last-admin block/delete/revoke denial прошли через HTTPS API, без SQL-подмен. Unfinished MFA и public admin login не заменяют private fresh proof.
+- Role expansion отзывает cookie/strict JWT; pure reduction сохраняет вход, но убирает permission. После unblock сохранённая старая cookie и JWT не оживают; свежий login работает. Runtime/API/schema/dependencies не менялись: дефектов в проверенных сценариях не воспроизведено. Новые synthetic users/roles оставлены без назначенных прав.
+- Cleanup вернул invitations/temporary-password=false, sandbox-1/TTL1m/7 readonly mounts без admin source; readiness200/public JWKS sandbox-1/no d, все4 контейнера работают, dependencies healthy. Formatter/task check lint0/live client race/security PASS (0 reachable/imported-package,1 known module-only). 18 октября тесты J7.5 и admin acceptance зафиксированы отдельными коммитами; подробности проверок — в history.
 
 ## Следующий блок — оставшиеся pre-ui gates
 
-Продолжить на том же стенде без сброса данных: локальная приёмка key/JWKS outage/rotation/stale trust, остальные administrative/session pre-ui сценарии, затем измеряемые mixed load/storage/cleanup/память/GC по существующим планам. Выбрать конкретный риск и минимальный сценарий до следующей реализации; не добавлять новые рабочие механизмы ради тестов. Fleet/emergency distrust, реальные providers/SMTP/browser/operator и ingress остаются отдельными gates, если нет условий — NOT RUN. Capacity/production budgets пока не измерены.
+Продолжить на том же стенде без сброса данных: отдельный lifecycle блок invitation/temporary reissue и actual delete обычного synthetic account с отказом старым credentials. Fresh-proof aging/role-required MFA — по соответствующим gates, не выдавать за текущий PASS. Затем измеряемые mixed load/storage/cleanup/память/GC по существующим планам. Не добавлять новые рабочие механизмы ради тестов. Selective JWKS-only partition/normal planned TTL-drain/fleet/emergency/operator/providers/SMTP/browser/ingress остаются отдельными gates, при отсутствии условий — NOT RUN. Capacity/production budgets пока не измерены.
 
 Постоянные тестовые зависимости уже работают — не создавать очередные ephemeral fixtures вместо этого стенда без конкретной нужды. Не повторять однообразные unit suites формально. Real browser/ingress/providers/external SMTP/human authenticator/operator/fleet/rotation/load/GC — отдельные NOT RUN gates, а не причина скрыто объявить local эквивалентом внешнего. Рабочие restore/secret rotation/ENV/DB только по отдельному разрешению.
 
@@ -18,7 +18,7 @@ Traffic и ручной/orchestrator startup закрыты до SQL invalidatio
 
 J6 целиком/J7/A6.4/pre-ui/A8 открыты. Real HTTPS/fleet/rotation/fault/load/GC/restore требуют разрешённого стенда/synthetic data и оператора; при отсутствии условий — NOT RUN, не выдуманная capacity. UI — после pre-ui backend gate.
 
-J7.1 SQL/HTTPS consumer и J7.2 restore SQL/drill выполнены локально, [recovery runbook](../operations/jwt-recovery.md) и [матрица](../operations/jwt-security-acceptance.md) остаются обязательными. Direct native Google/Telegram handoff — отдельный J4c. Далее local JWT acceptance → оставшиеся pre-ui/external gates → UI A7 → A8.
+J7.1 SQL/HTTPS consumer, J7.2 restore SQL/drill, J7.4 JWT baseline и J7.5 rotation/outage выполнены локально, [recovery runbook](../operations/jwt-recovery.md) и [матрица](../operations/jwt-security-acceptance.md) остаются обязательными. J7.5 — early distrust, не planned TTL-drain/fleet sign-off. Direct native Google/Telegram handoff — отдельный J4c. Далее оставшиеся pre-ui/external gates → UI A7 → A8.
 
 ## Сохраняемые ограничения native и приёмки
 
