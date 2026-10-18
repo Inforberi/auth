@@ -138,6 +138,14 @@ Cleanup role-сценария выполняется до долгого ожи�
 
 Нет проверки точной микросекунды границы5min, clock-skew/fleet/lock-contention/реального authenticator/browser и отсутствия утечек под нагрузкой. Это отдельные gates, не следствие одного локального PASS.
 
+## Ограниченный HTTP baseline
+
+`task sandbox:load` — [условия, профиль, результаты и ограничения](load-baseline.md). Требует JWT/admin fixtures; не запускать одновременно с другими sandbox acceptance runners. Временно включает только `GODEBUG=gctrace=1`, не ослабляет лимиты/hash/TTL; cleanup возвращает original API. Это single-instance50RPS baseline, не production capacity/cleanup throughput/leak sign-off.
+
+`task sandbox:load:rest` — [повторные load/rest циклы с RSS и scheduler/GC diagnostics](load-rest.md), тот же production image, временный GODEBUG без HTTP diagnostic endpoints/heap dumps. Один процесс до cleanup, два90s/75s цикла после прогрева. Не запускать вместе со сборкой/другими runners, не выдавать sampled active G descriptors за runtime.NumGoroutine, короткий envelope — за доказанное отсутствие утечек.
+
+`task sandbox:cleanup` — [controlled backlog/drain под HTTP нагрузкой](load-baseline.md#очистка-backlog-под-http-нагрузкой). Только новый blocked fixture UUID/исторические test records, реальные worker ticks200/1m и saved30/180days, API не пересоздаётся. Остатки fixture удаляются точечно; обычные users/volumes/retention settings не сбрасываются.
+
 ## Ротация и недоступность JWKS — J7.5-local
 
 ```bash

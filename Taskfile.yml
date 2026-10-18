@@ -98,6 +98,30 @@ tasks:
         cmds:
             - AUTH_SANDBOX_SECURITY=1 go test -race ./deploy/sandbox -run '^TestSecurityAcceptance$' -count=1 -v -timeout=10m
 
+    sandbox:load:
+        desc: Замерить ограниченный HTTP baseline sandbox без ослабления лимитов
+        preconditions:
+            - sh: test -f tmp/sandbox/admin-setup.json -a -f tmp/sandbox/jwt/private.pem
+              msg: Нужен подготовленный JWT sandbox и тестовый администратор
+        cmds:
+            - AUTH_SANDBOX_LOAD=1 go test ./deploy/sandbox -run '^TestLoadAcceptance$' -count=1 -v -timeout=8m
+
+    sandbox:load:rest:
+        desc: Проверить повторные циклы нагрузки и отдыха с RSS и диагностикой Go runtime
+        preconditions:
+            - sh: test -f tmp/sandbox/admin-setup.json -a -f tmp/sandbox/jwt/private.pem
+              msg: Нужен подготовленный JWT sandbox и тестовый администратор
+        cmds:
+            - AUTH_SANDBOX_LOAD_REST=1 go test ./deploy/sandbox -run '^TestLoadRestAcceptance$' -count=1 -v -timeout=14m
+
+    sandbox:cleanup:
+        desc: Проверить штатную очистку тестового backlog под HTTP нагрузкой
+        preconditions:
+            - sh: test -f tmp/sandbox/admin-setup.json -a -f tmp/sandbox/jwt/private.pem
+              msg: Нужен подготовленный JWT sandbox и тестовый администратор
+        cmds:
+            - AUTH_SANDBOX_CLEANUP=1 go test ./deploy/sandbox -run '^TestCleanupAcceptance$' -count=1 -v -timeout=8m
+
     # Разработка — API с Air, PostgreSQL, Redis и Mailpit
     dev:up:
         desc: Запустить разработку с автоматической пересборкой
