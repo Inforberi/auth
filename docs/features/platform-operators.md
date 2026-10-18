@@ -37,7 +37,7 @@ Runtime split: `app/auth/app.go` открывает общие dependencies/hash
 
 `AuthorizeRead` делает один ограниченный SQL-запрос без положительного кеша. Требует ожидаемый initialized realm, platform permission, активного неудалённого пользователя, актуальный auth_version, живую browser/password session с действующими role revision bindings, password/MFA proofs не из будущего и существующие password/TOTP credentials. Driver details не возвращаются, отмена сохраняется в безопасной ошибке.
 
-Это **snapshot чтения**, не разрешение следующей мутации. Изменения проектов/bridge требуют locks до commit, свежие proofs, audit/receipt и concurrency/revoke/lost-reply проверки. Маршруты этим блоком не открыты. Login/MFA/recovery должны использовать существующий Auth стек; platform HTTP wiring и recovery drill остаются открытыми. Reset пароля не выдаёт grants, не повторяет bootstrap и не обходит MFA.
+Это **snapshot чтения**, не разрешение следующей мутации. Изменения проектов/bridge требуют locks до commit, свежие proofs, audit/receipt и concurrency/revoke/lost-reply проверки. Management маршруты этим блоком не открыты. Login/MFA и [platform recovery](platform-recovery.md) используют существующий Auth стек. Reset пароля не выдаёт grants, не повторяет bootstrap и не обходит MFA.
 
 ## Проверки
 
@@ -45,4 +45,4 @@ Runtime split: `app/auth/app.go` открывает общие dependencies/hash
 
 Catalog regression/up/down также PASS. Fixture удалена, рабочая Auth не менялась; [evidence](../planning/history.md#результат-mp23mp24-foundation--18-октября-2026).
 
-Дополнительный [operator profile](platform-login.md) прошёл local restricted SQL/Redis/TLS setup/login/password recovery/revoke и targeted unit race. NOT RUN: реальный browser/SMTP/ingress, two-runtime isolation, scoped emergency/lost-factor tooling, fleet/load/GC и cross-project bridge. MP2.3/MP2.4 целиком не закрыты.
+Дополнительный [operator profile](platform-login.md) прошёл local restricted SQL/Redis/TLS setup/login/password recovery/revoke и targeted unit race; [scoped emergency/lost-factor tooling](platform-recovery.md) — отдельный SQL/HTTP/CLI drill. NOT RUN: реальный browser/SMTP/ingress/независимая проверка личности, two-runtime isolation, fleet/load/GC и cross-project bridge. MP2 целиком не закрыт.

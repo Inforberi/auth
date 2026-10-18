@@ -46,7 +46,11 @@ func (s realmSecurity) assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb 
 	}
 	if cfg.MFA.RecoveryEnabled {
 		checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		err := repo.CheckRecoveryOperator(checkCtx)
+		check := repo.CheckRecoveryOperator
+		if cfg.Platform.Enabled {
+			check = repo.CheckPlatformRecoveryOperator
+		}
+		err := check(checkCtx)
 		cancel()
 		if err != nil {
 			return nil, err

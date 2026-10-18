@@ -165,6 +165,7 @@ func TestOperatorProfileSQLHTTPS(t *testing.T) {
 	_, cookies = h.call("POST", "/api/v1/auth/mfa/login/complete", map[string]any{"challenge": operatorField(t, login, "challenge"), "code": completed.RecoveryCodes[1], "recovery": true}, []*http.Cookie{binding}, 200)
 	session = operatorCookie(t, cookies, sessionhttp.SessionCookieName)
 	h.call("GET", "/api/v1/auth/me", nil, []*http.Cookie{session}, 200)
+	session = operatorRecoveryDrill(t, admin, deps, cfg, mail, h, user, session, completed.RecoveryCodes[2])
 	h.call("POST", "/api/v1/auth/logout", map[string]string{}, []*http.Cookie{session}, 204)
 	h.call("GET", "/api/v1/auth/me", nil, []*http.Cookie{session}, 401)
 	cfg.InitialSetup.Enabled = false

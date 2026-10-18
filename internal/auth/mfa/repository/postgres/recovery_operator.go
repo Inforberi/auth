@@ -13,14 +13,25 @@ import (
 )
 
 func (r *Repository) CheckRecoveryOperator(ctx context.Context) error {
+	return r.checkRecoveryOperator(ctx, "auth_mfa_recovery_operator")
+}
+
+func (r *Repository) CheckPlatformRecoveryOperator(ctx context.Context) error {
+	return r.checkRecoveryOperator(ctx, "platform_mfa_recovery_operator")
+}
+
+func (r *Repository) checkRecoveryOperator(ctx context.Context, group string) error {
 	var ready bool
 	err := r.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_catalog.pg_roles g
 		JOIN pg_catalog.pg_proc p ON p.oid=pg_catalog.to_regprocedure('auth.decide_mfa_recovery(uuid,uuid,bigint,boolean,text,text)')
-		WHERE g.rolname='auth_mfa_recovery_operator' AND NOT g.rolcanlogin AND p.prosecdef
+		WHERE g.rolname=$1 AND NOT g.rolcanlogin AND p.prosecdef
+		AND (g.rolname='auth_mfa_recovery_operator' OR EXISTS(SELECT 1 FROM pg_catalog.pg_roles base
+			WHERE base.rolname='auth_mfa_recovery_operator' AND NOT base.rolcanlogin
+			AND pg_has_role(g.oid,base.oid,'MEMBER') AND NOT pg_has_role(g.oid,base.oid,'USAGE') AND NOT pg_has_role(g.oid,base.oid,'SET')))
 		AND pg_catalog.has_function_privilege(g.oid,p.oid,'EXECUTE')
 		AND NOT pg_catalog.pg_has_role(session_user,g.oid,'MEMBER')
 		AND NOT pg_catalog.has_function_privilege(session_user,p.oid,'EXECUTE')
-		AND NOT pg_catalog.has_function_privilege(current_user,p.oid,'EXECUTE'))`).Scan(&ready)
+		AND NOT pg_catalog.has_function_privilege(current_user,p.oid,'EXECUTE'))`, group).Scan(&ready)
 	if err != nil {
 		return err
 	}

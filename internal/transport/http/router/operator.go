@@ -42,6 +42,10 @@ func NewOperator(h Handlers) (http.Handler, error) {
 			r.Post("/forgot-password", h.Recovery.Forgot)
 			r.Post("/reset-password", h.Recovery.Reset)
 			r.Post("/mfa/login/complete", h.MFA.CompleteLogin)
+			if h.Config.MFA.RecoveryEnabled {
+				r.Post("/mfa/recovery/start", h.MFA.StartRecovery)
+				r.Post("/mfa/recovery/complete", h.MFA.CompleteRecovery)
+			}
 			sessionRoutes(r, h)
 			owner := r.With(h.Middleware.NoRefreshAuth)
 			owner.Post("/change-password", h.PasswordHandler.ChangePassword)

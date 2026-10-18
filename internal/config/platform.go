@@ -28,7 +28,6 @@ func (cfg Config) ValidatePlatform() error {
 		name    string
 		enabled bool
 	}{
-		{"MFA_RECOVERY_ENABLED", cfg.MFA.RecoveryEnabled},
 		{"JWT_ENABLED", cfg.JWT.Enabled},
 		{"JWT_NATIVE_ENABLED", cfg.JWT.NativeEnabled},
 		{"GOOGLE_LOGIN_ENABLED", cfg.Google.Enabled},

@@ -19,12 +19,18 @@ type mfaOperator interface {
 	Decide(context.Context, domain.RecoveryDecision) error
 }
 
-func parseMFAOptions(args []string) (domain.RecoveryDecision, error) {
-	result := domain.RecoveryDecision{Approve: args[0] == "mfa-approve"}
+type mfaOptions struct {
+	domain.RecoveryDecision
+	realm string
+}
+
+func parseMFAOptions(args []string) (mfaOptions, error) {
+	result := mfaOptions{RecoveryDecision: domain.RecoveryDecision{Approve: args[0] == "mfa-approve"}}
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	var user string
 	flags.StringVar(&user, "user", "", "existing account UUID")
+	flags.StringVar(&result.realm, "platform-realm", "", "trusted platform realm UUID; omit only for legacy standalone")
 	flags.StringVar(&result.RequestID, "request", "", "exact recovery request UUID")
 	flags.StringVar(&result.Environment, "environment", "", "explicit environment")
 	flags.StringVar(&result.Reason, "reason", "", "independent identity verification incident reference")
@@ -55,11 +61,15 @@ func runMFA(ctx context.Context, args []string) error {
 		return err
 	}
 	defer pool.Close()
+	if err := checkRecoveryRealm(ctx, pool, opts.realm, opts.UserID, true); err != nil {
+		return err
+	}
+	destination = recoveryDestination(destination, opts.realm)
 	svc := mfaservice.NewRecoveryOperator(mfapostgres.New(pool))
 	return executeMFA(ctx, opts, destination, svc, os.Stdin, os.Stdout)
 }
 
-func executeMFA(ctx context.Context, opts domain.RecoveryDecision, destination string, svc mfaOperator, input io.Reader, output io.Writer) error {
+func executeMFA(ctx context.Context, opts mfaOptions, destination string, svc mfaOperator, input io.Reader, output io.Writer) error {
 	target, err := svc.Preview(ctx, opts.UserID, opts.RequestID)
 	if err != nil {
 		return publicMFAError(err)
@@ -77,7 +87,7 @@ func executeMFA(ctx context.Context, opts domain.RecoveryDecision, destination s
 	if err := confirmRecovery(input, confirmation); err != nil {
 		return err
 	}
-	if err := svc.Decide(ctx, opts); err != nil {
+	if err := svc.Decide(ctx, opts.RecoveryDecision); err != nil {
 		return publicMFAError(err)
 	}
 	_, err = io.WriteString(output, "MFA recovery decision committed. Existing factor and sessions unchanged.\n")

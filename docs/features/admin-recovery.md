@@ -2,6 +2,8 @@
 
 10.3b-local. Есть два независимых пути: обычный email reset и отдельная операторская CLI на случай недоступной почты/SMTP. Потеря MFA — другой сценарий; ни один из этих путей не отключает фактор.
 
+Для отдельной платформенной БД обязателен `-platform-realm <UUID>` и отдельные `platform_*_recovery_operator` группы, не прямое применение общих grants ниже. [Platform recovery: права, CLI и HTTP](platform-recovery.md). Без флага CLI допускает только прежний standalone без schema platform.
+
 ## Решения по MFA recovery (13.1d.1-local)
 
 В том же executable появились два отдельных действия. Они **только одобряют/отменяют recovery request**, не меняют TOTP, пароль, роли, статус или сессии и не выдают вход. Owner HTTP start/complete и App delivery подключены opt-in в d.3; по умолчанию MFA_RECOVERY_ENABLED=false. Не создавать candidates прямым SQL вместо workflow. [HTTP-контракт](mfa.md#настройки-и-http).

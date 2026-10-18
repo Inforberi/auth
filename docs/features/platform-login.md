@@ -40,7 +40,7 @@ Runtime использует прежний Auth DML/retention контракт,
 
 Пользовательские Handler/DTO/Swagger descriptions переиспользуются без второго password/MFA стека. Полученный session cookie остаётся `__Host-session`, Secure/HttpOnly/SameSite=Lax/Path=/, без Domain; MFA binding cookie — также host-only. Setup не создаёт сессию. Login сначала выдаёт только challenge; password reset отзывает все старые сессии, сохраняет MFA/права и требует повторного входа. Logout возвращает прежний204.
 
-Первый профиль не публикует MFA disable/enrollment и lost-all-factors recovery. `MFA_RECOVERY_ENABLED=true` пока отклоняется: нужны scoped operational recovery tooling и отдельный drill, не повторный bootstrap или публичный bypass. Имеющиеся TOTP recovery-коды для входа работают. Проектная cookie сама не становится платформенной: SQL pool/marker/origin фиксированы; полный тест двух runtime/БД остаётся MP7.
+Профиль не публикует MFA disable/enrollment. [Потеря всех факторов](platform-recovery.md) подключается только при `MFA_RECOVERY_ENABLED=true` и проверенных отдельных offline grants: POST `/api/v1/auth/mfa/recovery/start`, `/api/v1/auth/mfa/recovery/complete`, с независимым CLI approval между ними. По умолчанию выключено. Это не повторный bootstrap/публичный MFA bypass. Имеющиеся TOTP recovery-коды для входа работают. Проектная cookie сама не становится платформенной: SQL pool/marker/origin фиксированы; полный тест двух runtime/БД остаётся MP7.
 
 ## Проверено
 
@@ -49,4 +49,4 @@ Runtime использует прежний Auth DML/retention контракт,
 - TLS — `httptest` server/client с проверкой тестового сертификата, request Host задаётся отдельно. Mailer — bounded in-memory test mailbox, не внешний SMTP. Unit проверяют allowlist/Host/plaintext/forwarded-host/Origin/foreign scope и config incompatibilities. Это не реальный browser/ingress/fleet sign-off.
 - Fixture schemas/LOGIN роль/Redis keys удалены; DB15 count0; новая auth_platform_test удалена без FORCE, исходная auth сохранена. PostgreSQL/Redis возвращены в initial stopped; scratch удалён. Рабочие ENV/secrets/данные не менялись.
 
-NOT RUN: настоящий deployment/TLS certificate/ingress/browser/SMTP/аутентификатор, полная матрица двух проектов и SQL grants upgrades, lost-all-factors scoped CLI, fleet/rotation/load/GC/max RPS. MP2.3/MP2.4 и pre-ui gates целиком не закрыты. Следующий подэтап — scoped emergency/lost-factor recovery без сброса БД, затем management/catalog/bridge.
+Аварийная scoped CLI и lost-all-factors SQL/HTTP drill выполнены следующим блоком [MP2.4](platform-recovery.md). NOT RUN: настоящий deployment/TLS certificate/ingress/browser/SMTP/аутентификатор/independent identity verification, полная матрица двух проектов и SQL grants upgrades, fleet/rotation/load/GC/max RPS. MP2/pre-ui gates целиком не закрыты. Далее — transitions и management/catalog/bridge.

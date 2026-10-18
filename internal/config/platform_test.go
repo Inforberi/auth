@@ -20,7 +20,6 @@ func TestPlatformProfile(t *testing.T) {
 		"CORS":                   func(c *Config) { c.Browser.CORSEnabled = true },
 		"foreign browser origin": func(c *Config) { c.Browser.AllowedOrigins = []string{"https://project.auth.example"} },
 		"no MFA":                 func(c *Config) { c.MFA.Enabled = false },
-		"lost-factor not ready":  func(c *Config) { c.MFA.RecoveryEnabled = true },
 		"no TLS":                 func(c *Config) { c.Server.TLSCertFile = "" },
 		"foreign reset URL":      func(c *Config) { c.Password.ResetURL = "https://project.auth.example/reset" },
 		"JWT":                    func(c *Config) { c.JWT.Enabled = true },
