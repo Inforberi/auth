@@ -65,4 +65,17 @@ CREATE TABLE platform.project_events (
   PRIMARY KEY(project_id,operation_id)
 );
 CREATE INDEX project_events_page ON platform.project_events(project_id,created_at DESC,operation_id DESC);
+CREATE INDEX project_preparation_history ON platform.project_events(project_id) WHERE action='begin_preparation';
 REVOKE ALL ON platform.project_events FROM PUBLIC;
+
+CREATE TABLE platform.project_preparations (
+  project_id UUID PRIMARY KEY REFERENCES platform.projects(id),
+  reservation_id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()
+    CHECK (reservation_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  storage_target TEXT NOT NULL CHECK (storage_target ~ '^[a-z][a-z0-9_-]{0,63}$'),
+  operation_id UUID NOT NULL CHECK (operation_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  version BIGINT NOT NULL CHECK (version>0),
+  generation BIGINT NOT NULL CHECK (generation>0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+REVOKE ALL ON platform.project_preparations FROM PUBLIC;

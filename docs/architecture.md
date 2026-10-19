@@ -4,6 +4,8 @@
 
 ## Профиль и границы
 
+MP3 reservation foundation: [внутренняя подготовка](features/project-preparation.md) — отдельный catalog SQL credential/profile, existing begin transition + one durable reservation, generation/target/replay guards в одной bounded transaction. Technical names по project UUID, nonce неизменяемый. HTTP/worker/CLI не запускают этот port; DDL/target connection/внешнее fencing/owner markers остаются следующим подблоком, ready не публикуется.
+
 MP2.5-create: [создание pending intent](features/platform-project-creation.md) — domain policy/command → managed project repository/common authority transaction → project INSERT + immutable creation snapshot/audit в одном CTE. Same operation получает один UUID, slug/origin защищены unique indexes; origin и single storage target задаёт trusted deployment config, не HTTP. Initial platform000001/grants расширены, existing install требует controlled upgrade. Executor/physical DB/runtime/bridge/UI не добавлены.
 
 MP2.5-write-lifecycle: [retry/suspend/resume](features/platform-project-mutations.md) используют service ChangeState → managed project repository → caller-owned transaction/operator.AuthorizeMutation → прежний Transition. Shared authority locks до commit, fresh-proof deadline после ожидания, atomic audit/replay; ограниченные column grants. Нет нового pool/worker/schema/ENV, intent/provisioning/bridge/fleet ещё впереди.

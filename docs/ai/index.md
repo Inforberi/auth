@@ -1,5 +1,7 @@
 # Карта проекта
 
+Project preparation foundation: [контракт](../features/project-preparation.md), `project/domain/preparation`, `project/repository/postgres/{preparation,preparation_profile}`, `deploy/platform-preparation-grants.sql`, `app/auth/operator_preparation_test.go`. Atomic begin+immutable reservation/fences; внутренний port без executor loop/target DDL/новых HTTP.
+
 Platform creation API: [контракт](../features/platform-project-creation.md), `project/{domain,service,repository/postgres}/create`, `transport/http/create_project`, `config/platform`, `app/auth/operator_catalog_create_test.go`. Generated origin/single trusted target, atomic project+immutable creation receipt; физическая БД/runtime не создаются.
 
 Platform state API: [контракт](../features/platform-project-mutations.md), `project/service/change_state`, `project/repository/postgres/management`, `operator/repository/postgres/mutation`, `project/transport/http/{state,suspend_project,resume_project,retry_project}`. Same SQL transaction/locked authority/receipt; tests — `app/auth/operator_{catalog_write,authority}_test.go`. Bridge/provisioning ещё закрыты.

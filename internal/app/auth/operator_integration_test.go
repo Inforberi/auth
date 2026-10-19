@@ -51,7 +51,7 @@ func TestOperatorProfileSQLHTTPS(t *testing.T) {
 			t.Fatal("partial runtime privileges accepted")
 		}
 	}
-	for _, privilege := range []string{"UPDATE ON platform.operator_audit", "UPDATE(id) ON platform.operator_realm", "CREATE ON SCHEMA auth", "UPDATE(database_name) ON platform.projects", "INSERT(created_at) ON platform.project_events", "DELETE ON platform.project_events", "INSERT(phase) ON platform.projects", "UPDATE ON platform.project_creations"} {
+	for _, privilege := range []string{"UPDATE ON platform.operator_audit", "UPDATE(id) ON platform.operator_realm", "CREATE ON SCHEMA auth", "UPDATE(database_name) ON platform.projects", "INSERT(created_at) ON platform.project_events", "DELETE ON platform.project_events", "INSERT(phase) ON platform.projects", "UPDATE ON platform.project_creations", "UPDATE(operation_id) ON platform.project_preparations"} {
 		if _, err := admin.Exec(ctx, "GRANT "+privilege+" TO "+operatorFixtureRole); err != nil {
 			t.Fatal(err)
 		}
@@ -142,6 +142,7 @@ func TestOperatorProfileSQLHTTPS(t *testing.T) {
 	operatorCatalogReadDrill(t, admin, h, user, session)
 	operatorCatalogWriteDrill(t, admin, deps.pool, repo, h, actor, session)
 	operatorCatalogCreateDrill(t, admin, deps.pool, repo, h, actor, session)
+	operatorPreparationDrill(t, admin, deps.pool, cfg.Platform.RealmID)
 	h.call("GET", "/api/v1/auth/me", nil, []*http.Cookie{{Name: sessionhttp.SessionCookieName, Value: strings.Repeat("A", 43)}}, 401)
 	workerCtx, cancel := context.WithCancel(ctx)
 	done := make(chan error, 1)

@@ -2,6 +2,8 @@
 
 19 октября 2026. `POST /api/v1/platform/projects` сохраняет **намерение создать проект**: enabled/pending, version/generation1, без физической БД, ключей, пользователей и runtime. Это не готовый проект для входа. [Оператор](platform-operators.md), [чтение](platform-projects-api.md), [управление состоянием](platform-project-mutations.md).
 
+Добавлен отдельный [внутренний port резервации подготовки](project-preparation.md), но API его автоматически не запускает. Исполняемый storage executor/DDL ещё не подключены; создание metadata не стало синхронным ожиданием подготовки.
+
 ## Конфигурация и запрос
 
 Только operator profile, точный platform HTTPS Host/Origin, host-only browser session и current `platform.projects.manage`. Перед replay также необходимы текущие права/fresh password и MFA по существующему [write-контракту](platform-project-mutations.md#authority-и-транзакция). Standalone/JWT/project role не дают доступа.

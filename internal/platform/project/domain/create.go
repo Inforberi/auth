@@ -17,8 +17,10 @@ type CreationPolicy struct {
 
 func (p CreationPolicy) Valid() bool {
 	return ValidOrigin("https://"+p.AuthDomain) && !strings.ContainsAny(p.AuthDomain, ":/") &&
-		storageTargetPattern.MatchString(p.StorageTarget) && ValidOrigin(p.PlatformOrigin)
+		ValidStorageTarget(p.StorageTarget) && ValidOrigin(p.PlatformOrigin)
 }
+
+func ValidStorageTarget(target string) bool { return storageTargetPattern.MatchString(target) }
 
 type Create struct {
 	OperationID ID
