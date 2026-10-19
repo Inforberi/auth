@@ -2,22 +2,16 @@ package postgres
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
-	"strings"
 	"time"
 
-	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
 )
 
 // AuthorizeRead is a current SQL snapshot, not a mutation/bridge guard.
 // Mutations must hold authority locks through their commit; a preceding read is insufficient.
 func (r *Repository) AuthorizeRead(ctx context.Context, actor domain.Principal, permission domain.Permission) error {
-	if !permission.Valid() || !accountdomain.ValidUserID(actor.UserID) || len(actor.TokenHash) != 64 || actor.TokenHash != strings.ToLower(actor.TokenHash) {
-		return domain.ErrForbidden
-	}
-	if _, err := hex.DecodeString(actor.TokenHash); err != nil {
+	if !permission.Valid() || !actor.Valid() {
 		return domain.ErrForbidden
 	}
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)

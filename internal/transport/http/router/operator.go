@@ -42,6 +42,9 @@ func NewOperator(h Handlers) (http.Handler, error) {
 				r.Use(browserProtection(h), h.Middleware.NoRefreshAuth)
 				r.Get("/projects", h.Projects.List)
 				r.Get("/projects/{id}", h.Projects.Read)
+				r.Post("/projects/{id}/suspend", h.Projects.Suspend)
+				r.Post("/projects/{id}/resume", h.Projects.Resume)
+				r.Post("/projects/{id}/retry", h.Projects.Retry)
 			})
 		}
 		r.Route("/auth", func(r chi.Router) {

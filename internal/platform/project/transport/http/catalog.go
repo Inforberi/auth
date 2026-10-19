@@ -17,6 +17,7 @@ import (
 type catalogService interface {
 	List(context.Context, operatordomain.Principal, service.ListInput) (service.ListResult, error)
 	Read(context.Context, operatordomain.Principal, domain.ID) (domain.Project, error)
+	ChangeState(context.Context, operatordomain.Principal, domain.Action, service.ChangeStateInput) (domain.TransitionReceipt, error)
 }
 
 type Handler struct {
@@ -60,9 +61,12 @@ func requestActor(w http.ResponseWriter, r *http.Request) (operatordomain.Princi
 
 var catalogErrors = []httpx.ErrorRule{
 	httpx.MatchError(operatordomain.ErrForbidden, 403, "forbidden", "forbidden"),
+	httpx.MatchError(operatordomain.ErrFreshAuthRequired, 428, "fresh_auth_required", "fresh authentication required"),
 	httpx.MatchError(domain.ErrInvalidPage, 400, "invalid_query", "invalid project query"),
 	httpx.MatchError(domain.ErrInvalidProject, 400, "invalid_project", "invalid project"),
 	httpx.MatchError(domain.ErrNotFound, 404, "project_not_found", "project not found"),
+	httpx.MatchError(domain.ErrConflict, 409, "project_conflict", "project version or operation conflict"),
+	httpx.MatchError(domain.ErrInvalidTransition, 409, "invalid_transition", "invalid project transition"),
 }
 
 func (h *Handler) respondError(w http.ResponseWriter, r *http.Request, err error) {

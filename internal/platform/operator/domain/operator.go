@@ -1,7 +1,9 @@
 package domain
 
 import (
+	"encoding/hex"
 	"errors"
+	"strings"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 )
@@ -21,13 +23,22 @@ const (
 )
 
 var (
-	ErrForbidden   = errors.New("platform access forbidden")
-	ErrUnavailable = errors.New("platform authority unavailable")
+	ErrForbidden         = errors.New("platform access forbidden")
+	ErrFreshAuthRequired = errors.New("fresh platform authentication required")
+	ErrUnavailable       = errors.New("platform authority unavailable")
 )
 
 type Principal struct {
 	UserID    accountdomain.UserID
 	TokenHash string
+}
+
+func (p Principal) Valid() bool {
+	if !accountdomain.ValidUserID(p.UserID) || len(p.TokenHash) != 64 || p.TokenHash != strings.ToLower(p.TokenHash) {
+		return false
+	}
+	_, err := hex.DecodeString(p.TokenHash)
+	return err == nil
 }
 
 func (id RealmID) Valid() bool {

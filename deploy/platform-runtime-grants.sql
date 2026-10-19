@@ -10,5 +10,12 @@ GRANT SELECT ON platform.operator_realm TO auth_platform_runtime;
 GRANT UPDATE(initialized_at,first_operator_id) ON platform.operator_realm TO auth_platform_runtime;
 GRANT SELECT,INSERT ON platform.operator_permissions,platform.operator_audit TO auth_platform_runtime;
 GRANT SELECT ON platform.projects TO auth_platform_runtime;
+-- Row-locking SELECT requires UPDATE on at least one column of operator_permissions.
+GRANT UPDATE(permission_key) ON platform.operator_permissions TO auth_platform_runtime;
+GRANT UPDATE(desired_state,phase,version,generation,updated_at) ON platform.projects TO auth_platform_runtime;
+GRANT SELECT ON platform.project_events TO auth_platform_runtime;
+GRANT INSERT(project_id,operation_id,action,actor_kind,actor_id,reason,
+  from_state,from_phase,from_version,from_generation,to_state,to_phase,to_version,to_generation)
+  ON platform.project_events TO auth_platform_runtime;
 
 -- Deliberately no blanket platform DML/default privileges, schema CREATE or recovery decision grants.

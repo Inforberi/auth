@@ -11,7 +11,11 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
-type Repository struct{ db *pgxpool.Pool }
+type Repository struct {
+	db        *pgxpool.Pool
+	authority MutationAuthority
+	freshFor  time.Duration
+}
 
 func New(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
 

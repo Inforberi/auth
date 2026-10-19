@@ -121,6 +121,8 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 	}{
 		{"project_http.ProjectResponse", projecthttp.ProjectResponse{}},
 		{"project_http.ProjectPageResponse", projecthttp.ProjectPageResponse{Projects: []projecthttp.ProjectResponse{}}},
+		{"project_http.ChangeStateRequest", projecthttp.ChangeStateRequest{}},
+		{"project_http.TransitionResponse", projecthttp.TransitionResponse{}},
 		{"token_http.IntrospectionRequest", tokenhttp.IntrospectionRequest{}},
 		{"token_http.IntrospectionResponse", tokenhttp.IntrospectionResponse{Active: true, Issuer: "issuer", Subject: "user", SessionID: "session", ID: "token", Audience: "orders", ExpiresAt: 1, Scope: "orders.read"}},
 		{"token_http.ExchangeRequest", tokenhttp.ExchangeRequest{Scope: []accessdomain.PermissionKey{}}},

@@ -1,6 +1,6 @@
 # Чтение каталога из платформы — MP2.5-read / MP2.6
 
-18 октября 2026. Подключены только две GET-ручки операторского профиля. Создание проекта, retry/suspend/resume, физические БД и cross-project bridge **не опубликованы**. [Operator login](platform-login.md), [каталог](project-catalog.md), [lifecycle](project-lifecycle.md).
+Обновлено19 октября 2026. Здесь описаны две GET-ручки операторского профиля. Отдельно подключены [retry/suspend/resume](platform-project-mutations.md). Создание проекта, физические БД и cross-project bridge **не опубликованы**. [Operator login](platform-login.md), [каталог](project-catalog.md), [lifecycle](project-lifecycle.md).
 
 ## Доступ
 
@@ -10,7 +10,7 @@
 
 Чтение не требует обновлять fresh password/MFA, не продлевает session/административную активность, не меняет cookie и не вызывает project storage/provider/SMTP probes. `NoRefreshAuth` → существующий `AuthorizeRead` → bounded catalog lookup. Проверка права некешируемая на каждый запрос. Это разрешение ограниченного чтения: уже авторизованный read может завершиться при конкурентном отзыве в пределах deadline. Оно не даёт mutation/bridge authority; будущая запись должна удерживать SQL guards до commit.
 
-Если Origin присутствует, он обязан совпадать с платформенным; у безопасного GET без Origin сохранена существующая поддержка CLI. CORS остаётся выключенным. Все ответы `Cache-Control: no-store`, без Set-Cookie. Startup дополнительно проверяет уже предусмотренный template grant `SELECT ON platform.projects`; новых DB mutation grants/ENV/миграций нет.
+Если Origin присутствует, он обязан совпадать с платформенным; у безопасного GET без Origin сохранена существующая поддержка CLI. CORS остаётся выключенным. Все ответы `Cache-Control: no-store`, без Set-Cookie. Для чтения требуется template grant `SELECT ON platform.projects`; текущие дополнительные write grants и startup checks описаны [отдельно](platform-project-mutations.md#grants-и-ошибки).
 
 ## Список проектов
 
@@ -52,4 +52,4 @@ UUID — canonical nonzero project ID; query параметры не прини�
 
 Unit/HTTP/router tests проверяют auth-before-data, повторную проверку permission, cursor shape/filter, default/empty page, query ambiguity, actor mapping, DTO/error redaction, Host/Origin/TLS/no-refresh/CORS и standalone route absence. Реальный `TestOperatorProfileSQLHTTPS` расширен: restricted LOGIN, startup SELECT guard,3 synthetic projects/tied timestamps, exclusive pagination, phase filter, pending/failed/suspended card, invalid limit/cursor/UUID, no private binding, unchanged session SQL row/no cookies, permission revoke403 при всё ещё действующей Auth super-admin session, восстановление grant и reset session401. Полный предыдущий setup/password/MFA/reset/recovery regression сохранён.
 
-Результаты/cleanup — [history](../planning/history.md#результат-mp25-read-api--18-октября-2026). Без opt-in ENV SQL fixture SKIP; unit race не является live SQL race. Real browser/ingress, two-realm/fleet/capacity/load/GC остаются NOT RUN. UI не начинался и требует отдельного согласования. Далее — MP2.5-write с текущей platform authority/fresh proofs/locks, intent creation и lifecycle mutations; только после соответствующих revoke/concurrency/audit tests.
+Результаты чтения/cleanup — [history](../planning/history.md#результат-mp25-read-api--18-октября-2026), текущие [write guarantees/tests](platform-project-mutations.md) — отдельно. Без opt-in ENV SQL fixture SKIP; unit race не является live SQL race. Real browser/ingress, two-realm/fleet/capacity/load/GC остаются NOT RUN. UI не начинался и требует отдельного согласования. Следующий подблок — создание catalog intent, не повторная реализация lifecycle.

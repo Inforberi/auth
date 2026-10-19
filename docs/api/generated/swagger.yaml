@@ -955,6 +955,17 @@ definitions:
     required:
     - idempotencyKey
     type: object
+  project_http.ChangeStateRequest:
+    properties:
+      expectedGeneration:
+        type: integer
+      expectedVersion:
+        type: integer
+      operationId:
+        type: string
+      reason:
+        type: string
+    type: object
   project_http.ProjectPageResponse:
     properties:
       nextCursor:
@@ -984,6 +995,21 @@ definitions:
         type: string
       updatedAt:
         type: string
+      version:
+        type: integer
+    type: object
+  project_http.TransitionResponse:
+    properties:
+      desiredState:
+        type: string
+      generation:
+        type: integer
+      phase:
+        type: string
+      projectId:
+        type: string
+      replayed:
+        type: boolean
       version:
         type: integer
     type: object
@@ -5739,6 +5765,200 @@ paths:
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
       summary: Read an independent project
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/resume:
+    post:
+      consumes:
+      - application/json
+      description: Platform deployment only. Requires current platform.projects.manage
+        and fresh password/MFA proofs. Restores desired state without re-provisioning
+        an already prepared database. Returns the committed receipt, not a fresh project
+        card. Pending or failed preparation does not become ready.
+      parameters:
+      - description: Exact platform HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Operation UUID, expected version/generation and safe reason (1-500
+          bytes)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ChangeStateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/project_http.TransitionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "428":
+          description: Precondition Required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Resume an independent project
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/retry:
+    post:
+      consumes:
+      - application/json
+      description: Platform deployment only. Requires current platform.projects.manage
+        and fresh password/MFA proofs. Changes enabled/failed to enabled/pending and
+        records one audit/receipt. Does not create a database in the HTTP request
+        or start an executor. A suspended project must be resumed first.
+      parameters:
+      - description: Exact platform HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Operation UUID, expected version/generation and safe reason (1-500
+          bytes)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ChangeStateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/project_http.TransitionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "428":
+          description: Precondition Required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Retry failed project preparation
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/suspend:
+    post:
+      consumes:
+      - application/json
+      description: Platform deployment only. Requires current platform.projects.manage
+        and fresh password/MFA proofs. Stores a suspension decision and atomic audit,
+        without deleting storage or sessions. Same committed operation and payload
+        returns its original receipt only after current authority is checked again.
+        Runtime enforcement arrives with MP4; this endpoint alone does not stop an
+        external running service.
+      parameters:
+      - description: Exact platform HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Operation UUID, expected version/generation and safe reason (1-500
+          bytes)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ChangeStateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/project_http.TransitionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "428":
+          description: Precondition Required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Suspend an independent project
       tags:
       - Platform Projects
   /api/v1/setup/complete:

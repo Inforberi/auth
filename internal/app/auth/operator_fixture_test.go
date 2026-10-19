@@ -110,8 +110,9 @@ func operatorFixture(t *testing.T) (*pgxpool.Pool, realmDependencies, *config.Co
 	if _, err := admin.Exec(ctx, grants); err != nil {
 		t.Fatal("runtime grants", err)
 	}
-	pc.ConnConfig.User = operatorFixtureRole
-	runtime, err := pgxpool.NewWithConfig(ctx, pc)
+	runtimeConfig := pc.Copy()
+	runtimeConfig.ConnConfig.User = operatorFixtureRole
+	runtime, err := pgxpool.NewWithConfig(ctx, runtimeConfig)
 	if err != nil {
 		t.Fatal(err)
 	}

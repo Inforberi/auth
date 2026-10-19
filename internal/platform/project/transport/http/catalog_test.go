@@ -18,11 +18,19 @@ import (
 )
 
 type catalogServiceStub struct {
-	calls int
-	actor operatordomain.Principal
-	input service.ListInput
-	id    domain.ID
-	err   error
+	calls  int
+	actor  operatordomain.Principal
+	input  service.ListInput
+	id     domain.ID
+	action domain.Action
+	change service.ChangeStateInput
+	err    error
+}
+
+func (s *catalogServiceStub) ChangeState(_ context.Context, actor operatordomain.Principal, action domain.Action, input service.ChangeStateInput) (domain.TransitionReceipt, error) {
+	s.calls++
+	s.actor, s.action, s.change = actor, action, input
+	return domain.TransitionReceipt{ProjectID: input.ProjectID, DesiredState: domain.Suspended, Phase: domain.Pending, Version: 2, Generation: 2}, s.err
 }
 
 func (s *catalogServiceStub) List(_ context.Context, actor operatordomain.Principal, input service.ListInput) (service.ListResult, error) {

@@ -31,11 +31,24 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 			WHERE ns.nspname IN ('auth','platform') AND c.relkind IN ('r','p','v','S') AND pg_has_role(current_user,c.relowner,'MEMBER'))
 		AND NOT EXISTS(SELECT 1 FROM (VALUES
 			('platform.projects','SELECT'),
+			('platform.project_events','SELECT'),
 			('platform.operator_realm','SELECT'),('platform.operator_permissions','SELECT'),('platform.operator_permissions','INSERT'),
 			('platform.operator_audit','SELECT'),('platform.operator_audit','INSERT')) required(relation,privilege)
 			WHERE NOT has_table_privilege(current_user,required.relation,required.privilege))
 		AND has_column_privilege(current_user,'platform.operator_realm','initialized_at','UPDATE')
 		AND has_column_privilege(current_user,'platform.operator_realm','first_operator_id','UPDATE')
+		AND has_column_privilege(current_user,'platform.operator_permissions','permission_key','UPDATE')
+		AND NOT has_column_privilege(current_user,'platform.operator_permissions','user_id','UPDATE')
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['desired_state','phase','version','generation','updated_at']) col
+			WHERE NOT has_column_privilege(current_user,'platform.projects',col,'UPDATE'))
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['id','slug','name','origin','storage_target','database_name','credential_ref','schema_version','created_at']) col
+			WHERE has_column_privilege(current_user,'platform.projects',col,'UPDATE'))
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['project_id','operation_id','action','actor_kind','actor_id','reason',
+			'from_state','from_phase','from_version','from_generation','to_state','to_phase','to_version','to_generation']) col
+			WHERE NOT has_column_privilege(current_user,'platform.project_events',col,'INSERT'))
+		AND NOT has_column_privilege(current_user,'platform.project_events','created_at','INSERT')
+		AND NOT has_table_privilege(current_user,'platform.projects','INSERT,DELETE,TRUNCATE')
+		AND NOT has_table_privilege(current_user,'platform.project_events','UPDATE,DELETE,TRUNCATE')
 		AND NOT has_table_privilege(current_user,'platform.operator_realm','INSERT,DELETE,TRUNCATE')
 		AND NOT has_column_privilege(current_user,'platform.operator_realm','id','UPDATE')
 		AND NOT has_table_privilege(current_user,'platform.operator_audit','UPDATE,DELETE,TRUNCATE')

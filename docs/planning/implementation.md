@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP2.5-write-lifecycle, 19 октября.** [Retry/suspend/resume](../features/platform-project-mutations.md): current platform manage permission/fresh password+MFA, shared SQL authority locks до project lock/commit, existing atomic transition/audit/replay, final expiry guard. Same pool, bounded3s/rollback1s, минимальные column grants; schema/ENV/dependencies не добавлены. Создание catalog intent — следующий подблок MP2.5, не выполнено этим блоком. Runtime suspension enforcement/executor/bridge/UI ещё впереди; общая MFA policy пока прежняя.
+
 - [x] **MP2.5-read, 18 октября.** [Read API платформы](../features/platform-projects-api.md): GET list/detail только в operator profile, текущая platform.projects.read, no refresh/cookie mutation, bounded phase/keyset pagination и явный безопасный DTO. Consumer list types перенесены к service без второго pagination механизма. Final task check lint0/targeted unit race/Swagger reproducibility и profile route/DTO contracts PASS; реальный restricted PostgreSQL18.6+Redis8.2.6+local TLS read/reset/recovery regression PASS1.80s. [Evidence](history.md#результат-mp25-read-api--18-октября-2026). MP2.5 целиком открыт: следующий блок — guarded write authority и create-intent/retry/suspend/resume; нельзя использовать AuthorizeRead как mutation guard. UI не начинался.
 
 ### Переход к UI — только после отдельного согласования

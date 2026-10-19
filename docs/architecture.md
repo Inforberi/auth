@@ -4,6 +4,8 @@
 
 ## Профиль и границы
 
+MP2.5-write-lifecycle: [retry/suspend/resume](features/platform-project-mutations.md) используют service ChangeState → managed project repository → caller-owned transaction/operator.AuthorizeMutation → прежний Transition. Shared authority locks до commit, fresh-proof deadline после ожидания, atomic audit/replay; ограниченные column grants. Нет нового pool/worker/schema/ENV, intent/provisioning/bridge/fleet ещё впереди.
+
 MP2.5-read: [platform catalog API](features/platform-projects-api.md) — `project/service` владеет List/Read и pagination contracts, `project/transport/http` содержит две отдельные ручки. Operator assembly использует существующие SQL pool/AuthorizeRead, router — exact Host/TLS/Origin и NoRefreshAuth. Standalone эти пути не публикует. Запись/bridge этим read snapshot не авторизуются.
 
 MP2.2: [lifecycle проектов](features/project-lifecycle.md) — domain matrix и `project/repository/postgres.Transition` в caller-owned Read Committed transaction, чтобы будущий platform service удерживал authority locks до того же commit. Audit/receipt находятся в platform catalog; нет своего worker/server/HTTP или универсального workflow. Health отделён от lifecycle; реальные storage checks и runtime generation leases принадлежат MP3/MP4.

@@ -1,10 +1,10 @@
 # Каталог независимых проектов — MP2.1 foundation
 
-MP2.5-read: [список и карточка](platform-projects-api.md) подключены только к операторскому профилю, с current platform read permission и безопасным DTO. List/cursor/page consumer types теперь в project/service; SQL/keyset/bounds сохранены. Публичные мутации и physical provisioning не подключены.
+MP2.5: [список и карточка](platform-projects-api.md), [retry/suspend/resume](platform-project-mutations.md) подключены только к операторскому профилю с раздельными current read/manage permissions. List/cursor/page consumer types в project/service; managed repository удерживает mutation authority до commit. Создание intent/physical provisioning/bridge ещё не подключены.
 
-MP2.2: добавлены [внутренние lifecycle transitions](project-lifecycle.md) и atomic event/receipt table. Read-model ниже сохраняется; management HTTP/runtime/provisioning пока не подключены.
+MP2.2: добавлены [внутренние lifecycle transitions](project-lifecycle.md) и atomic event/receipt table. Read-model ниже сохраняется; public operator mutations используют тот же transition, executor/runtime/provisioning ещё впереди.
 
-Следующий результат: [operator foundation MP2.3/MP2.4](platform-operators.md) реализован отдельно. Упоминания отсутствующего operator ниже относятся к первоначальному MP2.1; runtime/management API/bridge по-прежнему не подключены.
+Следующий результат: [operator foundation MP2.3/MP2.4](platform-operators.md) реализован отдельно. Упоминания отсутствующего operator ниже относятся к первоначальному MP2.1; несколько runtime/intent creation/bridge по-прежнему не подключены.
 
 18 октября 2026. Реализована внутренняя read-модель каталога и отдельная SQL migration. Это не готовая платформа: текущий Auth runtime не переключён, операторы/management API/provisioning/admin bridge ещё не подключены. [ADR005](../adr/005-independent-projects.md), [порядок MP2–MP8](../planning/multi-project.md).
 
@@ -24,7 +24,7 @@ MP2.2: добавлены [внутренние lifecycle transitions](project-l
 | phase | pending / provisioning / failed / ready | Готовность подготовки, не результат health probe |
 | admission | enabled AND ready | Unknown/пустое состояние не допускается |
 
-Новый ряд по умолчанию pending/enabled и не допускает запросы. Ready требует непустых storage binding/schema metadata. SQL constraints задают допустимые значения/целостность, но не заменяют текущие actor/version/state-transition guards. Внутренний Transition обеспечивает матрицу/version/generation/audit/replay в caller-owned transaction; авторизация публичных мутаций ещё не подключена. Изменения slug/origin не опубликованы; identity этой операцией не меняется.
+Новый ряд по умолчанию pending/enabled и не допускает запросы. Ready требует непустых storage binding/schema metadata. SQL constraints задают допустимые значения/целостность, но не заменяют текущие actor/version/state-transition guards. Внутренний Transition обеспечивает матрицу/version/generation/audit/replay в caller-owned transaction; managed repository получает locked authority от operator repository до project lock. Изменения slug/origin не опубликованы; identity этой операцией не меняется.
 
 Slug1–63 ASCII символа, starts-letter, без trailing hyphen и reserved admin/api/auth/console/platform/www. Display name — непустой UTF-8 до200bytes, без controls, trim выполняется в domain. Canonical origin — exact HTTPS DNS host с optional non-default port; без credentials/path/query/fragment/IP/uppercase/trailing dot. Syntax validation не доказывает владение доменом и не выбирает trusted auth-domain: регистрацию/binding проверит platform service.
 

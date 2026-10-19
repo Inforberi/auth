@@ -1,12 +1,12 @@
 # Состояния и переходы проектов — MP2.2
 
-18 октября 2026. Внутренние domain rules и PostgreSQL persistence; **без service/HTTP/executor wiring и создания физических БД**. Полная матрица и решения — [ADR005 §2.1](../adr/005-independent-projects.md#21-lifecycle-проекта--mp22); исходная read-модель — [project catalog](project-catalog.md).
+Обновлено19 октября 2026. Здесь описаны внутренние domain rules и PostgreSQL persistence. [Operator retry/suspend/resume](platform-project-mutations.md) теперь подключены через locked mutation authority в той же транзакции. **Executor и создание физических БД отсутствуют**. Полная матрица и решения — [ADR005 §2.1](../adr/005-independent-projects.md#21-lifecycle-проекта--mp22); исходная read-модель — [project catalog](project-catalog.md).
 
 ## Что реализовано
 
 - `domain/transition.go`: шесть команд lifecycle, допустимые источники actor, validation/bounds, версия и generation, typed receipt. Здоровье SQL/Redis не является командой lifecycle. `DesiredState.Valid` и `Phase.Valid` запрещают неизвестные значения.
 - `repository/postgres/transition.go`: `Transition(ctx, tx, command)` присоединяется к caller-owned transaction; не открывает свой pool/транзакцию. Это позволяет будущему platform service держать authority locks до того же commit, а не проверять права отдельным устаревающим запросом.
-- `platform.project_events` в исходной catalog000001: атомарный audit/receipt, уникальность `(project_id,operation_id)`, metadata only. Нет credentials/DSN/raw SQL errors. PUBLIC grants отсутствуют; platform runtime пока не получает mutation/event grants.
+- `platform.project_events` в исходной catalog000001: атомарный audit/receipt, уникальность `(project_id,operation_id)`, metadata only. Нет credentials/DSN/raw SQL errors. PUBLIC grants отсутствуют; runtime получает только ограниченные [lifecycle column grants](platform-project-mutations.md#grants-и-ошибки), не executor/binding права.
 
 Вызов требует явных `ProjectID`, `OperationID`, `ExpectedVersion`, `ExpectedGeneration`, `Action`, `ActorKind`, `ActorID` и `Reason`. IDs — canonical nonzero UUID; reason — непустой UTF-8 до500bytes, без controls/внешних пробелов. Reason — безопасная причина/incident reference, не место для пароля/секретов/driver error. Operator actor применяется к suspend/resume/retry; provisioner — к begin/fail/finish. Это проверка корректности attribution, **не авторизация оператора или executor**.
 
@@ -30,4 +30,4 @@ Generation растёт на каждом принятом lifecycle change и �
 
 Domain tests перебирают всю матрицу, неизвестные states/actions, source actor, input/reason bounds и counter overflow. `TestProjectTransitionsPostgres` проверяет workflow/retry/suspend/finish/resume, stale executor, missing binding, generation conflict, lost-response replay после новых изменений, payload/actor collision, отсутствие UPDATE при replay, rollback/audit failure, parallel version winner и duplicate operation, bounded lock/cancellation, независимость project locks, unknown project и отсутствие PUBLIC grants. В той же fixture выполнена регрессия catalog/indexes и platform owner/authority.
 
-Команды/результаты/cleanup — [history](../planning/history.md#результат-mp22-project-lifecycle--18-октября-2026). Без AUTH_PLATFORM_TEST_DATABASE_URL SQL fixture SKIP; обычный `task check`/unit race не выдаются за SQL acceptance. HTTP/fleet/real provisioning/DB grants upgrade/load/GC не реализованы/не проверялись этим этапом. Далее — MP2.5/MP2.6 защищённый platform management API, не открытый вызов persistence из HTTP.
+Команды/результаты/cleanup исходного MP2.2 — [history](../planning/history.md#результат-mp22-project-lifecycle--18-октября-2026). Без AUTH_PLATFORM_TEST_DATABASE_URL SQL fixture SKIP; обычный `task check`/unit race не выдаются за SQL acceptance. Последующие HTTP/authority/grants checks описаны в [MP2.5-write-lifecycle](platform-project-mutations.md); публичный handler не вызывает этот port в обход managed transaction. Fleet/real provisioning/production grants upgrade/load/GC по-прежнему не проверены этим результатом. Далее — catalog intent, executor и runtime, не открытый клиентский finish.

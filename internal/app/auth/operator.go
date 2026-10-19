@@ -70,9 +70,13 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 	if err != nil {
 		return nil, err
 	}
+	projects, err := projectpostgres.NewManaged(deps.pool, operator, cfg.Session.FreshAuthTTL)
+	if err != nil {
+		return nil, err
+	}
 	handler, err := router.NewOperator(router.Handlers{
 		Config: cfg, Logger: deps.log, Setup: setup, MFA: mfa.handler,
-		Projects:         projecthttp.New(projectservice.New(projectpostgres.New(deps.pool), operator), deps.log),
+		Projects:         projecthttp.New(projectservice.New(projects, operator), deps.log),
 		PasswordHandler:  passwordhttp.New(password.service, deps.log),
 		Recovery:         passwordhttp.NewRecovery(password.recovery, deps.log),
 		Middleware:       sessionhttp.New(svc, deps.log),

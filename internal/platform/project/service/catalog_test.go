@@ -28,6 +28,8 @@ type catalogStub struct {
 	query        ListQuery
 	page         Page
 	err          error
+	actor        operatordomain.Principal
+	command      domain.Transition
 }
 
 func (r *catalogStub) Read(context.Context, domain.ID) (domain.Project, error) {
@@ -39,6 +41,11 @@ func (r *catalogStub) List(_ context.Context, q ListQuery) (Page, error) {
 	r.lists++
 	r.query = q
 	return r.page, r.err
+}
+
+func (r *catalogStub) ApplyTransition(_ context.Context, actor operatordomain.Principal, command domain.Transition) (domain.TransitionReceipt, error) {
+	r.actor, r.command = actor, command
+	return domain.TransitionReceipt{ProjectID: command.ProjectID}, r.err
 }
 
 func TestCatalogReadAuthority(t *testing.T) {
