@@ -31,19 +31,9 @@ func main() {
 }
 
 func run(ctx context.Context, args []string, env func(string) string, output, diagnostics io.Writer) error {
-	flags := flag.NewFlagSet("project-prepare", flag.ContinueOnError)
-	flags.SetOutput(diagnostics)
-	project := flags.String("project", "", "project UUID from catalog")
-	operation := flags.String("operation", "", "stable begin operation UUID; reuse on retry")
-	version := flags.Int64("version", 0, "expected catalog version before begin")
-	generation := flags.Int64("generation", 0, "expected catalog generation before begin")
-	if err := flags.Parse(args); err != nil {
+	input, err := parseCommand(args, env, diagnostics)
+	if err != nil {
 		return err
-	}
-	realm := domain.ID(env("PROVISIONER_REALM_ID"))
-	target := env("PROVISIONER_STORAGE_TARGET")
-	if flags.NArg() != 0 || !domain.ValidID(domain.ID(*project)) || !domain.ValidID(domain.ID(*operation)) || *version < 1 || *generation < 1 || !domain.ValidID(realm) || !domain.ValidStorageTarget(target) {
-		return errors.New("project, operation, version, generation and trusted provisioner realm/target required")
 	}
 	catalogConfig, err := connectionConfig(env("PROVISIONER_CATALOG_URL"))
 	if err != nil {
@@ -65,7 +55,7 @@ func run(ctx context.Context, args []string, env func(string) string, output, di
 		_ = conn.Close(cleanup) //nolint:gosec // A dedicated connection is never returned to a pool with a held lock.
 	}
 	defer closeStorage()
-	physical, err := storage.New(conn, realm, target)
+	physical, err := storage.New(conn, input.realm, input.target)
 	if err != nil {
 		return err
 	}
@@ -83,13 +73,11 @@ func run(ctx context.Context, args []string, env func(string) string, output, di
 		return errors.New("catalog connection failed")
 	}
 	defer pool.Close()
-	preparation, err := catalog.NewPreparation(pool, realm, target)
+	preparation, err := catalog.NewPreparation(pool, input.realm, input.target)
 	if err != nil {
 		return err
 	}
-	reservation, err := preparation.Reserve(ctx, domain.PreparationRequest{
-		ProjectID: domain.ID(*project), OperationID: domain.ID(*operation), ExpectedVersion: *version, ExpectedGeneration: *generation,
-	})
+	reservation, err := preparation.Reserve(ctx, input.request)
 	if err != nil {
 		return err
 	}
@@ -97,10 +85,47 @@ func run(ctx context.Context, args []string, env func(string) string, output, di
 	if err != nil {
 		return err
 	}
+	stage, schemaVersion := "database_sealed", 0
+	if input.schema {
+		schemaVersion, err = physical.InstallSchema(ctx, func(check context.Context) error { return preparation.CheckCurrent(check, reservation) })
+		if err != nil {
+			return err
+		}
+		stage = "schema_prepared"
+	}
 	closeStorage() // Release the target lock even if the output pipe is blocked.
 	return json.NewEncoder(output).Encode(struct {
-		ProjectID   domain.ID `json:"projectId"`
-		Stage       string    `json:"stage"`
-		DatabaseOID uint32    `json:"databaseOid"`
-	}{reservation.ProjectID, "database_sealed", resources.DatabaseOID})
+		ProjectID     domain.ID `json:"projectId"`
+		Stage         string    `json:"stage"`
+		DatabaseOID   uint32    `json:"databaseOid"`
+		SchemaVersion int       `json:"schemaVersion,omitempty"`
+	}{reservation.ProjectID, stage, resources.DatabaseOID, schemaVersion})
+}
+
+type command struct {
+	request domain.PreparationRequest
+	realm   domain.ID
+	target  string
+	schema  bool
+}
+
+func parseCommand(args []string, env func(string) string, diagnostics io.Writer) (command, error) {
+	flags := flag.NewFlagSet("project-prepare", flag.ContinueOnError)
+	flags.SetOutput(diagnostics)
+	project := flags.String("project", "", "project UUID from catalog")
+	operation := flags.String("operation", "", "stable begin operation UUID; reuse on retry")
+	version := flags.Int64("version", 0, "expected catalog version before begin")
+	generation := flags.Int64("generation", 0, "expected catalog generation before begin")
+	schema := flags.Bool("schema", false, "install Auth schema and NOLOGIN runtime grants; keep database sealed")
+	if err := flags.Parse(args); err != nil {
+		return command{}, err
+	}
+	input := command{
+		request: domain.PreparationRequest{ProjectID: domain.ID(*project), OperationID: domain.ID(*operation), ExpectedVersion: *version, ExpectedGeneration: *generation},
+		realm:   domain.ID(env("PROVISIONER_REALM_ID")), target: env("PROVISIONER_STORAGE_TARGET"), schema: *schema,
+	}
+	if flags.NArg() != 0 || !domain.ValidID(input.request.ProjectID) || !domain.ValidID(input.request.OperationID) || *version < 1 || *generation < 1 || !domain.ValidID(input.realm) || !domain.ValidStorageTarget(input.target) {
+		return command{}, errors.New("project, operation, version, generation and trusted provisioner realm/target required")
+	}
+	return input, nil
 }

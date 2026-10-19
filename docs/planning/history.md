@@ -2,7 +2,29 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+## Результат MP3-schema — 19 октября 2026
+
+[Контракт/границы](../features/project-schema-preparation.md). Opt-in project-prepare -schema использует existing initial Auth SQL и runtime grants как embedded assets (migrations/auth.go, deploy/runtime.go). Source SQL/Go dependencies/HTTP/Swagger/реальные ENV не менялись. В initial storage-target.sql добавлены только schema_started/default false и column UPDATE grant; old target требует controlled forward upgrade, не replay/reset журнала. Default sealed CLI output сохранён.
+
+CheckCurrent проверяет matching initialized realm/desired state/phase/version/generation/operation/nonce/target/no-binding до и после schema stage. В maintenance transaction атомарны intent/shared database marker/executor CONNECT/ALLOW_CONNECTIONS, с actual OID/ACL guard. Новая project connection до DDL сверяет shared marker/actual OIDs; target session lock дополняется project transaction lock на случай потери control session. Runtime NOLOGIN роль+schema+grants+private identity/version/source checksum коммитятся в одной project transaction. Auth DDL выполняется SET LOCAL ROLE в NOLOGIN owner; отдельный постоянный migrator LOGIN ещё не выпущен. Runtime без CONNECT/LOGIN/owner/DDL/restore_audit DML/offline MFA decision EXECUTE. Успех только после reseal/current authority; passwords/keys/admin/binding/ready не публикуются. Checksum не полный drift scanner/защита от злонамеренного owner.
+
+При ошибке project close1s/seal cleanup3s; при потере connection/kill может остаться executor-only доступ без runtime LOGIN, восстановление только с intent/shared marker/OIDs/safe ACL. До3 SQL connections, без project pool/queue/retry loops; command90s/schema60s и прежние server/connect/lock budgets. Это не fleet admission/capacity; Auth/Redis горячие пути не менялись.
+
+Проверено:
+
+- Formatter + final task check PASS/lint0: /private/tmp/auth-schema-check-ready.log. Исправлены промежуточные SQL syntax error (лишняя скобка ACL guard) и cyclop21 (parser выделен в том же main.go, без suppression). Существующий formatter deprecation warning оставлен.
+- go test -race ./cmd/project-prepare ./internal/platform/project/... ./migrations ./deploy PASS: /private/tmp/auth-schema-race-ready.log. Без live SQL ENV, не SQL-race sign-off.
+- task check:security PASS:0 reachable/symbol/package findings, прежнее1 module-only advisory: /private/tmp/auth-schema-security.log. После scan добавлены только project transaction lock/уточнения tests, без dependencies/новых внешних API; второй scan формально не запускался.
+- PostgreSQL18.6/Linux arm64: TestStoragePreparationSQL PASS0.41s (/private/tmp/auth-schema-storage-sql-ready.log): прежние storage guards плюс отказ unmarked/unsafe open и безопасный intent/marker-based crash-open reseal/снятие executor CONNECT.
+- TestPrepareCommandSQL PASS0.55s (/private/tmp/auth-schema-command-sql-ready.log): actual migrations/restricted LOGIN/two databases; injected CREATE TABLE fault откатывает schema/runtime role, затем success/replay/version1. SQLSTATE42501 runtime DDL/audit/marker и разрешённый user DML в rollback transaction; wrong project marker conflict/reseal. При реально заблокированной marker schema transaction изменён catalog suspend/version/generation; после unlock final CheckCurrent возвращает именно conflict, БД sealed. Старый command после suspend тоже отвергается. Это invocation run, не subprocess SIGTERM/kill drill.
+- Linux binaries собраны GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go test -c -ldflags='-s -w'. Git diff check PASS; Swagger generation не нужна, contract/router tests входят в task check. Dockerfile COPY/ignore проверены: assets доступны; Auth image не менялся/не пересобирался.
+
+Использован existing auth-sandbox-postgres-1, initial stopped временно изменён только для SQL. Docker disk ~64MiB free, чужие caches/images/volumes не prune. Fixture names предварительно отсутствовали; после tests6 fixture role names/3 project DB names отсутствуют.2 disposable БД auth_storage_test/auth_prepare_catalog_test удалены без FORCE, original auth присутствует (0 fixture DB/1 original).6 scratch copies и /tmp/auth-schema.XKa8zN удалены; PG снова stopped. Redis/HTTP/SMTP не запускались, real ENV/secrets/рабочая Auth БД не менялись; local /private/tmp evidence сохранён.
+
+Context7 PostgreSQL18 подтвердил trusted extension/CREATE database и default PUBLIC privilege semantics, фактические права дополнительно проверены SQL. Production network TLS/DNS switching/control-session death/active DDL kill/full restore/failover/fleet/load/GC/capacity NOT RUN. Далее — encrypted independent runtime credentials/keys, безопасная активация доступа/configuration/initial admin/binding/readiness; migrator deployment credentials/scheduler открыты. UI не начинался.
+
 ## Результат MP3-storage — 19 октября 2026
+
 
 [Контракт/запуск/ограничения](../features/project-storage-preparation.md). Реализован первый physical stage, **не весь MP3**: одноразовая команда `cmd/project-prepare`, прежний catalog Reserve с отдельным restricted credential и один trusted PostgreSQL18 target на dedicated connection. В maintenance-БД — immutable realm/target marker и ownership ledger; schema/grants устанавливает инфраструктурный owner через `deploy/storage-target.sql`, не HTTP. Новый отдельный `deploy/project-prepare.env.example` не меняет реальные ENV/Auth config. Нет новых Go dependencies, Auth migrations, HTTP routes/DTO/Swagger, scheduler/очереди/pool на проект.
 

@@ -16,9 +16,15 @@ var (
 )
 
 type Target struct {
-	conn  *pgx.Conn
-	realm domain.ID
-	name  string
+	conn     *pgx.Conn
+	realm    domain.ID
+	name     string
+	prepared *preparedProject
+}
+
+type preparedProject struct {
+	reservation domain.PreparationReservation
+	resources   Resources
 }
 
 type Resources struct {
@@ -59,10 +65,12 @@ func (t *Target) CheckRuntime(ctx context.Context) error {
 			WHERE has_column_privilege(current_user,'provisioning.resources',col,'UPDATE'))
 		AND NOT has_column_privilege(current_user,'provisioning.resources','database_oid','INSERT')
 		AND NOT has_column_privilege(current_user,'provisioning.resources','created_at','INSERT')
+		AND NOT has_column_privilege(current_user,'provisioning.resources','schema_started','INSERT')
 		AND has_table_privilege(current_user,'provisioning.target','SELECT')
 		AND has_table_privilege(current_user,'provisioning.resources','SELECT')
 		AND has_column_privilege(current_user,'provisioning.resources','database_oid','UPDATE')
 		AND has_column_privilege(current_user,'provisioning.resources','generation','UPDATE')
+		AND has_column_privilege(current_user,'provisioning.resources','schema_started','UPDATE')
 		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['project_id','reservation_id','owner_oid','generation']) col
 			WHERE NOT has_column_privilege(current_user,'provisioning.resources',col,'INSERT'))`, t.realm, t.name).Scan(&allowed)
 	if err != nil || !allowed {
@@ -98,6 +106,7 @@ func (t *Target) Prepare(ctx context.Context, r domain.PreparationReservation) (
 	if err := t.prepareDatabase(ctx, r, &resources); err != nil {
 		return Resources{}, err
 	}
+	t.prepared = &preparedProject{reservation: r, resources: resources}
 	return resources, nil
 }
 

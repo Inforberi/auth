@@ -82,6 +82,8 @@ SSO, регистрация нескольких приложений внутр
 
 ## MP3. Создание БД и подготовка проекта
 
+- [x] MP3-schema, 19 октября. [Opt-in schema stage](../features/project-schema-preparation.md): embedded existing initial SQL/runtime grants, transient executor-only access с persisted intent/shared marker/OID/ACL guards, atomic schema+NOLOGIN runtime role+identity/checksum marker, target session/project transaction locks, current epoch до/после и reseal. Runtime LOGIN/credentials/ключи/admin/ready и отдельный постоянный migrator LOGIN не выдавались; MP3.1–MP3.8 целиком остаются открытыми.
+
 - [x] MP3-storage-sealed, 19 октября. [One-shot executor](../features/project-storage-preparation.md) с отдельными catalog/target credentials, explicit single target, trusted marker, bounded session lock, atomic role+ledger и закрытой физической БД. Owner/database OID и nonce/generation защищают retry; чужие ресурсы по имени не принимаются, automatic DROP отсутствует. Это первый physical stage, не schema/keys/onboarding/readiness, не background scheduler; MP3.1–MP3.8 целиком остаются открытыми.
 
 - [x] MP3-reservation-foundation, 19 октября. [Внутренний catalog port](../features/project-preparation.md): bounded3s transaction, отдельный restricted preparation credential/realm guard, existing begin/audit+immutable reservation, same-operation replay без UPDATE, epoch/target/missing-history guards и стабильные технические имена по project UUID. Live SQL/Redis/local TLS regression PASS4.57s. Это не подключённый target/executor/DDL/lease; пункты MP3.1–MP3.8 в целом остаются открытыми.

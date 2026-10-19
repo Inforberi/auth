@@ -35,8 +35,16 @@ func (t *Target) prepareDatabase(ctx context.Context, r domain.PreparationReserv
 	if err != nil {
 		return unavailable(ctx)
 	}
-	if owner != resources.OwnerOID || !sealed || (recordedOID != nil && *recordedOID != resources.DatabaseOID) {
+	if owner != resources.OwnerOID || (recordedOID != nil && *recordedOID != resources.DatabaseOID) {
 		return domain.ErrConflict
+	}
+	if !sealed {
+		if recordedOID == nil {
+			return domain.ErrConflict
+		}
+		if err := t.recoverSchemaAccess(ctx, r, *resources); err != nil {
+			return err
+		}
 	}
 	// SET role is granted only to this executor. NOLOGIN + closed database protect the crash window.
 	if err := t.sealPrivileges(ctx, *resources); err != nil {

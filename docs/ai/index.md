@@ -1,5 +1,7 @@
 # Карта проекта
 
+Project schema stage: [контракт](../features/project-schema-preparation.md), `project/storage/postgres/schema{,_access,_identity}`, `project/repository/postgres/preparation_current`, `cmd/project-prepare -schema`. Embedded initial SQL/runtime grants — `migrations/auth.go`, `deploy/runtime.go`; transactional NOLOGIN role+schema+marker, temporary executor-only access/reseal/current epoch guards. Без runtime credentials/ready.
+
 Physical project storage: [контракт](../features/project-storage-preparation.md), `cmd/project-prepare`, `project/storage/postgres/{target,owner,database}`, `deploy/{storage-target.sql,project-prepare.env.example}`. Отдельный one-shot процесс: catalog Reserve → target journal/session lock → sealed DB/NOLOGIN owner; не schema/runtime/ready и не фоновый scheduler.
 
 Project preparation foundation: [контракт](../features/project-preparation.md), `project/domain/preparation`, `project/repository/postgres/{preparation,preparation_profile}`, `deploy/platform-preparation-grants.sql`, `app/auth/operator_preparation_test.go`. Atomic begin+immutable reservation/fences; внутренний port без executor loop/target DDL/новых HTTP.

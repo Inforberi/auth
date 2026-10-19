@@ -4,6 +4,8 @@
 
 ## Профиль и границы
 
+MP3-schema: [opt-in schema stage](features/project-schema-preparation.md) в существующем project-prepare. Встроенные initial Auth SQL/runtime grants остаются одним источником; отдельная NOLOGIN runtime role, schema и version/checksum/realm/project/OID marker коммитятся в project transaction. Persisted schema intent + exclusive CONNECT executor/shared marker, проверка новой connection до DDL, target session lock и project transaction lock; success только после reseal/current catalog check. Secrets/LOGIN/initial admin/binding/ready ещё не выпущены; обычный Auth API по-прежнему без DDL.
+
 MP3-storage: [отдельный one-shot executor](features/project-storage-preparation.md), `cmd/project-prepare` → existing catalog Reserve + `platform/project/storage/postgres`. Две отдельные credentials, authoritative maintenance-БД с ownership journal и session lock, atomic role+owner OID record, закрытая physical DB и проверка реальных owner/database OID. Auth API не импортирует executor и не получает DDL privileges. Schema/runtime/keys/onboarding/ready и background scheduling ещё не реализованы; network connections требуют verified TLS.
 
 MP3 reservation foundation: [внутренняя подготовка](features/project-preparation.md) — отдельный catalog SQL credential/profile, existing begin transition + one durable reservation, generation/target/replay guards в одной bounded transaction. Technical names по project UUID, nonce неизменяемый. HTTP/worker не запускают этот port; ручная CLI добавлена в MP3-storage, ready не публикуется.
