@@ -18,13 +18,21 @@ import (
 )
 
 type catalogServiceStub struct {
-	calls  int
-	actor  operatordomain.Principal
-	input  service.ListInput
-	id     domain.ID
-	action domain.Action
-	change service.ChangeStateInput
-	err    error
+	calls    int
+	actor    operatordomain.Principal
+	input    service.ListInput
+	id       domain.ID
+	action   domain.Action
+	change   service.ChangeStateInput
+	creation service.CreateInput
+	replayed bool
+	err      error
+}
+
+func (s *catalogServiceStub) Create(_ context.Context, actor operatordomain.Principal, input service.CreateInput) (domain.CreationReceipt, error) {
+	s.calls++
+	s.actor, s.creation = actor, input
+	return domain.CreationReceipt{Project: domain.Project{ID: "1c82c477-3a57-4823-8c49-a476550d8a21", Slug: input.Slug, Name: input.Name, Phase: domain.Pending, DesiredState: domain.Enabled, Version: 1, Generation: 1}, Replayed: s.replayed}, s.err
 }
 
 func (s *catalogServiceStub) ChangeState(_ context.Context, actor operatordomain.Principal, action domain.Action, input service.ChangeStateInput) (domain.TransitionReceipt, error) {

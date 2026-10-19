@@ -32,6 +32,20 @@ CREATE INDEX projects_page ON platform.projects(created_at DESC,id DESC);
 CREATE INDEX projects_phase_page ON platform.projects(phase,created_at DESC,id DESC);
 REVOKE ALL ON platform.projects FROM PUBLIC;
 
+-- Immutable creation snapshot is both audit and idempotency receipt, independent of later lifecycle.
+CREATE TABLE platform.project_creations (
+  operation_id UUID PRIMARY KEY CHECK (operation_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  project_id UUID NOT NULL UNIQUE REFERENCES platform.projects(id),
+  actor_id UUID NOT NULL CHECK (actor_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  slug TEXT NOT NULL CHECK (octet_length(slug) BETWEEN 1 AND 63),
+  name TEXT NOT NULL CHECK (octet_length(name) BETWEEN 1 AND 200),
+  origin TEXT NOT NULL CHECK (octet_length(origin) BETWEEN 9 AND 280),
+  storage_target TEXT NOT NULL CHECK (storage_target ~ '^[a-z][a-z0-9_-]{0,63}$'),
+  reason TEXT NOT NULL CHECK (octet_length(reason) BETWEEN 1 AND 500 AND reason=btrim(reason) AND reason !~ '[[:cntrl:]]'),
+  created_at TIMESTAMPTZ NOT NULL
+);
+REVOKE ALL ON platform.project_creations FROM PUBLIC;
+
 CREATE TABLE platform.project_events (
   project_id UUID NOT NULL REFERENCES platform.projects(id),
   operation_id UUID NOT NULL CHECK (operation_id <> '00000000-0000-0000-0000-000000000000'::uuid),

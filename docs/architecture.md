@@ -4,6 +4,8 @@
 
 ## Профиль и границы
 
+MP2.5-create: [создание pending intent](features/platform-project-creation.md) — domain policy/command → managed project repository/common authority transaction → project INSERT + immutable creation snapshot/audit в одном CTE. Same operation получает один UUID, slug/origin защищены unique indexes; origin и single storage target задаёт trusted deployment config, не HTTP. Initial platform000001/grants расширены, existing install требует controlled upgrade. Executor/physical DB/runtime/bridge/UI не добавлены.
+
 MP2.5-write-lifecycle: [retry/suspend/resume](features/platform-project-mutations.md) используют service ChangeState → managed project repository → caller-owned transaction/operator.AuthorizeMutation → прежний Transition. Shared authority locks до commit, fresh-proof deadline после ожидания, atomic audit/replay; ограниченные column grants. Нет нового pool/worker/schema/ENV, intent/provisioning/bridge/fleet ещё впереди.
 
 MP2.5-read: [platform catalog API](features/platform-projects-api.md) — `project/service` владеет List/Read и pagination contracts, `project/transport/http` содержит две отдельные ручки. Operator assembly использует существующие SQL pool/AuthorizeRead, router — exact Host/TLS/Origin и NoRefreshAuth. Standalone эти пути не публикует. Запись/bridge этим read snapshot не авторизуются.

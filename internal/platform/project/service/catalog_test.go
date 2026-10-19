@@ -30,6 +30,12 @@ type catalogStub struct {
 	err          error
 	actor        operatordomain.Principal
 	command      domain.Transition
+	creation     domain.Create
+}
+
+func (r *catalogStub) Create(_ context.Context, actor operatordomain.Principal, input domain.Create) (domain.CreationReceipt, error) {
+	r.actor, r.creation = actor, input
+	return domain.CreationReceipt{Project: domain.Project{Slug: input.Slug}}, r.err
 }
 
 func (r *catalogStub) Read(context.Context, domain.ID) (domain.Project, error) {

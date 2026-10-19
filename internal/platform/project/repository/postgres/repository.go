@@ -15,6 +15,7 @@ type Repository struct {
 	db        *pgxpool.Pool
 	authority MutationAuthority
 	freshFor  time.Duration
+	creation  domain.CreationPolicy
 }
 
 func New(db *pgxpool.Pool) *Repository { return &Repository{db: db} }

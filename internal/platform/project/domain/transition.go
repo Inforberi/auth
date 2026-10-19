@@ -3,9 +3,6 @@ package domain
 import (
 	"errors"
 	"math"
-	"strings"
-	"unicode"
-	"unicode/utf8"
 )
 
 type (
@@ -52,8 +49,7 @@ type TransitionReceipt struct {
 
 func (c Transition) Validate() error {
 	if !ValidID(c.ProjectID) || !ValidID(c.OperationID) || !ValidID(c.ActorID) || c.ExpectedVersion < 1 || c.ExpectedGeneration < 1 ||
-		len(c.Reason) == 0 || len(c.Reason) > 500 || !utf8.ValidString(c.Reason) ||
-		strings.TrimSpace(c.Reason) != c.Reason || strings.ContainsFunc(c.Reason, unicode.IsControl) {
+		!validReason(c.Reason) {
 		return ErrInvalidProject
 	}
 	switch c.Action {

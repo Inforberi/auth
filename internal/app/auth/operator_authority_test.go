@@ -50,7 +50,7 @@ func operatorMutationLocksDrill(t *testing.T, admin, runtime *pgxpool.Pool, auth
 	if err := tx.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
-	manager, err := projectpostgres.NewManaged(runtime, authority, 5*time.Minute)
+	manager, err := projectpostgres.NewManaged(runtime, authority, 5*time.Minute, projectdomain.CreationPolicy{AuthDomain: "auth.example", StorageTarget: "primary", PlatformOrigin: "https://console.auth.example"})
 	if err != nil {
 		t.Fatal(err)
 	}

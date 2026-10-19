@@ -18,6 +18,7 @@ type catalogService interface {
 	List(context.Context, operatordomain.Principal, service.ListInput) (service.ListResult, error)
 	Read(context.Context, operatordomain.Principal, domain.ID) (domain.Project, error)
 	ChangeState(context.Context, operatordomain.Principal, domain.Action, service.ChangeStateInput) (domain.TransitionReceipt, error)
+	Create(context.Context, operatordomain.Principal, service.CreateInput) (domain.CreationReceipt, error)
 }
 
 type Handler struct {

@@ -4,7 +4,7 @@ import "testing"
 
 func TestPlatformProfile(t *testing.T) {
 	base := validConfig()
-	base.Platform = PlatformConfig{Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example"}
+	base.Platform = PlatformConfig{Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example", ProjectAuthDomain: "auth.example", StorageTarget: "primary"}
 	base.Browser.AllowedOrigins = []string{base.Platform.Origin}
 	base.MFA.Enabled = true
 	base.Server.TLSCertFile, base.Server.TLSKeyFile = "tls.crt", "tls.key"
@@ -27,6 +27,10 @@ func TestPlatformProfile(t *testing.T) {
 		"Telegram":               func(c *Config) { c.Telegram.Enabled = true },
 		"OTP":                    func(c *Config) { c.EmailOTP.Enabled = true },
 		"invitations":            func(c *Config) { c.Invitation.Enabled = true },
+		"no project domain":      func(c *Config) { c.Platform.ProjectAuthDomain = "" },
+		"domain is URL":          func(c *Config) { c.Platform.ProjectAuthDomain = "https://auth.example" },
+		"domain wildcard":        func(c *Config) { c.Platform.ProjectAuthDomain = "*.auth.example" },
+		"target DSN":             func(c *Config) { c.Platform.StorageTarget = "postgres://example/db" },
 	} {
 		t.Run(name, func(t *testing.T) {
 			cfg := base

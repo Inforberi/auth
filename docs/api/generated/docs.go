@@ -6072,6 +6072,93 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "description": "Platform deployment only. Requires current platform.projects.manage and fresh password/MFA. Persists enabled/pending metadata plus an atomic creation audit/receipt; does not create a database, keys, administrator or running project. Origin is generated from slug and deployment-owned auth domain. Storage target is deployment-owned; arbitrary origin/DSN/credentials are not accepted. Retry the same operation UUID/payload after a lost response. Replay checks current authority and returns the original creation snapshot, not later lifecycle state.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Create an independent project intent",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact platform HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Operation UUID, immutable slug, display name and safe reason",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.CreateProjectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Committed replay",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.CreateProjectResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.CreateProjectResponse"
+                        },
+                        "headers": {
+                            "Location": {
+                                "type": "string",
+                                "description": "Relative platform project card path"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "428": {
+                        "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/platform/projects/{id}": {
@@ -8096,6 +8183,34 @@ const docTemplate = `{
                 },
                 "reason": {
                     "type": "string"
+                }
+            }
+        },
+        "project_http.CreateProjectRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "operationId": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                }
+            }
+        },
+        "project_http.CreateProjectResponse": {
+            "type": "object",
+            "properties": {
+                "project": {
+                    "$ref": "#/definitions/project_http.ProjectResponse"
+                },
+                "replayed": {
+                    "type": "boolean"
                 }
             }
         },

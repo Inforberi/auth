@@ -20,6 +20,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
 	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/platform/operator/repository/postgres"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
 	projectservice "github.com/Inforberi/financial-intelligence/internal/platform/project/service"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
@@ -70,7 +71,9 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 	if err != nil {
 		return nil, err
 	}
-	projects, err := projectpostgres.NewManaged(deps.pool, operator, cfg.Session.FreshAuthTTL)
+	projects, err := projectpostgres.NewManaged(deps.pool, operator, cfg.Session.FreshAuthTTL, projectdomain.CreationPolicy{
+		AuthDomain: cfg.Platform.ProjectAuthDomain, StorageTarget: cfg.Platform.StorageTarget, PlatformOrigin: cfg.Platform.Origin,
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -29,7 +29,7 @@ const operatorFixtureRole = "auth_platform_operator_test"
 
 func operatorConfig(realm string) *config.Config {
 	cfg := &config.Config{
-		Platform:     config.PlatformConfig{Enabled: true, RealmID: realm, Origin: "https://console.auth.example"},
+		Platform:     config.PlatformConfig{Enabled: true, RealmID: realm, Origin: "https://console.auth.example", ProjectAuthDomain: "auth.example", StorageTarget: "primary"},
 		HTTP:         requestmiddleware.CapacityConfig{MaxInFlight: 16, RequestTimeout: 10 * time.Second},
 		Browser:      requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://console.auth.example"}},
 		Account:      accountservice.Config{URL: "https://console.auth.example/verify", EncryptionKey: "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=", TTL: 30 * time.Minute, ResendInterval: time.Minute, RegistrationIPLimit: 5, RegistrationGlobalLimit: 100},

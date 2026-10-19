@@ -32,6 +32,7 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 		AND NOT EXISTS(SELECT 1 FROM (VALUES
 			('platform.projects','SELECT'),
 			('platform.project_events','SELECT'),
+			('platform.project_creations','SELECT'),('platform.project_creations','INSERT'),
 			('platform.operator_realm','SELECT'),('platform.operator_permissions','SELECT'),('platform.operator_permissions','INSERT'),
 			('platform.operator_audit','SELECT'),('platform.operator_audit','INSERT')) required(relation,privilege)
 			WHERE NOT has_table_privilege(current_user,required.relation,required.privilege))
@@ -47,7 +48,12 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 			'from_state','from_phase','from_version','from_generation','to_state','to_phase','to_version','to_generation']) col
 			WHERE NOT has_column_privilege(current_user,'platform.project_events',col,'INSERT'))
 		AND NOT has_column_privilege(current_user,'platform.project_events','created_at','INSERT')
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['id','slug','name','origin','storage_target']) col
+			WHERE NOT has_column_privilege(current_user,'platform.projects',col,'INSERT'))
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['desired_state','phase','version','generation','database_name','credential_ref','schema_version','created_at','updated_at']) col
+			WHERE has_column_privilege(current_user,'platform.projects',col,'INSERT'))
 		AND NOT has_table_privilege(current_user,'platform.projects','INSERT,DELETE,TRUNCATE')
+		AND NOT has_table_privilege(current_user,'platform.project_creations','UPDATE,DELETE,TRUNCATE')
 		AND NOT has_table_privilege(current_user,'platform.project_events','UPDATE,DELETE,TRUNCATE')
 		AND NOT has_table_privilege(current_user,'platform.operator_realm','INSERT,DELETE,TRUNCATE')
 		AND NOT has_column_privilege(current_user,'platform.operator_realm','id','UPDATE')

@@ -75,7 +75,7 @@ func TestSwaggerMatchesRoutes(t *testing.T) {
 func TestSwaggerMatchesPlatformRoutes(t *testing.T) {
 	doc := readAPI(t)
 	h := contractHandlers("prod")
-	h.Config = &config.Config{Platform: config.PlatformConfig{Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example"}}
+	h.Config = &config.Config{Platform: config.PlatformConfig{Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example", ProjectAuthDomain: "auth.example", StorageTarget: "primary"}}
 	h.Config.MFA.Enabled, h.Config.MFA.RecoveryEnabled, h.Config.InitialSetup.Enabled = true, true, true
 	h.Config.Browser.AllowedOrigins = []string{h.Config.Platform.Origin}
 	h.Config.Server.TLSCertFile, h.Config.Server.TLSKeyFile = "tls.crt", "tls.key"
@@ -123,6 +123,8 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 		{"project_http.ProjectPageResponse", projecthttp.ProjectPageResponse{Projects: []projecthttp.ProjectResponse{}}},
 		{"project_http.ChangeStateRequest", projecthttp.ChangeStateRequest{}},
 		{"project_http.TransitionResponse", projecthttp.TransitionResponse{}},
+		{"project_http.CreateProjectRequest", projecthttp.CreateProjectRequest{}},
+		{"project_http.CreateProjectResponse", projecthttp.CreateProjectResponse{}},
 		{"token_http.IntrospectionRequest", tokenhttp.IntrospectionRequest{}},
 		{"token_http.IntrospectionResponse", tokenhttp.IntrospectionResponse{Active: true, Issuer: "issuer", Subject: "user", SessionID: "session", ID: "token", Audience: "orders", ExpiresAt: 1, Scope: "orders.read"}},
 		{"token_http.ExchangeRequest", tokenhttp.ExchangeRequest{Scope: []accessdomain.PermissionKey{}}},
@@ -198,8 +200,18 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 					expectedType = "integer"
 				case []any:
 					expectedType = "array"
+				case map[string]any:
+					expectedType = "object"
 				}
-				if schema.Properties[name].Type != expectedType {
+				property := schema.Properties[name]
+				if property.Ref != "" {
+					definition, ok := doc.Definitions[strings.TrimPrefix(property.Ref, "#/definitions/")]
+					if !ok || expectedType != "object" || len(definition.Properties) != len(value.(map[string]any)) {
+						t.Errorf("invalid nested schema reference for %s", name)
+					}
+					continue
+				}
+				if property.Type != expectedType {
 					t.Errorf("missing/wrong JSON property %s", name)
 				}
 			}

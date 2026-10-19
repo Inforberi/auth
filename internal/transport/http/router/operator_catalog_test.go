@@ -32,6 +32,11 @@ func (s *operatorReadSession) ValidateSessionWithoutRefresh(context.Context, str
 
 type operatorReadCatalog struct{ calls int }
 
+func (s *operatorReadCatalog) Create(context.Context, operatordomain.Principal, projectservice.CreateInput) (projectdomain.CreationReceipt, error) {
+	s.calls++
+	return projectdomain.CreationReceipt{}, nil
+}
+
 func (s *operatorReadCatalog) List(context.Context, operatordomain.Principal, projectservice.ListInput) (projectservice.ListResult, error) {
 	s.calls++
 	return projectservice.ListResult{}, nil
@@ -48,7 +53,7 @@ func (s *operatorReadCatalog) ChangeState(context.Context, operatordomain.Princi
 }
 
 func TestOperatorCatalogRouteBoundary(t *testing.T) {
-	cfg := &config.Config{Platform: config.PlatformConfig{Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example"}}
+	cfg := &config.Config{Platform: config.PlatformConfig{Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example", ProjectAuthDomain: "auth.example", StorageTarget: "primary"}}
 	cfg.MFA.Enabled = true
 	cfg.Browser.AllowedOrigins = []string{cfg.Platform.Origin}
 	cfg.Server.TLSCertFile, cfg.Server.TLSKeyFile = "tls.crt", "tls.key"
@@ -74,7 +79,7 @@ func TestOperatorCatalogRouteBoundary(t *testing.T) {
 		{"GET", "https://project.auth.example", cfg.Platform.Origin, "/api/v1/platform/projects", true, 404},
 		{"GET", "http://console.auth.example", cfg.Platform.Origin, "/api/v1/platform/projects", true, 404},
 		{"OPTIONS", cfg.Platform.Origin, cfg.Platform.Origin, "/api/v1/platform/projects", true, 403},
-		{"POST", cfg.Platform.Origin, cfg.Platform.Origin, "/api/v1/platform/projects", true, 405},
+		{"POST", cfg.Platform.Origin, cfg.Platform.Origin, "/api/v1/platform/projects", true, 400},
 		{"POST", cfg.Platform.Origin, cfg.Platform.Origin, "/api/v1/platform/projects/id/begin", true, 404},
 		{"POST", cfg.Platform.Origin, cfg.Platform.Origin, "/api/v1/platform/projects/id/suspend", true, 200},
 		{"POST", cfg.Platform.Origin, cfg.Platform.Origin, "/api/v1/platform/projects/id/resume", true, 200},
@@ -84,6 +89,9 @@ func TestOperatorCatalogRouteBoundary(t *testing.T) {
 		{"POST", cfg.Platform.Origin, cfg.Platform.Origin, "/api/v1/platform/projects/id/suspend", false, 401},
 		{"POST", "https://project.auth.example", cfg.Platform.Origin, "/api/v1/platform/projects/id/suspend", true, 404},
 		{"POST", "http://console.auth.example", cfg.Platform.Origin, "/api/v1/platform/projects/id/suspend", true, 404},
+		{"POST", cfg.Platform.Origin, "", "/api/v1/platform/projects", true, 403},
+		{"POST", cfg.Platform.Origin, "https://shop.auth.example", "/api/v1/platform/projects", true, 403},
+		{"POST", cfg.Platform.Origin, cfg.Platform.Origin, "/api/v1/platform/projects", false, 401},
 	} {
 		request := httptest.NewRequest(test.method, test.host+test.path, strings.NewReader(`{"operationId":"11111111-1111-4111-8111-111111111111","expectedVersion":1,"expectedGeneration":1,"reason":"fixture"}`))
 		request.Header.Set("Content-Type", "application/json")

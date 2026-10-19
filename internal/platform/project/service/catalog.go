@@ -11,6 +11,7 @@ type Repository interface {
 	Read(context.Context, domain.ID) (domain.Project, error)
 	List(context.Context, ListQuery) (Page, error)
 	ApplyTransition(context.Context, operatordomain.Principal, domain.Transition) (domain.TransitionReceipt, error)
+	Create(context.Context, operatordomain.Principal, domain.Create) (domain.CreationReceipt, error)
 }
 
 type ReadAuthority interface {

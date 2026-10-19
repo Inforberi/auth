@@ -1,6 +1,8 @@
 # Карта проекта
 
-Platform state API: [контракт](../features/platform-project-mutations.md), `project/service/change_state`, `project/repository/postgres/management`, `operator/repository/postgres/mutation`, `project/transport/http/{state,suspend_project,resume_project,retry_project}`. Same SQL transaction/locked authority/receipt; tests — `app/auth/operator_{catalog_write,authority}_test.go`. Creation/bridge/provisioning ещё закрыты.
+Platform creation API: [контракт](../features/platform-project-creation.md), `project/{domain,service,repository/postgres}/create`, `transport/http/create_project`, `config/platform`, `app/auth/operator_catalog_create_test.go`. Generated origin/single trusted target, atomic project+immutable creation receipt; физическая БД/runtime не создаются.
+
+Platform state API: [контракт](../features/platform-project-mutations.md), `project/service/change_state`, `project/repository/postgres/management`, `operator/repository/postgres/mutation`, `project/transport/http/{state,suspend_project,resume_project,retry_project}`. Same SQL transaction/locked authority/receipt; tests — `app/auth/operator_{catalog_write,authority}_test.go`. Bridge/provisioning ещё закрыты.
 
 Platform catalog read API: [контракт](../features/platform-projects-api.md), `project/service/{catalog,list,read}`, `project/transport/http/{catalog,list_projects,read_project}`, `router/operator.go`, `app/auth/operator_catalog_test.go`. Consumer list types в service, same SQL pool; snapshot чтения не mutation guard.
 

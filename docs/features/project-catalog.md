@@ -1,10 +1,10 @@
 # Каталог независимых проектов — MP2.1 foundation
 
-MP2.5: [список и карточка](platform-projects-api.md), [retry/suspend/resume](platform-project-mutations.md) подключены только к операторскому профилю с раздельными current read/manage permissions. List/cursor/page consumer types в project/service; managed repository удерживает mutation authority до commit. Создание intent/physical provisioning/bridge ещё не подключены.
+MP2.5: [список и карточка](platform-projects-api.md), [retry/suspend/resume](platform-project-mutations.md) и [создание pending intent](platform-project-creation.md) подключены только к операторскому профилю с раздельными current read/manage permissions. List/cursor/page consumer types в project/service; managed repository удерживает mutation authority до commit. Physical provisioning/bridge ещё не подключены.
 
 MP2.2: добавлены [внутренние lifecycle transitions](project-lifecycle.md) и atomic event/receipt table. Read-model ниже сохраняется; public operator mutations используют тот же transition, executor/runtime/provisioning ещё впереди.
 
-Следующий результат: [operator foundation MP2.3/MP2.4](platform-operators.md) реализован отдельно. Упоминания отсутствующего operator ниже относятся к первоначальному MP2.1; несколько runtime/intent creation/bridge по-прежнему не подключены.
+Следующий результат: [operator foundation MP2.3/MP2.4](platform-operators.md) реализован отдельно. Упоминания отсутствующего operator ниже относятся к первоначальному MP2.1; несколько runtime/physical provisioning/bridge по-прежнему не подключены.
 
 18 октября 2026. Реализована внутренняя read-модель каталога и отдельная SQL migration. Это не готовая платформа: текущий Auth runtime не переключён, операторы/management API/provisioning/admin bridge ещё не подключены. [ADR005](../adr/005-independent-projects.md), [порядок MP2–MP8](../planning/multi-project.md).
 

@@ -1,6 +1,6 @@
 # Вход оператора платформы — MP2.3 operator profile
 
-Обновлено19 октября 2026. Добавлен отдельный **opt-in профиль одного platform runtime**, переиспользующий существующий Auth. Подключены [чтение каталога](platform-projects-api.md) и [retry/suspend/resume](platform-project-mutations.md); создание проекта, диспетчер нескольких проектов и UI ещё не реализованы. Текущий standalone остаётся профилем по умолчанию. [Realm/permissions](platform-operators.md), [Redis/crypto scope](realm-isolation.md), [план](../planning/multi-project.md).
+Обновлено19 октября 2026. Добавлен отдельный **opt-in профиль одного platform runtime**, переиспользующий существующий Auth. Подключены [чтение каталога](platform-projects-api.md), [retry/suspend/resume](platform-project-mutations.md) и [создание pending intent](platform-project-creation.md); физические БД, диспетчер нескольких проектов и UI ещё не реализованы. Текущий standalone остаётся профилем по умолчанию. [Realm/permissions](platform-operators.md), [Redis/crypto scope](realm-isolation.md), [план](../planning/multi-project.md).
 
 ## Конфигурация и запуск
 
@@ -9,6 +9,8 @@
 | `PLATFORM_ENABLED` | По умолчанию false; true выбирает операторскую assembly вместо обычной проектной |
 | `PLATFORM_REALM_ID` | Canonical nonzero UUID из `platform.operator_realm`, полученный оператором из доверенной БД |
 | `PLATFORM_ORIGIN` | Точный canonical HTTPS origin панели, без wildcard/path/query |
+| `PLATFORM_PROJECT_AUTH_DOMAIN` | Канонический DNS-домен для `https://<slug>.<domain>`; обязателен при включённой платформе |
+| `PLATFORM_STORAGE_TARGET` | Один trusted target identifier, default primary; не DSN/credential, executor пока не подключён |
 
 Нужна **новая отдельная платформенная БД**. В ней offline migration owner применяет Auth000001, затем platform000001/000002; существующие Task migration-команды сами этого не делают. Миграция operator realm отвергает использованную Auth БД. После этого оператор создаёт отдельную LOGIN runtime-роль и адаптирует [grants template](../../deploy/platform-runtime-grants.sql) под свои имена БД/роли. Приложению передаётся runtime `DATABASE_URL`, не owner/provisioner credential. Само приложение БД/роли не создаёт.
 
@@ -34,6 +36,7 @@ Runtime использует прежний Auth DML/retention контракт,
 | Password + MFA | POST `/api/v1/admin/auth/login/email` → POST `/api/v1/auth/mfa/login/complete` |
 | Password recovery | POST `/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password` |
 | Каталог платформы, чтение | GET `/api/v1/platform/projects`, `/api/v1/platform/projects/{id}`; current platform.projects.read, no session refresh, без binding/secrets |
+| Создание намерения | POST `/api/v1/platform/projects`; current platform.projects.manage/fresh proofs,201 first/200 replay; без физической БД |
 | Состояние проекта | POST `/api/v1/platform/projects/{id}/suspend`, `/resume`, `/retry`; current platform.projects.manage, fresh password/MFA, locked authority, version/generation, atomic audit/receipt |
 | Свои сессии | GET `/api/v1/auth/me`, `/api/v1/auth/sessions`; POST logout/logout-all; DELETE `/api/v1/auth/sessions/{id}` |
 | Сроки/смена сессии | POST `/api/v1/auth/session/activity`, `/api/v1/auth/session/rotate` |

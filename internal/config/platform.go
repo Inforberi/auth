@@ -9,9 +9,11 @@ import (
 )
 
 type PlatformConfig struct {
-	Enabled bool   `env:"PLATFORM_ENABLED" env-default:"false"`
-	RealmID string `env:"PLATFORM_REALM_ID"`
-	Origin  string `env:"PLATFORM_ORIGIN"`
+	Enabled           bool   `env:"PLATFORM_ENABLED" env-default:"false"`
+	RealmID           string `env:"PLATFORM_REALM_ID"`
+	Origin            string `env:"PLATFORM_ORIGIN"`
+	ProjectAuthDomain string `env:"PLATFORM_PROJECT_AUTH_DOMAIN"`
+	StorageTarget     string `env:"PLATFORM_STORAGE_TARGET" env-default:"primary"`
 }
 
 func (cfg Config) ValidatePlatform() error {
@@ -23,6 +25,9 @@ func (cfg Config) ValidatePlatform() error {
 	}
 	if !cfg.MFA.Enabled {
 		return fmt.Errorf("platform requires MFA_ENABLED")
+	}
+	if !(projectdomain.CreationPolicy{AuthDomain: cfg.Platform.ProjectAuthDomain, StorageTarget: cfg.Platform.StorageTarget, PlatformOrigin: cfg.Platform.Origin}).Valid() {
+		return fmt.Errorf("platform requires canonical PLATFORM_PROJECT_AUTH_DOMAIN and a named PLATFORM_STORAGE_TARGET")
 	}
 	for _, feature := range []struct {
 		name    string

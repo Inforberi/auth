@@ -1,6 +1,6 @@
 # Чтение каталога из платформы — MP2.5-read / MP2.6
 
-Обновлено19 октября 2026. Здесь описаны две GET-ручки операторского профиля. Отдельно подключены [retry/suspend/resume](platform-project-mutations.md). Создание проекта, физические БД и cross-project bridge **не опубликованы**. [Operator login](platform-login.md), [каталог](project-catalog.md), [lifecycle](project-lifecycle.md).
+Обновлено19 октября 2026. Здесь описаны две GET-ручки операторского профиля. Отдельно подключены [retry/suspend/resume](platform-project-mutations.md) и [создание pending intent](platform-project-creation.md). Физические БД и cross-project bridge **не подключены**. [Operator login](platform-login.md), [каталог](project-catalog.md), [lifecycle](project-lifecycle.md).
 
 ## Доступ
 
@@ -52,4 +52,4 @@ UUID — canonical nonzero project ID; query параметры не прини�
 
 Unit/HTTP/router tests проверяют auth-before-data, повторную проверку permission, cursor shape/filter, default/empty page, query ambiguity, actor mapping, DTO/error redaction, Host/Origin/TLS/no-refresh/CORS и standalone route absence. Реальный `TestOperatorProfileSQLHTTPS` расширен: restricted LOGIN, startup SELECT guard,3 synthetic projects/tied timestamps, exclusive pagination, phase filter, pending/failed/suspended card, invalid limit/cursor/UUID, no private binding, unchanged session SQL row/no cookies, permission revoke403 при всё ещё действующей Auth super-admin session, восстановление grant и reset session401. Полный предыдущий setup/password/MFA/reset/recovery regression сохранён.
 
-Результаты чтения/cleanup — [history](../planning/history.md#результат-mp25-read-api--18-октября-2026), текущие [write guarantees/tests](platform-project-mutations.md) — отдельно. Без opt-in ENV SQL fixture SKIP; unit race не является live SQL race. Real browser/ingress, two-realm/fleet/capacity/load/GC остаются NOT RUN. UI не начинался и требует отдельного согласования. Следующий подблок — создание catalog intent, не повторная реализация lifecycle.
+Результаты чтения/cleanup — [history](../planning/history.md#результат-mp25-read-api--18-октября-2026), текущие [lifecycle](platform-project-mutations.md) и [creation guarantees/tests](platform-project-creation.md) — отдельно. Без opt-in ENV SQL fixture SKIP; unit race не является live SQL race. Real browser/ingress, two-realm/fleet/capacity/load/GC остаются NOT RUN. UI не начинался и требует отдельного согласования. Следующий функциональный блок — физическая подготовка, не повторная реализация metadata API.

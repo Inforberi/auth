@@ -13,7 +13,7 @@ import (
 )
 
 func TestOperatorHTTPAllowlist(t *testing.T) {
-	cfg := &config.Config{Platform: config.PlatformConfig{Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example"}}
+	cfg := &config.Config{Platform: config.PlatformConfig{Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example", ProjectAuthDomain: "auth.example", StorageTarget: "primary"}}
 	cfg.MFA.Enabled = true
 	cfg.Browser.AllowedOrigins = []string{cfg.Platform.Origin}
 	cfg.Server.TLSCertFile, cfg.Server.TLSKeyFile = "tls.crt", "tls.key"
