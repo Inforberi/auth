@@ -1,5 +1,7 @@
 # Карта проекта
 
+Physical project storage: [контракт](../features/project-storage-preparation.md), `cmd/project-prepare`, `project/storage/postgres/{target,owner,database}`, `deploy/{storage-target.sql,project-prepare.env.example}`. Отдельный one-shot процесс: catalog Reserve → target journal/session lock → sealed DB/NOLOGIN owner; не schema/runtime/ready и не фоновый scheduler.
+
 Project preparation foundation: [контракт](../features/project-preparation.md), `project/domain/preparation`, `project/repository/postgres/{preparation,preparation_profile}`, `deploy/platform-preparation-grants.sql`, `app/auth/operator_preparation_test.go`. Atomic begin+immutable reservation/fences; внутренний port без executor loop/target DDL/новых HTTP.
 
 Platform creation API: [контракт](../features/platform-project-creation.md), `project/{domain,service,repository/postgres}/create`, `transport/http/create_project`, `config/platform`, `app/auth/operator_catalog_create_test.go`. Generated origin/single trusted target, atomic project+immutable creation receipt; физическая БД/runtime не создаются.

@@ -4,7 +4,9 @@
 
 ## Профиль и границы
 
-MP3 reservation foundation: [внутренняя подготовка](features/project-preparation.md) — отдельный catalog SQL credential/profile, existing begin transition + one durable reservation, generation/target/replay guards в одной bounded transaction. Technical names по project UUID, nonce неизменяемый. HTTP/worker/CLI не запускают этот port; DDL/target connection/внешнее fencing/owner markers остаются следующим подблоком, ready не публикуется.
+MP3-storage: [отдельный one-shot executor](features/project-storage-preparation.md), `cmd/project-prepare` → existing catalog Reserve + `platform/project/storage/postgres`. Две отдельные credentials, authoritative maintenance-БД с ownership journal и session lock, atomic role+owner OID record, закрытая physical DB и проверка реальных owner/database OID. Auth API не импортирует executor и не получает DDL privileges. Schema/runtime/keys/onboarding/ready и background scheduling ещё не реализованы; network connections требуют verified TLS.
+
+MP3 reservation foundation: [внутренняя подготовка](features/project-preparation.md) — отдельный catalog SQL credential/profile, existing begin transition + one durable reservation, generation/target/replay guards в одной bounded transaction. Technical names по project UUID, nonce неизменяемый. HTTP/worker не запускают этот port; ручная CLI добавлена в MP3-storage, ready не публикуется.
 
 MP2.5-create: [создание pending intent](features/platform-project-creation.md) — domain policy/command → managed project repository/common authority transaction → project INSERT + immutable creation snapshot/audit в одном CTE. Same operation получает один UUID, slug/origin защищены unique indexes; origin и single storage target задаёт trusted deployment config, не HTTP. Initial platform000001/grants расширены, existing install требует controlled upgrade. Executor/physical DB/runtime/bridge/UI не добавлены.
 

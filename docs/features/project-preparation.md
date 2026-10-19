@@ -1,6 +1,6 @@
 # Резервация подготовки проекта — MP3 foundation
 
-19 октября 2026. Реализован **внутренний catalog port подготовки**, не работающий executor и не физическое создание БД. `PreparationRepository.Reserve` атомарно сохраняет резервацию ресурсов, переводит pending → provisioning и записывает существующий lifecycle audit. Автоматического запуска из HTTP/worker/CLI нет; Auth API не получает его credential. [Creation API](platform-project-creation.md), [lifecycle](project-lifecycle.md), [план MP3](../planning/multi-project.md#mp3-создание-бд-и-подготовка-проекта).
+19 октября 2026. Этот документ описывает **внутренний catalog port подготовки**, отдельно от physical storage stage. `PreparationRepository.Reserve` атомарно сохраняет резервацию ресурсов, переводит pending → provisioning и записывает существующий lifecycle audit. Из HTTP/worker он не запускается; ручной executor добавлен в [следующем MP3-storage блоке](project-storage-preparation.md). Auth API не получает его credential. [Creation API](platform-project-creation.md), [lifecycle](project-lifecycle.md), [план MP3](../planning/multi-project.md#mp3-создание-бд-и-подготовка-проекта).
 
 ## Данные и границы
 
@@ -42,4 +42,4 @@ Domain tests проверяют UUID/имена/стабильность при 
 
 Результаты/cleanup/NOT RUN — [history](../planning/history.md#результат-mp3-reservation-foundation--19-октября-2026). Обычный race без opt-in ENV не является live SQL-race. Не проверены реальные physical databases/target credentials/процесс executor/DNS/TLS onboarding/fleet/load/GC; storage готовым не объявляется.
 
-Следующий подблок: один защищённый target binding, отдельный процесс executor, durable ownership marker до/после нетранзакционного `CREATE DATABASE`, actual owner/OID checks, сериализация внешнего шага/краш-восстановление и ограниченная параллельность. Затем schema/grants/независимые ключи/admin setup/readiness. Не публиковать ready, запускать DDL из HTTP или принимать существующую БД по одному имени. UI не начинался.
+Следующий physical подблок выполнен отдельно: [MP3-storage](project-storage-preparation.md) добавил single trusted target, one-shot executor, durable target ownership ledger, actual owner/database OID checks и session serialization. Здесь описаны только catalog foundation guarantees. Дальше — schema/grants/независимые ключи/admin setup/readiness и scheduler. Не публиковать ready, запускать DDL из HTTP или принимать существующую БД по одному имени. UI не начинался.
