@@ -76,6 +76,22 @@ CREATE TABLE platform.project_preparations (
   operation_id UUID NOT NULL CHECK (operation_id <> '00000000-0000-0000-0000-000000000000'::uuid),
   version BIGINT NOT NULL CHECK (version>0),
   generation BIGINT NOT NULL CHECK (generation>0),
+  secrets_created BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
 REVOKE ALL ON platform.project_preparations FROM PUBLIC;
+
+CREATE TABLE platform.project_secrets (
+  project_id UUID PRIMARY KEY REFERENCES platform.project_preparations(project_id),
+  reservation_id UUID NOT NULL,
+  storage_target TEXT NOT NULL CHECK (storage_target ~ '^[a-z][a-z0-9_-]{0,63}$'),
+  database_oid OID NOT NULL CHECK (database_oid<>0),
+  owner_oid OID NOT NULL CHECK (owner_oid<>0),
+  runtime_oid OID NOT NULL CHECK (runtime_oid<>0),
+  schema_version BIGINT NOT NULL CHECK (schema_version>0),
+  format_version BIGINT NOT NULL CHECK (format_version=1),
+  key_id TEXT NOT NULL CHECK (key_id ~ '^[a-z][a-z0-9-]{0,31}$'),
+  ciphertext BYTEA NOT NULL CHECK (octet_length(ciphertext) BETWEEN 128 AND 8192),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+REVOKE ALL ON platform.project_secrets FROM PUBLIC;

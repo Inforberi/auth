@@ -18,6 +18,7 @@ func (t *Target) InstallSchema(ctx context.Context, authorize func(context.Conte
 	if t.prepared == nil || authorize == nil {
 		return 0, domain.ErrConflict
 	}
+	t.prepared.schemaReady = false
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	if err := authorize(ctx); err != nil {
@@ -71,6 +72,7 @@ func (t *Target) InstallSchema(ctx context.Context, authorize func(context.Conte
 	if err := authorize(ctx); err != nil {
 		return 0, err
 	}
+	t.prepared.schemaReady = true
 	return migrations.AuthVersion, nil
 }
 

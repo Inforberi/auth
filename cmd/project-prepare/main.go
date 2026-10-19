@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/credentials"
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 	catalog "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
 	storage "github.com/Inforberi/financial-intelligence/internal/platform/project/storage/postgres"
@@ -34,6 +35,13 @@ func run(ctx context.Context, args []string, env func(string) string, output, di
 	input, err := parseCommand(args, env, diagnostics)
 	if err != nil {
 		return err
+	}
+	var codec *credentials.Codec
+	if input.secrets {
+		codec, err = credentials.New(env("PROVISIONER_MASTER_KEY"), env("PROVISIONER_MASTER_KEY_ID"))
+		if err != nil {
+			return err
+		}
 	}
 	catalogConfig, err := connectionConfig(env("PROVISIONER_CATALOG_URL"))
 	if err != nil {
@@ -93,6 +101,16 @@ func run(ctx context.Context, args []string, env func(string) string, output, di
 		}
 		stage = "schema_prepared"
 	}
+	if input.secrets {
+		binding, err := physical.SecretsBinding()
+		if err != nil {
+			return err
+		}
+		if err := preparation.EnsureSecrets(ctx, reservation, binding, codec); err != nil {
+			return err
+		}
+		stage = "secrets_stored"
+	}
 	closeStorage() // Release the target lock even if the output pipe is blocked.
 	return json.NewEncoder(output).Encode(struct {
 		ProjectID     domain.ID `json:"projectId"`
@@ -107,6 +125,7 @@ type command struct {
 	realm   domain.ID
 	target  string
 	schema  bool
+	secrets bool
 }
 
 func parseCommand(args []string, env func(string) string, diagnostics io.Writer) (command, error) {
@@ -117,15 +136,19 @@ func parseCommand(args []string, env func(string) string, diagnostics io.Writer)
 	version := flags.Int64("version", 0, "expected catalog version before begin")
 	generation := flags.Int64("generation", 0, "expected catalog generation before begin")
 	schema := flags.Bool("schema", false, "install Auth schema and NOLOGIN runtime grants; keep database sealed")
+	secrets := flags.Bool("secrets", false, "store encrypted project secrets; requires -schema; does not enable LOGIN")
 	if err := flags.Parse(args); err != nil {
 		return command{}, err
 	}
 	input := command{
 		request: domain.PreparationRequest{ProjectID: domain.ID(*project), OperationID: domain.ID(*operation), ExpectedVersion: *version, ExpectedGeneration: *generation},
-		realm:   domain.ID(env("PROVISIONER_REALM_ID")), target: env("PROVISIONER_STORAGE_TARGET"), schema: *schema,
+		realm:   domain.ID(env("PROVISIONER_REALM_ID")), target: env("PROVISIONER_STORAGE_TARGET"), schema: *schema, secrets: *secrets,
 	}
 	if flags.NArg() != 0 || !domain.ValidID(input.request.ProjectID) || !domain.ValidID(input.request.OperationID) || *version < 1 || *generation < 1 || !domain.ValidID(input.realm) || !domain.ValidStorageTarget(input.target) {
 		return command{}, errors.New("project, operation, version, generation and trusted provisioner realm/target required")
+	}
+	if *secrets && !*schema {
+		return command{}, errors.New("-secrets requires -schema")
 	}
 	return input, nil
 }

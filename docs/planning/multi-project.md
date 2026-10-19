@@ -82,6 +82,8 @@ SSO, регистрация нескольких приложений внутр
 
 ## MP3. Создание БД и подготовка проекта
 
+- [x] MP3-secrets-storage, 19 октября. [Encrypted bootstrap](../features/project-secrets-preparation.md): independent password/encryption/setup/ES256 material, existing AES-GCM с full binding, protected external master key/key ID, atomic immutable ciphertext+retained flag/current authority locks, no-UPDATE replay/no silent regeneration. API rejects ciphertext column access; catalog/API roles reject REPLICATION. DB password installation/LOGIN/CONNECT/typed reader/rotation/readiness ещё не реализованы; MP3.5 целиком открыт.
+
 - [x] MP3-schema, 19 октября. [Opt-in schema stage](../features/project-schema-preparation.md): embedded existing initial SQL/runtime grants, transient executor-only access с persisted intent/shared marker/OID/ACL guards, atomic schema+NOLOGIN runtime role+identity/checksum marker, target session/project transaction locks, current epoch до/после и reseal. Runtime LOGIN/credentials/ключи/admin/ready и отдельный постоянный migrator LOGIN не выдавались; MP3.1–MP3.8 целиком остаются открытыми.
 
 - [x] MP3-storage-sealed, 19 октября. [One-shot executor](../features/project-storage-preparation.md) с отдельными catalog/target credentials, explicit single target, trusted marker, bounded session lock, atomic role+ledger и закрытой физической БД. Owner/database OID и nonce/generation защищают retry; чужие ресурсы по имени не принимаются, automatic DROP отсутствует. Это первый physical stage, не schema/keys/onboarding/readiness, не background scheduler; MP3.1–MP3.8 целиком остаются открытыми.

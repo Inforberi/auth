@@ -1,6 +1,6 @@
 # Схема и runtime-права проекта — MP3-schema
 
-19 октября 2026. `project-prepare -schema` расширяет [physical storage stage](project-storage-preparation.md): устанавливает исходную схему Auth и права отдельной **NOLOGIN** runtime-роли, затем снова закрывает БД. Не создаёт пользователей/первого администратора, пароли, signing/integration keys или ready binding. Каталог остаётся provisioning, обычный Auth API ещё не обслуживает этот проект.
+19 октября 2026. `project-prepare -schema` расширяет [physical storage stage](project-storage-preparation.md): устанавливает исходную схему Auth и права отдельной **NOLOGIN** runtime-роли, затем снова закрывает БД. Сам schema stage не создаёт пользователей/первого администратора, пароли/signing/integration keys или ready binding. Отдельный opt-in [encrypted secrets stage](project-secrets-preparation.md) уже сохраняет bootstrap-набор, не включает LOGIN/CONNECT. Каталог остаётся provisioning, обычный Auth API ещё не обслуживает этот проект.
 
 ## Запуск и источники
 

@@ -25,6 +25,8 @@ type Target struct {
 type preparedProject struct {
 	reservation domain.PreparationReservation
 	resources   Resources
+	runtimeOID  uint32
+	schemaReady bool
 }
 
 type Resources struct {

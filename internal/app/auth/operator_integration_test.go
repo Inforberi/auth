@@ -51,7 +51,7 @@ func TestOperatorProfileSQLHTTPS(t *testing.T) {
 			t.Fatal("partial runtime privileges accepted")
 		}
 	}
-	for _, privilege := range []string{"UPDATE ON platform.operator_audit", "UPDATE(id) ON platform.operator_realm", "CREATE ON SCHEMA auth", "UPDATE(database_name) ON platform.projects", "INSERT(created_at) ON platform.project_events", "DELETE ON platform.project_events", "INSERT(phase) ON platform.projects", "UPDATE ON platform.project_creations", "UPDATE(operation_id) ON platform.project_preparations"} {
+	for _, privilege := range []string{"UPDATE ON platform.operator_audit", "UPDATE(id) ON platform.operator_realm", "CREATE ON SCHEMA auth", "UPDATE(database_name) ON platform.projects", "INSERT(created_at) ON platform.project_events", "DELETE ON platform.project_events", "INSERT(phase) ON platform.projects", "UPDATE ON platform.project_creations", "UPDATE(operation_id) ON platform.project_preparations", "SELECT(ciphertext) ON platform.project_secrets", "UPDATE(secrets_created) ON platform.project_preparations"} {
 		if _, err := admin.Exec(ctx, "GRANT "+privilege+" TO "+operatorFixtureRole); err != nil {
 			t.Fatal(err)
 		}

@@ -137,6 +137,8 @@ func TestPrepareCommandSQL(t *testing.T) {
 	require.Contains(t, installed.String(), `"schemaVersion":1`)
 	require.NoError(t, run(ctx, schemaArgs, env, &replayed, io.Discard))
 	require.Equal(t, installed.String(), replayed.String())
+	operatorSecretsProfileDrill(t, admin, env, read)
+	secretsPreparationDrill(t, admin, physical, env, schemaArgs)
 	var closed bool
 	require.NoError(t, physical.QueryRow(ctx, `SELECT NOT datallowconn FROM pg_database WHERE datname='authp_a2000000000040008000000000000001'`).Scan(&closed))
 	require.True(t, closed)

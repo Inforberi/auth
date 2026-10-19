@@ -5,6 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/credentials"
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 	"github.com/Inforberi/financial-intelligence/migrations"
 )
@@ -29,6 +30,7 @@ func (t *Target) recordInstalledSchema(ctx context.Context, tx pgx.Tx, r domain.
 
 func (t *Target) checkInstalledSchema(ctx context.Context, tx pgx.Tx, r domain.PreparationReservation, resources Resources, runtime, checksum string) error {
 	var valid bool
+	var runtimeOID uint32
 	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM project_meta.identity marker
 		JOIN pg_roles role ON role.oid=marker.runtime_oid
 		WHERE marker.singleton AND marker.realm_id=$1 AND marker.project_id=$2 AND marker.reservation_id=$3
@@ -48,13 +50,25 @@ func (t *Target) checkInstalledSchema(ctx context.Context, tx pgx.Tx, r domain.P
 		AND NOT EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace ns ON ns.oid=c.relnamespace
 			CROSS JOIN (VALUES('SELECT'),('INSERT'),('UPDATE'),('DELETE')) permission(name)
 			WHERE ns.nspname='auth' AND c.relkind IN ('r','p') AND (c.relname<>'restore_audit' OR permission.name='SELECT')
-			AND NOT has_table_privilege(role.oid,c.oid,permission.name)))`,
-		t.realm, r.ProjectID, r.ReservationID, resources.DatabaseOID, resources.OwnerOID, migrations.AuthVersion, checksum, runtime).Scan(&valid)
+			AND NOT has_table_privilege(role.oid,c.oid,permission.name))),COALESCE((SELECT runtime_oid FROM project_meta.identity WHERE singleton),0)`,
+		t.realm, r.ProjectID, r.ReservationID, resources.DatabaseOID, resources.OwnerOID, migrations.AuthVersion, checksum, runtime).Scan(&valid, &runtimeOID)
 	if err != nil {
 		return unavailable(ctx)
 	}
 	if !valid {
 		return domain.ErrConflict
 	}
+	t.prepared.runtimeOID = runtimeOID
 	return nil
+}
+
+func (t *Target) SecretsBinding() (credentials.Binding, error) {
+	if t.prepared == nil || !t.prepared.schemaReady || t.prepared.runtimeOID == 0 {
+		return credentials.Binding{}, domain.ErrConflict
+	}
+	r, resources := t.prepared.reservation, t.prepared.resources
+	return credentials.Binding{
+		RealmID: t.realm, ProjectID: r.ProjectID, ReservationID: r.ReservationID, StorageTarget: t.name,
+		DatabaseOID: resources.DatabaseOID, OwnerOID: resources.OwnerOID, RuntimeOID: t.prepared.runtimeOID, SchemaVersion: migrations.AuthVersion,
+	}, nil
 }

@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/credentials"
 )
 
 func TestConnectionConfig(t *testing.T) {
@@ -33,6 +35,23 @@ func TestConnectionConfig(t *testing.T) {
 		require.Error(t, err, dsn)
 		require.NotContains(t, err.Error(), "secret")
 	}
+}
+
+func TestSecretsModeFailsBeforeConnections(t *testing.T) {
+	env := func(key string) string {
+		if key == "PROVISIONER_REALM_ID" {
+			return "c2000000-0000-4000-8000-000000000001"
+		}
+		if key == "PROVISIONER_STORAGE_TARGET" {
+			return "primary"
+		}
+		return ""
+	}
+	args := []string{"-project", "a2000000-0000-4000-8000-000000000001", "-operation", "b2000000-0000-4000-8000-000000000001", "-version", "1", "-generation", "1", "-secrets"}
+	_, err := parseCommand(args, env, io.Discard)
+	require.ErrorContains(t, err, "-secrets requires -schema")
+	err = run(t.Context(), append(args, "-schema"), env, io.Discard, io.Discard)
+	require.ErrorIs(t, err, credentials.ErrUnavailable)
 }
 
 func TestRunRejectsInvalidIntentBeforeConnections(t *testing.T) {

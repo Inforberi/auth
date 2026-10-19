@@ -19,7 +19,7 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 		AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_roles g WHERE g.rolname IN ('auth_recovery_operator','auth_mfa_recovery_operator')
 			AND pg_has_role(session_user,g.oid,'MEMBER'))
 		AND NOT has_function_privilege(current_user,'auth.decide_mfa_recovery(uuid,uuid,bigint,boolean,text,text)','EXECUTE')
-		AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_roles role WHERE (role.rolsuper OR role.rolcreatedb OR role.rolcreaterole OR role.rolbypassrls)
+		AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_roles role WHERE (role.rolsuper OR role.rolcreatedb OR role.rolcreaterole OR role.rolreplication OR role.rolbypassrls)
 			AND (role.rolname=current_user OR pg_has_role(current_user,role.oid,'MEMBER')))
 		AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_database db WHERE db.datname=current_database() AND pg_has_role(current_user,db.datdba,'MEMBER'))
 		AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_namespace ns WHERE ns.nspname IN ('auth','platform') AND pg_has_role(current_user,ns.nspowner,'MEMBER'))
@@ -55,6 +55,9 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 		AND NOT has_table_privilege(current_user,'platform.projects','INSERT,DELETE,TRUNCATE')
 		AND NOT has_table_privilege(current_user,'platform.project_creations','UPDATE,DELETE,TRUNCATE')
 		AND NOT has_table_privilege(current_user,'platform.project_preparations','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
+		AND NOT has_table_privilege(current_user,'platform.project_secrets','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
+		AND NOT has_any_column_privilege(current_user,'platform.project_secrets','SELECT,INSERT,UPDATE,REFERENCES')
+		AND NOT has_column_privilege(current_user,'platform.project_preparations','secrets_created','INSERT,UPDATE')
 		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['project_id','reservation_id','storage_target','operation_id','version','generation','created_at']) col
 			WHERE has_column_privilege(current_user,'platform.project_preparations',col,'INSERT,UPDATE'))
 		AND NOT has_table_privilege(current_user,'platform.project_events','UPDATE,DELETE,TRUNCATE')

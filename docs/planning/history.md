@@ -2,6 +2,23 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+## Результат MP3-secrets-storage — 19 октября 2026
+
+Рабочий блок завершён20 октября. [Контракт](../features/project-secrets-preparation.md): opt-in `project-prepare -schema -secrets`, package `project/credentials`, существующий secretbox AES-GCM. Независимые DB password/encryption/setup/ES256 material с ownership AAD, root/key ID вне каталога. Нет публичного plaintext reader, установки PostgreSQL password, runtime LOGIN/CONNECT, ready или UI. Новых dependencies/HTTP/Swagger/Auth SQL нет; initial catalog000001 и preparation grants расширены без новой миграции. Старым установкам нужен controlled forward upgrade, не reset/replay.
+
+Одна bounded transaction держит realm → project → preparation locks и актуальный epoch/operation/desired state. INSERT ciphertext + retained flag атомарны; concurrent first calls сериализованы; replay проверяет старый материал без UPDATE. Missing row/flag disagreement, binding mismatch, wrong root/key ID/tamper не вызывают repair/regeneration. Ordinary API отвергает table/column secret grants и изменение flag; preparation writer не имеет ciphertext UPDATE/DELETE/TRUNCATE. В обоих затронутых профилях дополнительно закрыт REPLICATION attribute.
+
+Проверено:
+
+- Formatter + `task check` PASS/lint0: `/private/tmp/auth-credentials-check-final.log`. Прежний gofumpt deprecation warning остаётся. Промежуточный cyclop22 устранён выделением связного lock step в том же файле, без suppression; исправлены test-only OID cast и форматирование аргументов.
+- `go test -race ./cmd/project-prepare ./internal/platform/project/... ./internal/platform/operator/... ./internal/app/auth` PASS: `/private/tmp/auth-credentials-race-final.log`. SQL ENV не задан, это не SQL-race sign-off.
+- `task check:security` PASS:0 reachable/package findings,1 прежнее module-only advisory вне вызываемого кода: `/private/tmp/auth-credentials-security-final.log`.
+- PostgreSQL18.6/Linux arm64, `TestPrepareCommandSQL` PASS0.73s: `/private/tmp/auth-credentials-sql-final.log`. Actual preparation/API LOGIN;4 concurrent first calls/one row, immutable xmin replay, atomic rollback, wrong root/key ID/OID, lost ciphertext отказ без регенерации; column-only API secret SELECT, flag UPDATE и REPLICATION guards. Прежние schema rollback/replay/marker/runtime permissions/concurrent suspend проверки также выполнены. Runtime остаётся NOLOGIN, password NULL, БД sealed.
+- Полный HTTPS `TestOperatorProfileSQLHTTPS` отдельно live не запускался; новые profile cases проверены SQL-дриллом с реальным API LOGIN. Redis/Swagger regeneration не нужны для изменённого контракта и не запускались. PostgreSQL privileges/column grants/logging semantics сверены через Context7; криптография использует прежний secretbox без новой библиотеки.
+- Две созданные disposable БД удалены без FORCE; test roles/project DB очищены тестом, семь точных scratch-файлов удалены. Проверены0 fixture DB/role остатков и1 original auth DB. PostgreSQL возвращён в initial stopped; рабочая auth БД/реальные ENV/secrets не менялись. Чужие caches/images/volumes не чистились. Все master keys в тестах синтетические.
+
+Package называется credentials: прежний путь secrets попадал под существующий ignore `secrets/`; файлы перенесены без force-add/изменения ignore. Память очищается best-effort, zeroization Go strings/GC не обещается. Master rotation, backup/restore/key loss, TCP/TLS/password authentication, процессные crash tests, typed consumer, deployment/runtime registry/fleet/load/GC/capacity NOT RUN/не реализованы этим блоком. Это encrypted bootstrap foundation, не полный MP3.5/readiness/production sign-off. Следующий шаг — typed reader и безопасный credential activation protocol; не повторять schema bootstrap поверх активного runtime.
+
 ## Результат MP3-schema — 19 октября 2026
 
 [Контракт/границы](../features/project-schema-preparation.md). Opt-in project-prepare -schema использует existing initial Auth SQL и runtime grants как embedded assets (migrations/auth.go, deploy/runtime.go). Source SQL/Go dependencies/HTTP/Swagger/реальные ENV не менялись. В initial storage-target.sql добавлены только schema_started/default false и column UPDATE grant; old target требует controlled forward upgrade, не replay/reset журнала. Default sealed CLI output сохранён.

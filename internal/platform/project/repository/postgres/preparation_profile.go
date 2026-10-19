@@ -30,7 +30,7 @@ func (r *PreparationRepository) CheckRuntime(ctx context.Context) error {
 	var allowed bool
 	err := r.db.QueryRow(ctx, `SELECT current_user=session_user
 		AND EXISTS(SELECT 1 FROM platform.operator_realm WHERE id=$1 AND initialized_at IS NOT NULL)
-		AND NOT EXISTS(SELECT 1 FROM pg_roles role WHERE (role.rolsuper OR role.rolcreatedb OR role.rolcreaterole OR role.rolbypassrls)
+		AND NOT EXISTS(SELECT 1 FROM pg_roles role WHERE (role.rolsuper OR role.rolcreatedb OR role.rolcreaterole OR role.rolreplication OR role.rolbypassrls)
 			AND (role.rolname=current_user OR pg_has_role(current_user,role.oid,'MEMBER')))
 		AND NOT EXISTS(SELECT 1 FROM pg_database db WHERE db.datname=current_database() AND pg_has_role(current_user,db.datdba,'MEMBER'))
 		AND NOT EXISTS(SELECT 1 FROM pg_namespace ns WHERE ns.nspname IN ('auth','platform') AND pg_has_role(current_user,ns.nspowner,'MEMBER'))
@@ -49,6 +49,15 @@ func (r *PreparationRepository) CheckRuntime(ctx context.Context) error {
 		AND NOT has_table_privilege(current_user,'platform.project_events','UPDATE,DELETE,TRUNCATE')
 		AND NOT has_table_privilege(current_user,'platform.projects','INSERT,DELETE,TRUNCATE')
 		AND NOT has_table_privilege(current_user,'platform.project_preparations','DELETE,TRUNCATE')
+		AND has_table_privilege(current_user,'platform.project_secrets','SELECT')
+		AND NOT has_any_column_privilege(current_user,'platform.project_secrets','UPDATE,REFERENCES')
+		AND NOT has_table_privilege(current_user,'platform.project_secrets','DELETE,TRUNCATE')
+		AND NOT has_column_privilege(current_user,'platform.project_secrets','created_at','INSERT')
+		AND has_column_privilege(current_user,'platform.project_preparations','secrets_created','UPDATE')
+		AND NOT has_column_privilege(current_user,'platform.project_preparations','secrets_created','INSERT')
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['project_id','reservation_id','storage_target','database_oid','owner_oid','runtime_oid',
+			'schema_version','format_version','key_id','ciphertext']) col
+			WHERE NOT has_column_privilege(current_user,'platform.project_secrets',col,'INSERT'))
 		AND NOT EXISTS(SELECT 1 FROM (VALUES
 			('platform.operator_realm','SELECT'),('platform.projects','SELECT'),('platform.project_events','SELECT'),
 			('platform.project_preparations','SELECT')) required(relation,privilege)
