@@ -94,9 +94,13 @@ func (t *Target) applyPassword(ctx context.Context, tx pgx.Tx, value credentials
 	return nil
 }
 
-func (t *Target) checkPasswordTarget(ctx context.Context, tx pgx.Tx, runtime string, binding credentials.Binding) error {
+type passwordTargetQuery interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+func (t *Target) checkPasswordTarget(ctx context.Context, db passwordTargetQuery, runtime string, binding credentials.Binding) error {
 	var safe bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_database db JOIN pg_roles role ON role.oid=$1
+	err := db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_database db JOIN pg_roles role ON role.oid=$1
 		WHERE db.oid=$2 AND db.datname=$3 AND db.datdba=$4 AND NOT db.datallowconn AND NOT db.datistemplate
 		AND shobj_description(db.oid,'pg_database')=$5 AND db.datacl IS NOT NULL
 		AND NOT EXISTS(SELECT 1 FROM aclexplode(db.datacl) acl WHERE acl.grantee<>db.datdba)

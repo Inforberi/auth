@@ -25,6 +25,25 @@ func (r *Repository) CheckSetupOpen(ctx context.Context) error {
 	return nil
 }
 
+// PrepareSetupInTransaction pins a generated operator proof without creating a user or pending intent.
+func PrepareSetupInTransaction(ctx context.Context, tx pgx.Tx, operator string) error {
+	if err := lockSetup(ctx, tx); err != nil {
+		return err
+	}
+	var stored *string
+	if err := tx.QueryRow(ctx, `SELECT operator_hash FROM auth.initial_setup WHERE singleton`).Scan(&stored); err != nil {
+		return err
+	}
+	if stored != nil {
+		if *stored != operator {
+			return domain.ErrSetupConflict
+		}
+		return nil
+	}
+	_, err := tx.Exec(ctx, `UPDATE auth.initial_setup SET operator_hash=$1 WHERE singleton`, operator)
+	return err
+}
+
 // Access lock precedes the singleton row; the marker is independent of user/role survival.
 func lockSetup(ctx context.Context, tx pgx.Tx) error {
 	if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {

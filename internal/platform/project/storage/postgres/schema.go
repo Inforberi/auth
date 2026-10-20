@@ -15,14 +15,24 @@ import (
 )
 
 func (t *Target) InstallSchema(ctx context.Context, authorize func(context.Context) error) (int, error) {
+	err := t.withProjectAccess(ctx, authorize, func(check context.Context, project *pgx.Conn) error {
+		return t.installProjectSchema(check, project, t.prepared.reservation, t.prepared.resources)
+	})
+	if err != nil {
+		return 0, err
+	}
+	return migrations.AuthVersion, nil
+}
+
+func (t *Target) withProjectAccess(ctx context.Context, authorize func(context.Context) error, work func(context.Context, *pgx.Conn) error) error {
 	if t.prepared == nil || authorize == nil {
-		return 0, domain.ErrConflict
+		return domain.ErrConflict
 	}
 	t.prepared.schemaReady = false
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	if err := authorize(ctx); err != nil {
-		return 0, err
+		return err
 	}
 	r, resources := t.prepared.reservation, t.prepared.resources
 	sealed := false
@@ -36,13 +46,13 @@ func (t *Target) InstallSchema(ctx context.Context, authorize func(context.Conte
 		_ = t.schemaAccess(cleanup, r, resources, false) //nolint:gosec // Explicit final seal below must succeed before success is returned.
 	}()
 	if err := t.schemaAccess(ctx, r, resources, true); err != nil {
-		return 0, err
+		return err
 	}
 	cfg := t.conn.Config().Copy()
 	cfg.Database = resources.Database
 	project, err := pgx.ConnectConfig(ctx, cfg)
 	if err != nil {
-		return 0, unavailable(ctx)
+		return unavailable(ctx)
 	}
 	defer func() {
 		cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
@@ -54,26 +64,26 @@ func (t *Target) InstallSchema(ctx context.Context, authorize func(context.Conte
 	err = project.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname=current_database() AND oid=$1 AND datdba=$2
 		AND NOT datistemplate AND shobj_description(oid,'pg_database')=$3)`, resources.DatabaseOID, resources.OwnerOID, t.databaseMarker(r)).Scan(&matching)
 	if err != nil {
-		return 0, unavailable(ctx)
+		return unavailable(ctx)
 	}
 	if !matching {
-		return 0, domain.ErrConflict
+		return domain.ErrConflict
 	}
-	if err := t.installProjectSchema(ctx, project, r, resources); err != nil {
-		return 0, err
+	if err := work(ctx, project); err != nil {
+		return err
 	}
 	if err := project.Close(ctx); err != nil {
-		return 0, unavailable(ctx)
+		return unavailable(ctx)
 	}
 	if err := t.schemaAccess(ctx, r, resources, false); err != nil {
-		return 0, err
+		return err
 	}
 	sealed = true
 	if err := authorize(ctx); err != nil {
-		return 0, err
+		return err
 	}
 	t.prepared.schemaReady = true
-	return migrations.AuthVersion, nil
+	return nil
 }
 
 func (t *Target) installProjectSchema(ctx context.Context, conn *pgx.Conn, r domain.PreparationReservation, resources Resources) error {

@@ -15,7 +15,10 @@ func (t *Target) recordInstalledSchema(ctx context.Context, tx pgx.Tx, r domain.
 		CREATE TABLE project_meta.identity(
 			singleton BOOLEAN PRIMARY KEY CHECK(singleton),realm_id UUID NOT NULL,project_id UUID NOT NULL,
 			reservation_id UUID NOT NULL,database_oid OID NOT NULL,owner_oid OID NOT NULL,runtime_oid OID NOT NULL,
-			schema_version BIGINT NOT NULL,schema_checksum TEXT NOT NULL);
+			schema_version BIGINT NOT NULL,schema_checksum TEXT NOT NULL,
+			configuration_prepared BOOLEAN NOT NULL DEFAULT false,setup_operator_hash TEXT,
+			CHECK ((NOT configuration_prepared AND setup_operator_hash IS NULL)
+				OR (configuration_prepared AND setup_operator_hash IS NOT NULL AND setup_operator_hash ~ '^[a-f0-9]{64}$')));
 		REVOKE ALL ON project_meta.identity FROM PUBLIC`)
 	if err != nil {
 		return unavailable(ctx)

@@ -1,5 +1,7 @@
 # Карта проекта
 
+Project onboarding: [контракт](../features/project-onboarding-preparation.md), `storage/postgres/onboarding`, `credentials/setup`, `PreparationRepository.ReadSetupProof`, `cmd/project-prepare -onboarding`. Existing settings initializer/setup pin + private preparation marker атомарны; default public registration/providers/JWT закрыты. First admin/runtime activation/setup endpoint/ready ещё не публикуются.
+
 Project credentials: [контракт](../features/project-secrets-preparation.md), `project/credentials/{bundle,cipher,database}`, `repository/postgres/{preparation_secrets,preparation_credentials}`, `storage/postgres/{password,password_verifier}`, `cmd/project-prepare -schema -secrets [-password]`. Immutable encrypted catalog row/retained flag/current locks, typed DB reader и atomic SCRAM installation/target receipt; root key вне БД, API без ciphertext SELECT. LOGIN/CONNECT/runtime registry/ready пока закрыты.
 
 Project schema stage: [контракт](../features/project-schema-preparation.md), `project/storage/postgres/schema{,_access,_identity}`, `project/repository/postgres/preparation_current`, `cmd/project-prepare -schema`. Embedded initial SQL/runtime grants — `migrations/auth.go`, `deploy/runtime.go`; transactional NOLOGIN role+schema+marker, temporary executor-only access/reseal/current epoch guards. Без runtime credentials/ready.

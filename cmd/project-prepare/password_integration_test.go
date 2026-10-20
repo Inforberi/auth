@@ -92,6 +92,7 @@ func passwordPreparationDrill(t *testing.T, physical *pgx.Conn, env func(string)
 	_, err = physical.Exec(ctx, `UPDATE provisioning.resources SET password_fingerprint=$1`, fingerprint[:])
 	require.NoError(t, err)
 	passwordAuthenticationDrill(t, physical, value, binding)
+	onboardingPreparationDrill(t, physical, env, args, repo, reservation, binding, codec)
 }
 
 type passwordQueryTrace struct {
