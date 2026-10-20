@@ -50,6 +50,8 @@ func TestSecretsModeFailsBeforeConnections(t *testing.T) {
 	args := []string{"-project", "a2000000-0000-4000-8000-000000000001", "-operation", "b2000000-0000-4000-8000-000000000001", "-version", "1", "-generation", "1", "-secrets"}
 	_, err := parseCommand(args, env, io.Discard)
 	require.ErrorContains(t, err, "-secrets requires -schema")
+	_, err = parseCommand(append(args[:len(args)-1:len(args)-1], "-password", "-schema"), env, io.Discard)
+	require.ErrorContains(t, err, "-password requires -secrets")
 	err = run(t.Context(), append(args, "-schema"), env, io.Discard, io.Discard)
 	require.ErrorIs(t, err, credentials.ErrUnavailable)
 }

@@ -68,11 +68,15 @@ func (t *Target) CheckRuntime(ctx context.Context) error {
 		AND NOT has_column_privilege(current_user,'provisioning.resources','database_oid','INSERT')
 		AND NOT has_column_privilege(current_user,'provisioning.resources','created_at','INSERT')
 		AND NOT has_column_privilege(current_user,'provisioning.resources','schema_started','INSERT')
+		AND NOT has_column_privilege(current_user,'provisioning.resources','runtime_oid','INSERT')
+		AND NOT has_column_privilege(current_user,'provisioning.resources','password_fingerprint','INSERT')
 		AND has_table_privilege(current_user,'provisioning.target','SELECT')
 		AND has_table_privilege(current_user,'provisioning.resources','SELECT')
 		AND has_column_privilege(current_user,'provisioning.resources','database_oid','UPDATE')
 		AND has_column_privilege(current_user,'provisioning.resources','generation','UPDATE')
 		AND has_column_privilege(current_user,'provisioning.resources','schema_started','UPDATE')
+		AND has_column_privilege(current_user,'provisioning.resources','runtime_oid','UPDATE')
+		AND has_column_privilege(current_user,'provisioning.resources','password_fingerprint','UPDATE')
 		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['project_id','reservation_id','owner_oid','generation']) col
 			WHERE NOT has_column_privilege(current_user,'provisioning.resources',col,'INSERT'))`, t.realm, t.name).Scan(&allowed)
 	if err != nil || !allowed {

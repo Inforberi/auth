@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -39,14 +40,19 @@ func (t *Target) schemaAccess(ctx context.Context, r domain.PreparationReservati
 		if !safe {
 			return domain.ErrConflict
 		}
-		changed, err := tx.Exec(ctx, `UPDATE provisioning.resources SET schema_started=true
-			WHERE project_id=$1 AND reservation_id=$2 AND database_oid=$3 AND owner_oid=$4 AND generation=$5`,
-			r.ProjectID, r.ReservationID, resources.DatabaseOID, resources.OwnerOID, r.Generation)
-		if err != nil {
+		var started bool
+		if err := tx.QueryRow(ctx, `SELECT schema_started FROM provisioning.resources
+			WHERE project_id=$1 AND reservation_id=$2 AND database_oid=$3 AND owner_oid=$4 AND generation=$5 FOR UPDATE`,
+			r.ProjectID, r.ReservationID, resources.DatabaseOID, resources.OwnerOID, r.Generation).Scan(&started); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return domain.ErrConflict
+			}
 			return unavailable(ctx)
 		}
-		if changed.RowsAffected() != 1 {
-			return domain.ErrConflict
+		if !started {
+			if _, err := tx.Exec(ctx, `UPDATE provisioning.resources SET schema_started=true WHERE project_id=$1`, r.ProjectID); err != nil {
+				return unavailable(ctx)
+			}
 		}
 	}
 	if _, err := tx.Exec(ctx, `SET LOCAL ROLE `+pgx.Identifier{resources.Owner}.Sanitize()); err != nil {

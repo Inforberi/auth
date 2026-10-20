@@ -90,6 +90,9 @@ func secretsPreparationDrill(t *testing.T, admin, physical *pgx.Conn, env func(s
 	require.NoError(t, run(ctx, args, protected, &response, io.Discard))
 	require.Contains(t, response.String(), `"stage":"secrets_stored"`)
 	require.NotContains(t, response.String(), root)
+	require.NoError(t, physical.QueryRow(ctx, `SELECT rolpassword IS NULL FROM pg_authid WHERE oid=$1`, binding.RuntimeOID).Scan(&clean))
+	require.True(t, clean, "-secrets alone must not install a password")
+	passwordPreparationDrill(t, physical, protected, args, repo, reservation, binding, codec)
 	for _, override := range []map[string]string{
 		{"PROVISIONER_MASTER_KEY": base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{18}, 32))},
 		{"PROVISIONER_MASTER_KEY_ID": "root-2"},
@@ -124,8 +127,8 @@ func secretsPreparationDrill(t *testing.T, admin, physical *pgx.Conn, env func(s
 	require.NoError(t, physical.QueryRow(ctx, `SELECT NOT datallowconn AND NOT r.rolcanlogin FROM pg_database db
 		JOIN pg_roles r ON r.oid=$1 WHERE db.oid=$2`, binding.RuntimeOID, binding.DatabaseOID).Scan(&clean))
 	require.True(t, clean)
-	require.NoError(t, physical.QueryRow(ctx, `SELECT rolpassword IS NULL FROM pg_authid WHERE oid=$1`, binding.RuntimeOID).Scan(&clean))
-	require.True(t, clean, "storage stage must not install a PostgreSQL password before activation")
+	require.NoError(t, physical.QueryRow(ctx, `SELECT rolpassword LIKE 'SCRAM-SHA-256$%' FROM pg_authid WHERE oid=$1`, binding.RuntimeOID).Scan(&clean))
+	require.True(t, clean, "explicit password stage must preserve the installed verifier")
 }
 
 func operatorSecretsProfileDrill(t *testing.T, admin *pgx.Conn, env, read func(string) string) {

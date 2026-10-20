@@ -18,6 +18,10 @@ CREATE TABLE provisioning.resources (
     database_oid OID UNIQUE,
     generation BIGINT NOT NULL CHECK (generation > 0),
     schema_started BOOLEAN NOT NULL DEFAULT FALSE,
+    runtime_oid OID UNIQUE,
+    password_fingerprint BYTEA,
+    CHECK ((runtime_oid IS NULL AND password_fingerprint IS NULL)
+        OR (runtime_oid IS NOT NULL AND runtime_oid <> 0 AND octet_length(password_fingerprint)=32 AND password_fingerprint IS NOT NULL)),
     created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
 REVOKE ALL ON ALL TABLES IN SCHEMA provisioning FROM PUBLIC;
@@ -26,6 +30,7 @@ GRANT SELECT ON provisioning.target, provisioning.resources TO auth_storage_exec
 GRANT INSERT(project_id,reservation_id,owner_oid,generation), UPDATE(database_oid,generation)
     ON provisioning.resources TO auth_storage_executor;
 GRANT UPDATE(schema_started) ON provisioning.resources TO auth_storage_executor;
+GRANT UPDATE(runtime_oid,password_fingerprint) ON provisioning.resources TO auth_storage_executor;
 DO $$ BEGIN
     EXECUTE format('REVOKE ALL ON DATABASE %I FROM PUBLIC', current_database());
     EXECUTE format('GRANT CONNECT ON DATABASE %I TO auth_storage_executor', current_database());
