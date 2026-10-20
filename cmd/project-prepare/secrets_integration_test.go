@@ -70,6 +70,9 @@ func secretsPreparationDrill(t *testing.T, admin, physical *pgx.Conn, env func(s
 	require.NoError(t, err)
 	codec, err := credentials.New(root, "root-1")
 	require.NoError(t, err)
+	missing, err := repo.ReadDatabaseCredential(ctx, reservation, binding, codec)
+	require.ErrorIs(t, err, domain.ErrConflict)
+	require.Empty(t, missing.Password())
 	finished := make(chan error, 4)
 	for range 4 {
 		go func() { finished <- repo.EnsureSecrets(ctx, reservation, binding, codec) }()
@@ -81,6 +84,8 @@ func secretsPreparationDrill(t *testing.T, admin, physical *pgx.Conn, env func(s
 	var xmin string
 	require.NoError(t, admin.QueryRow(ctx, `SELECT ciphertext,xmin::text FROM platform.project_secrets`).Scan(&payload, &xmin))
 	require.NoError(t, codec.Verify(binding, credentials.Version, "root-1", payload))
+	credentialsReadDrill(t, admin, repo, reservation, binding, codec, payload)
+	require.NoError(t, admin.QueryRow(ctx, `SELECT xmin::text FROM platform.project_secrets`).Scan(&xmin))
 	var response bytes.Buffer
 	require.NoError(t, run(ctx, args, protected, &response, io.Discard))
 	require.Contains(t, response.String(), `"stage":"secrets_stored"`)
@@ -109,6 +114,9 @@ func secretsPreparationDrill(t *testing.T, admin, physical *pgx.Conn, env func(s
 	require.NoError(t, err)
 	_, err = admin.Exec(ctx, `DELETE FROM platform.project_secrets`)
 	require.NoError(t, err)
+	missing, err = repo.ReadDatabaseCredential(ctx, reservation, binding, codec)
+	require.ErrorIs(t, err, domain.ErrConflict)
+	require.Empty(t, missing.Password())
 	require.ErrorIs(t, run(ctx, args, protected, io.Discard, io.Discard), domain.ErrConflict, "lost ciphertext must not regenerate secrets")
 	require.NoError(t, admin.QueryRow(ctx, `SELECT secrets_created AND NOT EXISTS(SELECT 1 FROM platform.project_secrets)
 		FROM platform.project_preparations`).Scan(&clean))

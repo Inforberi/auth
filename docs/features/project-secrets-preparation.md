@@ -11,7 +11,7 @@
 | Initial setup secret | Ещё32 random bytes, raw base64url; не равен project encryption key, не включает setup автоматически |
 | Signing key + kid | ES256/P-256, PKCS8 PRIVATE KEY PEM и random kid; JWT не включается и ключ/JWKS не публикуются |
 
-Генерация — crypto/rand/ecdsa/x509, без новой зависимости или собственного криптопротокола. Google/Telegram/SMTP credentials не выдумываются. Package `internal/platform/project/credentials` имеет только генерацию encrypted payload/проверку; plaintext material не возвращается из catalog port, не сериализуется в CLI response и не передаётся PostgreSQL. Runtime reader/установка DB password/активация — следующий блок.
+Генерация — crypto/rand/ecdsa/x509, без новой зависимости или собственного криптопротокола. Google/Telegram/SMTP credentials не выдумываются. Package `internal/platform/project/credentials` генерирует/проверяет encrypted payload и открывает ограниченный тип DatabaseCredential для доверенного provisioning reader. Plaintext не сериализуется в CLI response и не передаётся PostgreSQL. Установка DB password/активация — следующий блок.
 
 ## Operational master key
 
@@ -53,6 +53,16 @@ Role обычного platform API не получает даже ciphertext SEL
 
 Всё добавлено в исходную catalog000001/preparation grants, без нового migration-файла. Старой установке нужен controlled forward schema/grants upgrade, не replay initial migration/сброс данных. Ownership markers и ciphertext не очищаются обычным session/security-audit retention.
 
+## Типизированное чтение DB credential — 20 октября
+
+`PreparationRepository.ReadDatabaseCredential` — внутренний provisioning port, не HTTP endpoint и не online runtime registry. Требует restricted preparation SQL credential и правильный master key. Возвращает только DatabaseCredential с привязкой и явным `Password()`; setup/encryption/signing keys через этот контракт не раскрываются. fmt/String/GoString/JSON представления типа редактированы; явный Password() предназначен только для доверенного connection/installation кода, его нельзя логировать. Это не защита от отладчика/reflection/компрометации процесса и не гарантированное zeroization.
+
+Тот же3s budget/1s rollback и lock order realm → project → preparation, что у writer. Проверяются initialized realm, current version/generation/operation/desired state, reservation/target/no-binding, retained creation flag, полная metadata binding и AEAD. Неверный ключ/tamper/missing row/stale state дают ошибку и пустой credential. Нет генерации, INSERT, UPDATE ciphertext или нового material. Возврат только после успешного commit; cancelled/blocked transaction не выдаёт секрет.
+
+**Результат — snapshot на момент чтения, не разрешение на будущий LOGIN/CONNECT/ready.** Locks отпущены при возврате; следующая стадия обязана отдельно обеспечить актуальную authority/fencing/target attestation перед side effect и публикацией доступа. Нельзя проверять только сохранённый Binding и считать, что поздний suspend не имеет значения. В ordinary API нет reader/root key; CLI не экспортирует пароль. Live SQL проверяет repeat read, stale generation/version/operation/project/target/OID, wrong root/tamper/flag/lost row, ожидание конкурентного UPDATE с bounded cancellation и отказ после suspend. Reader не подтверждает будущий password authentication.
+
+Установка пароля остаётся отдельной задачей: PostgreSQL18 принимает готовый SCRAM verifier, поэтому plaintext нельзя включать в ALTER ROLE, SQL parameters/logs или диагностику. В pgx5.10.0 нет публичного генератора verifier; Context7 lookup для оценки отдельной SCRAM-библиотеки оказался недоступен. Непроверенная dependency/ручная реализация SCRAM не добавлены, LOGIN/CONNECT остаются закрытыми. Verifier тоже чувствительный материал и требует защиты логов/транспорта. [Проверки и ограничения](../planning/history.md#результат-mp3-credentials-reader--20-октября-2026).
+
 ## Rotation и восстановление
 
 Смена master key/key ID в ENV **не ротирует** существующие записи. Replay остановится; не удалять marker/row и не генерировать новый project key для обхода ошибки. Вернуть соответствующий сохранённый key ID/master и согласованный catalog backup.
@@ -67,4 +77,4 @@ Unit: независимые key sets, private-key format, AEAD binding кажд
 
 Команды/evidence/cleanup/NOT RUN — [history](../planning/history.md#результат-mp3-secrets-storage--19-октября-2026). Обычный race не SQL-race. Не проверены реальный TCP/TLS/password authentication для нового DB credential, process crash/restore/rotation/secret registry consumer/fleet/load/GC. До3 SQL connections на обычный invocation, один3s catalog save с1s cleanup; crypto только на создании/проверке provisioning, не на каждом Auth request. Capacity не измерена.
 
-Далее: typed runtime reader, безопасная установка DB credential без plaintext SQL/logs, LOGIN/CONNECT только после durable matching material/current authority и readiness, независимые runtime/configuration/first admin, binding/ready. Master storage foundation готова, весь MP3.5/MP3/readiness не закрыты; UI не начинать.
+Далее: безопасная установка DB credential без plaintext SQL/logs, LOGIN/CONNECT только после durable matching material/current authority и readiness, независимые runtime/configuration/first admin, binding/ready. Provisioning DB reader готов; полный runtime registry/consumers всех ключей, master rotation и весь MP3.5/MP3/readiness не закрыты; UI не начинать.

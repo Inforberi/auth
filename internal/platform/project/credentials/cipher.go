@@ -90,27 +90,34 @@ func (c *Codec) Generate(binding Binding) ([]byte, error) {
 }
 
 func (c *Codec) Verify(binding Binding, version int, keyID string, payload []byte) error {
+	value, err := c.open(binding, version, keyID, payload)
+	clear(value.SigningPrivateKey)
+	return err
+}
+
+func (c *Codec) open(binding Binding, version int, keyID string, payload []byte) (material, error) {
 	if len(payload) < 128 || len(payload) > 8192 {
-		return ErrUnavailable
+		return material{}, ErrUnavailable
 	}
 	cipher, err := c.cipher(binding, version, keyID)
 	if err != nil {
-		return err
+		return material{}, err
 	}
 	plain, err := cipher.Open(payload)
 	if err != nil {
-		return ErrUnavailable
+		return material{}, ErrUnavailable
 	}
 	defer clear(plain)
 	var value material
-	defer func() { clear(value.SigningPrivateKey) }()
 	decoder := json.NewDecoder(bytes.NewReader(plain))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&value); err != nil || !value.valid() {
-		return ErrUnavailable
+		clear(value.SigningPrivateKey)
+		return material{}, ErrUnavailable
 	}
 	if decoder.Decode(new(any)) != io.EOF {
-		return ErrUnavailable
+		clear(value.SigningPrivateKey)
+		return material{}, ErrUnavailable
 	}
-	return nil
+	return value, nil
 }

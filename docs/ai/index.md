@@ -1,6 +1,6 @@
 # Карта проекта
 
-Project credentials: [контракт](../features/project-secrets-preparation.md), `project/credentials/{bundle,cipher}`, `repository/postgres/preparation_secrets`, `cmd/project-prepare -schema -secrets`. Immutable encrypted catalog row + atomic retained flag/current locks; root key вне БД, API без ciphertext SELECT. DB password/LOGIN/CONNECT/reader/ready пока не включены.
+Project credentials: [контракт](../features/project-secrets-preparation.md), `project/credentials/{bundle,cipher,database}`, `repository/postgres/{preparation_secrets,preparation_credentials}`, `cmd/project-prepare -schema -secrets`. Immutable encrypted catalog row + atomic retained flag/current locks; internal typed provisioning DB reader, root key вне БД, API без ciphertext SELECT. DB password installation/LOGIN/CONNECT/runtime registry/ready пока не включены.
 
 Project schema stage: [контракт](../features/project-schema-preparation.md), `project/storage/postgres/schema{,_access,_identity}`, `project/repository/postgres/preparation_current`, `cmd/project-prepare -schema`. Embedded initial SQL/runtime grants — `migrations/auth.go`, `deploy/runtime.go`; transactional NOLOGIN role+schema+marker, temporary executor-only access/reseal/current epoch guards. Без runtime credentials/ready.
 

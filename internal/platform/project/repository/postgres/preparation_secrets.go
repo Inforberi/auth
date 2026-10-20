@@ -30,7 +30,7 @@ func scanSecret(row pgx.Row, realm, project domain.ID) (secretRecord, error) {
 
 // EnsureSecrets never enables LOGIN. The retained creation flag makes lost ciphertext fail closed.
 func (r *PreparationRepository) EnsureSecrets(ctx context.Context, reservation domain.PreparationReservation, binding credentials.Binding, codec *credentials.Codec) error {
-	if codec == nil || binding.RealmID != r.realm || binding.ProjectID != reservation.ProjectID || binding.ReservationID != reservation.ReservationID || binding.StorageTarget != r.target {
+	if codec == nil || !r.matchesSecretsBinding(reservation, binding) {
 		return domain.ErrConflict
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
@@ -86,6 +86,10 @@ func (r *PreparationRepository) EnsureSecrets(ctx context.Context, reservation d
 		return catalogError(ctx, err)
 	}
 	return nil
+}
+
+func (r *PreparationRepository) matchesSecretsBinding(reservation domain.PreparationReservation, binding credentials.Binding) bool {
+	return binding.RealmID == r.realm && binding.ProjectID == reservation.ProjectID && binding.ReservationID == reservation.ReservationID && binding.StorageTarget == r.target
 }
 
 func (r *PreparationRepository) lockSecretsPreparation(ctx context.Context, tx pgx.Tx, reservation domain.PreparationReservation) (bool, error) {
