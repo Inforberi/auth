@@ -21,6 +21,20 @@ Bootstrap setup secret уже находится внутри encrypted catalog 
 
 Вся операция bounded20s, project rollback/close1s и access cleanup3s; прежний target session lock сохраняется, обычный invocation использует до3 SQL connections без нового пула/workers. SQL presence checks — EXISTS, нет сканирования пользователей для подсчёта/импорта и нет изменения Auth hot path. Capacity/GC не измерялись.
 
+## Изолированный HTTP-профиль onboarding
+
+`router.NewProjectOnboarding` принимает только доверенный origin проекта, существующий SetupHandler, callback текущего допуска, HTTP capacity/proxy policy и logger. Здесь нет общего набора Auth handlers или наследования конфигурации платформы. Профиль пока **не подключён** к основному серверу.
+
+Разрешены только `POST /api/v1/setup/start` и `POST /api/v1/setup/complete`. Повторно используются существующие setup handler/DTO/error mapping, ограничения размера JSON и проверка `X-Setup-Token`. Новый профиль не реализует второй setup flow и не меняет требования email/MFA существующего сервиса.
+
+- Требуются TLS и точное совпадение Host, включая настроенный порт. X-Forwarded-Host/Forwarded/X-Forwarded-Proto не заменяют эти проверки; deployment с TLS termination потребует отдельно согласованного trusted ingress, plaintext fallback здесь отсутствует.
+- Для обоих POST обязателен единственный точный project Origin. Cross-origin CORS не включён; OPTIONS и остальные методы не дают доступ к setup. Platform Origin не разрешается автоматически. Это same-origin профиль, не готовое подключение будущей общей админки.
+- На каждом допустимом POST вызывается `Admit(ctx)`: false →404, ошибка/отменённый context →503 без деталей каталога; положительный ответ не кешируется. Callback обязан проверять актуальные project/reservation/version/generation и readiness для onboarding, соблюдать общий request deadline. Его production-реализация ещё не подключена; unit fake не подтверждает SQL authority/fencing.
+- Неверные Host/Origin, неизвестные маршруты и неподдерживаемые методы не вызывают catalog callback или SetupHandler. Login/register/recovery/roles/settings/platform/JWKS/Swagger/health не регистрируются. Ответы не кешируются, собственных session cookies профиль не создаёт.
+- Используется существующий bounded HTTP admission; бюджет относится к экземпляру handler, а не ко всему процессу/fleet. Дальнейший dispatcher обязан учитывать суммарные бюджеты.
+
+Проверка допуска — до выполнения setup, не распределённая транзакция с project SQL. Уже допущенный запрос потенциально завершится после suspend; публикация ready и дальнейший допуск требуют отдельного fencing/readiness протокола. Один успешный callback не разрешает обычные Auth routes.
+
 ## Что ещё не включено
 
 Этот этап **не запускает UI и не публикует project setup endpoint**. Доставка raw setup secret доверенному владельцу/сборка runtime с собственными encryption keys/доступ оператору требуют отдельного протокола, не ссылки с секретом в URL или CLI stdout. Не копировать credentials платформенного администратора в проект и не трактовать platform session как SSO.
