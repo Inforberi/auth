@@ -2,6 +2,29 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+## Результат навигация и контекст — 20 октября 2026
+
+Только документация/правила работы, без изменения сервиса. Карта docs/ai/index.md заменена статическим тематическим маршрутизатором вместо последовательности статусов каждого блока; текущая заметка сокращена до результата, ближайшего функционального шага и обязательных ссылок. Runtime/onboarding требования сохранены в multi-project, незакрытые resource/external/native/restore gates — в acceptance-summary. Прежние evidence/owner-only deletion/optional MFA/UI constraints сохранены; следующий функциональный шаг MP3 не изменён.
+
+AGENTS уточнён без нового набора дублирующих правил: semantic lookup → нужные bodies/references по задаче, целевой rg для SQL/config/при отказе Serena; не перечитывать доступное через другой инструмент, после compaction восстанавливаться точечно, обрезанный вывод сужать. Полнота security checks и обязательное чтение инструкций не ограничены. Не создавать параллельный status store в memories/RAG. Новых инструментов, индексов, скриптов или зависимостей нет.
+
+Проверка: git diff --check, локальные Markdown paths/anchors и сверка перенесённых ограничений. Одноразовая read-only проверка ссылок адаптирована к системному Ruby (map.compact вместо недоступного filter_map), библиотек не добавлено. Go/Docker/SQL/SMTP/load не запускались: executable code/config не менялись. Предыдущие незакоммиченные HTTP/docs изменения не отменялись, staging не менялся, коммита нет. Уменьшение файлов — объём стартовой документации, не измеренная экономия токенов/времени; эффект оценивать на сопоставимых рабочих задачах, без формальных дополнительных прогонов.
+
+## Результат MP3-onboarding-http-profile — 20 октября 2026
+
+[Контракт](../features/project-onboarding-preparation.md#изолированный-http-профиль-onboarding). Добавлены router/project_onboarding.go (80 строк) и contract tests. Узкий constructor принимает project Origin/SetupHandler/current-admission callback и явные HTTP capacity/proxy settings; не полный набор feature handlers/config платформы. Только два существующих POST setup/start, setup/complete, без дубликата Auth/setup service. Exact TLS/Host/Origin, same-origin/no CORS; forwarded headers не меняют authority. Callback выполняется заново после browser guard, в request deadline; false404/error или cancelled context503 без деталей. Остальные routes/methods не обращаются к catalog callback/setup. Per-handler admission budget не объявлен fleet budget; проверка перед setup не заявляет атомарности с поздним catalog suspend.
+
+Проверено:
+
+- gofmt обоих новых Go-файлов; `go test ./internal/transport/http/router -run TestProjectOnboarding -count=1` PASS. Constructor negative cases, оба setup actions, bad Host/port/plaintext/forwarded headers, missing/duplicate/foreign Origin, dependency error/cancellation/inactive/closed/unauthorized, сохранение setup proof, no cookie/no-store/no CORS/no private error. Ordinary Auth/platform/JWKS/Swagger/health paths и неизвестный setup отсутствуют; GET/HEAD/PUT/DELETE/OPTIONS не вызывают setup. Три последовательных запроса проверяют изменение допуска без пересоздания handler.
+- `task check` PASS/lint0: `/private/tmp/auth-project-onboarding-http-check.log`. Первоначальный sandbox отказ доступа к Go cache исправлен повтором с разрешённым доступом; два gocritic ifElseChain замечания в новых тестах исправлены до финального PASS. Прежний formatter deprecation warning остаётся.
+- `go test -race ./internal/transport/http/router ./internal/transport/http/middleware` PASS: `/private/tmp/auth-project-onboarding-http-race.log`. Выполнено перед последней стилистической заменой if/else на switch в tests; production code не менялся, финальный обычный suite после исправления PASS. Это HTTP unit/contract tests, не SQL/fleet race.
+- `task check:security` PASS:0 reachable/package vulnerabilities,1 прежнее module-only advisory, `/private/tmp/auth-project-onboarding-http-security.log`. Dependencies не менялись. `git diff --check` PASS.
+
+Профиль не подключён к основному серверу. Project runtime factory/pool attestation/project keys/SQL SMTP loading, реальный callback current authority/fencing, activation/dispatcher/setup authority delivery/first-admin completion/ready остаются следующими шагами. Фейковые service/callback не являются проверкой project SQL grants или SMTP. Новых зависимостей/ENV/schema/migration/workers нет, Docker/БД/реальные secrets не трогались; UI не начинался. Сохранены прежние несакоммиченные owner-only deletion требования, destructive реализация не выполнялась. Коммита нет.
+
+NOT RUN: live SQL/Redis/SMTP/browser/ingress/two-project setup, suspension во время реального setup commit, production image, нагрузка/память/GC. SQL и существующие Swagger annotations/DTO не менялись, повторный SQL suite/Swagger generation не запускались ради формальности.
+
 ## Результат MP3-onboarding-preparation — 20 октября 2026
 
 [Контракт](../features/project-onboarding-preparation.md). Opt-in -onboarding требует -password/-secrets/-schema. Existing encrypted bundle → credentials.SetupProof (только SHA256 setup token digest+binding, redacted fmt/JSON); shared catalog read transaction/decoder сохраняет guards и выдаёт результат только после commit. Target preflight проверяет actual NOLOGIN/sealed ACL/OIDs и password receipt до открытия; schema/onboarding переиспользуют прежний executor-only connection/attestation/reseal lifecycle. Нового pool/worker/network client/crypto protocol/ENV/HTTP/Swagger/dependencies нет.

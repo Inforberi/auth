@@ -1,77 +1,41 @@
 # Карта проекта
 
-Project onboarding: [контракт](../features/project-onboarding-preparation.md), `storage/postgres/onboarding`, `credentials/setup`, `PreparationRepository.ReadSetupProof`, `cmd/project-prepare -onboarding`. Existing settings initializer/setup pin + private preparation marker атомарны; default public registration/providers/JWT закрыты. First admin/runtime activation/setup endpoint/ready ещё не публикуются.
+Начать с [текущего шага](current-task.md), затем выбрать нужную строку ниже. Это навигация, не список обязательного чтения: статусы — в плане, поведение — в коде, доказательства — в history. Правила — [AGENTS.md](../../AGENTS.md).
 
-Project credentials: [контракт](../features/project-secrets-preparation.md), `project/credentials/{bundle,cipher,database}`, `repository/postgres/{preparation_secrets,preparation_credentials}`, `storage/postgres/{password,password_verifier}`, `cmd/project-prepare -schema -secrets [-password]`. Immutable encrypted catalog row/retained flag/current locks, typed DB reader и atomic SCRAM installation/target receipt; root key вне БД, API без ciphertext SELECT. LOGIN/CONNECT/runtime registry/ready пока закрыты.
+Пути к исходникам относительно корня репозитория; Auth = `internal/auth`, Project = `internal/platform/project`.
 
-Project schema stage: [контракт](../features/project-schema-preparation.md), `project/storage/postgres/schema{,_access,_identity}`, `project/repository/postgres/preparation_current`, `cmd/project-prepare -schema`. Embedded initial SQL/runtime grants — `migrations/auth.go`, `deploy/runtime.go`; transactional NOLOGIN role+schema+marker, temporary executor-only access/reseal/current epoch guards. Без runtime credentials/ready.
+## Проекты и сборка
 
-Physical project storage: [контракт](../features/project-storage-preparation.md), `cmd/project-prepare`, `project/storage/postgres/{target,owner,database}`, `deploy/{storage-target.sql,project-prepare.env.example}`. Отдельный one-shot процесс: catalog Reserve → target journal/session lock → sealed DB/NOLOGIN owner; не schema/runtime/ready и не фоновый scheduler.
-
-Project preparation foundation: [контракт](../features/project-preparation.md), `project/domain/preparation`, `project/repository/postgres/{preparation,preparation_profile}`, `deploy/platform-preparation-grants.sql`, `app/auth/operator_preparation_test.go`. Atomic begin+immutable reservation/fences; внутренний port без executor loop/target DDL/новых HTTP.
-
-Platform creation API: [контракт](../features/platform-project-creation.md), `project/{domain,service,repository/postgres}/create`, `transport/http/create_project`, `config/platform`, `app/auth/operator_catalog_create_test.go`. Generated origin/single trusted target, atomic project+immutable creation receipt; физическая БД/runtime не создаются.
-
-Platform state API: [контракт](../features/platform-project-mutations.md), `project/service/change_state`, `project/repository/postgres/management`, `operator/repository/postgres/mutation`, `project/transport/http/{state,suspend_project,resume_project,retry_project}`. Same SQL transaction/locked authority/receipt; tests — `app/auth/operator_{catalog_write,authority}_test.go`. Bridge/provisioning ещё закрыты.
-
-Platform catalog read API: [контракт](../features/platform-projects-api.md), `project/service/{catalog,list,read}`, `project/transport/http/{catalog,list_projects,read_project}`, `router/operator.go`, `app/auth/operator_catalog_test.go`. Consumer list types в service, same SQL pool; snapshot чтения не mutation guard.
-
-Project lifecycle: [контракт](../features/project-lifecycle.md), `internal/platform/project/domain/transition.go`, `repository/postgres/transition.go`, `migrations/platform/transitions_test.go`; caller-owned transaction после authority locks, atomic audit/receipt. Operator HTTP использует тот же port; executor ещё не подключён.
-
-Multi-project operator foundation: [контракт и ограничения](../features/platform-operators.md), `internal/platform/operator`, `migrations/platform/000002_operators.*`; использует Auth setup, не отдельный login stack.
-
-Opt-in operator Auth: [platform-login](../features/platform-login.md), `app/auth/operator.go`, `router/operator.go`, `config/platform.go`, operator repository `runtime.go`, `deploy/platform-runtime-grants.sql`; один профиль/listener, не fleet dispatcher.
-
-Offline operator recovery: [platform-recovery](../features/platform-recovery.md), `cmd/admin-recovery/realm.go`, operator repository `recovery.go`, `deploy/platform-recovery-grants.sql`; explicit platform UUID и отдельные DB-группы, существующие password/MFA транзакции.
-
-Сборка Auth: `internal/app/auth/app.go` — standalone resources/server; `realm.go` — feature assembly с borrowed dependencies; `run.go` — background lifecycle. Второй realm пока не публикуется.
-
-Redis/crypto scope: [контракт и проверки](../features/realm-isolation.md), `internal/infra/realmscope`, `app/auth/realm_security.go`, feature `repository/redis/*`. Standalone — explicit legacy, не default для новой платформы.
-
-Обязательные правила — [AGENTS.md](../../AGENTS.md), ближайший шаг — [current-task](current-task.md). Ниже маршрутизация, не перечень обязательного чтения. Выбрать нужную тему, прочитать связный раздел с ограничениями и проверить код.
-
-| Тема | Источник | Где искать |
+| Задача | Первичный документ | Код |
 | --- | --- | --- |
-| План и результаты | [implementation](../planning/implementation.md), [roadmap](../planning/roadmap.md), [history](../planning/history.md) | В implementation — текущий выпуск A1–A8; history читать только для нужного прошлого решения |
-| Архитектура и запуск | [architecture](../architecture.md), [ADR](../adr/) | `cmd/auth`, `internal/app`, `internal/config`, `internal/server/http` |
-| Независимые проекты — до UI | [multi-project MP1–MP8](../planning/multi-project.md), [ADR005](../adr/005-independent-projects.md), [каталог](../features/project-catalog.md) | internal/platform/project/{domain,repository/postgres}, migrations/platform; process/project split и admin bridge — ADR005, runtime ещё однопроектный |
-| API и ошибки | [contract](../api/contract.md), [руководство интегратора](../auth-guide.md) | `internal/transport/http/router`, `httpx`, фичевые `transport/http`; generated — `docs/api/generated` |
-| Схема и транзакции | [schema](../schema.md), [ADR 002](../adr/002-sessions-and-transactions.md) | `migrations`, фичевые `repository/postgres` |
-| Sessions/security | [auth-security](../planning/auth-security.md), [ADR 002](../adr/002-sessions-and-transactions.md) | `internal/auth/session`, router; для конкретного сценария — его service/repository |
-| Native refresh/logout/API | [native-http](../features/native-http.md), [refresh-storage](../features/refresh-storage.md), [ADR 004](../adr/004-jwt-access-profiles.md) | token/{service,repository/postgres,transport/http}/{refresh,logout}*, App token/native_token, router/token; bounded cleanup — account/{retention,transient_cleanup}, SQL retention_checkpoints |
-| Первая API issuance | [native-issuance](../features/native-issuance.md) | password/service/authenticate → token/service/native_password_login/native_login; repository/postgres/native/issuance_audit; policy — config/native_jwt.go, сборка — app/auth/token/native_token |
-| Native MFA | [native-mfa](../features/native-mfa.md), [native HTTP](../features/native-http.md) | token/service/native_login, repository/postgres/native_mfa; mfa/service/native_login/login_enrollment и repository/postgres/native_completion/login_*; HTTP — token/transport/http/native_mfa/native_enrollment* |
-| Native email OTP | [native-email-otp](../features/native-email-otp.md), [native HTTP](../features/native-http.md) | token/service/native_email_login и methods/emailotp/service/native_login; общий repository/postgres/{request,confirm}, API-only target/proof → issuance/MFA; HTTP — token/transport/http/native_email_* |
-| JWT — ключи и выдача | [jwt-keys](../features/jwt-keys.md), [jwt-exchange](../features/jwt-exchange.md), [jwt-access](../planning/jwt-access.md), [ADR 004](../adr/004-jwt-access-profiles.md) | internal/auth/token/{signing,service,repository,settings,transport/http}, app/auth/token.go, router/token.go, pkg/authjwt |
-| JWT online authority | [jwt-introspection](../features/jwt-introspection.md) | token/{service,repository/postgres,repository/redis,settings,transport/http}/introspection*, app/auth/token_introspection |
-| JWT consumer/middleware | [jwt-consumer](../features/jwt-consumer.md) | pkg/authjwt/{consumer,consumer_transport,jwks_cache,introspection,middleware,permissions,principal}, example_test; Auth TLS wire contract — router/jwt_consumer_contract_test |
-| JWT settings/UI contract | [jwt-profile-settings](../features/jwt-profile-settings.md) | settings policy/SQL/HTTP tokenIssuance, read-only tokenProfiles; app/auth/token_deployment; final token/MFA SQL guards |
-| JWT security/restore gate | [матрица S1–S10](../operations/jwt-security-acceptance.md), [recovery](../operations/jwt-recovery.md) | password repository jwt_consumer_sql/restore_auth integration tests; deploy/restore-auth-state.sql + scripts/postgres-restore.sh/mock tests; source restore_audit/runtime-grants |
-| Локальный HTTPS-стенд | [sandbox](../operations/local-sandbox.md) | Task sandbox:up/down/jwt/jwt:rotation/admin/lifecycle/security, deploy/compose.sandbox*.yml + sandbox-runtime.sql; deploy/sandbox — fixtures и opt-in JWT/rotation/admin/lifecycle/security acceptance; ignored tmp/sandbox, отдельный Compose project auth-sandbox |
-| Политика входа/settings | [auth-settings](../features/auth-settings.md) | `internal/auth/settings`, `internal/app/auth`, `internal/config` |
-| SMTP settings/rotation | [smtp-settings](../features/smtp-settings.md) | Settings: `smtp*`, `app/auth/smtp.go`, `infra/mailer` |
-| Google/Telegram settings/rotation | [provider-settings](../features/provider-settings.md) | Settings: `provider*`, `app/auth/provider_settings.go`, OIDC flow/MFA provider version, `integrations/oidc` shared owner |
-| Роли/permissions | [roles-permissions](../features/roles-permissions.md) | `internal/access` |
-| Каталог разрешений | [access-catalog](../features/access-catalog.md) | `internal/access/settings`, `cmd/access-catalog`, `internal/app/access` |
-| Список/карточка пользователей | [user-directory](../features/user-directory.md) | Account: `user_directory`, `list_users`, `read_user` |
-| Статус, удаление, retention | [account-deletion](../features/account-deletion.md) | `internal/auth/account`, config, app lifecycle |
-| Сохраняемые сроки очистки | [retention-settings](../features/retention-settings.md) | Settings: `retention*`, account worker; batch/interval остаются ENV |
-| Первый super-admin | [initial-setup](../features/initial-setup.md) | Account: `setup*`; не lost-admin recovery |
-| Аварийное восстановление пароля | [admin-recovery](../features/admin-recovery.md) | `cmd/admin-recovery`, password: `operator_recovery*`, `deploy/recovery-grants.sql` |
-| Приглашения/provisioning | [invitations](../features/invitations.md) | Account: `provision*`/`invitation_*`, password: `activate_invitation*` |
-| Временный пароль | [temporary-passwords](../features/temporary-passwords.md) | Password: `temporary_*` |
-| Обычный password recovery | [password-recovery](../features/password-recovery.md) | Password: forgot/reset/change |
-| Email verification | [email-verification](../features/email-verification.md) | Account: `verification_*`, delivery |
-| Первая почта external-only | [email-binding](../features/email-binding.md) | Account: `email_binding*` |
-| Смена email/защитный recovery | [email-change](../features/email-change.md) | Account: `email_change_*`, password: `protected_recovery*` |
-| MFA | [mfa](../features/mfa.md) | `internal/auth/mfa`, emailotp: `reauthentication_*` |
-| Потеря всех MFA-факторов | [mfa-recovery](../planning/mfa-recovery.md), [runbook](../operations/mfa-recovery-acceptance.md) | MFA recovery, `cmd/admin-recovery`; не отключение MFA |
-| Внешние identities | [external-identities](../features/external-identities.md) | Account: `linked_identity`, `identity_resolution*` |
-| Telegram / Google | [telegram](../features/telegram-login.md), [google](../features/google-login.md) | `internal/auth/methods/{telegram,google,oidc}`, `internal/integrations`, app/auth |
-| Email OTP | [email-otp](../features/email-otp.md) | `internal/auth/methods/emailotp`, app/auth, delivery runner |
-| Origin/CORS/HTTPS/SMTP | [browser-security](../operations/browser-security.md) | HTTP middleware/router, server, `internal/infra/mailer` |
-| Угрозы и security boundaries | [threat-model](../threat-model.md), нужный [ADR](../adr/) | Проверить границы затронутого сценария, не только HTTP middleware |
-| Нагрузка и ресурсы | [performance](../operations/performance.md), [HTTP baseline/cleanup](../operations/load-baseline.md), [load/rest](../operations/load-rest.md) | Hasher/limits, HTTP admission, SQL/Redis, retention/delivery; Task sandbox:load/load:rest/cleanup, deploy/sandbox/load*_test.go и cleanup* fixtures/observer |
-| Команды и CI | [режим проверок](../planning/implementation.md#режим-проверок-после-уточнения-пользователя) | `Taskfile.yml`, `.github/workflows/ci.yml`, `deploy` |
+| План независимых проектов | [MP1–MP8](../planning/multi-project.md), [ADR005](../adr/005-independent-projects.md) | `Project`, `internal/platform/operator` |
+| Каталог, создание, состояния | [каталог](../features/project-catalog.md), [read API](../features/platform-projects-api.md), [создание](../features/platform-project-creation.md), [изменения](../features/platform-project-mutations.md), [lifecycle](../features/project-lifecycle.md) | `Project/{domain,service,repository/postgres,transport/http}` |
+| Подготовка БД и ключей | [reservation](../features/project-preparation.md), [storage](../features/project-storage-preparation.md), [schema](../features/project-schema-preparation.md), [credentials](../features/project-secrets-preparation.md) | `cmd/project-prepare`, `Project/{storage/postgres,credentials,repository/postgres}`, `deploy/*grants.sql` |
+| Onboarding проекта | [подготовка и HTTP-профиль](../features/project-onboarding-preparation.md), [первый администратор](../features/initial-setup.md) | `Project/storage/postgres/onboarding*`, `Auth/account/*/setup*`, `internal/transport/http/router/project_onboarding*` |
+| Оператор платформы | [foundation](../features/platform-operators.md), [login](../features/platform-login.md), [recovery](../features/platform-recovery.md) | `internal/platform/operator`, `internal/app/auth/operator*`, `router/operator.go`, `cmd/admin-recovery` |
+| Сборка, lifecycle, изоляция | [архитектура](../architecture.md), [realm isolation](../features/realm-isolation.md) | `internal/app/auth/{app,realm,run,realm_security}.go`, `internal/config`, `internal/server/http`, `internal/infra/realmscope` |
 
-Под «Account» понимается `internal/auth/account`, под «Password» — `internal/auth/methods/password`. Путь с `*` — ориентир поиска, не отдельный пакет. Правила инструментов и актуализации — в AGENTS; подробные статусы сюда не копировать.
+## Auth и доступы
+
+| Задача | Первичный документ | Код |
+| --- | --- | --- |
+| API, ошибки, middleware | [контракт](../api/contract.md), [руководство](../auth-guide.md), [browser security](../operations/browser-security.md) | `internal/transport/http/{router,httpx,middleware}`, фичевые `transport/http` |
+| Сессии, транзакции, SQL | [security-план](../planning/auth-security.md), [ADR002](../adr/002-sessions-and-transactions.md), [schema](../schema.md) | `Auth/session`, `migrations`, фичевые `repository/postgres` |
+| Password, provisioning | [recovery](../features/password-recovery.md), [offline recovery](../features/admin-recovery.md), [invitations](../features/invitations.md), [temporary](../features/temporary-passwords.md) | `Auth/methods/password`, `Auth/account/*/{provision*,invitation_*}`, `cmd/admin-recovery` |
+| Email и внешние входы | [verification](../features/email-verification.md), [binding](../features/email-binding.md), [change](../features/email-change.md), [identities](../features/external-identities.md), [email OTP](../features/email-otp.md), [Google](../features/google-login.md), [Telegram](../features/telegram-login.md) | `Auth/account`, `Auth/methods/{emailotp,google,telegram,oidc}`, `internal/integrations` |
+| MFA | [контракт](../features/mfa.md), [recovery-план](../planning/mfa-recovery.md), [приёмка](../operations/mfa-recovery-acceptance.md) | `Auth/mfa`, `Auth/methods/emailotp/service/reauthentication*` |
+| Роли и пользователи | [roles](../features/roles-permissions.md), [permission catalog](../features/access-catalog.md), [directory](../features/user-directory.md), [deletion](../features/account-deletion.md) | `internal/access`, `cmd/access-catalog`, `Auth/account` |
+| Настройки | [Auth policy](../features/auth-settings.md), [SMTP](../features/smtp-settings.md), [providers](../features/provider-settings.md), [retention](../features/retention-settings.md) | `Auth/settings`, `internal/app/auth`, `internal/config` |
+| JWT: ключи, exchange, проверка | [план](../planning/jwt-access.md), [ADR004](../adr/004-jwt-access-profiles.md), [keys](../features/jwt-keys.md), [exchange](../features/jwt-exchange.md), [introspection](../features/jwt-introspection.md), [consumer](../features/jwt-consumer.md), [settings](../features/jwt-profile-settings.md) | `Auth/token`, `pkg/authjwt`, `internal/app/auth/token*` |
+| Native: выдача, MFA, email OTP | [HTTP](../features/native-http.md), [refresh](../features/refresh-storage.md), [issuance](../features/native-issuance.md), [MFA](../features/native-mfa.md), [email OTP](../features/native-email-otp.md) | `Auth/token`, `Auth/mfa`, `Auth/methods/{password,emailotp}` |
+
+## Проверки и эксплуатация
+
+| Задача | Первичный документ | Код / evidence |
+| --- | --- | --- |
+| Текущий scope и выполнение | [implementation](../planning/implementation.md), [roadmap](../planning/roadmap.md) | [history](../planning/history.md): искать нужный заголовок, не читать весь архив |
+| Security и восстановление | [угрозы](../threat-model.md), [JWT security matrix](../operations/jwt-security-acceptance.md), [restore gates](../operations/jwt-recovery.md) | `deploy/restore-auth-state.sql`, `scripts/postgres-restore.sh`, фичевые SQL/security tests |
+| Приёмка и производительность | [сводка и открытые gates](../operations/acceptance-summary.md), [performance](../operations/performance.md), [baseline](../operations/load-baseline.md), [load/rest](../operations/load-rest.md) | `deploy/sandbox`, `Auth/account` retention/delivery, shared hasher/limits |
+| Команды и стенд | [режим проверок](../planning/implementation.md#режим-проверок-после-уточнения-пользователя), [sandbox](../operations/local-sandbox.md) | `Taskfile.yml`, `.github/workflows/ci.yml`, `deploy/compose.sandbox*.yml` |
+
+Шаблоны путей — ориентир поиска, не обещание отдельного пакета. Подробности фичи и тесты искать через её документ/Serena, а не расширять эту карту до списка файлов.
