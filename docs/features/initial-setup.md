@@ -1,6 +1,6 @@
 # Первый супер-администратор
 
-Для multi-project отдельно реализован [подготовительный stage](project-onboarding-preparation.md): generated project setup secret остаётся encrypted в каталоге, его digest заранее pinned в проектной БД вместе с безопасными settings. Сам stage не включает эти routes, не создаёт администратора и не выдаёт token браузеру. Описанный ниже standalone setup flow сохраняется; runtime/admission/delivery для проекта подключаются отдельно.
+Для multi-project отдельно реализован [подготовительный stage](project-onboarding-preparation.md): generated project setup secret остаётся encrypted в каталоге, его digest pinned в проектной БД вместе с безопасными settings. Сам stage не включает эти routes, не создаёт администратора и не выдаёт token браузеру. По уточнению21 октября владелец платформы управляет новыми проектами через будущий guarded bridge без копии identity/выдачи setup secret/обязательного первого local super_admin. Описанный ниже flow относится к standalone first-install; его guards не меняются и не становятся обязательным мастером каждого owner-managed проекта.
 
 Backend 10.3a-local. UI-мастер будет отдельным этапом; уже сейчас доступны две opt-in ручки. Это первоначальная настройка новой установки, не обычная регистрация, назначение роли существующему пользователю или восстановление потерянного администратора.
 

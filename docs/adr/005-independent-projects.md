@@ -47,6 +47,8 @@ Persistence участвует в **Read Committed транзакции вызы
 
 ## 3. Одна сессия оператора, без пользовательского SSO
 
+Уточнение21 октября: владелец платформы остаётся полноправным администратором каждого проекта без project membership/копирования identity. Создание проекта не требует создания отдельного владельца/первого local super_admin; локальных администраторов владелец добавляет явно существующими provisioning-сценариями. Project role не выдаёт platform rights и не может отозвать полномочия владельца платформы. Полномочия проверяются backend по действующей platform session/permissions/freshness, не по hardcoded UserID или клиентскому флагу. Raw setup secret пользователю не передавать. SQL-аудит actor origin, target binding и защищённый межбазовый commit остаются обязательными; уточнение не объявляет bridge/readiness реализованными и не вводит SSO.
+
 Оператор входит на platform origin, проходит MFA/fresh proof и управляет любым разрешённым проектом через platform endpoints с явно указанным target ID. Пользовательский project origin не принимает платформенную cookie/Bearer и не создаёт project session для оператора. Project super-admin не получает platform rights. Cookie `__Host-session` может иметь прежнее имя на разных origins: Domain не задаётся, Path=/, HTTPS; Origin/CORS/CSRF policy остаётся exact и project-specific.
 
 Platform management — отдельный доверенный сценарий, не HTTP proxy к произвольному URL/path и не вызов обычного project handler с подменённым UserID. Для users/access/settings определить отдельные platform permissions и конечное соответствие конкретным use cases. Platform actor не становится синтетическим пользователем проекта. Membership/delegation проверки обычного проектного администратора не заменяются `skipAuth=true`.

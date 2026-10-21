@@ -4,6 +4,8 @@ SMTP-настройки принадлежат `internal/auth/settings`. Root en
 
 ## Первоначальная настройка и хранение
 
+Ниже описан standalone startup. В multi-project первоначальные значения передаются явно через закрытый [Target.PrepareSMTP](project-onboarding-preparation.md#первоначальный-smtp-проекта--21-октября-2026): проектный ключ/purpose, атомарная запись SMTP+receipt, без импорта ENV/platform SMTP и без создания локального владельца. Общие validation/encryption/SQL initializer переиспользуются; обычный project runtime читает сохранённые значения и не делает reseed. UI/платформенный административный bridge ещё не подключены.
+
 На новой установке startup создаёт singleton `auth.smtp_settings` из `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_DOMAIN`, `SMTP_REQUIRE_TLS`. Существующая запись всегда приоритетнее seed; рестарт не меняет её из ENV. Конкурентные initializers сохраняют одного winner. После initialized setup marker отсутствие строки — ошибка, не разрешение повторно импортировать ENV. Повреждённый ciphertext, неверный root key или недоступная SQL также не разрешают fallback.
 
 Пароль шифруется существующим AES-GCM с отдельным purpose `smtp-settings:v1`; root `ACCOUNT_ENCRYPTION_KEY` не переносится в SQL/UI. База хранит JSON только не-секретной конфигурации, version и password presence; пароль — отдельный ciphertext. Чтение API/audit никогда не возвращает пароль, ciphertext, прежний пароль или маску для обратного сохранения. Очистка временного decrypted byte slice не означает гарантированное стирание Go strings/памяти GC; процесс и root key защищаются deployment-политикой.

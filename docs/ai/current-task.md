@@ -2,15 +2,15 @@
 
 Обновлено 21 октября 2026. [Карта](index.md) · [статусы](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui) · [приёмка](../operations/acceptance-summary.md#открытые-ограничения-приёмки). Git/staging и доступность стенда проверять по факту.
 
-## Последний результат — MP3 physical onboarding
+## Последний результат — MP3 initial project SMTP и уточнение владельца
 
-Явные Target.ActivateOnboarding/CloseOnboarding связывают restricted catalog admission с maintenance journal и реальным SQL доступом. Opening/open/closing/closed + operation/version/generation; ownership/OIDs/role/ACL guards и target session lock. Withdrawal до target writes; новая runtime authentication перед publication. Close закрывает новые подключения, завершает только project runtime sessions и отмечает closed после drain. Повтор/обрыв executor/старая target epoch восстанавливаются из SQL без reset/adoption. [Контракт](../features/project-onboarding-preparation.md#физическая-активация-и-остановка--21-октября-2026), [проверки/ограничения](../planning/history.md#результат-mp3-physical-onboarding--21-октября-2026).
+Target.PrepareSMTP сохраняет explicit project SMTP с project-scoped cipher и atomic private smtp_prepared receipt. Переиспользованы прежние validator/encryption/SQL initializer и executor-only open/reseal. Replay без UPDATE; lost row/orphan/tamper/mismatch/current authority loss дают отказ, не reset/fallback. Новых пользователей/ролей/HTTP/CLI/ENV/dependencies нет. [Контракт](../features/project-onboarding-preparation.md#первоначальный-smtp-проекта--21-октября-2026), [evidence](../planning/history.md#результат-mp3-initial-project-smtp--21-октября-2026).
 
-Restricted executor получает SET TRUE/INHERIT FALSE только к своему runtime (initial schema installer), без pg_signal_backend. Source target SQL/profile расширены без новой migration: старым installations нужен controlled upgrade, не reset. CLI по-прежнему sealed/NOLOGIN; production server/обычные Auth routes/ready/UI не публиковались.
+Пользователь уточнил: он как владелец платформы создаёт проекты, управляет каждым и явно добавляет локальных администраторов. Не копировать его identity, не требовать первого local super_admin и не выдавать человеку raw setup token. Это current platform authority через [MP2.7/ADR005](../adr/005-independent-projects.md#3-одна-сессия-оператора-без-пользовательского-sso), не SSO/SQL SUPERUSER/bypass fresh-auth. Standalone setup и прежние закрытые project setup/probe guards не ослаблялись; owner-managed readiness ещё надо реализовать отдельно.
 
-## Следующий шаг — защищённая первоначальная конфигурация
+## Следующий шаг — административный bridge владельца
 
-Protected initial SMTP provisioning и доставка setup authority доверенному владельцу, без URL/stdout/platform-secret fallback. Затем trusted loader/dispatcher и automatic reconcile/withdraw/drain при suspend/restart, вызов existing setup, first-admin/configuration readiness → binding/ready. Factory сейчас требует SQL SMTP; runtime activation сама его не создаёт. [План](../planning/multi-project.md#ограничения-runtime-и-onboarding).
+MP2.7: один platform principal управляет выбранным проектом без fake project user. Сначала конкретный action/permission mapping, удержание current platform authority до project commit, audit actor origin/idempotent receipt/uncertain outcome и revoke/concurrency tests; bridge не открывать до этих guards. Затем trusted registry/dispatcher/automatic reconcile и owner-managed configuration readiness → binding/ready. SMTP нужен выбранным email-функциям, не любому Telegram-only проекту. UI отдельно согласовать. [План](../planning/multi-project.md#результат-и-границы).
 
 Новый протокол пока вызывают только integration tests. Outage/потеря executor может оставить physical open с journal: ошибка cleanup не успех; новый executor обязан reconcile до обслуживания. Catalog unavailable не доказывает withdrawal. Поздний suspend закрывает новые HTTP admission, но не отменяет уже committed project write; background reconcile ещё не реализован. Uncertain commit не означает rollback и не разрешает сбросить данные.
 

@@ -1,5 +1,7 @@
 # Краткий отчёт по проверкам
 
+21 октября, MP3-initial-project-smtp: Go tests/финальный lint0, targeted race/security и actual PostgreSQL18.6/SCRAM command regression PASS5.50s. Scoped SMTP ciphertext+receipt atomic rollback, immutable replay, orphan/lost/tamper/mismatch/authority refusal, no users/roles и sealed runtime проверены. [Evidence/NOT RUN](../planning/history.md#результат-mp3-initial-project-smtp--21-октября-2026). Уточнён platform-owner контракт без копии identity/setup-token handoff/обязательного local super_admin; typed bridge/owner-managed readiness/real SMTP/UI ещё не готовы. Рабочие БД/secrets не менялись.
+
 21 октября, MP3-physical-onboarding: tests/lint0, targeted race/security и actual PostgreSQL18.6/SCRAM regression пройдены; target journal, publication rollback, session-loss/restart, epoch fencing, withdrawal-before-DDL, runtime transaction termination и foreign-session refusal. [Полное evidence/NOT RUN](../planning/history.md#результат-mp3-physical-onboarding--21-октября-2026). Это явный закрытый provisioning API, не server/CLI activation, scheduler/автоматический suspend drain, ready, UI или fleet/load/GC sign-off. Новых dependencies/ENV/миграций нет; рабочие БД и secrets не изменялись.
 
 ## Открытые ограничения приёмки

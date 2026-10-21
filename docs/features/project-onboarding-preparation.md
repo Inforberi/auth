@@ -1,4 +1,6 @@
-# Подготовка настроек и первого администратора проекта
+# Первоначальная подготовка проекта
+
+Уточнение21 октября: основной multi-project сценарий — управление владельцем платформы из общей панели, без его копии в проектной БД и без выдачи setup-токена человеку. Отдельный local super_admin не обязателен; дополнительных администраторов владелец создаёт явно через будущий guarded bridge. Описанная ранее setup foundation остаётся закрытой технической основой, не пользовательским обязательным мастером каждого проекта. Standalone первый запуск сохраняет прежний контракт. [Граница владельца](platform-operators.md#граница-полномочий), [план](../planning/multi-project.md#результат-и-границы).
 
 MP3-onboarding-preparation,20 октября2026. Opt-in `project-prepare -schema -secrets -password -onboarding` после [установки технического пароля](project-secrets-preparation.md#установка-технического-пароля--20-октября). Без -password новый флаг отвергается до подключений. Успех возвращает `stage: onboarding_prepared`, не ready/созданного администратора. Credentials/setup token/digest не включаются в ответ.
 
@@ -89,11 +91,23 @@ Admission — право на setup HTTP, не узкий набор SQL-при�
 
 Source `storage-target.sql`/target profile и первоначальный schema installer расширены без новой migration file. Existing installations требуют controlled upgrade, включая ограниченный SET grant; source bootstrap поверх рабочей БД не запускать. [Проверки и ограничения](../planning/history.md#результат-mp3-physical-onboarding--21-октября-2026).
 
+## Первоначальный SMTP проекта — 21 октября 2026
+
+`Target.PrepareSMTP` — закрытая provisioning-операция для доверенного backend caller, не HTTP-ручка и не новый CLI/ENV режим. Передаются typed project keys, явные SMTP config/password и deployment allowlist. Platform SMTP, root key и пользовательские credentials не копируются. `OnboardingSMTP` скрывает содержимое при fmt/JSON; результат содержит только безопасный SMTPSnapshot, без пароля/ciphertext/setup authority.
+
+- Общий `settings/service.NewSMTPSeed` переиспользует прежнюю проверку config/password/destination и шифрование. Для проекта принудительно RequireTLS=true, точный allowlist до16 host:port; никакого сетевого probe под SQL locks. Standalone Initialize сохраняет прежний приоритет существующей записи и отсутствие ENV fallback при decrypt/SQL failure. Валидация не дублируется в provisioning.
+- Cipher — существующий AES-GCM, purpose проектного realmscope + smtp-settings:v1. В проектной БД — только ciphertext, config, version и password presence. Platform/unscoped key purpose не расшифровывает проектный секрет. Очистка byte slices не обещает стирания Go strings/GC.
+- До открытия проверяются прежние sealed/NOLOGIN/ACL/OID/password receipt guards. Затем тот же executor-only open/attestation/reseal lifecycle, без runtime LOGIN/CONNECT/admission/ready. Shared schema lock → owner role → Access lock → exact private marker/setup proof. Наличие configuration-prepared, исходного safe policy/setup pin и отсутствие users/roles обязательны для этого первоначального stage.
+- Существующий `InitializeSMTP` выделен в `InitializeSMTPInTransaction`, без второго SQL writer. SMTP row и retained `project_meta.identity.smtp_prepared` сохраняются одной transaction. Missing row после receipt, unmarked existing row, чужой ciphertext, изменённая version/config/password и занятый проект дают отказ, не reseed/adoption/reset. Повтор той же конфигурации/password сохраняет оба xmin; изменение настройки затем относится к обычному административному API, не bootstrap.
+- Current catalog authority проверяется до открытия, перед project commit и после reseal. Ошибка до commit откатывает SMTP и receipt; поздняя потеря authority может оставить корректные настройки в **закрытой** БД. При любой ошибке результат пустой; операция не выдаёт secret или успешный ready. Outage при bounded cleanup требует прежнего recovery по ownership journal.
+
+Source private schema расширена default-false smtp_prepared с CHECK against configuration_prepared, без новой migration file. Existing installations требуют controlled upgrade, не повтор bootstrap/reset. Новых dependencies, сетевых clients, workers, очередей, HTTP/Swagger DTO или чтения реальных ENV нет. SMTP setup — отдельный выбор для email-функций; не вводит требование локального владельца/SMTP для любого owner-managed проекта. Real SMTP/TLS delivery и готовность всего проекта этим stage не доказываются.
+
 ## Что ещё не включено
 
-Этот этап **не запускает UI и не публикует project setup endpoint**. Factory, SQL admission и явный physical activation/recovery реализованы, но ещё нет production caller/loader/dispatcher, автоматического reconcile/drain при suspend и protected SMTP provisioning. Доставка raw setup secret доверенному владельцу/доступ оператору требуют отдельного протокола, не ссылки с секретом в URL или CLI stdout. Не копировать credentials платформенного администратора в проект и не трактовать platform session как SSO.
+Этот этап **не запускает UI и не публикует project setup endpoint**. Factory, SQL admission, явные physical activation/recovery и protected SMTP stage реализованы; production caller/loader/dispatcher и автоматический reconcile/drain ещё отсутствуют. Следующий функциональный блок — административный bridge владельца с текущей platform authority, явным project target и отдельным audit actor origin. Raw setup secret человеку не передаётся. Не копировать credentials платформенного администратора в проект и не трактовать platform session как SSO.
 
-Завершение первого администратора переиспользует [существующий setup](initial-setup.md): email proof/password policy/MFA/recovery и durable initialized marker; SMTP/provider/MFA readiness не выдумывается. Текущий setup требует MFA, выбор обязательности ещё в отдельном A6.3m. Configuration prepared не означает готовый SMTP или существующего администратора. Далее — protected initial SMTP/setup authority delivery, trusted loader/dispatcher/reconciliation, first-admin/configuration readiness и binding/ready. Не открывать обычные Auth endpoints только на основании этого marker.
+Standalone [существующий setup](initial-setup.md) сохраняет email proof/password policy/MFA/recovery и durable initialized marker; выбор обязательности MFA остаётся в A6.3m. Для owner-managed проекта readiness надо связать с техническими проверками и выбранными функциями, а не с обязательным первым local super_admin. Сам этот блок не меняет прежние закрытые setup/runtime probes и не публикует ready. Далее — MP2.7/target registry/dispatcher/reconciliation и owner-managed configuration readiness → binding/ready; обычные Auth endpoints только по marker не открывать.
 
 ## Проверки
 
