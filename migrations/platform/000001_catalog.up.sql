@@ -97,3 +97,17 @@ CREATE TABLE platform.project_secrets (
   created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
 REVOKE ALL ON platform.project_secrets FROM PUBLIC;
+
+-- Platform actor is not a project user. Intent/audit is not proof of execution.
+CREATE TABLE platform.project_role_intents (
+  operation_id UUID PRIMARY KEY CHECK (operation_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  project_id UUID NOT NULL REFERENCES platform.projects(id),
+  realm_id UUID NOT NULL CHECK (realm_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  actor_id UUID NOT NULL CHECK (actor_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  version BIGINT NOT NULL CHECK (version>0),
+  generation BIGINT NOT NULL CHECK (generation>0),
+  binding JSONB NOT NULL CHECK (jsonb_typeof(binding)='object' AND octet_length(binding::text)<=1024),
+  request JSONB NOT NULL CHECK (jsonb_typeof(request)='object' AND octet_length(request::text)<=32768),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+REVOKE ALL ON platform.project_role_intents FROM PUBLIC;

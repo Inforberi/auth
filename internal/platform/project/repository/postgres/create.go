@@ -13,7 +13,7 @@ import (
 
 func (r *Repository) Create(ctx context.Context, actor operatordomain.Principal, input domain.Create) (domain.CreationReceipt, error) {
 	var result domain.CreationReceipt
-	err := r.mutate(ctx, actor, func(ctx context.Context, tx pgx.Tx) error {
+	err := r.mutate(ctx, actor, operatordomain.ProjectsManage, func(ctx context.Context, tx pgx.Tx) error {
 		command, err := input.Normalize()
 		if err != nil {
 			return err

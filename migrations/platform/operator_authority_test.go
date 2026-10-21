@@ -32,6 +32,7 @@ func operatorAuthority(t *testing.T, db *pgxpool.Pool, ctx context.Context, repo
 	if !errors.Is(wrong.AuthorizeRead(ctx, actor, domain.ProjectsRead), domain.ErrForbidden) {
 		t.Fatal("session crossed realm boundary")
 	}
+	t.Run("role creation intent", func(t *testing.T) { roleCreationIntent(t, db, ctx, actor) })
 	for _, test := range []struct{ name, change, restore string }{
 		{"revoked", `UPDATE auth.sessions SET revoked_at=clock_timestamp()`, `UPDATE auth.sessions SET revoked_at=NULL`},
 		{"expired", `UPDATE auth.sessions SET expires_at=created_at+interval '1 microsecond'`, `UPDATE auth.sessions SET expires_at=clock_timestamp()+interval '10 minutes'`},

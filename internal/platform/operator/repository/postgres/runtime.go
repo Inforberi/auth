@@ -33,6 +33,7 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 			('platform.projects','SELECT'),
 			('platform.project_events','SELECT'),
 			('platform.project_creations','SELECT'),('platform.project_creations','INSERT'),
+			('platform.project_role_intents','SELECT'),
 			('platform.operator_realm','SELECT'),('platform.operator_permissions','SELECT'),('platform.operator_permissions','INSERT'),
 			('platform.operator_audit','SELECT'),('platform.operator_audit','INSERT')) required(relation,privilege)
 			WHERE NOT has_table_privilege(current_user,required.relation,required.privilege))
@@ -54,6 +55,11 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 			WHERE has_column_privilege(current_user,'platform.projects',col,'INSERT'))
 		AND NOT has_table_privilege(current_user,'platform.projects','INSERT,DELETE,TRUNCATE')
 		AND NOT has_table_privilege(current_user,'platform.project_creations','UPDATE,DELETE,TRUNCATE')
+		AND NOT has_table_privilege(current_user,'platform.project_role_intents','DELETE,TRUNCATE')
+		AND NOT has_any_column_privilege(current_user,'platform.project_role_intents','UPDATE,REFERENCES')
+		AND NOT has_column_privilege(current_user,'platform.project_role_intents','created_at','INSERT')
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['operation_id','project_id','realm_id','actor_id','version','generation','binding','request']) col
+			WHERE NOT has_column_privilege(current_user,'platform.project_role_intents',col,'INSERT'))
 		AND NOT has_table_privilege(current_user,'platform.project_preparations','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
 		AND NOT has_table_privilege(current_user,'platform.project_secrets','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
 		AND NOT has_any_column_privilege(current_user,'platform.project_secrets','INSERT,UPDATE,REFERENCES')

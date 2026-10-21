@@ -25,7 +25,7 @@ func NewManaged(db *pgxpool.Pool, authority MutationAuthority, freshFor time.Dur
 
 func (r *Repository) ApplyTransition(ctx context.Context, actor operatordomain.Principal, command domain.Transition) (domain.TransitionReceipt, error) {
 	var result domain.TransitionReceipt
-	err := r.mutate(ctx, actor, func(ctx context.Context, tx pgx.Tx) error {
+	err := r.mutate(ctx, actor, operatordomain.ProjectsManage, func(ctx context.Context, tx pgx.Tx) error {
 		command.ActorID, command.ActorKind = domain.ID(actor.UserID), domain.OperatorActor
 		var err error
 		result, err = Transition(ctx, tx, command)
@@ -37,7 +37,7 @@ func (r *Repository) ApplyTransition(ctx context.Context, actor operatordomain.P
 	return result, nil
 }
 
-func (r *Repository) mutate(ctx context.Context, actor operatordomain.Principal, apply func(context.Context, pgx.Tx) error) error {
+func (r *Repository) mutate(ctx context.Context, actor operatordomain.Principal, permission operatordomain.Permission, apply func(context.Context, pgx.Tx) error) error {
 	if r.authority == nil || r.db == nil {
 		return domain.ErrUnavailable
 	}
@@ -52,7 +52,7 @@ func (r *Repository) mutate(ctx context.Context, actor operatordomain.Principal,
 		defer stop()
 		_ = tx.Rollback(cleanup) //nolint:gosec // Preserve the original error; Commit closes the transaction.
 	}()
-	deadline, err := r.authority.AuthorizeMutation(ctx, tx, actor, operatordomain.ProjectsManage, r.freshFor)
+	deadline, err := r.authority.AuthorizeMutation(ctx, tx, actor, permission, r.freshFor)
 	if err != nil {
 		return err
 	}

@@ -2,6 +2,22 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+## Результат MP2.7 role-intent foundation — 21 октября 2026
+
+[Контракт](../features/platform-role-intents.md). Реализована только подготовка создания роли в каталоге: existing locked AuthorizeMutation, фиксированное AccessManage, exact project/version/generation и non-secret storage binding, canonical request, immutable intent/audit с platform realm/actor. Transaction owner переиспользован с явным permission каждого сценария, без дополнительной обёртки. Project-user authority, Auth sessions и HTTP API не изменены. Initial catalog schema/grants дополнены без новой migration/рабочего upgrade. Runtime не получает UPDATE/DELETE/TRUNCATE намерений, INSERT времени или ciphertext.
+
+UUID+ON CONFLICT DO NOTHING и отдельный SELECT дают canonical no-update replay; другое содержимое/actor/realm/project/binding — conflict после новых authority/target checks. Намерение не созданная роль/capability/очередь. A6.3m.6/A7-mfa-methods дополнены выбором TOTP/email/Telegram: повтор того же primary-канала не независимая MFA, фактический method/assurance не должен удовлетворять более строгому guard. MFA runtime этим блоком не менялся.
+
+Проверки на Go1.27.3:
+
+- Formatter и `task check` PASS, lint 0 issues: `/private/tmp/auth-role-intent-check.log`. После финального упрощения transaction owner — целевые project/operator/migrations tests и targeted lint PASS: `/private/tmp/auth-role-intent-targeted.log`, `/private/tmp/auth-role-intent-lint.log`. Прежнее предупреждение formatter extra-rules deprecated не менялось.
+- `go test -race ./internal/platform/project/domain ./internal/platform/project/repository/postgres ./internal/platform/operator/repository/postgres` PASS: `/private/tmp/auth-role-intent-race.log`. Это не live SQL-race.
+- PostgreSQL18.6 arm64, отдельный tmpfs/network-none контейнер, Linux test binary `./migrations/platform`, все catalog/operator/transitions SQL tests PASS: `/private/tmp/auth-role-intent-sql.log`. Реальный restricted runtime со штатным grants template: immutable xmin/time replay, шесть concurrent retries/одна запись, изменённый запрос, неизвестный проект, suspend/pending/version/generation/database/binding/secrets mismatch, revoked session/blocked owner/stale password/MFA, exact AccessManage mapping, rollback при отказе audit insertion, rejection расширенных runtime grants, bounded project lock wait и удержание session guard против concurrent revoke. Ошибки UUID-типа/временных ограничений тестовой фикстуры исправлены до финального PASS.
+- `task check:security` PASS: `/private/tmp/auth-role-intent-security.log`. 0 reachable/0 imported-package findings; 1 прежняя module-only находка без вызываемого пути. Новых зависимостей нет.
+- Fixture cleanup подтвердил отсутствие auth/platform schemas и временной SQL-роли. Удалены только контейнер auth-role-intent-check-20261021 и его test binary/directory; логи оставлены. Рабочие контейнеры/БД/ENV не менялись.
+
+NOT RUN/открыто: реальная project mutation/connection attestation, cross-DB audit/receipt, потеря platform connection и unknown project commit, public HTTP/dispatcher/UI, production capacity/GC. MP2.7 целиком открыт. Далее конкретное выполнение создания роли с typed actor и atomic project audit/receipt; не публиковать подготовку как готовую операцию.
+
 ## Результат MP3-initial-project-smtp — 21 октября 2026
 
 [Контракт](../features/project-onboarding-preparation.md#первоначальный-smtp-проекта--21-октября-2026). Target.PrepareSMTP использует typed project keys, явные config/password и allowlist. Общий SMTP seed policy/validator/encryption выделен из прежнего сервиса, shared InitializeSMTPInTransaction — из прежнего repository writer. Нет второго SMTP стека, network probe под locks, ENV/platform SMTP fallback, новых clients/workers/dependencies/HTTP/CLI. Private schema получила default-false smtp_prepared receipt с CHECK against configuration_prepared; source initial SQL, без новой migration/рабочего upgrade/reset. Cipher purpose — project realmscope + smtp-settings:v1; fmt/JSON input redacted, результат только безопасный SMTPSnapshot.
