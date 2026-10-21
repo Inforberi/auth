@@ -56,7 +56,10 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 		AND NOT has_table_privilege(current_user,'platform.project_creations','UPDATE,DELETE,TRUNCATE')
 		AND NOT has_table_privilege(current_user,'platform.project_preparations','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
 		AND NOT has_table_privilege(current_user,'platform.project_secrets','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
-		AND NOT has_any_column_privilege(current_user,'platform.project_secrets','SELECT,INSERT,UPDATE,REFERENCES')
+		AND NOT has_any_column_privilege(current_user,'platform.project_secrets','INSERT,UPDATE,REFERENCES')
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['ciphertext','key_id','format_version','created_at']) col
+			WHERE has_column_privilege(current_user,'platform.project_secrets',col,'SELECT'))
+		AND NOT has_column_privilege(current_user,'platform.project_preparations','onboarding_admitted','INSERT,UPDATE')
 		AND NOT has_column_privilege(current_user,'platform.project_preparations','secrets_created','INSERT,UPDATE')
 		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['project_id','reservation_id','storage_target','operation_id','version','generation','created_at']) col
 			WHERE has_column_privilege(current_user,'platform.project_preparations',col,'INSERT,UPDATE'))

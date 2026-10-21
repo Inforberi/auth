@@ -16,6 +16,8 @@ import (
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
+	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
+	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/platform/operator/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/credentials"
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
@@ -25,6 +27,7 @@ import (
 
 type ProjectOnboardingConfig struct {
 	Project            projectdomain.Project
+	Reservation        projectdomain.PreparationReservation
 	Keys               credentials.OnboardingKeys
 	SMTPAllowedTargets []string
 	HTTP               requestmiddleware.CapacityConfig
@@ -33,21 +36,20 @@ type ProjectOnboardingConfig struct {
 
 // Dependencies are borrowed; constructing or rejecting a runtime never closes them.
 type ProjectOnboardingDependencies struct {
-	Pool   *pgxpool.Pool
-	Redis  *redis.Client
-	Logger *zap.Logger
-	Hash   *hasher.Bounded
-	// Admit must check current onboarding authority for the exact reservation/binding.
-	// CheckCurrent alone, a receipt or a cached Project snapshot is not sufficient.
-	Admit func(context.Context) (bool, error)
+	Pool    *pgxpool.Pool
+	Catalog *pgxpool.Pool
+	Redis   *redis.Client
+	Logger  *zap.Logger
+	Hash    *hasher.Bounded
 }
 
 func NewProjectOnboarding(ctx context.Context, cfg ProjectOnboardingConfig, deps ProjectOnboardingDependencies) (http.Handler, error) {
 	if err := cfg.validate(); err != nil {
 		return nil, err
 	}
-	if deps.Admit == nil {
-		return nil, errors.New("project onboarding requires current admission")
+	admission, err := projectpostgres.NewOnboardingAdmission(deps.Catalog, cfg.Project, cfg.Reservation, cfg.Keys.Binding())
+	if err != nil {
+		return nil, err
 	}
 	p := cfg.Project
 	scope, err := realmscope.New("project", string(p.ID))
@@ -60,8 +62,15 @@ func NewProjectOnboarding(ctx context.Context, cfg ProjectOnboardingConfig, deps
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+	operator, err := operatorpostgres.New(deps.Catalog, operatordomain.RealmID(cfg.Keys.Binding().RealmID))
+	if err != nil {
+		return nil, err
+	}
+	if err := operator.CheckRuntime(ctx, false); err != nil {
+		return nil, err
+	}
 	admit := func(check context.Context) error {
-		allowed, err := deps.Admit(check)
+		allowed, err := admission.Check(check)
 		if err != nil || !allowed || check.Err() != nil {
 			return errors.New("project onboarding unavailable")
 		}
@@ -91,7 +100,7 @@ func NewProjectOnboarding(ctx context.Context, cfg ProjectOnboardingConfig, deps
 		return nil, err
 	}
 	return router.NewProjectOnboarding(router.ProjectOnboardingHTTP{
-		Origin: p.Origin, Setup: setup, Capacity: cfg.HTTP, Proxy: cfg.Proxy, Logger: deps.Logger, Admit: deps.Admit,
+		Origin: p.Origin, Setup: setup, Capacity: cfg.HTTP, Proxy: cfg.Proxy, Logger: deps.Logger, Admit: admission.Check,
 	})
 }
 

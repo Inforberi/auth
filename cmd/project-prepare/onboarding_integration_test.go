@@ -118,7 +118,7 @@ func onboardingPreparationDrill(t *testing.T, physical *pgx.Conn, env func(strin
 			proof.Digest()).Scan(&safe, &markerXmin, &policyXmin, &setupXmin))
 		require.True(t, safe)
 	})
-	onboardingRuntimeDrill(t, physical, repo, r, binding, codec)
+	onboardingRuntimeDrill(t, physical, env, repo, r, binding, codec)
 	require.NoError(t, run(ctx, args, env, io.Discard, io.Discard))
 	inspect(func(conn *pgx.Conn) {
 		var same bool

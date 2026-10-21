@@ -77,6 +77,8 @@ CREATE TABLE platform.project_preparations (
   version BIGINT NOT NULL CHECK (version>0),
   generation BIGINT NOT NULL CHECK (generation>0),
   secrets_created BOOLEAN NOT NULL DEFAULT FALSE,
+  onboarding_admitted BOOLEAN NOT NULL DEFAULT FALSE,
+  CHECK (NOT onboarding_admitted OR secrets_created),
   created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
 REVOKE ALL ON platform.project_preparations FROM PUBLIC;

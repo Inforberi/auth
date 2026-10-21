@@ -12,6 +12,7 @@ GRANT INSERT(project_id,operation_id,action,actor_kind,actor_id,reason,
 GRANT INSERT(project_id,storage_target,operation_id,version,generation) ON platform.project_preparations TO auth_platform_preparation;
 GRANT UPDATE(operation_id,version,generation) ON platform.project_preparations TO auth_platform_preparation;
 GRANT UPDATE(secrets_created) ON platform.project_preparations TO auth_platform_preparation;
+GRANT UPDATE(onboarding_admitted) ON platform.project_preparations TO auth_platform_preparation;
 GRANT SELECT ON platform.project_secrets TO auth_platform_preparation;
 GRANT INSERT(project_id,reservation_id,storage_target,database_oid,owner_oid,runtime_oid,schema_version,format_version,key_id,ciphertext)
   ON platform.project_secrets TO auth_platform_preparation;

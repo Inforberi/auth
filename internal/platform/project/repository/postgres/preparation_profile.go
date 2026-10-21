@@ -54,6 +54,8 @@ func (r *PreparationRepository) CheckRuntime(ctx context.Context) error {
 		AND NOT has_table_privilege(current_user,'platform.project_secrets','DELETE,TRUNCATE')
 		AND NOT has_column_privilege(current_user,'platform.project_secrets','created_at','INSERT')
 		AND has_column_privilege(current_user,'platform.project_preparations','secrets_created','UPDATE')
+		AND has_column_privilege(current_user,'platform.project_preparations','onboarding_admitted','UPDATE')
+		AND NOT has_column_privilege(current_user,'platform.project_preparations','onboarding_admitted','INSERT')
 		AND NOT has_column_privilege(current_user,'platform.project_preparations','secrets_created','INSERT')
 		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['project_id','reservation_id','storage_target','database_oid','owner_oid','runtime_oid',
 			'schema_version','format_version','key_id','ciphertext']) col

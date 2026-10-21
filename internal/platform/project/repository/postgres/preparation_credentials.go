@@ -52,6 +52,10 @@ func (r *PreparationRepository) ReadOnboardingKeys(ctx context.Context, reservat
 }
 
 func (r *PreparationRepository) readSecrets(ctx context.Context, reservation domain.PreparationReservation, binding credentials.Binding, codec *credentials.Codec, decode func(secretRecord) error) error {
+	return r.withSecrets(ctx, reservation, binding, codec, func(_ context.Context, _ pgx.Tx, stored secretRecord) error { return decode(stored) })
+}
+
+func (r *PreparationRepository) withSecrets(ctx context.Context, reservation domain.PreparationReservation, binding credentials.Binding, codec *credentials.Codec, use func(context.Context, pgx.Tx, secretRecord) error) error {
 	if codec == nil || !r.matchesSecretsBinding(reservation, binding) {
 		return domain.ErrConflict
 	}
@@ -86,7 +90,7 @@ func (r *PreparationRepository) readSecrets(ctx context.Context, reservation dom
 	if stored.binding != binding {
 		return domain.ErrConflict
 	}
-	if err := decode(stored); err != nil {
+	if err := use(ctx, tx, stored); err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {

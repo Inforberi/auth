@@ -78,7 +78,7 @@ func (r *PreparationRepository) Reserve(ctx context.Context, input domain.Prepar
 		if result.Generation >= receipt.Generation {
 			return domain.PreparationReservation{}, domain.ErrConflict
 		}
-		_, err = tx.Exec(ctx, `UPDATE platform.project_preparations SET operation_id=$2,version=$3,generation=$4 WHERE project_id=$1`,
+		_, err = tx.Exec(ctx, `UPDATE platform.project_preparations SET operation_id=$2,version=$3,generation=$4,onboarding_admitted=false WHERE project_id=$1`,
 			input.ProjectID, input.OperationID, receipt.Version, receipt.Generation)
 		result.OperationID, result.Version, result.Generation = input.OperationID, receipt.Version, receipt.Generation
 	}

@@ -10,6 +10,10 @@ GRANT SELECT ON platform.operator_realm TO auth_platform_runtime;
 GRANT UPDATE(initialized_at,first_operator_id) ON platform.operator_realm TO auth_platform_runtime;
 GRANT SELECT,INSERT ON platform.operator_permissions,platform.operator_audit TO auth_platform_runtime;
 GRANT SELECT ON platform.projects TO auth_platform_runtime;
+GRANT SELECT(project_id,reservation_id,storage_target,operation_id,version,generation,secrets_created,onboarding_admitted)
+  ON platform.project_preparations TO auth_platform_runtime;
+GRANT SELECT(project_id,reservation_id,storage_target,database_oid,owner_oid,runtime_oid,schema_version)
+  ON platform.project_secrets TO auth_platform_runtime;
 GRANT INSERT(id,slug,name,origin,storage_target) ON platform.projects TO auth_platform_runtime;
 GRANT SELECT,INSERT ON platform.project_creations TO auth_platform_runtime;
 -- Row-locking SELECT requires UPDATE on at least one column of operator_permissions.

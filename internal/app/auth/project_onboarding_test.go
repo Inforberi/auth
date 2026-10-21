@@ -2,9 +2,7 @@ package auth
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
-	"errors"
 	"testing"
 	"time"
 
@@ -31,7 +29,7 @@ func TestProjectOnboardingValidationBeforeSQL(t *testing.T) {
 	require.NoError(t, err)
 	keys, err := codec.OpenOnboarding(b, credentials.Version, "root-1", payload)
 	require.NoError(t, err)
-	for _, mode := range []string{"project", "slug", "origin", "state", "phase", "version", "generation", "keys", "admit", "pool", "redis", "logger", "hasher", "http", "proxy", "denied", "error", "cancelled"} {
+	for _, mode := range []string{"project", "slug", "origin", "state", "phase", "version", "generation", "keys", "catalog", "reservation", "pool", "redis", "logger", "hasher", "http", "proxy"} {
 		t.Run(mode, func(t *testing.T) {
 			cfg := ProjectOnboardingConfig{
 				Project: projectdomain.Project{
@@ -39,12 +37,15 @@ func TestProjectOnboardingValidationBeforeSQL(t *testing.T) {
 					DesiredState: projectdomain.Enabled, Phase: projectdomain.Provisioning, Version: 1, Generation: 1,
 				},
 				Keys: keys, HTTP: requestmiddleware.CapacityConfig{MaxInFlight: 2, RequestTimeout: time.Second},
+				Reservation: projectdomain.PreparationReservation{
+					ProjectID: b.ProjectID, ReservationID: b.ReservationID,
+					OperationID: "b2000000-0000-4000-8000-000000000002", StorageTarget: b.StorageTarget, Version: 1, Generation: 1,
+				},
 			}
 			deps := ProjectOnboardingDependencies{
 				Pool: &pgxpool.Pool{}, Redis: &redis.Client{}, Logger: zap.NewNop(),
-				Hash: hasher.NewBounded(&blockingHash{}, 1), Admit: func(context.Context) (bool, error) { t.Fatal("unexpected admission"); return false, nil },
+				Hash: hasher.NewBounded(&blockingHash{}, 1), Catalog: &pgxpool.Pool{},
 			}
-			ctx := t.Context()
 			switch mode {
 			case "project":
 				cfg.Project.ID = "a2000000-0000-4000-8000-000000000002"
@@ -62,8 +63,10 @@ func TestProjectOnboardingValidationBeforeSQL(t *testing.T) {
 				cfg.Project.Generation = 0
 			case "keys":
 				cfg.Keys = credentials.OnboardingKeys{}
-			case "admit":
-				deps.Admit = nil
+			case "catalog":
+				deps.Catalog = nil
+			case "reservation":
+				cfg.Reservation.OperationID = ""
 			case "pool":
 				deps.Pool = nil
 			case "redis":
@@ -76,25 +79,10 @@ func TestProjectOnboardingValidationBeforeSQL(t *testing.T) {
 				cfg.HTTP.MaxInFlight = 0
 			case "proxy":
 				cfg.Proxy.TrustedCIDRs = []string{"invalid"}
-			case "denied", "error", "cancelled":
-				deps.Admit = func(check context.Context) (bool, error) {
-					_, bounded := check.Deadline()
-					require.True(t, bounded)
-					if mode == "error" {
-						return true, errors.New("private catalog details")
-					}
-					return mode != "denied", nil
-				}
-				if mode == "cancelled" {
-					cancelled, cancel := context.WithCancel(ctx)
-					cancel()
-					ctx = cancelled
-				}
 			}
-			handler, err := NewProjectOnboarding(ctx, cfg, deps)
+			handler, err := NewProjectOnboarding(t.Context(), cfg, deps)
 			require.Error(t, err)
 			require.Nil(t, handler)
-			require.NotContains(t, err.Error(), "private catalog details")
 		})
 	}
 }

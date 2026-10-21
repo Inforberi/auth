@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,7 +26,7 @@ import (
 	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
-func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, repo *catalog.PreparationRepository, r domain.PreparationReservation, binding credentials.Binding, codec *credentials.Codec) {
+func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, env func(string) string, repo *catalog.PreparationRepository, r domain.PreparationReservation, binding credentials.Binding, codec *credentials.Codec) {
 	t.Helper()
 	ctx := t.Context()
 	keys, err := repo.ReadOnboardingKeys(ctx, r, binding, codec)
@@ -84,11 +85,21 @@ func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, repo *catalog.Prep
 	require.NoError(t, err)
 	rdb := redis.NewClient(&redis.Options{Addr: "127.0.0.1:1"})
 	defer func() { require.NoError(t, rdb.Close()) }()
-	active, admissions := true, 0
+	apiConfig, err := pgxpool.ParseConfig(strings.Replace(env("PROVISIONER_CATALOG_URL"), "auth_platform_preparation_test:catalog-fixture-only@", "auth_platform_api_secrets_test:api-fixture-only@", 1))
+	require.NoError(t, err)
+	apiConfig.MaxConns, apiConfig.MinConns = 1, 0
+	api, err := pgxpool.NewWithConfig(ctx, apiConfig)
+	require.NoError(t, err)
+	defer api.Close()
+	adminConfig := apiConfig.Copy()
+	adminConfig.ConnConfig.User, adminConfig.ConnConfig.Password = "auth", ""
+	admin, err := pgxpool.NewWithConfig(ctx, adminConfig)
+	require.NoError(t, err)
+	defer admin.Close()
 	deps := appauth.ProjectOnboardingDependencies{
 		Pool: pool, Redis: rdb, Logger: zap.NewNop(),
-		Hash:  hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), 1),
-		Admit: func(context.Context) (bool, error) { admissions++; return active, nil },
+		Hash:    hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), 1),
+		Catalog: api,
 	}
 	cfg := appauth.ProjectOnboardingConfig{
 		Project: domain.Project{
@@ -96,8 +107,10 @@ func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, repo *catalog.Prep
 			DesiredState: domain.Enabled, Phase: domain.Provisioning, Version: r.Version, Generation: r.Generation,
 		},
 		Keys: keys, SMTPAllowedTargets: []string{"smtp.example.test:587"},
-		HTTP: requestmiddleware.CapacityConfig{MaxInFlight: 2, RequestTimeout: time.Second},
+		Reservation: r,
+		HTTP:        requestmiddleware.CapacityConfig{MaxInFlight: 2, RequestTimeout: time.Second},
 	}
+	onboardingAdmissionDrill(t, admin, api, pool, repo, cfg.Project, r, binding, codec)
 	handler, err := appauth.NewProjectOnboarding(ctx, cfg, deps)
 	require.ErrorIs(t, err, settingsdomain.ErrNotInitialized)
 	require.Nil(t, handler, "must not fall back to platform/environment SMTP")
@@ -118,7 +131,8 @@ func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, repo *catalog.Prep
 	handler, err = appauth.NewProjectOnboarding(ctx, cfg, deps)
 	require.NoError(t, err)
 	require.NotNil(t, handler)
-	active = false
+	_, err = admin.Exec(ctx, `UPDATE platform.project_preparations SET onboarding_admitted=false WHERE project_id=$1`, r.ProjectID)
+	require.NoError(t, err)
 	request := httptest.NewRequest("POST", cfg.Project.Origin+"/api/v1/setup/start", nil)
 	request.Header.Set("Origin", cfg.Project.Origin)
 	response := httptest.NewRecorder()
@@ -128,8 +142,7 @@ func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, repo *catalog.Prep
 	after, err := settingspostgres.New(pool).LoadSMTP(ctx)
 	require.NoError(t, err)
 	require.Equal(t, stored, after, "construction must not rewrite SMTP settings")
-	require.Equal(t, 4, admissions)
-	active = true
+	require.NoError(t, repo.PermitOnboarding(ctx, r, binding, codec, pool))
 	denied := cfg
 	denied.SMTPAllowedTargets = []string{"other.example.test:587"}
 	handler, err = appauth.NewProjectOnboarding(ctx, denied, deps)
@@ -144,12 +157,9 @@ func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, repo *catalog.Prep
 	require.Nil(t, handler)
 	_, err = privileged.Exec(ctx, `UPDATE auth.smtp_settings SET password=$1`, stored.Password)
 	require.NoError(t, err)
-	late := 0
-	deps.Admit = func(context.Context) (bool, error) { late++; return late == 1, nil }
-	handler, err = appauth.NewProjectOnboarding(ctx, cfg, deps)
-	require.Error(t, err)
-	require.Nil(t, handler, "authority lost during construction must not publish a handler")
-	require.Equal(t, 2, late)
+	onboardingAssemblySuspendDrill(t, admin, privileged, physical, cfg, deps)
 	_, err = privileged.Exec(ctx, `DELETE FROM auth.smtp_settings`)
+	require.NoError(t, err)
+	_, err = admin.Exec(ctx, `UPDATE platform.project_preparations SET onboarding_admitted=false WHERE project_id=$1`, r.ProjectID)
 	require.NoError(t, err)
 }

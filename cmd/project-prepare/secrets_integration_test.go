@@ -161,7 +161,7 @@ func operatorSecretsProfileDrill(t *testing.T, admin *pgx.Conn, env, read func(s
 	require.Error(t, repo.CheckRuntime(ctx, false))
 	_, err = admin.Exec(ctx, `ALTER ROLE auth_platform_api_secrets_test NOREPLICATION`)
 	require.NoError(t, err)
-	for _, grant := range []string{"SELECT(ciphertext) ON platform.project_secrets", "UPDATE(secrets_created) ON platform.project_preparations"} {
+	for _, grant := range []string{"SELECT(ciphertext) ON platform.project_secrets", "SELECT(key_id) ON platform.project_secrets", "UPDATE(secrets_created) ON platform.project_preparations", "UPDATE(onboarding_admitted) ON platform.project_preparations"} {
 		_, err := admin.Exec(ctx, "GRANT "+grant+" TO auth_platform_api_secrets_test")
 		require.NoError(t, err)
 		require.Error(t, repo.CheckRuntime(ctx, false))
