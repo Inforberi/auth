@@ -25,6 +25,19 @@ func (t *Target) PrepareOnboarding(ctx context.Context, proof credentials.SetupP
 	}
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
+	if err := t.checkOnboardingPreparation(ctx, binding); err != nil {
+		return err
+	}
+	return t.withProjectAccess(ctx, authorize, func(check context.Context, project *pgx.Conn) error {
+		// A newly opened connection is re-attested before touching Auth tables.
+		if err := t.installProjectSchema(check, project, t.prepared.reservation, t.prepared.resources); err != nil {
+			return err
+		}
+		return t.initializeOnboarding(check, project, proof, authorize)
+	})
+}
+
+func (t *Target) checkOnboardingPreparation(ctx context.Context, binding credentials.Binding) error {
 	if err := t.CheckRuntime(ctx); err != nil {
 		return err
 	}
@@ -33,7 +46,7 @@ func (t *Target) PrepareOnboarding(ctx context.Context, proof credentials.SetupP
 		return err
 	}
 	var passwordInstalled bool
-	err = t.conn.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM provisioning.resources WHERE project_id=$1
+	err := t.conn.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM provisioning.resources WHERE project_id=$1
 		AND reservation_id=$2 AND database_oid=$3 AND owner_oid=$4 AND runtime_oid=$5
 		AND generation=$6 AND password_fingerprint IS NOT NULL AND schema_started)`,
 		binding.ProjectID, binding.ReservationID, binding.DatabaseOID, binding.OwnerOID, binding.RuntimeOID, t.prepared.reservation.Generation).Scan(&passwordInstalled)
@@ -43,13 +56,7 @@ func (t *Target) PrepareOnboarding(ctx context.Context, proof credentials.SetupP
 	if !passwordInstalled {
 		return domain.ErrConflict
 	}
-	return t.withProjectAccess(ctx, authorize, func(check context.Context, project *pgx.Conn) error {
-		// A newly opened connection is re-attested before touching Auth tables.
-		if err := t.installProjectSchema(check, project, t.prepared.reservation, t.prepared.resources); err != nil {
-			return err
-		}
-		return t.initializeOnboarding(check, project, proof, authorize)
-	})
+	return nil
 }
 
 func (t *Target) initializeOnboarding(ctx context.Context, project *pgx.Conn, proof credentials.SetupProof, authorize func(context.Context) error) error {

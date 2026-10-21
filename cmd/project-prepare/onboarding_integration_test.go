@@ -119,6 +119,14 @@ func onboardingPreparationDrill(t *testing.T, physical *pgx.Conn, env func(strin
 		require.True(t, safe)
 	})
 	onboardingRuntimeDrill(t, physical, env, repo, r, binding, codec)
+	onboardingSMTPDrill(t, physical, env, repo, r, binding, codec)
+	inspect(func(conn *pgx.Conn) {
+		// SMTP adds only its own retained receipt, not a policy/setup rewrite.
+		var unchanged bool
+		require.NoError(t, conn.QueryRow(ctx, `SELECT m.xmin::text,m.smtp_prepared AND p.xmin::text=$1 AND s.xmin::text=$2
+			FROM project_meta.identity m CROSS JOIN auth.auth_settings p CROSS JOIN auth.initial_setup s`, policyXmin, setupXmin).Scan(&markerXmin, &unchanged))
+		require.True(t, unchanged)
+	})
 	onboardingActivationDrill(t, physical, env, repo, r, binding, codec)
 	require.NoError(t, run(ctx, args, env, io.Discard, io.Discard))
 	inspect(func(conn *pgx.Conn) {

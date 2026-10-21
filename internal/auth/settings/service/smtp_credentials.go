@@ -27,17 +27,11 @@ func (s *SMTP) Initialize(ctx context.Context, config domain.SMTPConfig, passwor
 	defer cancel()
 	stored, err := s.repo.LoadSMTP(ctx)
 	if errors.Is(err, domain.ErrNotInitialized) {
-		if err := s.validate(config); err != nil {
+		seed, err := s.policy.seed(config, password, s.cipher)
+		if err != nil {
 			return err
 		}
-		if !validSMTPPassword(password) || config.Username != "" && password == "" {
-			return domain.ErrInvalidSMTP
-		}
-		encrypted, err := s.cipher.Seal([]byte(password))
-		if err != nil {
-			return domain.ErrInvalidSMTP
-		}
-		stored, err = s.repo.InitializeSMTP(ctx, SMTPStored{SMTPSnapshot: domain.SMTPSnapshot{Config: config, PasswordSet: password != ""}, Password: encrypted})
+		stored, err = s.repo.InitializeSMTP(ctx, seed)
 		if err != nil {
 			return err
 		}
@@ -60,7 +54,7 @@ func (s *SMTP) Credentials(ctx context.Context) (domain.SMTPConfig, string, erro
 }
 
 func (s *SMTP) open(stored SMTPStored) (domain.SMTPConfig, string, error) {
-	if err := s.validate(stored.Config); err != nil {
+	if err := s.policy.validate(stored.Config); err != nil {
 		return domain.SMTPConfig{}, "", err
 	}
 	plain, err := s.cipher.Open(stored.Password)
@@ -82,7 +76,7 @@ func (s *SMTP) Update(ctx context.Context, input SMTPUpdateInput) (domain.SMTPSn
 	if input.ExpectedVersion < 1 {
 		return domain.SMTPSnapshot{}, domain.ErrInvalidSMTP
 	}
-	if err := s.validate(input.Config); err != nil {
+	if err := s.policy.validate(input.Config); err != nil {
 		return domain.SMTPSnapshot{}, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)

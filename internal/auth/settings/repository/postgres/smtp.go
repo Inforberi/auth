@@ -45,27 +45,32 @@ func (r *Repository) ReadSMTP(ctx context.Context, actor accessservice.Principal
 func (r *Repository) InitializeSMTP(ctx context.Context, seed service.SMTPStored) (service.SMTPStored, error) {
 	var result service.SMTPStored
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
-		if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
-			return err
-		}
-		stored, err := scanSMTP(tx.QueryRow(ctx, `SELECT `+smtpColumns+`,password FROM auth.smtp_settings WHERE singleton FOR UPDATE`), true)
-		if err == nil {
-			result = stored
-			return nil
-		}
-		if !errors.Is(err, domain.ErrNotInitialized) {
-			return err
-		}
-		var initialized bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.initial_setup WHERE initialized_at IS NOT NULL)`).Scan(&initialized); err != nil {
-			return err
-		}
-		if initialized {
-			return domain.ErrNotInitialized
-		}
-		result, err = scanSMTP(tx.QueryRow(ctx, `INSERT INTO auth.smtp_settings(singleton,configuration,password,password_set)
-			VALUES(true,$1,$2,$3) RETURNING `+smtpColumns+`,password`, seed.Config, seed.Password, seed.PasswordSet), true)
+		var err error
+		result, err = InitializeSMTPInTransaction(ctx, tx, seed)
 		return err
 	})
 	return result, err
+}
+
+// InitializeSMTPInTransaction preserves existing settings; the caller owns commit/rollback.
+func InitializeSMTPInTransaction(ctx context.Context, tx pgx.Tx, seed service.SMTPStored) (service.SMTPStored, error) {
+	if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
+		return service.SMTPStored{}, err
+	}
+	stored, err := scanSMTP(tx.QueryRow(ctx, `SELECT `+smtpColumns+`,password FROM auth.smtp_settings WHERE singleton FOR UPDATE`), true)
+	if err == nil {
+		return stored, nil
+	}
+	if !errors.Is(err, domain.ErrNotInitialized) {
+		return service.SMTPStored{}, err
+	}
+	var initialized bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.initial_setup WHERE initialized_at IS NOT NULL)`).Scan(&initialized); err != nil {
+		return service.SMTPStored{}, err
+	}
+	if initialized {
+		return service.SMTPStored{}, domain.ErrNotInitialized
+	}
+	return scanSMTP(tx.QueryRow(ctx, `INSERT INTO auth.smtp_settings(singleton,configuration,password,password_set)
+		VALUES(true,$1,$2,$3) RETURNING `+smtpColumns+`,password`, seed.Config, seed.Password, seed.PasswordSet), true)
 }

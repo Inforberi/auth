@@ -2,9 +2,6 @@ package service
 
 import (
 	"context"
-	"net"
-	"strconv"
-	"strings"
 	"time"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
@@ -45,44 +42,23 @@ type SMTPLimiter interface {
 }
 
 type SMTP struct {
-	repo       SMTPRepository
-	cipher     SMTPCipher
-	probe      SMTPProbe
-	limits     SMTPLimiter
-	targets    map[string]bool
-	requireTLS bool
-	tests      chan struct{}
+	repo   SMTPRepository
+	cipher SMTPCipher
+	probe  SMTPProbe
+	limits SMTPLimiter
+	policy smtpPolicy
+	tests  chan struct{}
 }
 
 func NewSMTP(repo SMTPRepository, cipher SMTPCipher, probe SMTPProbe, limits SMTPLimiter, allowed []string, requireTLS bool) (*SMTP, error) {
-	if repo == nil || cipher == nil || probe == nil || limits == nil || len(allowed) == 0 || len(allowed) > 16 {
+	if repo == nil || cipher == nil || probe == nil || limits == nil {
 		return nil, domain.ErrInvalidSMTP
 	}
-	s := &SMTP{repo: repo, cipher: cipher, probe: probe, limits: limits, targets: make(map[string]bool), requireTLS: requireTLS, tests: make(chan struct{}, 2)}
-	for _, target := range allowed {
-		host, port, err := net.SplitHostPort(strings.TrimSpace(target))
-		number, parseErr := strconv.Atoi(port)
-		candidate := domain.SMTPConfig{Host: host, Port: number, Domain: "example.com", From: "auth@example.com"}
-		if err != nil || parseErr != nil || candidate.Validate() != nil {
-			return nil, domain.ErrInvalidSMTP
-		}
-		s.targets[smtpTarget(candidate)] = true
+	policy, err := newSMTPPolicy(allowed, requireTLS)
+	if err != nil {
+		return nil, err
 	}
-	return s, nil
-}
-
-func smtpTarget(c domain.SMTPConfig) string {
-	return net.JoinHostPort(strings.ToLower(c.Host), strconv.Itoa(c.Port))
-}
-
-func (s *SMTP) validate(config domain.SMTPConfig) error {
-	if err := config.Validate(); err != nil {
-		return err
-	}
-	if !s.targets[smtpTarget(config)] || s.requireTLS && !config.RequireTLS {
-		return domain.ErrInvalidSMTP
-	}
-	return nil
+	return &SMTP{repo: repo, cipher: cipher, probe: probe, limits: limits, policy: policy, tests: make(chan struct{}, 2)}, nil
 }
 
 func (s *SMTP) Read(ctx context.Context, actor accessservice.Principal) (domain.SMTPSnapshot, error) {
