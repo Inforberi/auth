@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP3-onboarding-runtime-foundation,21 октября.** [Минимальная factory](../features/project-onboarding-preparation.md#сборка-проектного-runtime--21-октября-2026): typed protected key reader, borrowed project pool/shared Redis/hasher, read-only SQL role/binding/grants/setup/policy probe, SQL-only scoped SMTP без ENV seed/fallback, existing setup+closed HTTP profile. Callback обязателен до/после assembly и на запросах, но production authority/activation ещё не подключена. SMTP provisioning/delivery setup authority/registry/readiness/ready и UI не реализованы этим блоком; CheckCurrent/snapshot не разрешают публиковать traffic.
+
 - [x] **MP3-onboarding-http-profile,20 октября.** Отдельный закрытый [HTTP allowlist](../features/project-onboarding-preparation.md#изолированный-http-профиль-onboarding) для существующего setup: exact TLS/Host/Origin, same-origin, обязательный current-admission callback и bounded HTTP policy. Обычные Auth routes не регистрируются. Это профиль без подключения к серверу, не runtime/SQL activation или completed onboarding. Project keys/SQL SMTP/реальная admission authority/dispatcher/ready остаются следующими шагами; UI не начинался.
 
 - [ ] **Owner-only удаление проектов — MP6.5, уточнение20 октября.** [Требования](multi-project.md#создание-и-удаление-проектов--уточнение20-октября): отдельная операция от создания/приостановки, свежая аутентификация, явное подтверждение проекта и дополнительное предупреждение при наличии пользователей, SQL ownership/current-state guards, drain/revoke и отдельный destructive executor. Уточнить уровень владельца и политику окончательного удаления/отмены/backups до реализации. Пока только план, нет новых routes/schema/привилегий и удаления БД.

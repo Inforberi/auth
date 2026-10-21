@@ -17,8 +17,15 @@ func (c *Codec) OpenSetup(binding Binding, version int, keyID string, payload []
 		return SetupProof{}, err
 	}
 	defer clear(value.SigningPrivateKey)
-	digest := sha256.Sum256([]byte(value.SetupSecret))
-	return SetupProof{binding: binding, digest: hex.EncodeToString(digest[:])}, nil
+	return setupProof(binding, value.SetupSecret), nil
+}
+
+func setupProof(binding Binding, secret string) SetupProof {
+	if secret == "" {
+		return SetupProof{}
+	}
+	digest := sha256.Sum256([]byte(secret))
+	return SetupProof{binding: binding, digest: hex.EncodeToString(digest[:])}
 }
 
 func (p SetupProof) Binding() Binding { return p.binding }

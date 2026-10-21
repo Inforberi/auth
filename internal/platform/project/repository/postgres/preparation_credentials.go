@@ -38,6 +38,19 @@ func (r *PreparationRepository) ReadSetupProof(ctx context.Context, reservation 
 	return value, nil
 }
 
+func (r *PreparationRepository) ReadOnboardingKeys(ctx context.Context, reservation domain.PreparationReservation, binding credentials.Binding, codec *credentials.Codec) (credentials.OnboardingKeys, error) {
+	var value credentials.OnboardingKeys
+	err := r.readSecrets(ctx, reservation, binding, codec, func(stored secretRecord) error {
+		var err error
+		value, err = codec.OpenOnboarding(binding, stored.version, stored.keyID, stored.payload)
+		return err
+	})
+	if err != nil {
+		return credentials.OnboardingKeys{}, err
+	}
+	return value, nil
+}
+
 func (r *PreparationRepository) readSecrets(ctx context.Context, reservation domain.PreparationReservation, binding credentials.Binding, codec *credentials.Codec, decode func(secretRecord) error) error {
 	if codec == nil || !r.matchesSecretsBinding(reservation, binding) {
 		return domain.ErrConflict
