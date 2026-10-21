@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/credentials"
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
@@ -22,6 +23,8 @@ func TestTargetBounds(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrConflict)
 	_, err = target.InstallSchema(t.Context(), nil)
 	require.ErrorIs(t, err, domain.ErrConflict)
+	require.ErrorIs(t, target.ActivateOnboarding(t.Context(), domain.PreparationReservation{}, credentials.Binding{}, nil, nil, nil), domain.ErrConflict)
+	require.ErrorIs(t, target.CloseOnboarding(t.Context(), domain.PreparationReservation{}, credentials.Binding{}, nil), domain.ErrConflict)
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	require.ErrorIs(t, unavailable(ctx), context.Canceled)

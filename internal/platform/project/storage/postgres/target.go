@@ -70,6 +70,9 @@ func (t *Target) CheckRuntime(ctx context.Context) error {
 		AND NOT has_column_privilege(current_user,'provisioning.resources','schema_started','INSERT')
 		AND NOT has_column_privilege(current_user,'provisioning.resources','runtime_oid','INSERT')
 		AND NOT has_column_privilege(current_user,'provisioning.resources','password_fingerprint','INSERT')
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['onboarding_state','onboarding_operation_id','onboarding_version','onboarding_generation']) col
+			WHERE has_column_privilege(current_user,'provisioning.resources',col,'INSERT')
+			OR NOT has_column_privilege(current_user,'provisioning.resources',col,'UPDATE'))
 		AND has_table_privilege(current_user,'provisioning.target','SELECT')
 		AND has_table_privilege(current_user,'provisioning.resources','SELECT')
 		AND has_column_privilege(current_user,'provisioning.resources','database_oid','UPDATE')

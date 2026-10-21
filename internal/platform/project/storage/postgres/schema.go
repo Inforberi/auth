@@ -127,6 +127,9 @@ func (t *Target) installProjectSchema(ctx context.Context, conn *pgx.Conn, r dom
 		if _, err := tx.Exec(ctx, `CREATE ROLE `+pgx.Identifier{runtime}.Sanitize()+` NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`); err != nil {
 			return unavailable(ctx)
 		}
+		if _, err := tx.Exec(ctx, `GRANT `+pgx.Identifier{runtime}.Sanitize()+` TO SESSION_USER WITH SET TRUE, INHERIT FALSE`); err != nil {
+			return unavailable(ctx)
+		}
 		if _, err := tx.Exec(ctx, `SET LOCAL ROLE `+pgx.Identifier{resources.Owner}.Sanitize()); err != nil {
 			return unavailable(ctx)
 		}

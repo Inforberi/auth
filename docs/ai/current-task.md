@@ -2,17 +2,17 @@
 
 Обновлено 21 октября 2026. [Карта](index.md) · [статусы](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui) · [приёмка](../operations/acceptance-summary.md#открытые-ограничения-приёмки). Git/staging и доступность стенда проверять по факту.
 
-## Последний результат — MP3 catalog onboarding admission
+## Последний результат — MP3 physical onboarding
 
-Сохраняемый onboarding_admitted по умолчанию false; restricted PermitOnboarding ставит его только после actual SQL runtime probe под current-authority locks. Replay не пишет повторно, Reserve нового epoch сбрасывает grant. Обычный API читает только non-secret metadata, без ciphertext/flag writes. Factory принимает Catalog pool/Reservation и сама создаёт SQL reader вместо внешнего callback; тот проверяется до/после assembly и на каждом setup POST. [Контракт](../features/project-onboarding-preparation.md#сохраняемый-sql-допуск--21-октября-2026).
+Явные Target.ActivateOnboarding/CloseOnboarding связывают restricted catalog admission с maintenance journal и реальным SQL доступом. Opening/open/closing/closed + operation/version/generation; ownership/OIDs/role/ACL guards и target session lock. Withdrawal до target writes; новая runtime authentication перед publication. Close закрывает новые подключения, завершает только project runtime sessions и отмечает closed после drain. Повтор/обрыв executor/старая target epoch восстанавливаются из SQL без reset/adoption. [Контракт](../features/project-onboarding-preparation.md#физическая-активация-и-остановка--21-октября-2026), [проверки/ограничения](../planning/history.md#результат-mp3-physical-onboarding--21-октября-2026).
 
-Task check/lint0, targeted race/security PASS; live PostgreSQL command test PASS1.70s, включая concurrency/rollback/privileges/stale epoch/new Reserve и committed suspend во время assembly. После последнего test-only Reserve case повторены Linux test build/SQL/lint, production code не менялся. [Evidence](../planning/history.md#результат-mp3-catalog-onboarding-admission--21-октября-2026). Initial source catalog/grants расширены без новой migration; старым installations нужен controlled upgrade, не reset. Worker/server/обычные Auth routes/UI не публиковались.
+Restricted executor получает SET TRUE/INHERIT FALSE только к своему runtime (initial schema installer), без pg_signal_backend. Source target SQL/profile расширены без новой migration: старым installations нужен controlled upgrade, не reset. CLI по-прежнему sealed/NOLOGIN; production server/обычные Auth routes/ready/UI не публиковались.
 
-## Следующий шаг — physical onboarding activation/recovery
+## Следующий шаг — защищённая первоначальная конфигурация
 
-Сохраняемый target intent/journal → проверка ownership/current authority → controlled LOGIN/CONNECT/open → actual connection/probe → catalog permission, без полного Auth router/ready. Нужны restart/lost-reply/reseal/drain и закрытие admission до отключения physical access; сам permission bit этого не делает. Нынешний CLI оставляет БД sealed и не вызывает PermitOnboarding автоматически. Уже начатый project commit suspend мгновенно не отменяет.
+Protected initial SMTP provisioning и доставка setup authority доверенному владельцу, без URL/stdout/platform-secret fallback. Затем trusted loader/dispatcher и automatic reconcile/withdraw/drain при suspend/restart, вызов existing setup, first-admin/configuration readiness → binding/ready. Factory сейчас требует SQL SMTP; runtime activation сама его не создаёт. [План](../planning/multi-project.md#ограничения-runtime-и-onboarding).
 
-Далее trusted loader/dispatcher, защищённый initial SMTP и доставка setup authority без URL/stdout, first-admin/configuration readiness → binding/ready. [План и ограничения](../planning/multi-project.md#ограничения-runtime-и-onboarding). Failed replay не отзывает прежний grant, uncertain commit требует reconciliation; не трактовать ошибку как доказанный rollback или разрешение сбросить данные.
+Новый протокол пока вызывают только integration tests. Outage/потеря executor может оставить physical open с journal: ошибка cleanup не успех; новый executor обязан reconcile до обслуживания. Catalog unavailable не доказывает withdrawal. Поздний suspend закрывает новые HTTP admission, но не отменяет уже committed project write; background reconcile ещё не реализован. Uncertain commit не означает rollback и не разрешает сбросить данные.
 
 ## Нельзя потерять
 

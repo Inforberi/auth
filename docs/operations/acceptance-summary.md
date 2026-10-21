@@ -1,5 +1,7 @@
 # Краткий отчёт по проверкам
 
+21 октября, MP3-physical-onboarding: tests/lint0, targeted race/security и actual PostgreSQL18.6/SCRAM regression пройдены; target journal, publication rollback, session-loss/restart, epoch fencing, withdrawal-before-DDL, runtime transaction termination и foreign-session refusal. [Полное evidence/NOT RUN](../planning/history.md#результат-mp3-physical-onboarding--21-октября-2026). Это явный закрытый provisioning API, не server/CLI activation, scheduler/автоматический suspend drain, ready, UI или fleet/load/GC sign-off. Новых dependencies/ENV/миграций нет; рабочие БД и secrets не изменялись.
+
 ## Открытые ограничения приёмки
 
 Актуальная сводка перенесённых из текущей заметки ограничений. Датированные результаты ниже — evidence конкретного прогона, не текущая доступность стенда или production sign-off. Читать только затронутые задачей строки и профильный документ.

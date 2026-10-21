@@ -20,6 +20,14 @@ CREATE TABLE provisioning.resources (
     schema_started BOOLEAN NOT NULL DEFAULT FALSE,
     runtime_oid OID UNIQUE,
     password_fingerprint BYTEA,
+    onboarding_state TEXT NOT NULL DEFAULT 'closed' CHECK (onboarding_state IN ('closed','opening','open','closing')),
+    onboarding_operation_id UUID,
+    onboarding_version BIGINT,
+    onboarding_generation BIGINT,
+    CHECK ((onboarding_operation_id IS NULL AND onboarding_version IS NULL AND onboarding_generation IS NULL AND onboarding_state='closed')
+        OR (onboarding_operation_id IS NOT NULL AND onboarding_operation_id <> '00000000-0000-0000-0000-000000000000'
+            AND onboarding_version IS NOT NULL AND onboarding_version>0 AND onboarding_generation IS NOT NULL
+            AND onboarding_generation>0 AND runtime_oid IS NOT NULL AND schema_started)),
     CHECK ((runtime_oid IS NULL AND password_fingerprint IS NULL)
         OR (runtime_oid IS NOT NULL AND runtime_oid <> 0 AND octet_length(password_fingerprint)=32 AND password_fingerprint IS NOT NULL)),
     created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
@@ -31,6 +39,8 @@ GRANT INSERT(project_id,reservation_id,owner_oid,generation), UPDATE(database_oi
     ON provisioning.resources TO auth_storage_executor;
 GRANT UPDATE(schema_started) ON provisioning.resources TO auth_storage_executor;
 GRANT UPDATE(runtime_oid,password_fingerprint) ON provisioning.resources TO auth_storage_executor;
+GRANT UPDATE(onboarding_state,onboarding_operation_id,onboarding_version,onboarding_generation)
+    ON provisioning.resources TO auth_storage_executor;
 DO $$ BEGIN
     EXECUTE format('REVOKE ALL ON DATABASE %I FROM PUBLIC', current_database());
     EXECUTE format('GRANT CONNECT ON DATABASE %I TO auth_storage_executor', current_database());

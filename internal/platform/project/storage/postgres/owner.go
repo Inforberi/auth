@@ -22,8 +22,9 @@ func (t *Target) reserveOwner(ctx context.Context, r domain.PreparationReservati
 	}()
 	var reservation string
 	var generation int64
-	err = tx.QueryRow(ctx, `SELECT reservation_id::text,owner_oid,generation
-		FROM provisioning.resources WHERE project_id=$1 FOR UPDATE`, r.ProjectID).Scan(&reservation, &resources.OwnerOID, &generation)
+	var onboarding string
+	err = tx.QueryRow(ctx, `SELECT reservation_id::text,owner_oid,generation,onboarding_state
+		FROM provisioning.resources WHERE project_id=$1 FOR UPDATE`, r.ProjectID).Scan(&reservation, &resources.OwnerOID, &generation, &onboarding)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		var occupied bool
@@ -51,7 +52,7 @@ func (t *Target) reserveOwner(ctx context.Context, r domain.PreparationReservati
 		}
 	case err != nil:
 		return unavailable(ctx)
-	case reservation != string(r.ReservationID) || generation > r.Generation:
+	case reservation != string(r.ReservationID) || generation > r.Generation || onboarding != "closed":
 		return domain.ErrConflict
 	default:
 		if err := validateOwner(ctx, tx, *resources); err != nil {
