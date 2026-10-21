@@ -25,16 +25,29 @@ func (r *Repository) CreateRole(ctx context.Context, input service.CreateRoleInp
 		if role.MFARequired && !r.mfaReady {
 			return domain.ErrMFANotReady
 		}
-		if err := tx.QueryRow(ctx, `INSERT INTO auth.roles(key,name,description,mfa_required) VALUES ($1,$2,$3,$4) RETURNING id`, role.Key, role.Name, role.Description, role.MFARequired).Scan(&role.ID); err != nil {
-			return err
-		}
-		if err := replacePermissions(ctx, tx, role); err != nil {
+		var err error
+		role, err = InsertRoleInTransaction(ctx, tx, role)
+		if err != nil {
 			return err
 		}
 		return recordAudit(ctx, tx, input.Actor, role, "role_created", "", nil)
 	})
 	if err != nil {
 		return domain.Role{}, err
+	}
+	return role, nil
+}
+
+// InsertRoleInTransaction owns only persistence; the caller owns validation,
+// authority, Access locking, audit and commit. It must not be called by HTTP.
+func InsertRoleInTransaction(ctx context.Context, tx pgx.Tx, role domain.Role) (domain.Role, error) {
+	role.Version, role.System = 1, false
+	if err := tx.QueryRow(ctx, `INSERT INTO auth.roles(key,name,description,mfa_required) VALUES ($1,$2,$3,$4) RETURNING id`,
+		role.Key, role.Name, role.Description, role.MFARequired).Scan(&role.ID); err != nil {
+		return domain.Role{}, mapConflict(err)
+	}
+	if err := replacePermissions(ctx, tx, role); err != nil {
+		return domain.Role{}, mapConflict(err)
 	}
 	return role, nil
 }

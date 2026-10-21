@@ -48,13 +48,19 @@ func (t *Target) checkInstalledSchema(ctx context.Context, tx pgx.Tx, r domain.P
 		AND has_schema_privilege(role.oid,'auth','USAGE') AND NOT has_schema_privilege(role.oid,'auth','CREATE')
 		AND NOT has_schema_privilege(role.oid,'project_meta','USAGE')
 		AND NOT has_table_privilege(role.oid,'auth.restore_audit','INSERT,UPDATE,DELETE,TRUNCATE')
+		AND NOT has_any_column_privilege(role.oid,'auth.platform_role_creations','UPDATE')
+		AND NOT has_table_privilege(role.oid,'auth.platform_role_creations','DELETE,TRUNCATE')
+		AND NOT has_column_privilege(role.oid,'auth.platform_role_creations','created_at','INSERT')
 		AND NOT has_function_privilege(role.oid,'auth.decide_mfa_recovery(uuid,uuid,bigint,boolean,text,text)','EXECUTE')
 		AND EXISTS(SELECT 1 FROM pg_namespace WHERE nspname='auth' AND nspowner=$5)
 		AND EXISTS(SELECT 1 FROM pg_namespace WHERE nspname='project_meta' AND nspowner=$5)
 		AND NOT EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace ns ON ns.oid=c.relnamespace
 			CROSS JOIN (VALUES('SELECT'),('INSERT'),('UPDATE'),('DELETE')) permission(name)
 			WHERE ns.nspname='auth' AND c.relkind IN ('r','p') AND (c.relname<>'restore_audit' OR permission.name='SELECT')
-			AND NOT has_table_privilege(role.oid,c.oid,permission.name))),COALESCE((SELECT runtime_oid FROM project_meta.identity WHERE singleton),0)`,
+			AND (c.relname<>'platform_role_creations' OR permission.name='SELECT')
+			AND NOT has_table_privilege(role.oid,c.oid,permission.name))
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['operation_id','realm_id','actor_id','project_id','binding','request','role_id','role_snapshot']) col
+			WHERE NOT has_column_privilege(role.oid,'auth.platform_role_creations',col,'INSERT'))),COALESCE((SELECT runtime_oid FROM project_meta.identity WHERE singleton),0)`,
 		t.realm, r.ProjectID, r.ReservationID, resources.DatabaseOID, resources.OwnerOID, migrations.AuthVersion, checksum, runtime).Scan(&valid, &runtimeOID)
 	if err != nil {
 		return unavailable(ctx)

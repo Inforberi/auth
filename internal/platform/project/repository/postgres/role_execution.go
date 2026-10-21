@@ -1,0 +1,103 @@
+package postgres
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
+	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
+	"github.com/Inforberi/financial-intelligence/internal/access/settings"
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/credentials"
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
+)
+
+// CreatePlatformRoleInTransaction is project-side persistence, not a bridge.
+// The caller must hold current platform authority and the target guard through
+// project commit/rollback. No production caller is admitted before MP2.7 gates.
+func CreatePlatformRoleInTransaction(ctx context.Context, tx pgx.Tx, actor domain.PlatformActor, binding credentials.Binding,
+	command domain.RoleCreation, catalog settings.Catalog, mfaReady bool,
+) (domain.RoleCreationResult, error) {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	if tx == nil || !actor.Valid() || actor.RealmID != binding.RealmID || command.ProjectID != binding.ProjectID {
+		return domain.RoleCreationResult{}, domain.ErrInvalidProject
+	}
+	command, err := command.Normalize()
+	if err != nil {
+		return domain.RoleCreationResult{}, err
+	}
+	if err := checkRoleTarget(ctx, tx, binding); err != nil {
+		return domain.RoleCreationResult{}, err
+	}
+	if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
+		return domain.RoleCreationResult{}, catalogError(ctx, err)
+	}
+	request, err := json.Marshal(command)
+	if err != nil {
+		return domain.RoleCreationResult{}, domain.ErrInvalidProject
+	}
+	target, err := json.Marshal(binding)
+	if err != nil {
+		return domain.RoleCreationResult{}, domain.ErrInvalidProject
+	}
+	if replay, found, err := readRoleExecution(ctx, tx, actor, command, target, request); found || err != nil {
+		return replay, err
+	}
+	for _, permission := range command.Permissions {
+		if !catalog.Contains(permission) {
+			return domain.RoleCreationResult{}, accessdomain.ErrInvalidPermission
+		}
+	}
+	if command.MFARequired && !mfaReady {
+		return domain.RoleCreationResult{}, accessdomain.ErrMFANotReady
+	}
+	role, err := accesspostgres.InsertRoleInTransaction(ctx, tx, accessdomain.Role{
+		Key: command.Key, Name: command.Name, Description: command.Description,
+		Permissions: command.Permissions, MFARequired: command.MFARequired,
+	})
+	if err != nil {
+		if errors.Is(err, accessdomain.ErrConflict) {
+			return domain.RoleCreationResult{}, err
+		}
+		return domain.RoleCreationResult{}, catalogError(ctx, err)
+	}
+	snapshot, err := json.Marshal(role)
+	if err != nil {
+		return domain.RoleCreationResult{}, domain.ErrUnavailable
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO auth.platform_role_creations
+		(operation_id,realm_id,actor_id,project_id,binding,request,role_id,role_snapshot)
+		VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7,$8::jsonb)`, command.OperationID,
+		actor.RealmID, actor.UserID, command.ProjectID, target, request, role.ID, snapshot)
+	if err != nil {
+		return domain.RoleCreationResult{}, catalogError(ctx, err)
+	}
+	return domain.RoleCreationResult{Role: role}, nil
+}
+
+func readRoleExecution(ctx context.Context, tx pgx.Tx, actor domain.PlatformActor, command domain.RoleCreation, target, request []byte) (domain.RoleCreationResult, bool, error) {
+	var same bool
+	var snapshot []byte
+	err := tx.QueryRow(ctx, `SELECT realm_id=$2 AND actor_id=$3 AND project_id=$4
+		AND binding=$5::jsonb AND request=$6::jsonb,role_snapshot
+		FROM auth.platform_role_creations WHERE operation_id=$1`, command.OperationID,
+		actor.RealmID, actor.UserID, command.ProjectID, target, request).Scan(&same, &snapshot)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.RoleCreationResult{}, false, nil
+	}
+	if err != nil {
+		return domain.RoleCreationResult{}, false, catalogError(ctx, err)
+	}
+	if !same {
+		return domain.RoleCreationResult{}, true, domain.ErrConflict
+	}
+	var role accessdomain.Role
+	if err := json.Unmarshal(snapshot, &role); err != nil {
+		return domain.RoleCreationResult{}, true, domain.ErrUnavailable
+	}
+	return domain.RoleCreationResult{Role: role, Replayed: true}, true, nil
+}

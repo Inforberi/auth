@@ -70,6 +70,7 @@ func onboardingActivationDrill(t *testing.T, physical *pgx.Conn, env func(string
 	require.ErrorIs(t, err, domain.ErrConflict, "offline prepare must not advance an open journal")
 	require.Equal(t, xmin, check("open", true))
 	require.NoError(t, runtime.Ping(ctx))
+	t.Run("project role transaction", func(t *testing.T) { projectRoleDrill(t, physical, runtime, b) })
 	other, otherConn := open()
 	require.ErrorIs(t, other.CloseOnboarding(ctx, r, b, repo), storage.ErrBusy)
 	require.NoError(t, otherConn.Close(ctx))

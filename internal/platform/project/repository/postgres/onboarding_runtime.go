@@ -42,14 +42,21 @@ func CheckOnboardingRuntime(ctx context.Context, db *pgxpool.Pool, proof credent
 		AND EXISTS(SELECT 1 FROM pg_namespace WHERE nspname='auth' AND nspowner=$3)
 		AND EXISTS(SELECT 1 FROM pg_namespace WHERE nspname='project_meta' AND nspowner=$3)
 		AND NOT has_table_privilege(r.oid,'auth.restore_audit','INSERT,UPDATE,DELETE,TRUNCATE')
+		AND NOT has_any_column_privilege(r.oid,'auth.platform_role_creations','UPDATE')
+		AND NOT has_table_privilege(r.oid,'auth.platform_role_creations','DELETE,TRUNCATE')
+		AND NOT has_column_privilege(r.oid,'auth.platform_role_creations','created_at','INSERT')
 		AND NOT has_function_privilege(r.oid,'auth.decide_mfa_recovery(uuid,uuid,bigint,boolean,text,text)','EXECUTE')
 		AND NOT EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace ns ON ns.oid=c.relnamespace
 			CROSS JOIN (VALUES('SELECT'),('INSERT'),('UPDATE'),('DELETE')) permission(name)
 			WHERE ns.nspname='auth' AND c.relkind IN ('r','p')
 			AND (c.relname<>'restore_audit' OR permission.name='SELECT')
+			AND (c.relname<>'platform_role_creations' OR permission.name='SELECT')
 			AND (c.relowner<>$3 OR NOT has_table_privilege(r.oid,c.oid,permission.name)
 				OR has_table_privilege(r.oid,c.oid,permission.name||' WITH GRANT OPTION')
 				OR (permission.name='SELECT' AND has_table_privilege(r.oid,c.oid,'TRUNCATE'))))
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['operation_id','realm_id','actor_id','project_id','binding','request','role_id','role_snapshot']) col
+			WHERE NOT has_column_privilege(r.oid,'auth.platform_role_creations',col,'INSERT')
+			OR has_column_privilege(r.oid,'auth.platform_role_creations',col,'INSERT WITH GRANT OPTION'))
 		AND EXISTS(SELECT 1 FROM auth.initial_setup WHERE singleton AND operator_hash=$8 AND initialized_at IS NULL)
 		AND EXISTS(SELECT 1 FROM auth.auth_settings WHERE singleton AND version=1 AND password_enabled
 			AND NOT(registration_enabled OR email_otp_enabled OR google_enabled OR telegram_enabled

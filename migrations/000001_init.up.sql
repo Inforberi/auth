@@ -184,6 +184,21 @@ CREATE TABLE auth.access_audit (
 );
 CREATE INDEX access_audit_retention ON auth.access_audit(created_at,id);
 
+-- Platform attribution has no FK to project users. This immutable row is both
+-- audit and the replay receipt; ordinary access-audit retention must not erase it.
+CREATE TABLE auth.platform_role_creations (
+  operation_id UUID PRIMARY KEY CHECK (operation_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  realm_id UUID NOT NULL CHECK (realm_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  actor_id UUID NOT NULL CHECK (actor_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  project_id UUID NOT NULL CHECK (project_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  binding JSONB NOT NULL CHECK (jsonb_typeof(binding)='object' AND octet_length(binding::text)<=1024),
+  request JSONB NOT NULL CHECK (jsonb_typeof(request)='object' AND octet_length(request::text)<=32768),
+  role_id UUID NOT NULL REFERENCES auth.roles(id),
+  role_snapshot JSONB NOT NULL CHECK (jsonb_typeof(role_snapshot)='object' AND octet_length(role_snapshot::text)<=32768),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+REVOKE ALL ON auth.platform_role_creations FROM PUBLIC;
+
 CREATE TABLE auth.linked_identities (
   issuer TEXT COLLATE "C" NOT NULL CHECK (octet_length(issuer) BETWEEN 1 AND 512 AND btrim(issuer) <> ''),
   subject TEXT COLLATE "C" NOT NULL CHECK (octet_length(subject) BETWEEN 1 AND 255 AND btrim(subject) <> ''),

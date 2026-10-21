@@ -27,6 +27,11 @@ type RoleCreationIntent struct {
 	Replayed    bool
 }
 
+type RoleCreationResult struct {
+	Role     accessdomain.Role
+	Replayed bool
+}
+
 func (c RoleCreation) Normalize() (RoleCreation, error) {
 	if !ValidID(c.OperationID) || !ValidID(c.ProjectID) || c.ExpectedVersion < 1 ||
 		c.ExpectedGeneration < 1 || !validReason(c.Reason) {
