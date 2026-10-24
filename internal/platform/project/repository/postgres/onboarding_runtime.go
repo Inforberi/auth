@@ -54,7 +54,7 @@ func CheckOnboardingRuntime(ctx context.Context, db *pgxpool.Pool, proof credent
 			AND (c.relowner<>$3 OR NOT has_table_privilege(r.oid,c.oid,permission.name)
 				OR has_table_privilege(r.oid,c.oid,permission.name||' WITH GRANT OPTION')
 				OR (permission.name='SELECT' AND has_table_privilege(r.oid,c.oid,'TRUNCATE'))))
-		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['operation_id','realm_id','actor_id','project_id','binding','request','role_id','role_snapshot']) col
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['operation_id','realm_id','actor_id','project_id','binding','request','role_id','role_snapshot','admission_id']) col
 			WHERE NOT has_column_privilege(r.oid,'auth.platform_role_creations',col,'INSERT')
 			OR has_column_privilege(r.oid,'auth.platform_role_creations',col,'INSERT WITH GRANT OPTION'))
 		AND EXISTS(SELECT 1 FROM auth.initial_setup WHERE singleton AND operator_hash=$8 AND initialized_at IS NULL)

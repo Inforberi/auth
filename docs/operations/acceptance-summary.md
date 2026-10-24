@@ -6,6 +6,8 @@
 
 ## Открытые ограничения приёмки
 
+- MP2.7,24 октября: SQL intent/admission/project receipt/outcome создания роли проверяется отдельной приёмкой; это не опубликованный platform API. Согласована граница **commit admission**: новые операции после revoke/suspend запрещены, уже допущенные могут завершиться в коротком окне. До HTTP: trusted cold-attested runtime/lease, реальные transport-fault и concurrent suspend/factor/role tests, bounded resource/rate admission, read/reconcile при утрате исходным actor прав. Lost-COMMIT-ack адаптер проверяет recovery после настоящего SQL commit, но не заменяет сетевой/fleet fault test. [Контракт](../features/platform-role-intents.md#окончательный-допуск-и-выполнение--24-октября-2026).
+
 Актуальная сводка перенесённых из текущей заметки ограничений. Датированные результаты ниже — evidence конкретного прогона, не текущая доступность стенда или production sign-off. Читать только затронутые задачей строки и профильный документ.
 
 - **Порядок:** обычные проверки по каждому блоку; MP1–MP6 → [MP6R security/refactor](../planning/multi-project.md#mp6r-проверка-безопасности-и-рефакторинг-перед-итоговой-приёмкой) → MP7 → MP8 → отдельно согласованный UI. J6/J7/A6.3/A6.4/pre-ui/A8 целиком не закрыты; смена порядка не закрывает прежние gates. Optional MFA, owner-only deletion и UI имеют собственные незавершённые требования в плане.

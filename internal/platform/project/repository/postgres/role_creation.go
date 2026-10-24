@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -11,11 +12,11 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
-// PrepareRoleCreation writes only the catalog intent. Execution requires a new
-// current-authority guard, project attestation, project audit and atomic receipt.
+// PrepareRoleCreation writes only the catalog intent. A new committed admission
+// and an attested project connection are required before execution.
 func (r *Repository) PrepareRoleCreation(ctx context.Context, actor operatordomain.Principal, command domain.RoleCreation) (domain.RoleCreationIntent, error) {
 	var result domain.RoleCreationIntent
-	err := r.mutate(ctx, actor, operatordomain.AccessManage, func(ctx context.Context, tx pgx.Tx) error {
+	err := r.mutate(ctx, actor, operatordomain.AccessManage, func(ctx context.Context, tx pgx.Tx, _ time.Time) error {
 		command, err := command.Normalize()
 		if err != nil {
 			return err
@@ -24,30 +25,11 @@ func (r *Repository) PrepareRoleCreation(ctx context.Context, actor operatordoma
 		if err != nil {
 			return domain.ErrInvalidProject
 		}
-		var binding []byte
-		var realm string
-		// Lifecycle writers lock the project first. Do not read ciphertext or grant
-		// runtime UPDATE on provisioner-owned metadata just to lock it.
-		err = tx.QueryRow(ctx, `SELECT realm.id::text,jsonb_build_object(
-			'target',p.storage_target,'database',p.database_name,'reservation',s.reservation_id,
-			'database_oid',s.database_oid,'owner_oid',s.owner_oid,'runtime_oid',s.runtime_oid,
-			'schema',s.schema_version)
-			FROM platform.projects p
-			JOIN platform.project_preparations prep ON prep.project_id=p.id AND prep.secrets_created
-			JOIN platform.project_secrets s ON s.project_id=p.id AND s.reservation_id=prep.reservation_id
-				AND s.storage_target=prep.storage_target AND s.storage_target=p.storage_target
-				AND s.schema_version=p.schema_version
-			CROSS JOIN platform.operator_realm realm
-			WHERE p.id=$1 AND p.version=$2 AND p.generation=$3
-			AND p.desired_state='enabled' AND p.phase='ready' AND realm.initialized_at IS NOT NULL
-			AND p.database_name='authp_'||replace(p.id::text,'-','')
-			FOR SHARE OF p`, command.ProjectID, command.ExpectedVersion, command.ExpectedGeneration).Scan(&realm, &binding)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.ErrConflict
-		}
+		target, binding, err := lockRoleTarget(ctx, tx, command)
 		if err != nil {
-			return catalogError(ctx, err)
+			return err
 		}
+		realm := target.RealmID
 		result.OperationID = command.OperationID
 		err = tx.QueryRow(ctx, `INSERT INTO platform.project_role_intents
 			(operation_id,project_id,realm_id,actor_id,version,generation,binding,request)

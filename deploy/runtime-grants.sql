@@ -8,7 +8,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA auth TO auth_runtim
 REVOKE INSERT, UPDATE, DELETE ON auth.restore_audit FROM auth_runtime;
 REVOKE UPDATE, DELETE, TRUNCATE ON auth.platform_role_creations FROM auth_runtime;
 REVOKE INSERT ON auth.platform_role_creations FROM auth_runtime;
-GRANT INSERT(operation_id,realm_id,actor_id,project_id,binding,request,role_id,role_snapshot)
+GRANT INSERT(operation_id,realm_id,actor_id,project_id,binding,request,role_id,role_snapshot,admission_id)
   ON auth.platform_role_creations TO auth_runtime;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA auth TO auth_runtime;
 ALTER DEFAULT PRIVILEGES IN SCHEMA auth

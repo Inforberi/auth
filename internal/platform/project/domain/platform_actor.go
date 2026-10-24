@@ -2,8 +2,11 @@ package domain
 
 // PlatformActor is audit attribution, not proof of current authority.
 type PlatformActor struct {
-	RealmID ID
-	UserID  ID
+	RealmID     ID
+	UserID      ID
+	AdmissionID ID
 }
 
-func (a PlatformActor) Valid() bool { return ValidID(a.RealmID) && ValidID(a.UserID) }
+func (a PlatformActor) Valid() bool {
+	return ValidID(a.RealmID) && ValidID(a.UserID) && ValidID(a.AdmissionID)
+}

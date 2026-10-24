@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -13,7 +14,7 @@ import (
 
 func (r *Repository) Create(ctx context.Context, actor operatordomain.Principal, input domain.Create) (domain.CreationReceipt, error) {
 	var result domain.CreationReceipt
-	err := r.mutate(ctx, actor, operatordomain.ProjectsManage, func(ctx context.Context, tx pgx.Tx) error {
+	err := r.mutate(ctx, actor, operatordomain.ProjectsManage, func(ctx context.Context, tx pgx.Tx, _ time.Time) error {
 		command, err := input.Normalize()
 		if err != nil {
 			return err

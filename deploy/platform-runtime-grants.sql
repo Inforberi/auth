@@ -18,6 +18,9 @@ GRANT SELECT(project_id,reservation_id,storage_target,database_oid,owner_oid,run
 GRANT INSERT(id,slug,name,origin,storage_target) ON platform.projects TO auth_platform_runtime;
 GRANT SELECT,INSERT ON platform.project_creations TO auth_platform_runtime;
 GRANT SELECT ON platform.project_role_intents TO auth_platform_runtime;
+GRANT SELECT ON platform.project_role_admissions,platform.project_role_outcomes TO auth_platform_runtime;
+GRANT INSERT(operation_id,created_at,expires_at) ON platform.project_role_admissions TO auth_platform_runtime;
+GRANT INSERT(operation_id,admission_id,role_snapshot) ON platform.project_role_outcomes TO auth_platform_runtime;
 GRANT INSERT(operation_id,project_id,realm_id,actor_id,version,generation,binding,request)
   ON platform.project_role_intents TO auth_platform_runtime;
 -- Row-locking SELECT requires UPDATE on at least one column of operator_permissions.

@@ -59,7 +59,7 @@ func (t *Target) checkInstalledSchema(ctx context.Context, tx pgx.Tx, r domain.P
 			WHERE ns.nspname='auth' AND c.relkind IN ('r','p') AND (c.relname<>'restore_audit' OR permission.name='SELECT')
 			AND (c.relname<>'platform_role_creations' OR permission.name='SELECT')
 			AND NOT has_table_privilege(role.oid,c.oid,permission.name))
-		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['operation_id','realm_id','actor_id','project_id','binding','request','role_id','role_snapshot']) col
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['operation_id','realm_id','actor_id','project_id','binding','request','role_id','role_snapshot','admission_id']) col
 			WHERE NOT has_column_privilege(role.oid,'auth.platform_role_creations',col,'INSERT'))),COALESCE((SELECT runtime_oid FROM project_meta.identity WHERE singleton),0)`,
 		t.realm, r.ProjectID, r.ReservationID, resources.DatabaseOID, resources.OwnerOID, migrations.AuthVersion, checksum, runtime).Scan(&valid, &runtimeOID)
 	if err != nil {

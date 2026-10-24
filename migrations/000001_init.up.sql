@@ -189,6 +189,7 @@ CREATE INDEX access_audit_retention ON auth.access_audit(created_at,id);
 CREATE TABLE auth.platform_role_creations (
   operation_id UUID PRIMARY KEY CHECK (operation_id <> '00000000-0000-0000-0000-000000000000'::uuid),
   realm_id UUID NOT NULL CHECK (realm_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  admission_id UUID NOT NULL CHECK (admission_id <> '00000000-0000-0000-0000-000000000000'::uuid),
   actor_id UUID NOT NULL CHECK (actor_id <> '00000000-0000-0000-0000-000000000000'::uuid),
   project_id UUID NOT NULL CHECK (project_id <> '00000000-0000-0000-0000-000000000000'::uuid),
   binding JSONB NOT NULL CHECK (jsonb_typeof(binding)='object' AND octet_length(binding::text)<=1024),

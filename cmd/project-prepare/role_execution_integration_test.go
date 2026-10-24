@@ -36,7 +36,7 @@ func projectRoleDrill(t *testing.T, physical *pgx.Conn, runtime *pgxpool.Pool, b
 	})
 	permissions, err := settings.NewCatalog(nil)
 	require.NoError(t, err)
-	actor := domain.PlatformActor{RealmID: binding.RealmID, UserID: "e2000000-0000-4000-8000-000000000088"}
+	actor := domain.PlatformActor{RealmID: binding.RealmID, UserID: "e2000000-0000-4000-8000-000000000088", AdmissionID: "e2000000-0000-4000-8000-000000000080"}
 	command := domain.RoleCreation{
 		OperationID: "e2000000-0000-4000-8000-000000000081", ProjectID: binding.ProjectID,
 		ExpectedVersion: 3, ExpectedGeneration: 3, Key: "platform_drill_editor", Name: "Редактор", Reason: "SQL drill",

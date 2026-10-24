@@ -1,10 +1,16 @@
 package domain
 
 import (
+	"errors"
 	"slices"
 	"time"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
+)
+
+var (
+	ErrAdmissionExpired   = errors.New("role creation admission expired")
+	ErrRoleOutcomeUnknown = errors.New("role creation outcome unknown")
 )
 
 type RoleCreation struct {
@@ -28,8 +34,9 @@ type RoleCreationIntent struct {
 }
 
 type RoleCreationResult struct {
-	Role     accessdomain.Role
-	Replayed bool
+	Role            accessdomain.Role
+	Replayed        bool
+	CatalogRecorded bool
 }
 
 func (c RoleCreation) Normalize() (RoleCreation, error) {

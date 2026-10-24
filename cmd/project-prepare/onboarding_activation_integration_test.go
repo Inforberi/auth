@@ -71,6 +71,7 @@ func onboardingActivationDrill(t *testing.T, physical *pgx.Conn, env func(string
 	require.Equal(t, xmin, check("open", true))
 	require.NoError(t, runtime.Ping(ctx))
 	t.Run("project role transaction", func(t *testing.T) { projectRoleDrill(t, physical, runtime, b) })
+	t.Run("platform role admission", func(t *testing.T) { roleAdmissionDrill(t, physical, runtime, env, r, b) })
 	other, otherConn := open()
 	require.ErrorIs(t, other.CloseOnboarding(ctx, r, b, repo), storage.ErrBusy)
 	require.NoError(t, otherConn.Close(ctx))

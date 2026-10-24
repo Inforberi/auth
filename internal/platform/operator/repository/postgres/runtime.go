@@ -34,6 +34,7 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 			('platform.project_events','SELECT'),
 			('platform.project_creations','SELECT'),('platform.project_creations','INSERT'),
 			('platform.project_role_intents','SELECT'),
+			('platform.project_role_admissions','SELECT'),('platform.project_role_outcomes','SELECT'),
 			('platform.operator_realm','SELECT'),('platform.operator_permissions','SELECT'),('platform.operator_permissions','INSERT'),
 			('platform.operator_audit','SELECT'),('platform.operator_audit','INSERT')) required(relation,privilege)
 			WHERE NOT has_table_privilege(current_user,required.relation,required.privilege))
@@ -58,6 +59,16 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 		AND NOT has_table_privilege(current_user,'platform.project_role_intents','DELETE,TRUNCATE')
 		AND NOT has_any_column_privilege(current_user,'platform.project_role_intents','UPDATE,REFERENCES')
 		AND NOT has_column_privilege(current_user,'platform.project_role_intents','created_at','INSERT')
+		AND NOT has_table_privilege(current_user,'platform.project_role_admissions','UPDATE,DELETE,TRUNCATE')
+		AND NOT has_any_column_privilege(current_user,'platform.project_role_admissions','UPDATE,REFERENCES')
+		AND NOT has_column_privilege(current_user,'platform.project_role_admissions','admission_id','INSERT')
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['operation_id','created_at','expires_at']) col
+			WHERE NOT has_column_privilege(current_user,'platform.project_role_admissions',col,'INSERT'))
+		AND NOT has_table_privilege(current_user,'platform.project_role_outcomes','UPDATE,DELETE,TRUNCATE')
+		AND NOT has_any_column_privilege(current_user,'platform.project_role_outcomes','UPDATE,REFERENCES')
+		AND NOT has_column_privilege(current_user,'platform.project_role_outcomes','created_at','INSERT')
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['operation_id','admission_id','role_snapshot']) col
+			WHERE NOT has_column_privilege(current_user,'platform.project_role_outcomes',col,'INSERT'))
 		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['operation_id','project_id','realm_id','actor_id','version','generation','binding','request']) col
 			WHERE NOT has_column_privilege(current_user,'platform.project_role_intents',col,'INSERT'))
 		AND NOT has_table_privilege(current_user,'platform.project_preparations','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')

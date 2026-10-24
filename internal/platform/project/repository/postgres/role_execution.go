@@ -16,8 +16,8 @@ import (
 )
 
 // CreatePlatformRoleInTransaction is project-side persistence, not a bridge.
-// The caller must hold current platform authority and the target guard through
-// project commit/rollback. No production caller is admitted before MP2.7 gates.
+// The caller must own a committed current admission for this exact command.
+// Later revoke cannot undo admitted work. No HTTP caller before MP2.7 gates.
 func CreatePlatformRoleInTransaction(ctx context.Context, tx pgx.Tx, actor domain.PlatformActor, binding credentials.Binding,
 	command domain.RoleCreation, catalog settings.Catalog, mfaReady bool,
 ) (domain.RoleCreationResult, error) {
@@ -70,9 +70,9 @@ func CreatePlatformRoleInTransaction(ctx context.Context, tx pgx.Tx, actor domai
 		return domain.RoleCreationResult{}, domain.ErrUnavailable
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO auth.platform_role_creations
-		(operation_id,realm_id,actor_id,project_id,binding,request,role_id,role_snapshot)
-		VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7,$8::jsonb)`, command.OperationID,
-		actor.RealmID, actor.UserID, command.ProjectID, target, request, role.ID, snapshot)
+		(operation_id,realm_id,actor_id,project_id,binding,request,role_id,role_snapshot,admission_id)
+		VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7,$8::jsonb,$9)`, command.OperationID,
+		actor.RealmID, actor.UserID, command.ProjectID, target, request, role.ID, snapshot, actor.AdmissionID)
 	if err != nil {
 		return domain.RoleCreationResult{}, catalogError(ctx, err)
 	}

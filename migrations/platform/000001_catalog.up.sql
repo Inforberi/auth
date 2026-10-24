@@ -111,3 +111,21 @@ CREATE TABLE platform.project_role_intents (
   created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
 REVOKE ALL ON platform.project_role_intents FROM PUBLIC;
+
+CREATE TABLE platform.project_role_admissions (
+  admission_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  operation_id UUID NOT NULL REFERENCES platform.project_role_intents(operation_id),
+  created_at TIMESTAMPTZ NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL CHECK (expires_at>created_at AND expires_at<=created_at+interval '3 seconds'),
+  UNIQUE(operation_id,admission_id)
+);
+REVOKE ALL ON platform.project_role_admissions FROM PUBLIC;
+
+CREATE TABLE platform.project_role_outcomes (
+  operation_id UUID PRIMARY KEY REFERENCES platform.project_role_intents(operation_id),
+  admission_id UUID NOT NULL,
+  role_snapshot JSONB NOT NULL CHECK (jsonb_typeof(role_snapshot)='object' AND octet_length(role_snapshot::text)<=32768),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  FOREIGN KEY(operation_id,admission_id) REFERENCES platform.project_role_admissions(operation_id,admission_id)
+);
+REVOKE ALL ON platform.project_role_outcomes FROM PUBLIC;
