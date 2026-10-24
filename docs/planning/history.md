@@ -2,6 +2,14 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+## MP2.7 authority/transport — подготовка,24 октября 2026
+
+[Матрица](../operations/platform-role-faults.md) добавлена в existing TestPrepareCommandSQL: lock-coordinated session/AccessManage/TOTP/suspend до admission и выполнение уже committed admission через warm registry; server backend terminate до записи; actual TCP close после независимо наблюдаемого commit до чтения ответа, затем receipt reconciliation без нового admission. Не менялись runtime/schema/API/dependencies/ENV. PostgreSQL18 semantics pg_terminate_backend timeout/pg_stat_activity сверены через Context7.
+
+Основной чат: formatter и compile-only `go test ./cmd/project-prepare -run '^$'` PASS0.482s (`/private/tmp/auth-role-faults-compile.log`), `git diff --check`/локальные doc paths. Это не SQL/race приёмка. Длительный `task check`, целевой command race и actual TLS SQL передаются в отдельный чат «Проверки Auth — Luna», исходный блок остаётся unchecked до отчёта. Работа здесь не ждёт окончания отдельного чата. Новая матрица не объявляется PASS по прежним тестам; явные ограничения local socket-control/fleet/project-role/read-reconcile matrix сохранены.
+
+Handoff выполнен: чат `01a16eab-c777-78a0-a815-47b45ff0860d`, snapshot `/private/tmp/auth-role-faults-snapshot.3YF8Ha` из e69bc714e2d1e8e8c0498c8a5052e625444b67a8, patch SHA256 8ed801f43f94c57ac05bde0ca59d1d002f08c25ab9d5ace0d51f354018ddbcd7 + три новых тестовых файла; manifest `/private/tmp/auth-role-faults-manifest.sha256`. До отдельного отчёта проверки NOT RUN/ожидаются, результатов здесь не придумывать. SQL fixtures и cleanup поручены Luna только для собственного изолированного стенда.
+
 ## Результат MP2.7 role-outcomes — 24 октября 2026
 
 [Контракт](../features/platform-role-outcomes.md). ReadRoleOutcome: current guarded ProjectsRead/fresh policy, только своя операция, current AccessManage не нужен; unknown не означает rollback. ReconcileRoleOutcome читает исходный receipt через registry/read-only transaction/full SQL profile, сверяет admission и дописывает только idempotent catalog evidence. Финальный guarded read защищает выдачу после изменения authority. Общие receipt reader/recorder переиспользованы. Новых admissions/ролей/project writes/schema/routes/ENV/dependencies/worker нет.
