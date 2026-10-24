@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"errors"
-	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -24,39 +22,15 @@ func (a *AdmittedRoleCreation) Execute(ctx context.Context, project RoleProjectD
 	if a == nil || a.repository == nil || a.used == nil || !a.actor.Valid() || !time.Now().Before(a.until) {
 		return domain.RoleCreationResult{}, domain.ErrAdmissionExpired
 	}
-	if project == nil || !a.used.CompareAndSwap(false, true) {
-		return domain.RoleCreationResult{}, domain.ErrConflict
-	}
-	ctx, cancel := context.WithDeadline(ctx, a.until)
-	defer cancel()
-	tx, err := project.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
-	if err != nil {
-		return domain.RoleCreationResult{}, catalogError(ctx, err)
-	}
-	defer func() {
-		cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
-		defer stop()
-		_ = tx.Rollback(cleanup) //nolint:gosec // Caller result is known only after Commit; preserve it.
-	}()
-	millis := time.Until(a.until).Milliseconds()
-	if millis < 1 {
-		return domain.RoleCreationResult{}, domain.ErrAdmissionExpired
-	}
-	// Bound server work even if cancellation/connection close cannot reach it.
-	_, err = tx.Exec(ctx, `SELECT set_config('transaction_timeout',$1,true),set_config('statement_timeout',$1,true)`, strconv.FormatInt(millis, 10))
-	if err != nil {
-		return domain.RoleCreationResult{}, catalogError(ctx, err)
-	}
-	result, err := CreatePlatformRoleInTransaction(ctx, tx, a.actor, a.binding, a.command, permissions, mfaReady)
+	var result domain.RoleCreationResult
+	err := executeRoleTransaction(ctx, project, a.until, a.used, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		result, err = CreatePlatformRoleInTransaction(ctx, tx, a.actor, a.binding, a.command, permissions, mfaReady)
+		return err
+	})
 	if err != nil {
 		return domain.RoleCreationResult{}, err
 	}
-	if err := ctx.Err(); err != nil {
-		return domain.RoleCreationResult{}, errors.Join(domain.ErrAdmissionExpired, err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return domain.RoleCreationResult{}, errors.Join(domain.ErrRoleOutcomeUnknown, ctx.Err())
-	}
-	result.CatalogRecorded = a.recordOutcome(ctx, result.Role) == nil
+	result.CatalogRecorded = a.recordOutcome(ctx, result) == nil
 	return result, nil
 }

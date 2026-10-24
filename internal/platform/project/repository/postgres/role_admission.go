@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"sync/atomic"
 	"time"
 
@@ -43,7 +42,7 @@ func (r *Repository) AdmitRoleCreation(ctx context.Context, actor operatordomain
 		if err != nil {
 			return err
 		}
-		binding, snapshot, err := lockRoleTarget(ctx, tx, command)
+		binding, snapshot, err := lockRoleTarget(ctx, tx, command.ProjectID, command.ExpectedVersion, command.ExpectedGeneration)
 		if err != nil {
 			return err
 		}
@@ -51,25 +50,12 @@ func (r *Repository) AdmitRoleCreation(ctx context.Context, actor operatordomain
 		if err != nil {
 			return domain.ErrInvalidProject
 		}
-		var found int
-		err = tx.QueryRow(ctx, `SELECT 1 FROM platform.project_role_intents
-			WHERE operation_id=$1 AND project_id=$2 AND realm_id=$3 AND actor_id=$4
-			AND version=$5 AND generation=$6 AND binding=$7::jsonb AND request=$8::jsonb`,
-			command.OperationID, command.ProjectID, binding.RealmID, actor.UserID,
-			command.ExpectedVersion, command.ExpectedGeneration, snapshot, request).Scan(&found)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.ErrConflict
-		}
+		a.id, remaining, err = issueRoleAdmission(ctx, tx, roleIntentRecord{
+			operation: command.OperationID, project: command.ProjectID, realm: binding.RealmID, actor: domain.ID(actor.UserID),
+			version: command.ExpectedVersion, generation: command.ExpectedGeneration, binding: snapshot, request: request,
+		}, proofDeadline)
 		if err != nil {
-			return catalogError(ctx, err)
-		}
-		err = tx.QueryRow(ctx, `WITH issued AS (SELECT clock_timestamp() AS at)
-			INSERT INTO platform.project_role_admissions(operation_id,created_at,expires_at)
-			SELECT $1,at,LEAST($2::timestamptz,at+interval '3 seconds') FROM issued
-			RETURNING admission_id::text,EXTRACT(EPOCH FROM expires_at-clock_timestamp())::double precision`,
-			command.OperationID, proofDeadline).Scan(&a.id, &remaining)
-		if err != nil {
-			return catalogError(ctx, err)
+			return err
 		}
 		a.actor = domain.PlatformActor{RealmID: binding.RealmID, UserID: domain.ID(actor.UserID), AdmissionID: a.id}
 		a.binding, a.command = binding, command

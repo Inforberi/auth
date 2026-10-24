@@ -51,6 +51,9 @@ const projectRuntimeProfileSQL = `SELECT EXISTS(SELECT 1 FROM pg_database d JOIN
 	AND NOT has_any_column_privilege(r.oid,'auth.platform_role_creations','UPDATE')
 	AND NOT has_table_privilege(r.oid,'auth.platform_role_creations','DELETE,TRUNCATE')
 	AND NOT has_column_privilege(r.oid,'auth.platform_role_creations','created_at','INSERT')
+	AND NOT has_any_column_privilege(r.oid,'auth.platform_role_assignments','UPDATE')
+	AND NOT has_table_privilege(r.oid,'auth.platform_role_assignments','DELETE,TRUNCATE')
+	AND NOT has_column_privilege(r.oid,'auth.platform_role_assignments','created_at','INSERT')
 	AND NOT has_function_privilege(r.oid,'auth.decide_mfa_recovery(uuid,uuid,bigint,boolean,text,text)','EXECUTE')
 	AND NOT EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace ns ON ns.oid=c.relnamespace
 		CROSS JOIN (VALUES('SELECT'),('INSERT'),('UPDATE'),('DELETE')) permission(name)
@@ -58,6 +61,7 @@ const projectRuntimeProfileSQL = `SELECT EXISTS(SELECT 1 FROM pg_database d JOIN
 		AND (c.relkind<>'v' OR permission.name='SELECT')
 		AND (c.relname<>'restore_audit' OR permission.name='SELECT')
 		AND (c.relname<>'platform_role_creations' OR permission.name='SELECT')
+		AND (c.relname<>'platform_role_assignments' OR permission.name='SELECT')
 		AND (c.relowner<>$3 OR NOT has_table_privilege(r.oid,c.oid,permission.name)
 			OR has_table_privilege(r.oid,c.oid,permission.name||' WITH GRANT OPTION')
 			OR (permission.name='SELECT' AND has_table_privilege(r.oid,c.oid,'TRUNCATE'))))
@@ -67,7 +71,10 @@ const projectRuntimeProfileSQL = `SELECT EXISTS(SELECT 1 FROM pg_database d JOIN
 			OR has_sequence_privilege(r.oid,c.oid,'UPDATE,USAGE WITH GRANT OPTION,SELECT WITH GRANT OPTION')))
 	AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['operation_id','realm_id','actor_id','project_id','binding','request','role_id','role_snapshot','admission_id']) col
 		WHERE NOT has_column_privilege(r.oid,'auth.platform_role_creations',col,'INSERT')
-		OR has_column_privilege(r.oid,'auth.platform_role_creations',col,'INSERT WITH GRANT OPTION')))`
+		OR has_column_privilege(r.oid,'auth.platform_role_creations',col,'INSERT WITH GRANT OPTION'))
+	AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['operation_id','realm_id','actor_id','project_id','binding','request','user_id','role_id','role_snapshot','access_version','changed','admission_id']) col
+		WHERE NOT has_column_privilege(r.oid,'auth.platform_role_assignments',col,'INSERT')
+		OR has_column_privilege(r.oid,'auth.platform_role_assignments',col,'INSERT WITH GRANT OPTION')))`
 
 func runtimeProfileArguments(b credentials.Binding) ([]any, error) {
 	database, owner, err := (domain.PreparationReservation{ProjectID: b.ProjectID, ReservationID: b.ReservationID}).ResourceNames()

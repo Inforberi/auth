@@ -6812,6 +6812,250 @@
                 }
             }
         },
+        "/api/v1/platform/projects/{id}/users/{userId}/roles/{roleId}/grant": {
+            "post": {
+                "description": "Runtime-enabled platform only. Fresh platform.project_access.manage and exact project/user/role versions. System roles are forbidden. Grant checks catalog/MFA capability, caps assignments, invalidates pre-grant active sessions, and atomically records a project receipt. Same operation UUID/payload replays its original result; unknown COMMIT never means rollback. No actor/target/action override in JSON. Project MFA-required grants fail closed until capability is assembled.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Roles"
+                ],
+                "summary": "Grant a custom project role as a platform operator",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact platform HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project user UUID",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Custom role UUID in this project",
+                        "name": "roleId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Operation and expected versions; maximum 8 KiB",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.PlatformAssignmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.PlatformAssignmentResponse"
+                        },
+                        "headers": {
+                            "Location": {
+                                "type": "string",
+                                "description": "Role operation URL"
+                            }
+                        }
+                    },
+                    "202": {
+                        "description": "Outcome unknown",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.PlatformAssignmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "428": {
+                        "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/users/{userId}/roles/{roleId}/revoke": {
+            "post": {
+                "description": "Fresh platform.project_access.manage and exact versions. System role assignments cannot be changed here. Removes the binding under the shared Access lock, bumps access_version only on change, preserves auth_version, and writes the immutable receipt in the same transaction. SQL permission validation observes revocation immediately; offline JWT semantics are unchanged. Blocked non-deleted targets may be stripped of custom roles. Read/reconcile the same operation after an unknown response.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Roles"
+                ],
+                "summary": "Revoke a custom project role as a platform operator",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact platform HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project user UUID",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Custom role UUID in this project",
+                        "name": "roleId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Operation and expected versions; maximum 8 KiB",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.PlatformAssignmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.PlatformAssignmentResponse"
+                        },
+                        "headers": {
+                            "Location": {
+                                "type": "string",
+                                "description": "Role operation URL"
+                            }
+                        }
+                    },
+                    "202": {
+                        "description": "Outcome unknown",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.PlatformAssignmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "428": {
+                        "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/setup/complete": {
             "post": {
                 "description": "Consumes installation proof and pending intent with email and TOTP codes. Atomically creates account, verified contact, factor, recovery codes, system grant and durable initialized marker. Returns recovery codes once; does not issue a session. Setup stays closed after restart or loss of administrator.",
@@ -8588,6 +8832,64 @@
                 }
             }
         },
+        "project_http.PlatformAssignmentRequest": {
+            "type": "object",
+            "properties": {
+                "expectedAccessVersion": {
+                    "type": "integer"
+                },
+                "expectedGeneration": {
+                    "type": "integer"
+                },
+                "expectedRoleVersion": {
+                    "type": "integer"
+                },
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "operationId": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "project_http.PlatformAssignmentResponse": {
+            "type": "object",
+            "properties": {
+                "accessVersion": {
+                    "type": "integer"
+                },
+                "action": {
+                    "type": "string"
+                },
+                "catalogRecorded": {
+                    "type": "boolean"
+                },
+                "changed": {
+                    "type": "boolean"
+                },
+                "operationId": {
+                    "type": "string"
+                },
+                "projectId": {
+                    "type": "string"
+                },
+                "replayed": {
+                    "type": "boolean"
+                },
+                "role": {
+                    "$ref": "#/definitions/project_http.PlatformRoleResponse"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
         "project_http.PlatformRoleResponse": {
             "type": "object",
             "properties": {
@@ -8669,6 +8971,15 @@
         "project_http.RoleOutcomeResponse": {
             "type": "object",
             "properties": {
+                "accessVersion": {
+                    "type": "integer"
+                },
+                "action": {
+                    "type": "string"
+                },
+                "changed": {
+                    "type": "boolean"
+                },
                 "committed": {
                     "type": "boolean"
                 },
@@ -8680,6 +8991,9 @@
                 },
                 "role": {
                     "$ref": "#/definitions/project_http.PlatformRoleResponse"
+                },
+                "userId": {
+                    "type": "string"
                 }
             }
         },

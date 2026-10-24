@@ -1022,6 +1022,44 @@ definitions:
       replayed:
         type: boolean
     type: object
+  project_http.PlatformAssignmentRequest:
+    properties:
+      expectedAccessVersion:
+        type: integer
+      expectedGeneration:
+        type: integer
+      expectedRoleVersion:
+        type: integer
+      expectedVersion:
+        type: integer
+      operationId:
+        type: string
+      reason:
+        type: string
+    type: object
+  project_http.PlatformAssignmentResponse:
+    properties:
+      accessVersion:
+        type: integer
+      action:
+        type: string
+      catalogRecorded:
+        type: boolean
+      changed:
+        type: boolean
+      operationId:
+        type: string
+      projectId:
+        type: string
+      replayed:
+        type: boolean
+      role:
+        $ref: '#/definitions/project_http.PlatformRoleResponse'
+      status:
+        type: string
+      userId:
+        type: string
+    type: object
   project_http.PlatformRoleResponse:
     properties:
       description:
@@ -1075,6 +1113,12 @@ definitions:
     type: object
   project_http.RoleOutcomeResponse:
     properties:
+      accessVersion:
+        type: integer
+      action:
+        type: string
+      changed:
+        type: boolean
       committed:
         type: boolean
       operationId:
@@ -1083,6 +1127,8 @@ definitions:
         type: string
       role:
         $ref: '#/definitions/project_http.PlatformRoleResponse'
+      userId:
+        type: string
     type: object
   project_http.TransitionResponse:
     properties:
@@ -6343,6 +6389,182 @@ paths:
       summary: Suspend an independent project
       tags:
       - Platform Projects
+  /api/v1/platform/projects/{id}/users/{userId}/roles/{roleId}/grant:
+    post:
+      consumes:
+      - application/json
+      description: Runtime-enabled platform only. Fresh platform.project_access.manage
+        and exact project/user/role versions. System roles are forbidden. Grant checks
+        catalog/MFA capability, caps assignments, invalidates pre-grant active sessions,
+        and atomically records a project receipt. Same operation UUID/payload replays
+        its original result; unknown COMMIT never means rollback. No actor/target/action
+        override in JSON. Project MFA-required grants fail closed until capability
+        is assembled.
+      parameters:
+      - description: Exact platform HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Project user UUID
+        in: path
+        name: userId
+        required: true
+        type: string
+      - description: Custom role UUID in this project
+        in: path
+        name: roleId
+        required: true
+        type: string
+      - description: Operation and expected versions; maximum 8 KiB
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.PlatformAssignmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            Location:
+              description: Role operation URL
+              type: string
+          schema:
+            $ref: '#/definitions/project_http.PlatformAssignmentResponse'
+        "202":
+          description: Outcome unknown
+          schema:
+            $ref: '#/definitions/project_http.PlatformAssignmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "428":
+          description: Precondition Required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Grant a custom project role as a platform operator
+      tags:
+      - Platform Roles
+  /api/v1/platform/projects/{id}/users/{userId}/roles/{roleId}/revoke:
+    post:
+      consumes:
+      - application/json
+      description: Fresh platform.project_access.manage and exact versions. System
+        role assignments cannot be changed here. Removes the binding under the shared
+        Access lock, bumps access_version only on change, preserves auth_version,
+        and writes the immutable receipt in the same transaction. SQL permission validation
+        observes revocation immediately; offline JWT semantics are unchanged. Blocked
+        non-deleted targets may be stripped of custom roles. Read/reconcile the same
+        operation after an unknown response.
+      parameters:
+      - description: Exact platform HTTPS origin
+        in: header
+        name: Origin
+        required: true
+        type: string
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Project user UUID
+        in: path
+        name: userId
+        required: true
+        type: string
+      - description: Custom role UUID in this project
+        in: path
+        name: roleId
+        required: true
+        type: string
+      - description: Operation and expected versions; maximum 8 KiB
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.PlatformAssignmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            Location:
+              description: Role operation URL
+              type: string
+          schema:
+            $ref: '#/definitions/project_http.PlatformAssignmentResponse'
+        "202":
+          description: Outcome unknown
+          schema:
+            $ref: '#/definitions/project_http.PlatformAssignmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "428":
+          description: Precondition Required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Revoke a custom project role as a platform operator
+      tags:
+      - Platform Roles
   /api/v1/setup/complete:
     post:
       consumes:

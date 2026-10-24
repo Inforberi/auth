@@ -86,6 +86,8 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 		AND NOT has_table_privilege(current_user,'platform.operator_audit','UPDATE,DELETE,TRUNCATE')
 		AND NOT has_table_privilege(current_user,'auth.platform_role_creations','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
 		AND NOT has_any_column_privilege(current_user,'auth.platform_role_creations','SELECT,INSERT,UPDATE,REFERENCES')
+		AND NOT has_table_privilege(current_user,'auth.platform_role_assignments','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
+		AND NOT has_any_column_privilege(current_user,'auth.platform_role_assignments','SELECT,INSERT,UPDATE,REFERENCES')
 		AND NOT has_table_privilege(current_user,'auth.restore_audit','INSERT,UPDATE,DELETE,TRUNCATE')`, r.realm, setupEnabled).Scan(&ready)
 	if err != nil {
 		return errors.Join(domain.ErrUnavailable, ctx.Err())

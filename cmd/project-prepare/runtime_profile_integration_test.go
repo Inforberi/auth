@@ -98,6 +98,10 @@ func projectRuntimeProfileDrill(t *testing.T, admin *pgx.Conn, runtime *pgxpool.
 			"missing role permission", `REVOKE UPDATE ON auth.roles FROM :runtime`,
 			`GRANT UPDATE ON auth.roles TO :runtime`, nil,
 		},
+		{"assignment receipt update", `GRANT UPDATE ON auth.platform_role_assignments TO :runtime`, `REVOKE UPDATE ON auth.platform_role_assignments FROM :runtime`, nil},
+		{"assignment receipt delete", `GRANT DELETE ON auth.platform_role_assignments TO :runtime`, `REVOKE DELETE ON auth.platform_role_assignments FROM :runtime`, nil},
+		{"assignment receipt timestamp", `GRANT INSERT(created_at) ON auth.platform_role_assignments TO :runtime`, `REVOKE INSERT(created_at) ON auth.platform_role_assignments FROM :runtime`, nil},
+		{"missing assignment receipt insert", `REVOKE INSERT(changed) ON auth.platform_role_assignments FROM :runtime`, `GRANT INSERT(changed) ON auth.platform_role_assignments TO :runtime`, nil},
 		{
 			"missing view permission", `REVOKE SELECT ON auth.role_bound_sessions FROM :runtime`,
 			`GRANT SELECT ON auth.role_bound_sessions TO :runtime`, nil,

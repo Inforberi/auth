@@ -76,7 +76,7 @@ func CreatePlatformRoleInTransaction(ctx context.Context, tx pgx.Tx, actor domai
 	if err != nil {
 		return domain.RoleCreationResult{}, catalogError(ctx, err)
 	}
-	return domain.RoleCreationResult{Role: role}, nil
+	return domain.RoleCreationResult{Role: role, ReceiptAdmissionID: actor.AdmissionID}, nil
 }
 
 func readRoleReceipt(ctx context.Context, tx pgx.Tx, realm, actor domain.ID, command domain.RoleCreation, target, request []byte) (domain.RoleCreationResult, domain.ID, bool, error) {
@@ -100,5 +100,5 @@ func readRoleReceipt(ctx context.Context, tx pgx.Tx, realm, actor domain.ID, com
 	if err := json.Unmarshal(snapshot, &role); err != nil {
 		return domain.RoleCreationResult{}, "", true, domain.ErrUnavailable
 	}
-	return domain.RoleCreationResult{Role: role, Replayed: true}, admission, true, nil
+	return domain.RoleCreationResult{Role: role, Replayed: true, ReceiptAdmissionID: admission}, admission, true, nil
 }

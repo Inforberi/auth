@@ -5,6 +5,7 @@ GRANT USAGE ON SCHEMA auth,platform TO auth_platform_runtime;
 GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA auth TO auth_platform_runtime;
 REVOKE INSERT,UPDATE,DELETE,TRUNCATE ON auth.restore_audit FROM auth_platform_runtime;
 REVOKE ALL ON auth.platform_role_creations FROM auth_platform_runtime;
+REVOKE ALL ON auth.platform_role_assignments FROM auth_platform_runtime;
 GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA auth TO auth_platform_runtime;
 
 GRANT SELECT ON platform.operator_realm TO auth_platform_runtime;

@@ -24,19 +24,24 @@ import (
 
 type operatorRoles struct{ calls int }
 
+func (s *operatorRoles) ChangeRoleAssignment(context.Context, operatordomain.Principal, domain.RoleAssignment) (domain.RoleAssignmentResult, error) {
+	s.calls++
+	return domain.RoleAssignmentResult{}, nil
+}
+
 func (s *operatorRoles) CreateRole(context.Context, operatordomain.Principal, domain.RoleCreation) (domain.RoleCreationResult, error) {
 	s.calls++
 	return domain.RoleCreationResult{}, nil
 }
 
-func (s *operatorRoles) ReadRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleCreationOutcome, error) {
+func (s *operatorRoles) ReadRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleOutcome, error) {
 	s.calls++
-	return domain.RoleCreationOutcome{}, nil
+	return domain.RoleOutcome{}, nil
 }
 
-func (s *operatorRoles) ReconcileRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleCreationOutcome, error) {
+func (s *operatorRoles) ReconcileRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleOutcome, error) {
 	s.calls++
-	return domain.RoleCreationOutcome{}, nil
+	return domain.RoleOutcome{}, nil
 }
 
 func roleRouteRuntime() config.ProjectRuntimeConfig {
@@ -68,7 +73,10 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 			})
 		},
 	}
-	for _, path := range []string{"/projects/project/roles", "/projects/project/role-operations/op", "/projects/project/role-operations/op/reconcile"} {
+	for _, path := range []string{
+		"/projects/project/roles", "/projects/project/role-operations/op", "/projects/project/role-operations/op/reconcile",
+		"/projects/project/users/user/roles/role/grant", "/projects/project/users/user/roles/role/revoke",
+	} {
 		for _, tc := range []struct {
 			origin string
 			cookie bool
@@ -77,6 +85,9 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 			{cfg.Platform.Origin, true, 200}, {"https://foreign.example", true, 403}, {cfg.Platform.Origin, false, 401},
 		} {
 			method, body, status := "POST", "", tc.status
+			if strings.HasSuffix(path, "/grant") || strings.HasSuffix(path, "/revoke") {
+				body = "{}"
+			}
 			if strings.HasSuffix(path, "/roles") {
 				body = "{}"
 				if status == 200 {
@@ -103,7 +114,7 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 			}
 		}
 	}
-	require.Equal(t, 3, capacityCalls)
+	require.Equal(t, 5, capacityCalls)
 	unsafe := h
 	unsafe.ProjectCapacity = nil
 	_, err := NewOperator(unsafe)

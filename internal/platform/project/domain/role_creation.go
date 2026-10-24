@@ -1,16 +1,9 @@
 package domain
 
 import (
-	"errors"
 	"slices"
-	"time"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
-)
-
-var (
-	ErrAdmissionExpired   = errors.New("role creation admission expired")
-	ErrRoleOutcomeUnknown = errors.New("role creation outcome unknown")
 )
 
 type RoleCreation struct {
@@ -26,26 +19,11 @@ type RoleCreation struct {
 	Reason             string
 }
 
-// RoleCreationIntent records preparation, not a project mutation or an authority ticket.
-type RoleCreationIntent struct {
-	OperationID ID
-	CreatedAt   time.Time
-	Replayed    bool
-}
-
 type RoleCreationResult struct {
-	Role            accessdomain.Role
-	Replayed        bool
-	CatalogRecorded bool
-}
-
-// Committed describes the original operation, not the role's current configuration.
-// False means unknown: absence of completion evidence does not prove rollback.
-type RoleCreationOutcome struct {
-	OperationID ID
-	ProjectID   ID
-	Committed   bool
-	Role        accessdomain.Role
+	ReceiptAdmissionID ID `json:"-"`
+	Role               accessdomain.Role
+	Replayed           bool
+	CatalogRecorded    bool
 }
 
 func (c RoleCreation) Normalize() (RoleCreation, error) {

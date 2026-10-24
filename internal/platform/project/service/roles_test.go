@@ -15,9 +15,18 @@ type roleRepositoryStub struct {
 	err                error
 }
 
-func (s *roleRepositoryStub) PrepareRoleCreation(context.Context, operatordomain.Principal, domain.RoleCreation) (domain.RoleCreationIntent, error) {
+func (s *roleRepositoryStub) PrepareRoleAssignment(ctx context.Context, actor operatordomain.Principal, _ domain.RoleAssignment) (domain.RoleIntent, error) {
+	return s.PrepareRoleCreation(ctx, actor, domain.RoleCreation{})
+}
+
+func (s *roleRepositoryStub) ExecuteRoleAssignment(context.Context, operatordomain.Principal, domain.RoleAssignment) (domain.RoleAssignmentResult, error) {
+	s.executed = s.prepared
+	return domain.RoleAssignmentResult{}, nil
+}
+
+func (s *roleRepositoryStub) PrepareRoleCreation(context.Context, operatordomain.Principal, domain.RoleCreation) (domain.RoleIntent, error) {
 	s.prepared = true
-	return domain.RoleCreationIntent{}, s.err
+	return domain.RoleIntent{}, s.err
 }
 
 func (s *roleRepositoryStub) ExecuteRoleCreation(context.Context, operatordomain.Principal, domain.RoleCreation) (domain.RoleCreationResult, error) {
@@ -25,18 +34,32 @@ func (s *roleRepositoryStub) ExecuteRoleCreation(context.Context, operatordomain
 	return domain.RoleCreationResult{}, nil
 }
 
-func (s *roleRepositoryStub) ReadRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleCreationOutcome, error) {
-	return domain.RoleCreationOutcome{}, s.err
+func (s *roleRepositoryStub) ReadRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleOutcome, error) {
+	return domain.RoleOutcome{}, s.err
 }
 
-func (s *roleRepositoryStub) ReconcileRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleCreationOutcome, error) {
-	return domain.RoleCreationOutcome{}, s.err
+func (s *roleRepositoryStub) ReconcileRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleOutcome, error) {
+	return domain.RoleOutcome{}, s.err
 }
 
 func TestRoleCreationRequiresPreparedIntent(t *testing.T) {
 	for _, err := range []error{nil, operatordomain.ErrForbidden, domain.ErrConflict} {
 		repo := &roleRepositoryStub{err: err}
 		_, actual := NewRoles(repo).CreateRole(t.Context(), operatordomain.Principal{}, domain.RoleCreation{})
+		if err == nil {
+			require.NoError(t, actual)
+			require.True(t, repo.executed)
+		} else {
+			require.ErrorIs(t, actual, err)
+			require.False(t, repo.executed)
+		}
+	}
+}
+
+func TestRoleAssignmentRequiresPreparedIntent(t *testing.T) {
+	for _, err := range []error{nil, operatordomain.ErrForbidden, domain.ErrConflict} {
+		repo := &roleRepositoryStub{err: err}
+		_, actual := NewRoles(repo).ChangeRoleAssignment(t.Context(), operatordomain.Principal{}, domain.RoleAssignment{})
 		if err == nil {
 			require.NoError(t, actual)
 			require.True(t, repo.executed)

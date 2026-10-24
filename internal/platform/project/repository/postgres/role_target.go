@@ -10,8 +10,8 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
-func lockRoleTarget(ctx context.Context, tx pgx.Tx, command domain.RoleCreation) (credentials.Binding, []byte, error) {
-	b := credentials.Binding{ProjectID: command.ProjectID}
+func lockRoleTarget(ctx context.Context, tx pgx.Tx, project domain.ID, version, generation int64) (credentials.Binding, []byte, error) {
+	b := credentials.Binding{ProjectID: project}
 	var snapshot []byte
 	// Lifecycle writers lock the project first; runtime cannot alter private metadata.
 	err := tx.QueryRow(ctx, `SELECT realm.id::text,prep.reservation_id::text,p.storage_target,
@@ -25,7 +25,7 @@ func lockRoleTarget(ctx context.Context, tx pgx.Tx, command domain.RoleCreation)
 		CROSS JOIN platform.operator_realm realm
 		WHERE p.id=$1 AND p.version=$2 AND p.generation=$3 AND p.desired_state='enabled' AND p.phase='ready'
 		AND realm.initialized_at IS NOT NULL AND p.database_name='authp_'||replace(p.id::text,'-','')
-		FOR SHARE OF p`, command.ProjectID, command.ExpectedVersion, command.ExpectedGeneration).Scan(
+		FOR SHARE OF p`, project, version, generation).Scan(
 		&b.RealmID, &b.ReservationID, &b.StorageTarget, &b.DatabaseOID, &b.OwnerOID, &b.RuntimeOID, &b.SchemaVersion, &snapshot,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {

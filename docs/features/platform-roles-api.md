@@ -44,7 +44,7 @@ UUID проекта приходит только из URL. Version/generation �
 
 Максимум JSON32KiB; неизвестные поля, неверный Content-Type, несколько JSON-объектов и query parameters запрещены. Role domain проверяет key/name/description/permissions, максимум128 permissions и запрет `super_admin`; HTTP не дублирует эти правила. Неизвестное permission из каталога отвергается. Причина и лимиты команды проверяются существующим SQL guard/domain.
 
-Порядок: сохранить immutable intent → новый краткоживущий SQL admission → exact runtime lease → project SQL profile/Access lock → role и receipt в одной транзакции → completion evidence в каталоге. Actor не превращается в project user. Роль никому автоматически не назначается; управление назначениями будет отдельным сценарием.
+Порядок: сохранить immutable intent → новый краткоживущий SQL admission → exact runtime lease → project SQL profile/Access lock → role и receipt в одной транзакции → completion evidence в каталоге. Actor не превращается в project user. Роль никому автоматически не назначается; [grant/revoke](platform-role-assignments.md) реализованы отдельными явными маршрутами и проходят собственную проверку Luna.
 
 **MFA-required роли:** готовность MFA конкретного проекта пока не привязана к полной Auth assembly. Operator `MFA_ENABLED` её не доказывает. Поэтому новая роль с `mfaRequired=true` получает409 `mfa_not_ready`, без project role/receipt. Intent/admission могли уже сохраниться: они не означают создание роли. Нельзя включать capability простым клиентским флагом или подстановкой operator config. Уже существующий receipt остаётся достоверным результатом исходной операции.
 
@@ -75,7 +75,7 @@ UUID проекта приходит только из URL. Version/generation �
 
 ## Чтение и восстановление
 
-GET принимает пустое тело, не обращается к project DB и возвращает `operationId`, `projectId`, `committed` и исходный role snapshot только при `committed=true`. Snapshot не описывает последующие изменения роли. `committed=false` означает отсутствие catalog evidence, не отсутствие роли.
+GET принимает пустое тело, не обращается к project DB и возвращает `operationId`, `projectId`, `committed` и исходный role snapshot только при `committed=true`. Snapshot не описывает последующие изменения роли. Общий outcome также обслуживает [назначения](platform-role-assignments.md): action=create/grant/revoke, userId/accessVersion/changed только для назначения. `committed=false` означает отсутствие catalog evidence, не отсутствие роли.
 
 POST reconcile тоже требует пустое тело. При известном результате возвращает его из каталога. Иначе читает только исходный project receipt на exact binding/version/generation и дописывает outcome. Не создаёт новую роль/admission. Перед ответом повторно проверяет authority; отзыв session/read permission/proofs может запретить выдачу, хотя completion evidence успело сохраниться.
 
@@ -102,4 +102,4 @@ Project/actor/operation scope проверяется SQL-предикатом **
 
 Добавлены unit для DTO/32KiB/ошибок/202/Location/scope, service ordering, runtime-off assembly, guarded router и Swagger. В existing command TLS fixture добавлен настоящий HTTPS/SQL flow: create/replay/conflict, wrong project404, missing catalog outcome → reconcile без нового admission, MFA capability отказ и revoke write/read/session. Session adapter этого drill предоставляет синтетический SQL proof; Redis admission заменён identity middleware. Реальные login/session HTTPS и Redis limiter suites проверены отдельно, этот drill их не подменяет.
 
-Luna выполнила V1: tests/race/actual TLS SQL HTTPS/operator regression/API/scanner PASS; task check FAIL только3 lint замечания. Они исправлены без нового поведения, V2 targeted lint/race PASS, manifest совпал до/после; старые успешные suites не повторяются без причины. UI, назначения ролей, user provisioning, project Auth assembly/worker scheduler, credential rotation, fleet/load/GC приёмка остаются отдельно.
+Luna выполнила V1: tests/race/actual TLS SQL HTTPS/operator regression/API/scanner PASS; task check FAIL только3 lint замечания. Они исправлены без нового поведения, V2 targeted lint/race PASS, manifest совпал до/после; старые успешные suites не повторяются без причины. UI, user provisioning, project Auth assembly/worker scheduler, credential rotation, fleet/load/GC приёмка остаются отдельно.

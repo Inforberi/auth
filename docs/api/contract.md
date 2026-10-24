@@ -1,5 +1,7 @@
 # Текущий API-контракт
 
+MP2.7 assignments: [явные grant/revoke и общий read/reconcile](../features/platform-role-assignments.md); код готов, отдельная проверка Luna pending. Только custom roles, system administrator flow отдельно.
+
 MP2.7: opt-in platform role API: [POST create, GET outcome и POST reconcile](../features/platform-roles-api.md). Доступны только при включённом project runtime и current platform authority; проверки блока Luna завершены (V1 SQL/HTTPS/race/API/scanner, V2 targeted lint/race PASS). Project MFA-required capability пока не подключена, новая такая роль получает mfa_not_ready.
 
 J4b.2c.3-http-local: [native JWT API](../features/native-http.md), отдельный выключенный по умолчанию профиль. Password/email OTP → restricted MFA/enrollment либо access+refresh, POST refresh/logout и credentialProfile browser/api в own session list. Native JSON≤8KiB/exact fields/no-store, любой Origin/Cookie/Authorization/query отвергается; browser CORS не наследуется. Один общий App owner и существующие primary/MFA/email pipelines. Native включается только после deployment guard и готовности зависимостей; внешний load/fleet/HTTPS/SMTP/restore не закрыт.

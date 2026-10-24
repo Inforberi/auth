@@ -73,7 +73,7 @@ func (h *RoleHandler) Create(w http.ResponseWriter, r *http.Request) {
 		h.respondError(w, r, err)
 		return
 	}
-	w.Header().Set("Location", "/api/v1/platform/projects/"+string(project)+"/role-operations/"+string(input.OperationID))
+	w.Header().Set("Location", roleOperationLocation(project, input.OperationID))
 	response := CreatePlatformRoleResponse{OperationID: input.OperationID, ProjectID: project, Status: "committed", Role: platformRoleResponse(result.Role), Replayed: result.Replayed, CatalogRecorded: result.CatalogRecorded}
 	status := http.StatusCreated
 	if result.Replayed {

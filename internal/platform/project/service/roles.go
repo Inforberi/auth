@@ -8,10 +8,19 @@ import (
 )
 
 type RoleRepository interface {
-	PrepareRoleCreation(context.Context, operatordomain.Principal, domain.RoleCreation) (domain.RoleCreationIntent, error)
+	PrepareRoleAssignment(context.Context, operatordomain.Principal, domain.RoleAssignment) (domain.RoleIntent, error)
+	ExecuteRoleAssignment(context.Context, operatordomain.Principal, domain.RoleAssignment) (domain.RoleAssignmentResult, error)
+	PrepareRoleCreation(context.Context, operatordomain.Principal, domain.RoleCreation) (domain.RoleIntent, error)
 	ExecuteRoleCreation(context.Context, operatordomain.Principal, domain.RoleCreation) (domain.RoleCreationResult, error)
-	ReadRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleCreationOutcome, error)
-	ReconcileRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleCreationOutcome, error)
+	ReadRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleOutcome, error)
+	ReconcileRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleOutcome, error)
+}
+
+func (s *Roles) ChangeRoleAssignment(ctx context.Context, actor operatordomain.Principal, command domain.RoleAssignment) (domain.RoleAssignmentResult, error) {
+	if _, err := s.repo.PrepareRoleAssignment(ctx, actor, command); err != nil {
+		return domain.RoleAssignmentResult{}, err
+	}
+	return s.repo.ExecuteRoleAssignment(ctx, actor, command)
 }
 
 type Roles struct{ repo RoleRepository }
@@ -25,10 +34,10 @@ func (s *Roles) CreateRole(ctx context.Context, actor operatordomain.Principal, 
 	return s.repo.ExecuteRoleCreation(ctx, actor, command)
 }
 
-func (s *Roles) ReadRoleOutcome(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (domain.RoleCreationOutcome, error) {
+func (s *Roles) ReadRoleOutcome(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (domain.RoleOutcome, error) {
 	return s.repo.ReadRoleOutcome(ctx, actor, project, operation)
 }
 
-func (s *Roles) ReconcileRoleOutcome(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (domain.RoleCreationOutcome, error) {
+func (s *Roles) ReconcileRoleOutcome(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (domain.RoleOutcome, error) {
 	return s.repo.ReconcileRoleOutcome(ctx, actor, project, operation)
 }

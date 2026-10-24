@@ -2,6 +2,8 @@
 
 MP2.7. Внутренние методы `ReadRoleOutcome` и `ReconcileRoleOutcome` дополняют [intent/admission/receipt protocol](platform-role-intents.md). [HTTP](platform-roles-api.md) подключён в opt-in профиле; HTTP verification gate закрыт Luna (V1 tests/race/SQL/API/scanner, V2 targeted lint/race PASS). Внутренние методы принимают явный project UUID наряду с operation UUID, SQL scope проверяется до открытия project connection.
 
+Общий тип результата теперь `RoleOutcome`: `action=create/grant/revoke`, для назначения дополнительно userId/accessVersion/changed. [Расширение назначений](platform-role-assignments.md) проходит отдельный gate Luna; прежние PASS создания роли не подтверждают новый branch. Recovery сохраняет raw immutable request и выбирает receipt соответствующего typed сценария, не выполняя новое назначение.
+
 ## Кто получает результат
 
 Читать можно только свою операцию по operation UUID при действующих platform session и `platform.projects.read`. Право `platform.project_access.manage` для такого чтения не требуется: его отзыв запрещает новые допуски, но не стирает историю уже принятой команды. Один UUID без авторизации не открывает результат. Чужой UUID и неизвестный UUID возвращают одинаковый not-found.

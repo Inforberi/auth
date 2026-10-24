@@ -17,13 +17,21 @@ import (
 )
 
 type roleServiceStub struct {
+	assignment         domain.RoleAssignment
+	assigned           domain.RoleAssignmentResult
 	command            domain.RoleCreation
 	project, operation domain.ID
 	actor              operatordomain.Principal
 	create             domain.RoleCreationResult
-	outcome            domain.RoleCreationOutcome
+	outcome            domain.RoleOutcome
 	err                error
 	calls              int
+}
+
+func (s *roleServiceStub) ChangeRoleAssignment(_ context.Context, actor operatordomain.Principal, command domain.RoleAssignment) (domain.RoleAssignmentResult, error) {
+	s.calls++
+	s.actor, s.assignment = actor, command
+	return s.assigned, s.err
 }
 
 func (s *roleServiceStub) CreateRole(_ context.Context, actor operatordomain.Principal, command domain.RoleCreation) (domain.RoleCreationResult, error) {
@@ -32,13 +40,13 @@ func (s *roleServiceStub) CreateRole(_ context.Context, actor operatordomain.Pri
 	return s.create, s.err
 }
 
-func (s *roleServiceStub) ReadRoleOutcome(_ context.Context, actor operatordomain.Principal, project, operation domain.ID) (domain.RoleCreationOutcome, error) {
+func (s *roleServiceStub) ReadRoleOutcome(_ context.Context, actor operatordomain.Principal, project, operation domain.ID) (domain.RoleOutcome, error) {
 	s.calls++
 	s.actor, s.project, s.operation = actor, project, operation
 	return s.outcome, s.err
 }
 
-func (s *roleServiceStub) ReconcileRoleOutcome(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (domain.RoleCreationOutcome, error) {
+func (s *roleServiceStub) ReconcileRoleOutcome(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (domain.RoleOutcome, error) {
 	return s.ReadRoleOutcome(ctx, actor, project, operation)
 }
 

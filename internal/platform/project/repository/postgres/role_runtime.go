@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
@@ -29,7 +30,15 @@ func (r *RuntimeRoles) ExecuteRoleCreation(ctx context.Context, actor operatordo
 	return grant.ExecuteWithRuntime(ctx, r.registry, r.permissions, false)
 }
 
-func (r *RuntimeRoles) ReconcileRoleOutcome(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (domain.RoleCreationOutcome, error) {
+func (r *RuntimeRoles) ExecuteRoleAssignment(ctx context.Context, actor operatordomain.Principal, command domain.RoleAssignment) (domain.RoleAssignmentResult, error) {
+	grant, err := r.AdmitRoleAssignment(ctx, actor, command)
+	if err != nil {
+		return domain.RoleAssignmentResult{}, err
+	}
+	return grant.ExecuteWithRuntime(ctx, r.registry, r.permissions, false)
+}
+
+func (r *RuntimeRoles) ReconcileRoleOutcome(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (domain.RoleOutcome, error) {
 	return r.Repository.ReconcileRoleOutcome(ctx, actor, project, operation, r.registry)
 }
 
@@ -38,13 +47,19 @@ func (a *AdmittedRoleCreation) ExecuteWithRuntime(ctx context.Context, registry 
 	if a == nil || a.repository == nil || registry == nil {
 		return domain.RoleCreationResult{}, domain.ErrConflict
 	}
-	ctx, cancel := context.WithDeadline(ctx, a.until)
-	defer cancel()
 	key := projectruntime.Key{Binding: a.binding, Version: a.command.ExpectedVersion, Generation: a.command.ExpectedGeneration}
-	var result domain.RoleCreationResult
+	return withRoleRuntime(ctx, registry, key, a.until, func(ctx context.Context, db projectruntime.Database) (domain.RoleCreationResult, error) {
+		return a.Execute(ctx, db, permissions, mfaReady)
+	})
+}
+
+func withRoleRuntime[T any](ctx context.Context, registry *projectruntime.Registry, key projectruntime.Key, until time.Time, execute func(context.Context, projectruntime.Database) (T, error)) (T, error) {
+	ctx, cancel := context.WithDeadline(ctx, until)
+	defer cancel()
+	var result T
 	err := registry.Use(ctx, key, func(ctx context.Context, db projectruntime.Database) error {
 		var err error
-		result, err = a.Execute(ctx, db, permissions, mfaReady)
+		result, err = execute(ctx, db)
 		return err
 	})
 	return result, err
