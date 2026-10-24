@@ -70,7 +70,7 @@ func roleOutcomeConcurrencyDrill(t *testing.T, admin *pgx.Conn, managed *catalog
 			require.NoError(t, err)
 			finished := make(chan error, 1)
 			go func() {
-				_, e := managed.ReconcileRoleOutcome(bounded, actor, command.OperationID, registry)
+				_, e := managed.ReconcileRoleOutcome(bounded, actor, command.ProjectID, command.OperationID, registry)
 				finished <- e
 			}()
 			waitRoleSQL(t, bounded, blocker, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=current_database()
@@ -107,7 +107,7 @@ func roleOutcomeConcurrencyDrill(t *testing.T, admin *pgx.Conn, managed *catalog
 		for range 4 {
 			go func() {
 				<-start
-				outcome, e := managed.ReconcileRoleOutcome(bounded, actor, command.OperationID, registry)
+				outcome, e := managed.ReconcileRoleOutcome(bounded, actor, command.ProjectID, command.OperationID, registry)
 				if e == nil && (!outcome.Committed || outcome.Role.ID != created.Role.ID) {
 					e = domain.ErrConflict
 				}
@@ -118,7 +118,7 @@ func roleOutcomeConcurrencyDrill(t *testing.T, admin *pgx.Conn, managed *catalog
 		for range 4 {
 			require.NoError(t, <-finished)
 		}
-		known, err := managed.ReadRoleOutcome(bounded, actor, command.OperationID)
+		known, err := managed.ReadRoleOutcome(bounded, actor, command.ProjectID, command.OperationID)
 		require.NoError(t, err)
 		require.Equal(t, created.Role, known.Role)
 		var unchanged bool

@@ -87,6 +87,8 @@ func TestSwaggerMatchesPlatformRoutes(t *testing.T) {
 	h.Config.Server.TLSCertFile, h.Config.Server.TLSKeyFile = "tls.crt", "tls.key"
 	h.Config.Password.ResetURL = h.Config.Platform.Origin + "/reset"
 	h.Projects = projecthttp.New(&operatorReadCatalog{}, zap.NewNop())
+	h.Config.Platform.Runtime = roleRouteRuntime()
+	h.ProjectRoles = projecthttp.NewRoles(&operatorRoles{}, zap.NewNop())
 	h.ProjectCapacity = func(next http.Handler) http.Handler { return next }
 	handler, err := NewOperator(h)
 	if err != nil {

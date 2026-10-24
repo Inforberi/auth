@@ -21,8 +21,8 @@ type roleReconciliation struct {
 
 // ReconcileRoleOutcome reads an existing receipt; it cannot create a role or
 // admission. A final guarded read prevents disclosure after authority changes.
-func (r *Repository) ReconcileRoleOutcome(ctx context.Context, actor operatordomain.Principal, operation domain.ID, registry *projectruntime.Registry) (domain.RoleCreationOutcome, error) {
-	known, err := r.ReadRoleOutcome(ctx, actor, operation)
+func (r *Repository) ReconcileRoleOutcome(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID, registry *projectruntime.Registry) (domain.RoleCreationOutcome, error) {
+	known, err := r.ReadRoleOutcome(ctx, actor, project, operation)
 	if err != nil || known.Committed {
 		return known, err
 	}
@@ -31,7 +31,7 @@ func (r *Repository) ReconcileRoleOutcome(ctx context.Context, actor operatordom
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	job, err := r.roleReconciliation(ctx, actor, operation)
+	job, err := r.roleReconciliation(ctx, actor, project, operation)
 	if err != nil {
 		return domain.RoleCreationOutcome{}, err
 	}
@@ -77,24 +77,24 @@ func (r *Repository) ReconcileRoleOutcome(ctx context.Context, actor operatordom
 			return domain.RoleCreationOutcome{}, err
 		}
 	}
-	return r.ReadRoleOutcome(ctx, actor, operation)
+	return r.ReadRoleOutcome(ctx, actor, project, operation)
 }
 
-func (r *Repository) roleReconciliation(ctx context.Context, actor operatordomain.Principal, operation domain.ID) (roleReconciliation, error) {
+func (r *Repository) roleReconciliation(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (roleReconciliation, error) {
 	var job roleReconciliation
 	var request []byte
 	err := r.db.QueryRow(ctx, `SELECT realm_id::text,request,binding->>'target',binding->>'reservation',
 		(binding->>'database_oid')::oid,(binding->>'owner_oid')::oid,(binding->>'runtime_oid')::oid,(binding->>'schema')::int
 		FROM platform.project_role_intents
-		WHERE operation_id=$1 AND actor_id=$2 AND EXISTS(
-			SELECT 1 FROM platform.project_role_admissions a WHERE a.operation_id=$1)`, operation, actor.UserID).Scan(
+		WHERE operation_id=$1 AND actor_id=$2 AND project_id=$3 AND EXISTS(
+			SELECT 1 FROM platform.project_role_admissions a WHERE a.operation_id=$1)`, operation, actor.UserID, project).Scan(
 		&job.realm, &request, &job.binding.StorageTarget, &job.binding.ReservationID,
 		&job.binding.DatabaseOID, &job.binding.OwnerOID, &job.binding.RuntimeOID, &job.binding.SchemaVersion,
 	)
 	if err != nil {
 		return job, catalogError(ctx, err)
 	}
-	if json.Unmarshal(request, &job.command) != nil || job.command.OperationID != operation {
+	if json.Unmarshal(request, &job.command) != nil || job.command.OperationID != operation || job.command.ProjectID != project {
 		return job, domain.ErrConflict
 	}
 	job.binding.RealmID, job.binding.ProjectID = job.realm, job.command.ProjectID

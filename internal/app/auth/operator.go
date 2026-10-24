@@ -97,9 +97,14 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 	if err != nil {
 		return nil, err
 	}
+	roles, err := assembleProjectRoles(cfg, runtime, projects, deps.log)
+	if err != nil {
+		return nil, err
+	}
 	handler, err := router.NewOperator(router.Handlers{
 		Config: cfg, Logger: deps.log, Setup: setup, MFA: mfa.handler,
 		Projects:         projecthttp.New(projectservice.NewWithRuntime(projects, operator, observer), deps.log),
+		ProjectRoles:     roles,
 		ProjectCapacity:  projecthttp.Capacity(capacity),
 		PasswordHandler:  passwordhttp.New(password.service, deps.log),
 		Recovery:         passwordhttp.NewRecovery(password.recovery, deps.log),
@@ -108,17 +113,7 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 		Activity:         sessionhttp.NewActivity(sessionservice.NewActivity(sessions), deps.log),
 		Rotation:         sessionhttp.NewRotation(sessionservice.NewRotation(sessions, tokens), deps.log),
 		Reauthentication: passwordhttp.NewReauthentication(passwordservice.NewReauthentication(credentials, sessions, deps.hash, password.loginLimit, tokens, cfg.Session.FreshAuthTTL), deps.log),
-		ReadyCheck: func(ctx context.Context) error {
-			if err := deps.pool.Ping(ctx); err != nil {
-				return err
-			}
-			if runtime != nil {
-				if err := runtime.reader.CheckRuntime(ctx); err != nil {
-					return err
-				}
-			}
-			return deps.redis.Ping(ctx).Err()
-		},
+		ReadyCheck:       operatorReadyCheck(deps, runtime),
 	})
 	if err != nil {
 		return nil, err
@@ -129,4 +124,18 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 		retention: accountservice.NewRetention(repo, cfg.Retention),
 		workers:   realmDeliveryWorkers(password.recovery, account, mfa.delivery, nil),
 	}, nil
+}
+
+func operatorReadyCheck(deps realmDependencies, runtime *projectRuntime) func(context.Context) error {
+	return func(ctx context.Context) error {
+		if err := deps.pool.Ping(ctx); err != nil {
+			return err
+		}
+		if runtime != nil {
+			if err := runtime.reader.CheckRuntime(ctx); err != nil {
+				return err
+			}
+		}
+		return deps.redis.Ping(ctx).Err()
+	}
 }

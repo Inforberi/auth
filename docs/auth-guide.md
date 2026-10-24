@@ -1,5 +1,7 @@
 # Руководство по Auth: подключение, сценарии и API
 
+Управление ролями проекта из платформы: [POST create, GET outcome и POST reconcile](features/platform-roles-api.md). Доступны только при включённом project runtime и current platform authority; проверки блока Luna завершены (V1 SQL/HTTPS/race/API/scanner, V2 targeted lint/race PASS). Project MFA-required capability пока не подключена, новая такая роль получает mfa_not_ready.
+
 Состояние на 11 октября 2026 года. Документ описывает текущую реализацию и отдельно — согласованные будущие возможности. Это руководство для интегратора и владельца проекта, не подтверждение готовности к production release.
 
 **Как читать статусы:**

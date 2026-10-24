@@ -2,9 +2,9 @@
 
 ## Границы
 
-Платформенный deployment проверяет суммарный потолок SQL и ограничивает текущие HTTP-операции каталога: list/read/create/suspend/resume/retry. SQL-проверки session/permissions/fresh MFA и транзакционные гарантии сохраняются. Admission управляет ресурсами, не выдаёт полномочия.
+Платформенный deployment проверяет суммарный потолок SQL и ограничивает текущие HTTP-операции каталога: list/read/create/suspend/resume/retry и opt-in role create/read/reconcile. SQL-проверки session/permissions/fresh MFA и транзакционные гарантии сохраняются. Admission управляет ресурсами, не выдаёт полномочия.
 
-Это часть MP4.3/MP4.5. Project Auth assembly, ограниченный scheduler фоновых работ, будущий role bridge и замеры MP8 ещё отдельно. Прямые вызовы repositories/CLI не проходят HTTP admission; будущие административные маршруты должны явно подключать его. Общий HTTP admission и deadline продолжают действовать, включая этап проверки сессии до проектного лимита.
+Это часть MP4.3/MP4.5. Project Auth assembly, ограниченный scheduler фоновых работ, проверка нового role HTTP bridge и замеры MP8 ещё отдельно. Прямые вызовы repositories/CLI не проходят HTTP admission; будущие административные маршруты должны явно подключать его. Общий HTTP admission и deadline продолжают действовать, включая этап проверки сессии до проектного лимита.
 
 ## SQL: проверка конфигурации перед запуском
 
@@ -55,7 +55,7 @@ Redis выполняет один атомарный Lua-вызов: списа�
 | Заняты local slots / Redis недоступен / отмена | 503 | `temporarily_unavailable` | 1 |
 | Неверный project UUID | 400 | `invalid_project` | — |
 
-Ответы `no-store`, Redis failure не включает SQL fallback. `Retry-After: 60` — консервативный максимум окна, без дополнительного Redis round trip. Неизвестные внутренние ошибки не раскрываются клиенту. Swagger дополняется429 для шести операций.
+Ответы `no-store`, Redis failure не включает SQL fallback. `Retry-After: 60` — консервативный максимум окна, без дополнительного Redis round trip. Неизвестные внутренние ошибки не раскрываются клиенту. Swagger указывает429 для catalog и opt-in role операций.
 
 ## Проверки
 

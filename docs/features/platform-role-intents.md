@@ -1,6 +1,6 @@
 # Подготовка создания роли владельцем платформы
 
-MP2.7, обновлено24 октября 2026. Здесь описаны catalog intent, краткоживущий admission и проектная SQL-транзакция создания роли. Они пока не подключены к публичной HTTP-ручке. Само сохранение intent роль не создаёт. Общий протокол — [ADR005 §3](../adr/005-independent-projects.md#3-одна-сессия-оператора-без-пользовательского-sso).
+MP2.7, обновлено24 октября 2026. Здесь описаны catalog intent, краткоживущий admission и проектная SQL-транзакция создания роли. Подключены к [opt-in HTTP bridge](platform-roles-api.md); проверки HTTP-блока Luna завершены: V1 tests/race/SQL/API/scanner и V2 targeted lint/race PASS. Само сохранение intent роль не создаёт. Общий протокол — [ADR005 §3](../adr/005-independent-projects.md#3-одна-сессия-оператора-без-пользовательского-sso).
 
 ## Контракт
 
@@ -52,8 +52,8 @@ Project audit/receipt содержит исходный admission UUID без м
 
 `ExecuteWithRuntime` заимствует соединение из [ограниченного реестра](project-runtime-registry.md) по exact admission binding/version/generation и вызывает прежний Execute с тем же deadline. Reader credentials отдельный SELECT-only, endpoint только configured target, network TLS/SCRAM, каждый physical connect проходит SQL profile. Pool lease сохраняется до project commit/outcome; ошибочная БД или отсутствие capacity не вызывают fallback. Это внутренняя связь, без HTTP/server wiring и без изменения authority.
 
-## Следующий gate — отказы, concurrency и публикация
+## Публикация и оставшиеся gates
 
 Защищённое чтение своей операции и восстановление catalog outcome по project receipt реализованы [отдельно](platform-role-outcomes.md). Они требуют current read authority, не выдают admission и не повторяют project mutation. [Проверки отдельным агентом](../planning/history.md#результат-mp27-role-outcomes--24-октября-2026).
 
-SQL-связка intent → admission → project receipt → catalog outcome, schema/grants/checksum runtime profile, trusted SQL registry и read-own outcome recovery реализованы, но вызываются только integration tests. До HTTP нужны production wiring/автоматический invalidation, реальные transport-fault и конкурентные admission/suspend/role/factor checks, fleet/rate/resource bounds. Полностью отозванному или другому оператору доступ по UUID не выдаётся; отдельного support/recovery доступа нет. SQL fingerprint не доказывает доверие к произвольному серверу/DSN. Нельзя автоматически возобновлять истёкший допуск или исполнять старое намерение от другого actor. Dispatcher/owner-managed readiness/общий outcome API и UI остаются открытыми. Существующие project-user сценарии не меняются.
+SQL-связка, runtime profile, trusted registry, local lifecycle/resident sync, ресурсные bounds и локальные authority/transport/concurrency матрицы проверены в предыдущих блоках. Теперь добавлен [HTTP create/read/reconcile](platform-roles-api.md) с явным project scope до runtime access; новый HTTP блок проверен Luna (V1 tests/race/SQL/API/scanner, V2 lint/race PASS). Dispatcher использует прежний admission/ExecuteWithRuntime, без другого SQL пути или user impersonation. Новые MFA-required роли fail closed до готовности project capability. Owner-managed readiness, полная feature assembly/worker scheduler, назначения/пользователи/settings bridge, credential rotation и fleet приёмка остаются открытыми. SQL fingerprint не означает доверие к произвольному DSN. Существующие project-user сценарии не меняются.

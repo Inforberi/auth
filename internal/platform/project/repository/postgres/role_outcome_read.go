@@ -14,8 +14,8 @@ import (
 
 // ReadRoleOutcome requires current project-read authority and returns only the
 // caller's own operation. Losing write authority does not erase its history.
-func (r *Repository) ReadRoleOutcome(ctx context.Context, actor operatordomain.Principal, operation domain.ID) (domain.RoleCreationOutcome, error) {
-	if !domain.ValidID(operation) {
+func (r *Repository) ReadRoleOutcome(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (domain.RoleCreationOutcome, error) {
+	if !domain.ValidID(project) || !domain.ValidID(operation) {
 		return domain.RoleCreationOutcome{}, domain.ErrInvalidProject
 	}
 	var result domain.RoleCreationOutcome
@@ -23,7 +23,7 @@ func (r *Repository) ReadRoleOutcome(ctx context.Context, actor operatordomain.P
 		var snapshot []byte
 		err := tx.QueryRow(ctx, `SELECT i.operation_id::text,i.project_id::text,o.role_snapshot
 			FROM platform.project_role_intents i LEFT JOIN platform.project_role_outcomes o USING(operation_id)
-			WHERE i.operation_id=$1 AND i.actor_id=$2`, operation, actor.UserID).Scan(&result.OperationID, &result.ProjectID, &snapshot)
+			WHERE i.operation_id=$1 AND i.actor_id=$2 AND i.project_id=$3`, operation, actor.UserID, project).Scan(&result.OperationID, &result.ProjectID, &snapshot)
 		if err != nil {
 			return catalogError(ctx, err)
 		}

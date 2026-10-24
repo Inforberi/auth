@@ -19,6 +19,9 @@ func NewOperator(h Handlers) (http.Handler, error) {
 	if h.Projects != nil && h.ProjectCapacity == nil {
 		return nil, errors.New("project HTTP routes require capacity admission")
 	}
+	if h.ProjectRoles != nil && (h.Projects == nil || !h.Config.Platform.Runtime.Enabled) {
+		return nil, errors.New("project role routes require enabled runtime and the guarded catalog group")
+	}
 	origin, err := url.Parse(h.Config.Platform.Origin)
 	if err != nil {
 		return nil, err
@@ -40,18 +43,7 @@ func NewOperator(h Handlers) (http.Handler, error) {
 	r.Route("/api/v1", func(r chi.Router) {
 		setupRoutes(r, h)
 		administrativeLoginRoutes(r, h)
-		if h.Projects != nil {
-			r.Route("/platform", func(r chi.Router) {
-				r.Use(browserProtection(h), h.Middleware.NoRefreshAuth)
-				r = r.With(h.ProjectCapacity)
-				r.Get("/projects", h.Projects.List)
-				r.Post("/projects", h.Projects.Create)
-				r.Get("/projects/{id}", h.Projects.Read)
-				r.Post("/projects/{id}/suspend", h.Projects.Suspend)
-				r.Post("/projects/{id}/resume", h.Projects.Resume)
-				r.Post("/projects/{id}/retry", h.Projects.Retry)
-			})
-		}
+		platformProjectRoutes(r, h)
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(browserProtection(h))
 			r.Post("/forgot-password", h.Recovery.Forgot)
@@ -72,4 +64,25 @@ func NewOperator(h Handlers) (http.Handler, error) {
 		})
 	})
 	return r, nil
+}
+
+func platformProjectRoutes(r chi.Router, h Handlers) {
+	if h.Projects == nil {
+		return
+	}
+	r.Route("/platform", func(r chi.Router) {
+		r.Use(browserProtection(h), h.Middleware.NoRefreshAuth)
+		r = r.With(h.ProjectCapacity)
+		r.Get("/projects", h.Projects.List)
+		r.Post("/projects", h.Projects.Create)
+		r.Get("/projects/{id}", h.Projects.Read)
+		r.Post("/projects/{id}/suspend", h.Projects.Suspend)
+		r.Post("/projects/{id}/resume", h.Projects.Resume)
+		r.Post("/projects/{id}/retry", h.Projects.Retry)
+		if h.ProjectRoles != nil {
+			r.Post("/projects/{id}/roles", h.ProjectRoles.Create)
+			r.Get("/projects/{id}/role-operations/{operationId}", h.ProjectRoles.Read)
+			r.Post("/projects/{id}/role-operations/{operationId}/reconcile", h.ProjectRoles.Reconcile)
+		}
+	})
 }

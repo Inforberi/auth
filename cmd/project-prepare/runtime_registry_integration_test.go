@@ -123,6 +123,9 @@ func projectRuntimeDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Reposit
 	t.Run("concurrent role outcome authority", func(t *testing.T) {
 		roleOutcomeConcurrencyDrill(t, admin, managed, actor, command, binding, registry, result)
 	})
+	t.Run("platform role HTTP bridge", func(t *testing.T) {
+		roleHTTPDrill(t, admin, managed, actor, command, binding.RealmID, registry, permissions)
+	})
 	registry.Invalidate(key)
 	_, err = admin.Exec(ctx, `UPDATE platform.projects SET desired_state='suspended' WHERE id=$1`, binding.ProjectID)
 	require.NoError(t, err)

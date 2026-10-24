@@ -1,6 +1,6 @@
 # Результат создания роли и его восстановление
 
-MP2.7. Внутренние методы `ReadRoleOutcome` и `ReconcileRoleOutcome` дополняют [intent/admission/receipt protocol](platform-role-intents.md). HTTP пока закрыт.
+MP2.7. Внутренние методы `ReadRoleOutcome` и `ReconcileRoleOutcome` дополняют [intent/admission/receipt protocol](platform-role-intents.md). [HTTP](platform-roles-api.md) подключён в opt-in профиле; HTTP verification gate закрыт Luna (V1 tests/race/SQL/API/scanner, V2 targeted lint/race PASS). Внутренние методы принимают явный project UUID наряду с operation UUID, SQL scope проверяется до открытия project connection.
 
 ## Кто получает результат
 

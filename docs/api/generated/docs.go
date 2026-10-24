@@ -6436,6 +6436,289 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/platform/projects/{id}/role-operations/{operationId}": {
+            "get": {
+                "description": "Requires current platform.projects.read and fresh password/MFA. Exact project/operation/caller scope. Foreign project, unknown UUID and another caller's operation share not-found. committed=false means unknown, not rollback. This GET reads catalog evidence only and never opens a project connection. An existing result remains readable after write permission revoke or project suspension.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Roles"
+                ],
+                "summary": "Read the caller's project role operation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "If supplied, exact platform HTTPS origin",
+                        "name": "Origin",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Operation UUID",
+                        "name": "operationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.RoleOutcomeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "428": {
+                        "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/role-operations/{operationId}/reconcile": {
+            "post": {
+                "description": "Empty body. Requires current platform.projects.read and fresh password/MFA before recovery and before disclosure. Checks project/operation/caller scope before borrowing any project connection. Reads the original project receipt on the exact trusted runtime; records completion evidence only, never retries role mutation or creates an admission. Missing receipt remains unknown. Cold suspended/stale target may be unavailable; there is no fallback to another DB.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Roles"
+                ],
+                "summary": "Recover the caller's project role operation result",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact platform HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Operation UUID",
+                        "name": "operationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.RoleOutcomeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "428": {
+                        "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/roles": {
+            "post": {
+                "description": "Runtime-enabled platform only. Requires current platform.project_access.manage and fresh password/MFA. Exact project version/generation; immutable operation UUID/payload. Target and actor are server-owned. A 202 unknown result may have committed: read/reconcile the same operation, never infer rollback. Known project commit can return catalogRecorded=false. No assignment or project identity is created. Project MFA capability is not yet assembled: mfaRequired=true fails closed with mfa_not_ready. Permission catalog uses deployment-owned ACCESS_CATALOG_FILE.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Roles"
+                ],
+                "summary": "Create a project role as a platform operator",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exact platform HTTPS origin",
+                        "name": "Origin",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Immutable command; maximum 32 KiB",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.CreatePlatformRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Committed replay",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.CreatePlatformRoleResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.CreatePlatformRoleResponse"
+                        },
+                        "headers": {
+                            "Location": {
+                                "type": "string",
+                                "description": "Relative role operation URL"
+                            }
+                        }
+                    },
+                    "202": {
+                        "description": "Outcome unknown",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.CreatePlatformRoleResponse"
+                        },
+                        "headers": {
+                            "Location": {
+                                "type": "string",
+                                "description": "Relative role operation URL"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "428": {
+                        "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/platform/projects/{id}/suspend": {
             "post": {
                 "description": "Platform deployment only. Requires current platform.projects.manage and fresh password/MFA proofs. Stores a suspension decision and atomic audit, without deleting storage or sessions. Same committed operation and payload returns its original receipt only after current authority is checked again. Runtime enforcement arrives with MP4; this endpoint alone does not stop an external running service.",
@@ -8222,6 +8505,64 @@ const docTemplate = `{
                 }
             }
         },
+        "project_http.CreatePlatformRoleRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "expectedGeneration": {
+                    "type": "integer"
+                },
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "mfaRequired": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "operationId": {
+                    "type": "string"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "project_http.CreatePlatformRoleResponse": {
+            "type": "object",
+            "properties": {
+                "catalogRecorded": {
+                    "type": "boolean"
+                },
+                "operationId": {
+                    "type": "string"
+                },
+                "projectId": {
+                    "type": "string"
+                },
+                "replayed": {
+                    "type": "boolean"
+                },
+                "role": {
+                    "$ref": "#/definitions/project_http.PlatformRoleResponse"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "project_http.CreateProjectRequest": {
             "type": "object",
             "properties": {
@@ -8247,6 +8588,35 @@ const docTemplate = `{
                 },
                 "replayed": {
                     "type": "boolean"
+                }
+            }
+        },
+        "project_http.PlatformRoleResponse": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "mfaRequired": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -8296,6 +8666,23 @@ const docTemplate = `{
                 },
                 "version": {
                     "type": "integer"
+                }
+            }
+        },
+        "project_http.RoleOutcomeResponse": {
+            "type": "object",
+            "properties": {
+                "committed": {
+                    "type": "boolean"
+                },
+                "operationId": {
+                    "type": "string"
+                },
+                "projectId": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/project_http.PlatformRoleResponse"
                 }
             }
         },

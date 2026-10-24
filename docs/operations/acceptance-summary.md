@@ -6,7 +6,9 @@
 
 ## Открытые ограничения приёмки
 
-- MP2.7 целиком открыт: новые [role concurrency SQL cases](platform-role-faults.md#дополнение-команды-ролей-и-восстановление-результата) проверены Luna (task check/command host race/actual TLS suite PASS, fixture очищен). Это локальная матрица; HTTP bridge и оставшиеся publication prerequisites ещё не реализованы.
+- MP2.7 role HTTP: [opt-in create/read/reconcile](../features/platform-roles-api.md) реализованы, V1 tests/race/actual TLS SQL/API/scanner/operator regression PASS;3 lint замечания исправлены и закрыты targeted V2 lint/race PASS. Новая project MFA-required capability пока недоступна, independent catalogs/полная project Auth assembly отдельно.
+
+- MP2.7 целиком открыт: новые [role concurrency SQL cases](platform-role-faults.md#дополнение-команды-ролей-и-восстановление-результата) проверены Luna (task check/command host race/actual TLS suite PASS, fixture очищен). Это локальная матрица; Новый opt-in HTTP bridge прошёл собственный verification gate; прочие prerequisites сценариев ещё открыты.
 
 - MP4 целиком остаётся открыт: [resource bounds](../features/platform-resource-bounds.md) проверены Luna (V2 check/lint/race/live Redis/MFA, прежние API/scanner и V3 operator SQL/HTTPS/cleanup PASS). Это не полная feature assembly/scheduler и не fleet/load приёмка; предыдущие FAIL и ограничения сохранены в history.
 

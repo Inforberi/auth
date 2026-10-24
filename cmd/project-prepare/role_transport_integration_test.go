@@ -107,7 +107,7 @@ func roleTransportDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Reposito
 			_, err := admin.Exec(ctx, `DELETE FROM platform.operator_permissions WHERE user_id=$1 AND permission_key='platform.projects.read'`, actor.UserID)
 			require.NoError(t, err)
 		}()
-		recovered, err := managed.ReconcileRoleOutcome(ctx, actor, command.OperationID, registry)
+		recovered, err := managed.ReconcileRoleOutcome(ctx, actor, command.ProjectID, command.OperationID, registry)
 		require.NoError(t, err)
 		require.True(t, recovered.Committed)
 		var exactlyOnce bool

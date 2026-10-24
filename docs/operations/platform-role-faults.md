@@ -52,4 +52,4 @@ SQL порядок задаётся advisory lock Access и ACCESS EXCLUSIVE loc
 
 Логи/exit status/версии/snapshot сохранять в evidence; обратно только ошибки, при успехе короткий PASS со snapshot ID. При сбое исправляет основной агент, Luna повторяет затронутые проверки. Disposable DB/roles/контейнеры имеют собственные имена, рабочие данные не меняются. [Правила](../ai/development-workflow.md).
 
-Результаты добавляются после отчёта в [history](../planning/history.md) и [acceptance](acceptance-summary.md). HTTP и оставшиеся production assembly/credential rotation/fleet gates остаются отдельно; эта локальная матрица их не закрывает.
+Результаты добавляются после отчёта в [history](../planning/history.md) и [acceptance](acceptance-summary.md). [HTTP bridge](../features/platform-roles-api.md) реализован opt-in и проходит отдельный gate; оставшиеся production assembly/credential rotation/fleet gates отдельно; эта локальная матрица их не закрывает.
