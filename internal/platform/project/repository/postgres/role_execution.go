@@ -44,7 +44,7 @@ func CreatePlatformRoleInTransaction(ctx context.Context, tx pgx.Tx, actor domai
 	if err != nil {
 		return domain.RoleCreationResult{}, domain.ErrInvalidProject
 	}
-	if replay, found, err := readRoleExecution(ctx, tx, actor, command, target, request); found || err != nil {
+	if replay, _, found, err := readRoleReceipt(ctx, tx, actor.RealmID, actor.UserID, command, target, request); found || err != nil {
 		return replay, err
 	}
 	for _, permission := range command.Permissions {
@@ -79,25 +79,26 @@ func CreatePlatformRoleInTransaction(ctx context.Context, tx pgx.Tx, actor domai
 	return domain.RoleCreationResult{Role: role}, nil
 }
 
-func readRoleExecution(ctx context.Context, tx pgx.Tx, actor domain.PlatformActor, command domain.RoleCreation, target, request []byte) (domain.RoleCreationResult, bool, error) {
+func readRoleReceipt(ctx context.Context, tx pgx.Tx, realm, actor domain.ID, command domain.RoleCreation, target, request []byte) (domain.RoleCreationResult, domain.ID, bool, error) {
 	var same bool
 	var snapshot []byte
+	var admission domain.ID
 	err := tx.QueryRow(ctx, `SELECT realm_id=$2 AND actor_id=$3 AND project_id=$4
-		AND binding=$5::jsonb AND request=$6::jsonb,role_snapshot
+		AND binding=$5::jsonb AND request=$6::jsonb,role_snapshot,admission_id::text
 		FROM auth.platform_role_creations WHERE operation_id=$1`, command.OperationID,
-		actor.RealmID, actor.UserID, command.ProjectID, target, request).Scan(&same, &snapshot)
+		realm, actor, command.ProjectID, target, request).Scan(&same, &snapshot, &admission)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return domain.RoleCreationResult{}, false, nil
+		return domain.RoleCreationResult{}, "", false, nil
 	}
 	if err != nil {
-		return domain.RoleCreationResult{}, false, catalogError(ctx, err)
+		return domain.RoleCreationResult{}, "", false, catalogError(ctx, err)
 	}
 	if !same {
-		return domain.RoleCreationResult{}, true, domain.ErrConflict
+		return domain.RoleCreationResult{}, "", true, domain.ErrConflict
 	}
 	var role accessdomain.Role
 	if err := json.Unmarshal(snapshot, &role); err != nil {
-		return domain.RoleCreationResult{}, true, domain.ErrUnavailable
+		return domain.RoleCreationResult{}, "", true, domain.ErrUnavailable
 	}
-	return domain.RoleCreationResult{Role: role, Replayed: true}, true, nil
+	return domain.RoleCreationResult{Role: role, Replayed: true}, admission, true, nil
 }

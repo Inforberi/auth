@@ -39,6 +39,15 @@ type RoleCreationResult struct {
 	CatalogRecorded bool
 }
 
+// Committed describes the original operation, not the role's current configuration.
+// False means unknown: absence of completion evidence does not prove rollback.
+type RoleCreationOutcome struct {
+	OperationID ID
+	ProjectID   ID
+	Committed   bool
+	Role        accessdomain.Role
+}
+
 func (c RoleCreation) Normalize() (RoleCreation, error) {
 	if !ValidID(c.OperationID) || !ValidID(c.ProjectID) || c.ExpectedVersion < 1 ||
 		c.ExpectedGeneration < 1 || !validReason(c.Reason) {

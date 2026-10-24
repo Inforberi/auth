@@ -111,6 +111,9 @@ func projectRuntimeDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Reposit
 	result, err := grant.ExecuteWithRuntime(ctx, registry, permissions, true)
 	require.NoError(t, err)
 	require.True(t, result.CatalogRecorded)
+	t.Run("protected role outcome", func(t *testing.T) {
+		roleOutcomeDrill(t, admin, managed, actor, command, registry, result)
+	})
 	registry.Invalidate(key)
 	_, err = admin.Exec(ctx, `UPDATE platform.projects SET desired_state='suspended' WHERE id=$1`, binding.ProjectID)
 	require.NoError(t, err)
