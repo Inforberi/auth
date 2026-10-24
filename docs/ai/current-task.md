@@ -2,17 +2,17 @@
 
 Обновлено24 октября2026. [Карта](index.md) · [статусы](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui) · [gates](../operations/acceptance-summary.md#открытые-ограничения-приёмки). Git/staging и доступность стенда проверять по факту.
 
-## Текущий блок — MP4 resource bounds
+## Последний результат — MP2.7 role concurrency
 
-[SQL deployment budget и административный admission](../features/platform-resource-bounds.md): configured API instances/surge, public/private catalog/project pool ceilings и external reserve. Local global/actor/project caps без очереди, shared Redis minute budgets для list/read/create/suspend/resume/retry. Общий Lua limiter переиспользован из MFA, её ключи не менялись; SQL authority и session guards сохранены.
+[Матрица](../operations/platform-role-faults.md#дополнение-команды-ролей-и-восстановление-результата) проверена Luna: task check, command host race и actual PostgreSQL TLS suite PASS; новые сценарии выполнены, fixture очищен, hashes совпали до/после. Snapshot `/private/tmp/auth-role-concurrency-snapshot.xg_rpbaz`, manifest5 Go совпал и с рабочим кодом перед коммитом. [Evidence](../planning/history.md#результат-mp27-role-concurrency--24-октября-2026).
 
-Первый отчёт Luna: lint/API/scanner PASS, общий check и router race FAIL на необновлённой fixture Swagger contract. Исправлена только эта fixture, целевой тест PASS. Остальные пакеты race PASS на предыдущем manifest. Live Redis/MFA/operator SQL тогда NOT RUN из-за отсутствующего тега образа; найден установленный redis:8.2-bookworm без pull. На новом снимке Luna сообщила промежуточные PASS полного task check и router race; live Redis/MFA/operator SQL ещё выполняются, финальный gate открыт. Коммит не означает завершение приёмки. [History](../planning/history.md#результат-mp4-resource-bounds--24-октября-2026) содержит первый FAIL и новые snapshot/log paths; не переписывать его как прошлый PASS. Коммит только по запросу. Предыдущий resident sync завершён:802cea6.
+Проверены one-use Execute, разные operations/один role key, local Access writer commit/rollback, revoke session/read/TOTP/auth_version во время receipt read, допустимое чтение после write revoke/suspend и parallel reconciliation без новых admissions/перезаписи receipt. Production code/schema/routes/dependencies не менялись. Предыдущая очистка operator fixture уже проверена V3 resource bounds actual SQL/HTTPS PASS и входит в отдельный коммит. Текущие commit/staging смотреть через Git.
 
 ## Следующий шаг
 
-Уточнение пользователя: все исполняемые проверки и подготовка стенда — только отдельный чат Luna, включая быстрые tests. Здесь реализация/исправления и подготовка снимка; обратно только ошибки/блокировки, при успехе короткий PASS со snapshot ID, подробности в логах. Основной чат не ждёт. [Правило](development-workflow.md#проверки-параллельно-с-реализацией).
+Оценить оставшиеся prerequisites и подключить role bridge HTTP с existing platform guard/admission/receipt/outcome/registry, browser protection и resource admission. Новые маршруты не открывать до готовности нужной сборки/guards. Полный MP2.7/MP4, scheduler/полная feature assembly/owner-managed readiness/credential rotation/fleet/RPS/GC остаются открытыми.
 
-Прочитать компактный результат отдельного чата «Проверки Auth — Luna» (01a16eab-c777-78a0-a815-47b45ff0860d), устранить только найденные дефекты и повторить затронутые проверки. Затем project-role/read-reconcile concurrency matrix перед role bridge HTTP; остальное — [MP4](../planning/multi-project.md). Scheduler/полная feature assembly/owner-managed readiness/credential rotation ещё открыты. Здесь длинные проверки не ждать и не дублировать.
+Все исполняемые проверки и стенд — отдельный чат Luna01a16eab-c777-78a0-a815-47b45ff0860d, включая быстрые tests; сюда только ошибки/блокировки или короткий PASS со snapshot ID. Здесь не ждать и не дублировать прогоны. [Правило](development-workflow.md#проверки-параллельно-с-реализацией). Коммит только по запросу, сохранять пользовательские изменения/staging.
 
 ## Нельзя потерять
 

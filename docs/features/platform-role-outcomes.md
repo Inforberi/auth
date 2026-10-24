@@ -34,6 +34,8 @@ Snapshot описывает исходную операцию, а не теку�
 
 ## Границы проверки
 
+Добавлена [конкурентная матрица](../operations/platform-role-faults.md#дополнение-команды-ролей-и-восстановление-результата): revoke между initial guard и финальным ответом, write revoke/suspend на warm runtime и параллельное reconciliation без новых admissions/перезаписи receipt. Новый набор проверен Luna: task check/command host race/actual TLS SQL suite PASS, fixture очищен, hashes совпали до/после. [Evidence](../planning/history.md#результат-mp27-role-concurrency--24-октября-2026). Предыдущий PASS ниже относится к прежнему набору.
+
 Матрица ниже проверена отдельной Luna на actual PostgreSQL18.6 TLS: read/reconcile после session revoke запрещены; после read-permission revoke проверен отказ чтения. Финальный suite PASS9.01s, protected_role_outcome PASS0.03s. [Evidence и ограничения](../planning/history.md#результат-mp27-role-outcomes--24-октября-2026).
 
 SQL-приёмка должна проверять read-own после отзыва write permission, read/reconcile refusal после session/read-permission revoke, одинаковый not-found для чужого и неизвестного UUID, missing outcome → receipt recovery без новых admissions, admitted-but-not-executed → unknown. Shared receipt reader сохраняет прежние execution/replay проверки.

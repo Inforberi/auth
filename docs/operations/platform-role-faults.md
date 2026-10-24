@@ -28,10 +28,28 @@ Gate не подменяет Commit ошибкой после успешного
 
 Исходники: `cmd/project-prepare/role_{authority,transport,wire}_integration_test.go`; вход — nested `authority and transport faults` в existing TestPrepareCommandSQL. Требуется isolated PostgreSQL18.6 с TLS fixture, AUTH_STORAGE_TEST_TLS_CA и прочими existing command-test variables. При отсутствующем TLS fixture соответствующий parent SKIP не считать прохождением.
 
+## Дополнение: команды ролей и восстановление результата
+
+Сценарии добавлены24 октября и проверены Luna: **PASS** task check/command host race/actual TLS SQL suite, fixture очищен, manifest совпал до/после. [Evidence](../planning/history.md#результат-mp27-role-concurrency--24-октября-2026). Новые SQL cases входят в existing `TestPrepareCommandSQL`, без production hooks, schema/routes/dependencies.
+
+| Сценарий | Требуемый результат |
+| --- | --- |
+| Четыре одновременных Execute с одним process-local admission | Один success/receipt, остальные conflict, admission не переиспользуется |
+| Два разных operation UUID с одинаковым role key и разными permissions | Только один результат/receipt/outcome; права победителя не смешиваются с другим запросом |
+| Локальный role writer держит общий Access lock и commits создание того же key | Platform Execute наблюдается ожидающим SQL lock, затем conflict без своего receipt |
+| Тот же локальный writer откатывается | Platform Execute после lock wait создаёт роль и receipt |
+| Session/read permission/TOTP/auth_version отозваны после initial guard, пока receipt SELECT заблокирован | Финальная выдача результата запрещена, даже если completion evidence уже записано |
+| Write permission отозван или проект suspended в том же окне | Read-own ранее принятого результата разрешён на уже открытом exact runtime |
+| Четыре параллельных reconciliation запроса | Один catalog outcome, прежний role snapshot; project receipt xmin и число admissions не меняются |
+
+SQL порядок задаётся advisory lock Access и ACCESS EXCLUSIVE lock receipt-таблицы. Ожидание подтверждается `pg_stat_activity`, без sleep. Reconciliation проверяется отдельно от новых мутаций: suspend не обещает cold-open, новый admission и права на запись не выдаются. Все изменения session/proofs/state выполняет root только своего disposable fixture с восстановлением после подслучая.
+
+Исходники: `cmd/project-prepare/role_concurrency_integration_test.go`, `role_outcome_concurrency_integration_test.go`; подключены к existing role admission/runtime drills. Cleanup расширен только на префикс синтетических `bridge_race_` ролей/receipts. Это не новые HTTP role update/assignment APIs и не полная матрица всех будущих project policy/settings сценариев.
+
 ## Порядок проверки
 
-Основной чат: formatter и compile-only `go test ./cmd/project-prepare -run '^$'`. Это не выполнение новой SQL матрицы.
+Все исполняемые проверки — отдельный чат Luna на неизменяемом снимке. Основной чат пишет сценарии и форматирует изменения, не запускает даже compile-only тесты. Передать `task check`, command package race и actual PostgreSQL18.6 TLS `TestPrepareCommandSQL` с новыми nested cases без SKIP. Production API/crypto/dependencies не менялись: повтор scanner/Swagger без причины не нужен.
 
-Отдельный чат Luna: неизменяемый source snapshot, `task check`, целевой command `-race` и actual PostgreSQL TLS suite. Сохранять версию/логи/exit status и отсутствие SKIP для новых scenarios. При сбое вернуть диагностику; исправления — в основном чате, повторять только затронутые проверки. Disposable DB/roles/контейнеры имеют собственные имена, рабочие данные не меняются.
+Логи/exit status/версии/snapshot сохранять в evidence; обратно только ошибки, при успехе короткий PASS со snapshot ID. При сбое исправляет основной агент, Luna повторяет затронутые проверки. Disposable DB/roles/контейнеры имеют собственные имена, рабочие данные не меняются. [Правила](../ai/development-workflow.md).
 
-Результаты добавляются после отчёта в [history](../planning/history.md) и [acceptance](acceptance-summary.md). HTTP, production assembly/автоматический invalidation, fleet/fairness/rate budgets, concurrent read/reconcile authority changes и полная project-role matrix этим подготовленным блоком не закрыты.
+Результаты добавляются после отчёта в [history](../planning/history.md) и [acceptance](acceptance-summary.md). HTTP и оставшиеся production assembly/credential rotation/fleet gates остаются отдельно; эта локальная матрица их не закрывает.
