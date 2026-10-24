@@ -1,20 +1,16 @@
 # Текущий шаг
 
-Обновлено25 октября2026. [Карта](index.md) · [статусы](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui) · [gates](../operations/acceptance-summary.md#открытые-ограничения-приёмки). Git/staging и доступность стенда проверять по факту.
+Обновлено25 октября2026. [Карта](index.md) · [статусы](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui) · [gates](../operations/acceptance-summary.md#открытые-ограничения-приёмки). Git/staging и стенд проверять по факту.
 
-## Текущий блок — MP2.7 project role assignments
+## Завершённый блок — MP2.7 role directory
 
-[Контракт](../features/platform-role-assignments.md): opt-in POST grant/revoke обычной роли пользователю; текущие platform AccessManage/password/MFA, browser/session/capacity и exact registry guards. Version checks проекта/роли/user access, cap32, no-op без UPDATE пользователя, active grant отзывает pre-grant sessions, pending сохраняет activation auth_version. System super_admin запрещён в обоих направлениях, старый local last-admin flow сохранён. Revoke допускает blocked non-deleted target; MFA-required grants fail closed до project capability.
+GET списка ролей с keyset pagination и карточки с permissions/system/version, exact target/version/generation и current AccessManage/fresh-auth до/после readonly project snapshot. [Контракт](../features/platform-role-directory.md). Нет новых schema/ENV/dependencies/UI. Luna: V1 tests/actual TLS SQL/race/API/security PASS; оба formatter замечания закрыты targeted V2 lint PASS, manifest59 совпал до/после. Все assignment nested SQL cases тоже прошли без SKIP: прежний SQL gate закрыт. Evidence/source/исходные FAIL — [history](../planning/history.md#результат-mp27-role-directory--25-октября-2026). Полный MP2.7/MP4/fleet не закрыт.
 
-Role-family intents/admissions/outcomes переиспользованы, assignment Action хранится в typed immutable request. Общие модели RoleIntent/RoleOutcome названы по фактическим сценариям. Добавлен только project receipt `auth.platform_role_assignments`, updated initial schema/down/grants/profile/checksum; рабочие БД/ENV не менялись и upgrade migration не создавалась. Общая Access persistence отделена от local-user audit, чтобы platform actor не подменял project user. Общие SQL intent/admission и commit boundary выделены внутри role family, универсального execute API нет. Replay completion ссылается на original receipt admission (включая прежнее создание роли).
+## Следующий шаг — user directory/read bridge
 
-Добавлены unit/router/domain и реальный HTTPS/SQL drill: counters/sessions/pending/no-op, cap32/system/MFA/unknown target, atomic rollback receipt failure, parallel retries/version conflicts/role edit, receipt recovery без повторного назначения, original admission, local Access audit и last-admin regression. Данные fixture/cleanup только собственные. Root fixture multi-statement mode pgx5.10.0 сверён Context7; runtime protocol не менялся. Formatter/Swagger подготовлены, основной чат **не запускал проверки**. Все tests/race/live SQL/operator/runtime assembly/API/scanner — Luna pending; [history](../planning/history.md#результат-mp27-role-assignments--24-октября-2026) содержит source/evidence после передачи.
+Добавить список пользователей с точными email/status фильтрами и keyset pagination, карточку с текущими назначениями/accessVersion. Переиспользовать account validation/cursor и SQL projections, не подделывать project actor. Владелец SQL — account repository; typed platform authority отдельно. До выдачи данных повторять current permissions и exact binding; PII не раскрывать по одному ProjectsRead. Luna ищет точки минимального переиспользования, без правок/новых тестов; основной агент проектирует и реализует.
 
-## Следующий шаг
-
-Получить итог Luna для V3 `/private/tmp/auth-role-assignment-v3.m6zqqufh`: V2 исправил admission conflict, но assignment fixture не заполнял обязательный sessions.created_at. В V3 исправлен только INSERT двух тестовых сессий; переданы targeted lint и полный actual TLS command SQL, остальные47 source совпадают V2. Все nested assignment cases должны запуститься без SKIP. Итоги V2/V3, прежние PASS и manifest — [history](../planning/history.md#результат-mp27-role-assignments--24-октября-2026). Затем directory/read bridge пользователей/ролей/назначений для получения current versions без догадок, owner-managed readiness и остальные explicit users/settings по плану. Project MFA capability/полная Auth assembly/workers/credential rotation/fleet/RPS/GC ещё открыты. Предыдущий role create API проверен и закоммичен83ef51e.
-
-Все проверки/стенд — Luna, даже быстрые tests. Здесь код/formatter/immutable snapshot; не ждать и не дублировать команды. Коммит только по запросу. UI только после отдельного согласования; отдельные project catalogs/import из backend пока план.
+Все tests/стенд — Luna01a16eab-c777-78a0-a815-47b45ff0860d, не ждать и не дублировать команды. Коммит только по запросу. UI только после отдельного согласования. Owner readiness/project capability/full Auth assembly остаются следующими этапами.
 
 ## Нельзя потерять
 

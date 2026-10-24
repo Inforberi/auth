@@ -6606,6 +6606,102 @@ const docTemplate = `{
             }
         },
         "/api/v1/platform/projects/{id}/roles": {
+            "get": {
+                "description": "Requires current platform.project_access.manage and fresh password/MFA, checked before the project read and again before disclosure. Exact enabled/ready target and version/generation; read-only project snapshot. Exclusive key pagination, no total count, offset or per-row permission queries. Includes system-role metadata; assignments to system roles remain forbidden. Does not renew sessions or create operation receipts. Get permissions from the role detail endpoint.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Roles"
+                ],
+                "summary": "List current project roles from the platform",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exclusive nextAfterKey from previous page",
+                        "name": "afterKey",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Page size 1..100, default 50",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.PlatformRolePageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "428": {
+                        "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Runtime-enabled platform only. Requires current platform.project_access.manage and fresh password/MFA. Exact project version/generation; immutable operation UUID/payload. Target and actor are server-owned. A 202 unknown result may have committed: read/reconcile the same operation, never infer rollback. Known project commit can return catalogRecorded=false. No assignment or project identity is created. Project MFA capability is not yet assembled: mfaRequired=true fails closed with mfa_not_ready. Permission catalog uses deployment-owned ACCESS_CATALOG_FILE.",
                 "consumes": [
@@ -6688,6 +6784,104 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "428": {
+                        "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/roles/{roleId}": {
+            "get": {
+                "description": "Requires current platform.project_access.manage and fresh password/MFA before read and before disclosure. Exact enabled/ready project binding, version/generation and role UUID. Role and permissions come from one read-only repeatable-read project snapshot. No project identity impersonation, mutations, admissions or session renewal. A foreign or unknown role UUID is not found.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Roles"
+                ],
+                "summary": "Read a current project role with permissions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role UUID",
+                        "name": "roleId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.PlatformRoleResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -8893,6 +9087,20 @@ const docTemplate = `{
                 }
             }
         },
+        "project_http.PlatformRolePageResponse": {
+            "type": "object",
+            "properties": {
+                "nextAfterKey": {
+                    "type": "string"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/project_http.PlatformRoleSummary"
+                    }
+                }
+            }
+        },
         "project_http.PlatformRoleResponse": {
             "type": "object",
             "properties": {
@@ -8916,6 +9124,35 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "system": {
+                    "type": "boolean"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "project_http.PlatformRoleSummary": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "mfaRequired": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "system": {
+                    "type": "boolean"
                 },
                 "version": {
                     "type": "integer"

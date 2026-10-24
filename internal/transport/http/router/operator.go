@@ -80,6 +80,8 @@ func platformProjectRoutes(r chi.Router, h Handlers) {
 		r.Post("/projects/{id}/resume", h.Projects.Resume)
 		r.Post("/projects/{id}/retry", h.Projects.Retry)
 		if h.ProjectRoles != nil {
+			r.Get("/projects/{id}/roles", h.ProjectRoles.ListRoles)
+			r.Get("/projects/{id}/roles/{roleId}", h.ProjectRoles.ReadRole)
 			r.Post("/projects/{id}/roles", h.ProjectRoles.Create)
 			r.Post("/projects/{id}/users/{userId}/roles/{roleId}/grant", h.ProjectRoles.Grant)
 			r.Post("/projects/{id}/users/{userId}/roles/{roleId}/revoke", h.ProjectRoles.Revoke)

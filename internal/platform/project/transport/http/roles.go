@@ -11,10 +11,13 @@ import (
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/service"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
 type roleService interface {
+	ListProjectRoles(context.Context, operatordomain.Principal, service.ProjectRoleQuery) (service.ProjectRolePage, error)
+	ReadProjectRole(context.Context, operatordomain.Principal, domain.DirectoryTarget, accessdomain.RoleID) (accessdomain.Role, error)
 	ChangeRoleAssignment(context.Context, operatordomain.Principal, domain.RoleAssignment) (domain.RoleAssignmentResult, error)
 	CreateRole(context.Context, operatordomain.Principal, domain.RoleCreation) (domain.RoleCreationResult, error)
 	ReadRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleOutcome, error)
@@ -37,6 +40,7 @@ type PlatformRoleResponse struct {
 	Description string                       `json:"description"`
 	Permissions []accessdomain.PermissionKey `json:"permissions" swaggertype:"array,string"`
 	MFARequired bool                         `json:"mfaRequired"`
+	System      bool                         `json:"system"`
 	Version     int64                        `json:"version"`
 } // @name project_http.PlatformRoleResponse
 
@@ -58,7 +62,7 @@ func platformRoleResponse(role accessdomain.Role) *PlatformRoleResponse {
 	}
 	return &PlatformRoleResponse{
 		ID: role.ID, Key: role.Key, Name: role.Name, Description: role.Description,
-		Permissions: permissions, MFARequired: role.MFARequired, Version: role.Version,
+		Permissions: permissions, MFARequired: role.MFARequired, System: role.System, Version: role.Version,
 	}
 }
 

@@ -31,7 +31,19 @@ func readRole(ctx context.Context, db roleReader, id domain.RoleID) (domain.Role
 }
 
 func (r *Repository) ListRoles(ctx context.Context, afterKey string, limit int) ([]domain.Role, error) {
-	rows, err := r.db.Query(ctx, `SELECT id,key,name,description,system,version,mfa_required
+	return listRoles(ctx, r.db, afterKey, limit)
+}
+
+// ListRolesInTransaction reads metadata; its caller owns authority and the snapshot.
+func ListRolesInTransaction(ctx context.Context, tx pgx.Tx, afterKey string, limit int) ([]domain.Role, error) {
+	return listRoles(ctx, tx, afterKey, limit)
+}
+
+func listRoles(ctx context.Context, db interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+}, afterKey string, limit int,
+) ([]domain.Role, error) {
+	rows, err := db.Query(ctx, `SELECT id,key,name,description,system,version,mfa_required
 		FROM auth.roles WHERE key>$1 ORDER BY key LIMIT $2`, afterKey, limit)
 	if err != nil {
 		return nil, err

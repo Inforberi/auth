@@ -1060,6 +1060,15 @@ definitions:
       userId:
         type: string
     type: object
+  project_http.PlatformRolePageResponse:
+    properties:
+      nextAfterKey:
+        type: string
+      roles:
+        items:
+          $ref: '#/definitions/project_http.PlatformRoleSummary'
+        type: array
+    type: object
   project_http.PlatformRoleResponse:
     properties:
       description:
@@ -1076,6 +1085,25 @@ definitions:
         items:
           type: string
         type: array
+      system:
+        type: boolean
+      version:
+        type: integer
+    type: object
+  project_http.PlatformRoleSummary:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      key:
+        type: string
+      mfaRequired:
+        type: boolean
+      name:
+        type: string
+      system:
+        type: boolean
       version:
         type: integer
     type: object
@@ -6237,6 +6265,76 @@ paths:
       tags:
       - Platform Roles
   /api/v1/platform/projects/{id}/roles:
+    get:
+      description: Requires current platform.project_access.manage and fresh password/MFA,
+        checked before the project read and again before disclosure. Exact enabled/ready
+        target and version/generation; read-only project snapshot. Exclusive key pagination,
+        no total count, offset or per-row permission queries. Includes system-role
+        metadata; assignments to system roles remain forbidden. Does not renew sessions
+        or create operation receipts. Get permissions from the role detail endpoint.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: Exclusive nextAfterKey from previous page
+        in: query
+        name: afterKey
+        type: string
+      - default: 50
+        description: Page size 1..100, default 50
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/project_http.PlatformRolePageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "428":
+          description: Precondition Required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: List current project roles from the platform
+      tags:
+      - Platform Roles
     post:
       consumes:
       - application/json
@@ -6317,6 +6415,76 @@ paths:
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
       summary: Create a project role as a platform operator
+      tags:
+      - Platform Roles
+  /api/v1/platform/projects/{id}/roles/{roleId}:
+    get:
+      description: Requires current platform.project_access.manage and fresh password/MFA
+        before read and before disclosure. Exact enabled/ready project binding, version/generation
+        and role UUID. Role and permissions come from one read-only repeatable-read
+        project snapshot. No project identity impersonation, mutations, admissions
+        or session renewal. A foreign or unknown role UUID is not found.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role UUID
+        in: path
+        name: roleId
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/project_http.PlatformRoleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "428":
+          description: Precondition Required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read a current project role with permissions
       tags:
       - Platform Roles
   /api/v1/platform/projects/{id}/suspend:

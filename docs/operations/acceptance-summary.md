@@ -6,7 +6,7 @@
 
 ## Открытые ограничения приёмки
 
-- MP2.7 role assignments: [grant/revoke](../features/platform-role-assignments.md) реализация сохраняется с открытым gate. V2 task check/race PASS, SQL fixture исправлен в V3; его actual SQL/lint ещё pending. Итоги и ограничения cleanup — [history](../planning/history.md#результат-mp27-role-assignments--24-октября-2026). Initial schema/checksum изменены, существующим БД требуется controlled upgrade; рабочих данных не касались. Role directory/UI/project capability и полный MP4 остаются отдельно.
+- MP2.7: [grant/revoke](../features/platform-role-assignments.md) прошли все nested SQL/HTTP cases без SKIP в общем снимке [каталога ролей](../features/platform-role-directory.md). Directory tests/SQL/race/API/security PASS; два gofumpt замечания закрыты targeted V2 lint PASS, manifest59 совпал до/после. Evidence — [history](../planning/history.md#результат-mp27-role-directory--25-октября-2026). Initial assignment schema/checksum изменены, существующим БД требуется controlled upgrade; рабочих данных не касались. User directory/UI/project capability и полный MP4 остаются отдельно.
 
 - MP2.7 role HTTP: [opt-in create/read/reconcile](../features/platform-roles-api.md) реализованы, V1 tests/race/actual TLS SQL/API/scanner/operator regression PASS;3 lint замечания исправлены и закрыты targeted V2 lint/race PASS. Новая project MFA-required capability пока недоступна, independent catalogs/полная project Auth assembly отдельно.
 

@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/require"
 
+	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
@@ -19,10 +20,21 @@ import (
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
+	projectservice "github.com/Inforberi/financial-intelligence/internal/platform/project/service"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 )
 
 type operatorRoles struct{ calls int }
+
+func (s *operatorRoles) ListProjectRoles(context.Context, operatordomain.Principal, projectservice.ProjectRoleQuery) (projectservice.ProjectRolePage, error) {
+	s.calls++
+	return projectservice.ProjectRolePage{}, nil
+}
+
+func (s *operatorRoles) ReadProjectRole(context.Context, operatordomain.Principal, domain.DirectoryTarget, accessdomain.RoleID) (accessdomain.Role, error) {
+	s.calls++
+	return accessdomain.Role{}, nil
+}
 
 func (s *operatorRoles) ChangeRoleAssignment(context.Context, operatordomain.Principal, domain.RoleAssignment) (domain.RoleAssignmentResult, error) {
 	s.calls++
@@ -76,6 +88,8 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 	for _, path := range []string{
 		"/projects/project/roles", "/projects/project/role-operations/op", "/projects/project/role-operations/op/reconcile",
 		"/projects/project/users/user/roles/role/grant", "/projects/project/users/user/roles/role/revoke",
+		"/projects/project/roles?expectedVersion=1&expectedGeneration=1",
+		"/projects/project/roles/role?expectedVersion=1&expectedGeneration=1",
 	} {
 		for _, tc := range []struct {
 			origin string
@@ -97,6 +111,9 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 			if strings.HasSuffix(path, "/op") {
 				method = "GET"
 			}
+			if strings.Contains(path, "?") {
+				method = "GET"
+			}
 			router, err := NewOperator(h)
 			require.NoError(t, err)
 			r := httptest.NewRequest(method, cfg.Platform.Origin+"/api/v1/platform"+path, strings.NewReader(body))
@@ -114,7 +131,7 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 			}
 		}
 	}
-	require.Equal(t, 5, capacityCalls)
+	require.Equal(t, 7, capacityCalls)
 	unsafe := h
 	unsafe.ProjectCapacity = nil
 	_, err := NewOperator(unsafe)

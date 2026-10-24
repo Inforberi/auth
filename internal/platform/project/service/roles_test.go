@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
@@ -13,6 +14,18 @@ import (
 type roleRepositoryStub struct {
 	prepared, executed bool
 	err                error
+	directoryCalls     int
+	roles              []accessdomain.Role
+}
+
+func (s *roleRepositoryStub) ListProjectRoles(context.Context, operatordomain.Principal, ProjectRoleQuery) ([]accessdomain.Role, error) {
+	s.directoryCalls++
+	return s.roles, s.err
+}
+
+func (s *roleRepositoryStub) ReadProjectRole(context.Context, operatordomain.Principal, domain.DirectoryTarget, accessdomain.RoleID) (accessdomain.Role, error) {
+	s.directoryCalls++
+	return accessdomain.Role{}, s.err
 }
 
 func (s *roleRepositoryStub) PrepareRoleAssignment(ctx context.Context, actor operatordomain.Principal, _ domain.RoleAssignment) (domain.RoleIntent, error) {

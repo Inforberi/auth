@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -138,6 +139,10 @@ func roleHTTPDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Repository, a
 	require.True(t, replay.Replayed)
 	require.Equal(t, first.Role.ID, replay.Role.ID)
 
+	t.Run("project role directory", func(t *testing.T) {
+		roleDirectoryHTTPDrill(t, admin, actor, base, binding, *first.Role, call, send)
+	})
+
 	t.Run("project role assignments", func(t *testing.T) {
 		roleAssignmentHTTPDrill(t, admin, actor, base, binding, *first.Role, call, send)
 	})
@@ -170,6 +175,7 @@ func roleHTTPDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Repository, a
 	_, err = admin.Exec(ctx, `DELETE FROM platform.operator_permissions WHERE user_id=$1 AND permission_key='platform.project_access.manage'`, actor.UserID)
 	require.NoError(t, err)
 	call(t, "POST", createPath, input, 403)
+	call(t, "GET", createPath+fmt.Sprintf("?expectedVersion=%d&expectedGeneration=%d", base.ExpectedVersion, base.ExpectedGeneration), nil, 403)
 	call(t, "POST", "/api/v1/platform/projects/"+string(base.ProjectID)+"/users/"+string(assignmentActive)+"/roles/"+string(first.Role.ID)+"/grant",
 		projecthttp.PlatformAssignmentRequest{OperationID: "f7000000-0000-4000-8000-000000000099", ExpectedVersion: base.ExpectedVersion, ExpectedGeneration: base.ExpectedGeneration, ExpectedRoleVersion: 1, ExpectedAccessVersion: 1, Reason: "revoked operator"}, 403)
 	call(t, "GET", operationPath, nil, 200)

@@ -3,11 +3,14 @@ package service
 import (
 	"context"
 
+	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
 type RoleRepository interface {
+	ListProjectRoles(context.Context, operatordomain.Principal, ProjectRoleQuery) ([]accessdomain.Role, error)
+	ReadProjectRole(context.Context, operatordomain.Principal, domain.DirectoryTarget, accessdomain.RoleID) (accessdomain.Role, error)
 	PrepareRoleAssignment(context.Context, operatordomain.Principal, domain.RoleAssignment) (domain.RoleIntent, error)
 	ExecuteRoleAssignment(context.Context, operatordomain.Principal, domain.RoleAssignment) (domain.RoleAssignmentResult, error)
 	PrepareRoleCreation(context.Context, operatordomain.Principal, domain.RoleCreation) (domain.RoleIntent, error)

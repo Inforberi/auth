@@ -1,6 +1,6 @@
 # Текущий API-контракт
 
-MP2.7 assignments: [явные grant/revoke и общий read/reconcile](../features/platform-role-assignments.md); код готов, отдельная проверка Luna pending. Только custom roles, system administrator flow отдельно.
+MP2.7 assignments: [явные grant/revoke и общий read/reconcile](../features/platform-role-assignments.md); локальная SQL-приёмка пройдена. Только custom roles, system administrator flow отдельно. [Каталог ролей](../features/platform-role-directory.md): opt-in GET list/detail с exact project versions, current AccessManage/fresh-auth и no-store; tests/SQL/race/API/security и targeted lint PASS.
 
 MP2.7: opt-in platform role API: [POST create, GET outcome и POST reconcile](../features/platform-roles-api.md). Доступны только при включённом project runtime и current platform authority; проверки блока Luna завершены (V1 SQL/HTTPS/race/API/scanner, V2 targeted lint/race PASS). Project MFA-required capability пока не подключена, новая такая роль получает mfa_not_ready.
 

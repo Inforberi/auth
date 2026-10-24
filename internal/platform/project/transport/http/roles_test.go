@@ -14,6 +14,7 @@ import (
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/service"
 )
 
 type roleServiceStub struct {
@@ -26,6 +27,21 @@ type roleServiceStub struct {
 	outcome            domain.RoleOutcome
 	err                error
 	calls              int
+	query              service.ProjectRoleQuery
+	page               service.ProjectRolePage
+	role               accessdomain.Role
+}
+
+func (s *roleServiceStub) ListProjectRoles(_ context.Context, actor operatordomain.Principal, query service.ProjectRoleQuery) (service.ProjectRolePage, error) {
+	s.calls++
+	s.actor, s.query = actor, query
+	return s.page, s.err
+}
+
+func (s *roleServiceStub) ReadProjectRole(_ context.Context, actor operatordomain.Principal, target domain.DirectoryTarget, id accessdomain.RoleID) (accessdomain.Role, error) {
+	s.calls++
+	s.actor, s.query.Target, s.role.ID = actor, target, id
+	return s.role, s.err
 }
 
 func (s *roleServiceStub) ChangeRoleAssignment(_ context.Context, actor operatordomain.Principal, command domain.RoleAssignment) (domain.RoleAssignmentResult, error) {
