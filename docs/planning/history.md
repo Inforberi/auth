@@ -2,6 +2,24 @@
 
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
+## Результат MP2.7 runtime-registry — 24 октября 2026
+
+[Контракт](../features/project-runtime-registry.md). Реализованы explicit trusted targets (verified network TLS/explicit Unix socket), SCRAM-only runtime authentication без endpoint/credential fallback, отдельный SELECT-only private catalog reader с current ready/enabled/exact binding/version/generation snapshot и codec, bounded process-local SQL registry. Single-flight на точный key, MaxRuntimes × MaxConns ceiling, MinConns/MinIdleConns0, bounded concurrent acquiring/wait, active lease через callback, idle eviction/один janitor и exact invalidation. Closing entry остаётся в бюджете; ограниченные по MaxRuntimes close tasks не блокируют deadline Close(ctx), active callback не обрывается. Новое physical connection проходит общий SQL profile; ExecuteWithRuntime сохраняет старые admission/transaction/outcome гарантии и deadline до3s. Dedicated reader grants — шаблон, без CREATE ROLE/DDL прав и без применения к рабочим БД. Новых dependencies/ENV/routes/migrations нет.
+
+Проверки Go1.27.3:
+
+- Formatter изменённых Go; полный `task check` PASS, lint0: `/private/tmp/auth-runtime-registry-check.log`. После уточнения async close/удержания budget выполнены финальные targeted race и lint0 для runtime/repository/command: `/private/tmp/auth-runtime-registry-race-final.log`, `/private/tmp/auth-runtime-registry-lint-final.log`. Первоначальный targeted repository/runtime race также PASS: `/private/tmp/auth-runtime-registry-race.log`. Полный suite после локального уточнения shutdown повторно не запускался.
+- Actual PostgreSQL18.6 arm64, отдельный tmpfs/network-none TLS контейнер, TestPrepareCommandSQL PASS9.05s: `/private/tmp/auth-runtime-registry-sql.log`. Новый trusted_project_runtime subtest PASS, не SKIP: restricted reader/denied extra UPDATE/Auth access, stale generation, verified TLS connection/SCRAM-only client, profile, admitted role+catalog outcome через lease, suspended cold-open refusal и enable recovery. Прежние profile/admission/lost-ack/provisioning regression сохранены. Это synthetic local cert/credentials, не production PKI/network/fleet matrix.
+- `task check:security` PASS: `/private/tmp/auth-runtime-registry-security.log`, 0 reachable/imported-package findings, 1 прежняя module-only находка без вызываемого пути. pgx5.10.0 lifecycle/config сверены через Context7 и installed source.
+- SQL fixture cleanup подтвердил отсутствие project DB/временных ролей/catalog Auth/platform/provisioning schemas. Удалены только собственные контейнер auth-runtime-registry-check-20261024, временные cert/key и Linux test binary; логи сохранены. Рабочие контейнеры/БД/ENV/secrets и staging не менялись.
+- `git diff --check`, локальные doc links и согласованность статусов проверены.
+
+NOT RUN/открыто: production wiring/private reader/master key lifecycle, автоматический invalidation, полный Auth feature runtime/scheduler, fleet/fairness/rate budgets, реальные transport faults/concurrent suspend-factor-role matrix, protected outcome read/reconcile и HTTP. Load/long-run memory/GC/capacity — MP8. Это завершённая SQL registry часть, не готовый multi-project сервер и не закрытые MP2.7/MP4.
+
+## Процесс разработки с AI — 24 октября 2026
+
+Согласованный подход сохранён в [переносимом документе](../ai/development-workflow.md) и связан с AGENTS, картой, режимом проверок и текущей заметкой. Описаны роли исполнителей, проверка неизменяемого снимка, независимая параллельная работа, обработка ошибок, условия применения RAG/OpenSpec и оценка эффекта. Инструменты/задачи не устанавливались и не запускались, код и функциональный scope не менялись. Проверки: `git diff --check`, локальные ссылки и согласованность инструкций; Go/Docker/tests NOT RUN — только Markdown.
+
 ## Результат MP2.7 runtime-profile — 24 октября 2026
 
 [Контракт](../features/project-runtime-profile.md). Onboarding и actual project role transaction используют один SQL predicate identity/version/source-checksum/owner/ACL. Меньший прежний role identity guard удалён вместо второго запроса поверх него. Runtime читает восемь несекретных marker fields через owner-owned auth.project_identity, без USAGE/SELECT/column grants на private schema/table и без setup hash/keys. Проверяются точные колонки view, PUBLIC table/column ACL, write/grant option, таблицы/views/sequences и прежние protected restore/MFA/receipt исключения. Role writer выполняет проверку до Access lock/replay/writes на том же соединении, не доверяет probe другого pool connection. Hot login/session/JWT paths не менялись; новых pools/workers/ENV/routes/dependencies нет.

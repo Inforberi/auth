@@ -21,7 +21,7 @@ import (
 	catalog "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
 )
 
-func roleAdmissionDrill(t *testing.T, physical *pgx.Conn, project *pgxpool.Pool, env func(string) string, reservation domain.PreparationReservation, binding credentials.Binding) {
+func roleAdmissionDrill(t *testing.T, physical *pgx.Conn, project *pgxpool.Pool, env func(string) string, reservation domain.PreparationReservation, binding credentials.Binding, codec *credentials.Codec) {
 	t.Helper()
 	ctx := t.Context()
 	admin, err := pgx.Connect(ctx, strings.Replace(env("PROVISIONER_CATALOG_URL"), "auth_platform_preparation_test:catalog-fixture-only@", "auth@", 1))
@@ -35,8 +35,8 @@ func roleAdmissionDrill(t *testing.T, physical *pgx.Conn, project *pgxpool.Pool,
 		cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer stop()
 		_, err := projectAdmin.Exec(cleanup, `DELETE FROM auth.platform_role_creations WHERE role_id IN
-			(SELECT id FROM auth.roles WHERE key IN ('bridge_drill_editor','bridge_drill_parallel','bridge_drill_outage','bridge_drill_expired','bridge_drill_unknown'));
-			DELETE FROM auth.roles WHERE key IN ('bridge_drill_editor','bridge_drill_parallel','bridge_drill_outage','bridge_drill_expired','bridge_drill_unknown')`)
+			(SELECT id FROM auth.roles WHERE key IN ('bridge_drill_editor','bridge_drill_parallel','bridge_drill_outage','bridge_drill_expired','bridge_drill_unknown','bridge_drill_registry'));
+			DELETE FROM auth.roles WHERE key IN ('bridge_drill_editor','bridge_drill_parallel','bridge_drill_outage','bridge_drill_expired','bridge_drill_unknown','bridge_drill_registry')`)
 		require.NoError(t, err)
 		_, err = admin.Exec(cleanup, `DELETE FROM platform.project_role_outcomes;
 			DELETE FROM platform.project_role_admissions; DELETE FROM platform.project_role_intents;
@@ -94,6 +94,9 @@ func roleAdmissionDrill(t *testing.T, physical *pgx.Conn, project *pgxpool.Pool,
 	require.ErrorIs(t, err, domain.ErrConflict, "prepared intent is required")
 	_, err = repo.PrepareRoleCreation(ctx, actor, command)
 	require.NoError(t, err)
+	t.Run("trusted project runtime", func(t *testing.T) {
+		projectRuntimeDrill(t, admin, repo, actor, command, binding, codec, env, permissions)
+	})
 	grant, err := repo.AdmitRoleCreation(ctx, actor, command)
 	require.NoError(t, err)
 	copyOfGrant := *grant

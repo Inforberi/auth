@@ -15,6 +15,7 @@
 | Оператор платформы | [foundation](../features/platform-operators.md), [login](../features/platform-login.md), [recovery](../features/platform-recovery.md) | `internal/platform/operator`, `internal/app/auth/operator*`, `router/operator.go`, `cmd/admin-recovery` |
 | Управление ролями из платформы | [intent/admission/project receipt/outcome, HTTP ещё закрыт](../features/platform-role-intents.md) | `Project/domain/{role_creation,platform_actor}.go`, `Project/repository/postgres/role_{creation,admission,dispatch,execution,outcome,target}.go`, `internal/access/repository/postgres/manage_roles.go`, `migrations` |
 | Профиль проектного SQL runtime | [identity/version/checksum/grants](../features/project-runtime-profile.md) | `Project/repository/postgres/{runtime_profile,onboarding_runtime}.go`, `Project/storage/postgres/schema_identity.go`, `migrations/project_identity.go`, `deploy/runtime*` |
+| Подключения к готовым проектам | [trusted targets, credential reader, bounded registry/leases](../features/project-runtime-registry.md) | `Project/runtime`, `Project/repository/postgres/{runtime_credentials,runtime_connection,role_runtime}.go`, `deploy/platform-runtime-reader-grants.sql` |
 | Сборка, lifecycle, изоляция | [архитектура](../architecture.md), [realm isolation](../features/realm-isolation.md) | `internal/app/auth/{app,realm,run,realm_security}.go`, `internal/config`, `internal/server/http`, `internal/infra/realmscope` |
 
 ## Auth и доступы
@@ -35,6 +36,7 @@
 
 | Задача | Первичный документ | Код / evidence |
 | --- | --- | --- |
+| Организация разработки и перенос правил | [AI workflow: исполнители, фоновые проверки, ошибки, выбор инструментов](development-workflow.md) | [AGENTS.md](../../AGENTS.md), существующие runner/CI |
 | Текущий scope и выполнение | [implementation](../planning/implementation.md), [roadmap](../planning/roadmap.md) | [history](../planning/history.md): искать нужный заголовок, не читать весь архив |
 | Security и восстановление | [угрозы](../threat-model.md), [JWT security matrix](../operations/jwt-security-acceptance.md), [restore gates](../operations/jwt-recovery.md) | `deploy/restore-auth-state.sql`, `scripts/postgres-restore.sh`, фичевые SQL/security tests |
 | Приёмка и производительность | [сводка и открытые gates](../operations/acceptance-summary.md), [performance](../operations/performance.md), [baseline](../operations/load-baseline.md), [load/rest](../operations/load-rest.md) | `deploy/sandbox`, `Auth/account` retention/delivery, shared hasher/limits |

@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP2.7-runtime-registry,24 октября.** [Trusted loader и bounded SQL registry](../features/project-runtime-registry.md): отдельный read-only credential reader, configured targets/TLS/SCRAM, полный binding/version/generation key, single-flight/leases/idle eviction, connection/acquire ceilings и bounded shutdown без закрытия active lease. Role admission выполняется через registry; физические соединения проходят общий SQL profile. Tests/lint/race/security и PostgreSQL18.6 TLS regression PASS; [evidence](history.md#результат-mp27-runtime-registry--24-октября-2026). Production wiring, fleet budgets/fairness, reconcile/outcome/transport matrix и HTTP ещё открыты; MP2.7/MP4 целиком не закрыты.
+
 - [x] **MP2.7-project-runtime-profile,24 октября.** [Общий SQL профиль](../features/project-runtime-profile.md): read-only identity view без private setup/key доступа, единый source fingerprint, проверка actual transaction identity/version/checksum и table/view/sequence ACL до role writes. Onboarding переиспользует predicate без второй копии. Reapply Auth grants атомарно сохраняет protected exceptions/view SELECT-only; identifier/dollar quoting проверяется. SQL faults и исходный replay/admission pipeline проверены; [evidence](history.md#результат-mp27-runtime-profile--24-октября-2026). Trusted target/credential loader, bounded registry/lease, transport/fleet/outcome gates и HTTP ещё открыты, MP2.7/MP4 целиком не закрыты.
 
 - [x] **MP2.7-role-admission,24 октября.** [Внутренняя SQL-связка](../features/platform-role-intents.md#окончательный-допуск-и-выполнение--24-октября-2026): immutable intent → новый current-authority admission до3s → project commit/audit/receipt → append-only catalog outcome. Согласованная точка авторизации — commit admission; обычные session revoke не меняются. Проверяются revoke/new admission, parallel retries, expiry, catalog outage и lost-commit-ack recovery. HTTP/registry/cold-open integration, transport/fleet приёмка и другие bridge actions ещё открыты; MP2.7 целиком не закрыт. [Evidence](history.md#результат-mp27-role-admission--24-октября-2026).
@@ -567,6 +569,8 @@ Template не содержит identities/SSO/RBAC: эти задачи реал
 ## Режим проверок после уточнения пользователя
 
 Выбирать проверки до реализации по затронутым гарантиям; строки ниже дополняют друг друга, если рисков несколько. Не считать существование теста его прохождением и не запускать весь набор после каждой мелкой правки.
+
+Организация фоновых проверок, изоляция снимков, работа помощника и разбор ошибок — в [переносимом процессе разработки](../ai/development-workflow.md). Он не сокращает обязательный набор ниже и не закрывает gates результатами старой версии кода.
 
 | Изменение | Достаточная проверка |
 | --- | --- |

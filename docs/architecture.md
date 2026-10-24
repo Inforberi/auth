@@ -4,6 +4,8 @@
 
 ## Профиль и границы
 
+MP2.7 SQL registry: `internal/platform/project/runtime` владеет ограниченными project pools/leases и их cleanup; credential reader в project repository использует отдельный SELECT-only catalog pool, configured target задаёт transport. `ExecuteWithRuntime` соединяет registry с существующим role admission, без process-global current project или полного Auth.New на каждый проект. [Контракт и оставшиеся gates](features/project-runtime-registry.md). Production server/feature assembly/fleet budgets ещё не подключены.
+
 Проектный runtime проверяется [общим SQL profile](features/project-runtime-profile.md): установленный source checksum и несекретная read-only identity projection, actual connection/owners/ACL. Role mutation выполняет проверку на собственной transaction connection; onboarding добавляет свои условия к тому же predicate. Обычный Auth hot path не получает этот probe. Registry/transport trust и bounded pools — отдельные задачи, SQL marker не аутентифицирует произвольный сервер.
 
 Межбазовое административное создание роли использует [intent → committed admission → project receipt → catalog outcome](features/platform-role-intents.md#окончательный-допуск-и-выполнение--24-октября-2026). Authority locks защищают точку commit admission; последующий отзыв запрещает новые допуски, но не отменяет уже допущенную bounded команду. Никакой общей атомарной транзакции двух БД, пользовательского SSO или переноса platform cookie в project origin. Project runtime/pool проходит отдельную cold-open аттестацию; обычная session authority и немедленный отзыв не заменяются этим административным протоколом.
