@@ -46,6 +46,9 @@ func onboardingPreparationDrill(t *testing.T, physical *pgx.Conn, env func(strin
 		}()
 		check(conn)
 	}
+	t.Run("managed configuration", func(t *testing.T) {
+		managedPreparationDrill(t, physical, env, passwordArgs, repo, r, binding, codec, inspect)
+	})
 	inspect(func(conn *pgx.Conn) {
 		_, err := conn.Exec(ctx, `ALTER TABLE project_meta.identity ADD CONSTRAINT fail_onboarding CHECK(NOT configuration_prepared)`)
 		require.NoError(t, err)
@@ -106,6 +109,8 @@ func onboardingPreparationDrill(t *testing.T, physical *pgx.Conn, env func(strin
 	require.NoError(t, run(ctx, args, env, &response, io.Discard))
 	require.Contains(t, response.String(), `"stage":"onboarding_prepared"`)
 	require.NotContains(t, response.String(), proof.Digest())
+	managedArgs := append(append([]string{}, passwordArgs...), "-managed")
+	require.ErrorIs(t, run(ctx, managedArgs, env, io.Discard, io.Discard), domain.ErrConflict)
 	var markerXmin, policyXmin, setupXmin string
 	inspect(func(conn *pgx.Conn) {
 		var safe bool

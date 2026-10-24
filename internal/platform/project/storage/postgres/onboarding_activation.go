@@ -15,7 +15,20 @@ import (
 // ActivateOnboarding enables project SQL for the setup-only HTTP profile, never marks ready.
 // The SQL role retains its Auth grants; callers must not publish the normal Auth router.
 // Both connections must come from trusted target configuration, not request-supplied DSNs.
-func (t *Target) ActivateOnboarding(ctx context.Context, r domain.PreparationReservation, b credentials.Binding, codec *credentials.Codec, admission *catalog.PreparationRepository, runtime *pgxpool.Pool) (err error) {
+func (t *Target) ActivateOnboarding(ctx context.Context, r domain.PreparationReservation, b credentials.Binding, codec *credentials.Codec, admission *catalog.PreparationRepository, runtime *pgxpool.Pool) error {
+	return t.activateConfiguration(ctx, r, b, codec, admission, runtime, func(check context.Context, probe *pgxpool.Pool) error {
+		return admission.PermitOnboarding(check, r, b, codec, probe)
+	})
+}
+
+// ActivateManagedRuntime opens SQL only; no setup admission or ready publication follows.
+func (t *Target) ActivateManagedRuntime(ctx context.Context, r domain.PreparationReservation, b credentials.Binding, codec *credentials.Codec, admission *catalog.PreparationRepository, runtime *pgxpool.Pool) error {
+	return t.activateConfiguration(ctx, r, b, codec, admission, runtime, func(check context.Context, probe *pgxpool.Pool) error {
+		return admission.ProbeManagedRuntime(check, r, b, codec, probe)
+	})
+}
+
+func (t *Target) activateConfiguration(ctx context.Context, r domain.PreparationReservation, b credentials.Binding, codec *credentials.Codec, admission *catalog.PreparationRepository, runtime *pgxpool.Pool, permit func(context.Context, *pgxpool.Pool) error) (err error) {
 	if admission == nil || codec == nil || runtime == nil {
 		return domain.ErrConflict
 	}
@@ -54,7 +67,7 @@ func (t *Target) ActivateOnboarding(ctx context.Context, r domain.PreparationRes
 		return unavailable(ctx)
 	}
 	defer probe.Close()
-	if err := admission.PermitOnboarding(ctx, r, b, codec, probe); err != nil {
+	if err := permit(ctx, probe); err != nil {
 		return err
 	}
 	return authorize(ctx)

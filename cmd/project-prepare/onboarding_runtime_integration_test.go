@@ -66,6 +66,7 @@ func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, env func(string) s
 	pool := poolFor(runtime)
 	defer pool.Close()
 	require.NoError(t, catalog.CheckOnboardingRuntime(ctx, pool, keys.Proof()))
+	require.ErrorIs(t, catalog.CheckManagedRuntime(ctx, pool, keys.Proof()), domain.ErrConflict)
 	wrong := binding
 	wrong.RuntimeOID++
 	wrongPayload, err := codec.Generate(wrong)

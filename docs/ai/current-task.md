@@ -2,17 +2,17 @@
 
 Обновлено25 октября2026. [Карта](index.md) · [статусы](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui) · [gates](../operations/acceptance-summary.md#открытые-ограничения-приёмки). Git/staging и стенд проверять по факту.
 
-## Завершённый блок — MP2.7 user directory
+## Завершённый блок — MP3.7a closed managed configuration
 
-Opt-in GET списка пользователей и карточки с текущими ролями/accessVersion. List: UsersManage; detail: UsersManage+AccessManage; current authority/binding до/после readonly snapshot, общий3s deadline. Account validation/cursor/SQL projections/DTO переиспользованы, local SQL actor authority сохранена. Нет новых schema/grants/ENV/dependencies/UI. [Контракт](../features/platform-user-directory.md).
+[Контракт](../features/project-managed-readiness.md). CLI -managed требует schema/secrets/password и несовместим с-onboarding. Все public Auth/registration/token flows выключены, нет обязательного local admin/SMTP. Typed managed SQL probe/activation сохраняют current preparation/binding/journal/fresh authentication/cleanup; setup admission/ready/binding не публикуются. Legacy first-admin профиль сохранён; новых schema/grants/ENV/dependencies нет.
 
-Luna: task check/tests/lint/race/API/security и actual project SQL/local TestUserDirectorySchema PASS. Все обязательные user/role/assignment nested cases без SKIP; manifest81 совпал до/после, cleanup подтверждён. Source перед коммитом совпал с `/private/tmp/auth-user-directory-manifest.sha256`; snapshot `/private/tmp/auth-user-directory.033lrx45`. [Evidence](../planning/history.md#результат-mp27-user-directory--25-октября-2026). Результат относится к этому блоку, не ко всему MP2.7/MP4/fleet.
+Luna: task check/tests/lint/affected race/security и actual PostgreSQL18.6 TestPrepareCommandSQL PASS; все managed/legacy cases без SKIP/NOT RUN. Manifest10 изменённых source совпал; cleanup выполнен. Перед коммитом source совпал с `/private/tmp/auth-managed-readiness-manifest.sha256`, snapshot `/private/tmp/auth-managed-readiness.ow59nzkt`. [Evidence](../planning/history.md#результат-mp37a-managed-configuration--25-октября-2026). Это не весь MP3.7/MP4/public-ready/fleet.
 
-## Следующий шаг — owner-managed readiness
+## Следующий шаг
 
-Уточнить текущий backend протокол готовности проекта и подключить owner-managed readiness: техническая готовность/выбранные функции, без обязательной копии владельца или локального super_admin. Проверять SMTP для выбранных email-сценариев, не искусственно для всех проектов. Связь с activation/runtime и полный Auth/worker assembly выполнять по существующему плану MP3.7/MP4, без публикации небезопасного flow и без UI. Остальные явные user/settings/mutations остаются открытыми; полный MP2.7 не закрывать по завершению read directory.
+Выбранные методы/проектные settings и их реальные dependencies, production loader и корректная publish-ready связка по MP3.8/MP4. Один SQL probe не разрешает normal Auth traffic. Сначала уточнить минимальный конкретный следующий подэтап по существующим settings/bridge контрактам, не добавлять универсальный механизм или вручную выставлять ready. Владелец управляет через platform session, не обязательную копию identity. Для выбранных email-сценариев нужна готовая доставка; для проекта без email-функций SMTP не требовать.
 
-Все tests/стенд — Luna01a16eab-c777-78a0-a815-47b45ff0860d. Здесь проектирование/код/formatter/snapshot; не ждать и не дублировать проверки. Коммит только по запросу; UI после отдельного согласования.
+Все tests/стенд — Luna01a16eab-c777-78a0-a815-47b45ff0860d. Здесь проектирование/код/formatter/snapshot; не ждать и не дублировать проверки. Коммит только по запросу. Перед UI заранее предупредить пользователя и отдельно согласовать переход, стек, макеты и экраны; UI сейчас не начинать.
 
 ## Нельзя потерять
 

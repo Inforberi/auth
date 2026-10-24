@@ -19,6 +19,17 @@ import (
 
 // PrepareOnboarding pins setup authority and policy, not an administrator or a ready runtime.
 func (t *Target) PrepareOnboarding(ctx context.Context, proof credentials.SetupProof, authorize func(context.Context) error) error {
+	initial := settingsdomain.Policy{Methods: settingsdomain.PublicMethods{Password: true}, PasswordEmailVerification: settingsdomain.VerificationDisabled}
+	return t.prepareConfiguration(ctx, proof, initial, authorize)
+}
+
+// PrepareManagedConfiguration keeps public Auth closed; it creates no administrator.
+func (t *Target) PrepareManagedConfiguration(ctx context.Context, proof credentials.SetupProof, authorize func(context.Context) error) error {
+	initial := settingsdomain.Policy{PasswordEmailVerification: settingsdomain.VerificationDisabled}
+	return t.prepareConfiguration(ctx, proof, initial, authorize)
+}
+
+func (t *Target) prepareConfiguration(ctx context.Context, proof credentials.SetupProof, initial settingsdomain.Policy, authorize func(context.Context) error) error {
 	binding, err := t.SecretsBinding()
 	if err != nil || proof.Binding() != binding || proof.Digest() == "" || authorize == nil {
 		return domain.ErrConflict
@@ -33,7 +44,7 @@ func (t *Target) PrepareOnboarding(ctx context.Context, proof credentials.SetupP
 		if err := t.installProjectSchema(check, project, t.prepared.reservation, t.prepared.resources); err != nil {
 			return err
 		}
-		return t.initializeOnboarding(check, project, proof, authorize)
+		return t.initializeOnboarding(check, project, proof, initial, authorize)
 	})
 }
 
@@ -59,7 +70,7 @@ func (t *Target) checkOnboardingPreparation(ctx context.Context, binding credent
 	return nil
 }
 
-func (t *Target) initializeOnboarding(ctx context.Context, project *pgx.Conn, proof credentials.SetupProof, authorize func(context.Context) error) error {
+func (t *Target) initializeOnboarding(ctx context.Context, project *pgx.Conn, proof credentials.SetupProof, initial settingsdomain.Policy, authorize func(context.Context) error) error {
 	tx, err := project.Begin(ctx)
 	if err != nil {
 		return unavailable(ctx)
@@ -80,7 +91,6 @@ func (t *Target) initializeOnboarding(ctx context.Context, project *pgx.Conn, pr
 	if err != nil {
 		return err
 	}
-	initial := settingsdomain.Policy{Methods: settingsdomain.PublicMethods{Password: true}, PasswordEmailVerification: settingsdomain.VerificationDisabled}
 	snapshot, err := settingspostgres.InitializeInTransaction(ctx, tx, initial)
 	if err != nil {
 		return unavailable(ctx)
