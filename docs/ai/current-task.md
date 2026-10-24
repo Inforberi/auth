@@ -2,15 +2,17 @@
 
 Обновлено25 октября2026. [Карта](index.md) · [статусы](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui) · [gates](../operations/acceptance-summary.md#открытые-ограничения-приёмки). Git/staging и стенд проверять по факту.
 
-## Завершённый блок — MP2.7 role directory
+## Завершённый блок — MP2.7 user directory
 
-GET списка ролей с keyset pagination и карточки с permissions/system/version, exact target/version/generation и current AccessManage/fresh-auth до/после readonly project snapshot. [Контракт](../features/platform-role-directory.md). Нет новых schema/ENV/dependencies/UI. Luna: V1 tests/actual TLS SQL/race/API/security PASS; оба formatter замечания закрыты targeted V2 lint PASS, manifest59 совпал до/после. Все assignment nested SQL cases тоже прошли без SKIP: прежний SQL gate закрыт. Evidence/source/исходные FAIL — [history](../planning/history.md#результат-mp27-role-directory--25-октября-2026). Полный MP2.7/MP4/fleet не закрыт.
+Opt-in GET списка пользователей и карточки с текущими ролями/accessVersion. List: UsersManage; detail: UsersManage+AccessManage; current authority/binding до/после readonly snapshot, общий3s deadline. Account validation/cursor/SQL projections/DTO переиспользованы, local SQL actor authority сохранена. Нет новых schema/grants/ENV/dependencies/UI. [Контракт](../features/platform-user-directory.md).
 
-## Следующий шаг — user directory/read bridge
+Luna: task check/tests/lint/race/API/security и actual project SQL/local TestUserDirectorySchema PASS. Все обязательные user/role/assignment nested cases без SKIP; manifest81 совпал до/после, cleanup подтверждён. Source перед коммитом совпал с `/private/tmp/auth-user-directory-manifest.sha256`; snapshot `/private/tmp/auth-user-directory.033lrx45`. [Evidence](../planning/history.md#результат-mp27-user-directory--25-октября-2026). Результат относится к этому блоку, не ко всему MP2.7/MP4/fleet.
 
-Добавить список пользователей с точными email/status фильтрами и keyset pagination, карточку с текущими назначениями/accessVersion. Переиспользовать account validation/cursor и SQL projections, не подделывать project actor. Владелец SQL — account repository; typed platform authority отдельно. До выдачи данных повторять current permissions и exact binding; PII не раскрывать по одному ProjectsRead. Luna ищет точки минимального переиспользования, без правок/новых тестов; основной агент проектирует и реализует.
+## Следующий шаг — owner-managed readiness
 
-Все tests/стенд — Luna01a16eab-c777-78a0-a815-47b45ff0860d, не ждать и не дублировать команды. Коммит только по запросу. UI только после отдельного согласования. Owner readiness/project capability/full Auth assembly остаются следующими этапами.
+Уточнить текущий backend протокол готовности проекта и подключить owner-managed readiness: техническая готовность/выбранные функции, без обязательной копии владельца или локального super_admin. Проверять SMTP для выбранных email-сценариев, не искусственно для всех проектов. Связь с activation/runtime и полный Auth/worker assembly выполнять по существующему плану MP3.7/MP4, без публикации небезопасного flow и без UI. Остальные явные user/settings/mutations остаются открытыми; полный MP2.7 не закрывать по завершению read directory.
+
+Все tests/стенд — Luna01a16eab-c777-78a0-a815-47b45ff0860d. Здесь проектирование/код/formatter/snapshot; не ждать и не дублировать проверки. Коммит только по запросу; UI после отдельного согласования.
 
 ## Нельзя потерять
 

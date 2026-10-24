@@ -31,7 +31,7 @@ type PlatformRolePageResponse struct {
 // @Router /api/v1/platform/projects/{id}/roles [get]
 func (h *RoleHandler) ListRoles(w http.ResponseWriter, r *http.Request) {
 	actor, ok := requestActor(w, r)
-	if !ok || !emptyRoleBody(w, r) {
+	if !ok || !emptyRequestBody(w, r) {
 		return
 	}
 	query, ok := roleDirectoryQuery(w, r, true)

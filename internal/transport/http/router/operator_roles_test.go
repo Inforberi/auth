@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
@@ -25,6 +27,18 @@ import (
 )
 
 type operatorRoles struct{ calls int }
+
+type operatorUsers struct{ calls int }
+
+func (s *operatorUsers) ListProjectUsers(context.Context, operatordomain.Principal, domain.DirectoryTarget, accountservice.UserListInput) (accountservice.UserPage, error) {
+	s.calls++
+	return accountservice.UserPage{}, nil
+}
+
+func (s *operatorUsers) ReadProjectUser(context.Context, operatordomain.Principal, domain.DirectoryTarget, accountdomain.UserID) (accountservice.UserDetail, error) {
+	s.calls++
+	return accountservice.UserDetail{}, nil
+}
 
 func (s *operatorRoles) ListProjectRoles(context.Context, operatordomain.Principal, projectservice.ProjectRoleQuery) (projectservice.ProjectRolePage, error) {
 	s.calls++
@@ -75,8 +89,9 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 	cfg.Password.ResetURL = cfg.Platform.Origin + "/reset"
 	roles := &operatorRoles{}
 	capacityCalls := 0
+	users := &operatorUsers{}
 	h := Handlers{
-		Config: cfg, Projects: projecthttp.New(&operatorReadCatalog{}, nil), ProjectRoles: projecthttp.NewRoles(roles, nil), PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfahttp.Handler{}, Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(&operatorReadSession{}, nil), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
+		Config: cfg, Projects: projecthttp.New(&operatorReadCatalog{}, nil), ProjectRoles: projecthttp.NewRoles(roles, nil), ProjectUsers: projecthttp.NewUsers(users, nil), PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfahttp.Handler{}, Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(&operatorReadSession{}, nil), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
 		ProjectCapacity: func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				capacityCalls++
@@ -90,6 +105,8 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 		"/projects/project/users/user/roles/role/grant", "/projects/project/users/user/roles/role/revoke",
 		"/projects/project/roles?expectedVersion=1&expectedGeneration=1",
 		"/projects/project/roles/role?expectedVersion=1&expectedGeneration=1",
+		"/projects/project/users?expectedVersion=1&expectedGeneration=1",
+		"/projects/project/users/user?expectedVersion=1&expectedGeneration=1",
 	} {
 		for _, tc := range []struct {
 			origin string
@@ -122,16 +139,16 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 			if tc.cookie {
 				r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: strings.Repeat("A", 43)})
 			}
-			before := roles.calls
+			before := roles.calls + users.calls
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, r)
 			require.Equal(t, status, w.Code)
 			if status >= 400 {
-				require.Equal(t, before, roles.calls)
+				require.Equal(t, before, roles.calls+users.calls)
 			}
 		}
 	}
-	require.Equal(t, 7, capacityCalls)
+	require.Equal(t, 9, capacityCalls)
 	unsafe := h
 	unsafe.ProjectCapacity = nil
 	_, err := NewOperator(unsafe)
@@ -143,6 +160,7 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 	_, err = NewOperator(unsafe)
 	require.Error(t, err)
 	unsafe.ProjectRoles = nil
+	unsafe.ProjectUsers = nil
 	disabled, err := NewOperator(unsafe)
 	require.NoError(t, err)
 	request := httptest.NewRequest("POST", cfg.Platform.Origin+"/api/v1/platform/projects/project/roles", strings.NewReader("{}"))

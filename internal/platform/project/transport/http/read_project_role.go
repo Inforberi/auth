@@ -29,7 +29,7 @@ import (
 // @Router /api/v1/platform/projects/{id}/roles/{roleId} [get]
 func (h *RoleHandler) ReadRole(w http.ResponseWriter, r *http.Request) {
 	actor, ok := requestActor(w, r)
-	if !ok || !emptyRoleBody(w, r) {
+	if !ok || !emptyRequestBody(w, r) {
 		return
 	}
 	query, ok := roleDirectoryQuery(w, r, false)

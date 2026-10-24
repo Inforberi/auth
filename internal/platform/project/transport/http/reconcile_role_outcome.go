@@ -27,7 +27,7 @@ import (
 // @Router /api/v1/platform/projects/{id}/role-operations/{operationId}/reconcile [post]
 func (h *RoleHandler) Reconcile(w http.ResponseWriter, r *http.Request) {
 	actor, ok := roleActor(w, r)
-	if !ok || !emptyRoleBody(w, r) {
+	if !ok || !emptyRequestBody(w, r) {
 		return
 	}
 	result, err := h.service.ReconcileRoleOutcome(r.Context(), actor, domain.ID(chi.URLParam(r, "id")), domain.ID(chi.URLParam(r, "operationId")))

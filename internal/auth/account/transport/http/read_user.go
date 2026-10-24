@@ -8,6 +8,7 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -60,8 +61,12 @@ func (h *UserDirectoryHandler) Read(w http.ResponseWriter, r *http.Request) {
 		h.respondError(w, r, err)
 		return
 	}
+	httpx.JSON(w, 200, NewUserDetailResponse(user))
+}
+
+func NewUserDetailResponse(user service.UserDetail) UserDetailResponse {
 	response := UserDetailResponse{
-		UserSummaryResponse: userSummaryResponse(user.UserSummary), AuthVersion: user.AuthVersion, AccessVersion: user.AccessVersion, DeletedAt: user.DeletedAt,
+		UserSummaryResponse: NewUserSummaryResponse(user.UserSummary), AuthVersion: user.AuthVersion, AccessVersion: user.AccessVersion, DeletedAt: user.DeletedAt,
 		PasswordConfigured: user.PasswordConfigured, TemporaryPasswordRequired: user.TemporaryPasswordRequired, MFAEnrolled: user.MFAEnrolled,
 		Contacts: make([]UserContactResponse, 0, len(user.Contacts)), ExternalIssuers: user.ExternalIssuers, Roles: make([]UserRoleResponse, 0, len(user.Roles)),
 	}
@@ -74,5 +79,5 @@ func (h *UserDirectoryHandler) Read(w http.ResponseWriter, r *http.Request) {
 	for _, role := range user.Roles {
 		response.Roles = append(response.Roles, UserRoleResponse{ID: role.ID, Key: role.Key, Name: role.Name, System: role.System, Version: role.Version})
 	}
-	httpx.JSON(w, 200, response)
+	return response
 }

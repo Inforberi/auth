@@ -71,6 +71,9 @@ func roleAssignmentHTTPDrill(t *testing.T, catalog *pgx.Conn, actor operatordoma
 		require.False(t, first.Replayed)
 		require.True(t, first.CatalogRecorded)
 		state(t, assignmentActive, 2, 2, true)
+		t.Run("platform user directory", func(t *testing.T) {
+			userDirectoryHTTPDrill(t, catalog, db, actor, base, role, call, send)
+		})
 		replay := apply(t, assignmentActive, role.ID, domain.RoleGrant, input(1, 1), 200)
 		require.True(t, replay.Replayed)
 		require.Equal(t, first.AccessVersion, replay.AccessVersion)

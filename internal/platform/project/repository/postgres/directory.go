@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -11,14 +12,25 @@ import (
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
-func (r *RuntimeRoles) readDirectory(ctx context.Context, actor operatordomain.Principal, target domain.DirectoryTarget, read func(context.Context, pgx.Tx) error) error {
-	if r.registry == nil {
+func (r *Repository) readDirectory(ctx context.Context, actor operatordomain.Principal, target domain.DirectoryTarget, registry *projectruntime.Registry, permissions []operatordomain.Permission, read func(context.Context, pgx.Tx) error) error {
+	if registry == nil || len(permissions) == 0 {
 		return domain.ErrUnavailable
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	key := projectruntime.Key{Version: target.ExpectedVersion, Generation: target.ExpectedGeneration}
 	guard := func(ctx context.Context, tx pgx.Tx, _ time.Time) error {
+		// mutate already holds identity/session/fresh-auth locks for permissions[0].
+		for _, permission := range permissions[1:] {
+			var found int
+			err := tx.QueryRow(ctx, `SELECT 1 FROM platform.operator_permissions WHERE user_id=$1 AND permission_key=$2 FOR SHARE`, actor.UserID, permission).Scan(&found)
+			if errors.Is(err, pgx.ErrNoRows) {
+				return operatordomain.ErrForbidden
+			}
+			if err != nil {
+				return catalogError(ctx, err)
+			}
+		}
 		binding, _, err := lockRoleTarget(ctx, tx, target.ProjectID, target.ExpectedVersion, target.ExpectedGeneration)
 		if err != nil {
 			return err
@@ -29,10 +41,10 @@ func (r *RuntimeRoles) readDirectory(ctx context.Context, actor operatordomain.P
 		key.Binding = binding
 		return nil
 	}
-	if err := r.mutate(ctx, actor, operatordomain.AccessManage, guard); err != nil {
+	if err := r.mutate(ctx, actor, permissions[0], guard); err != nil {
 		return err
 	}
-	err := r.registry.Use(ctx, key, func(ctx context.Context, db projectruntime.Database) error {
+	err := registry.Use(ctx, key, func(ctx context.Context, db projectruntime.Database) error {
 		tx, err := db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 		if err != nil {
 			return catalogError(ctx, err)
@@ -54,5 +66,5 @@ func (r *RuntimeRoles) readDirectory(ctx context.Context, actor operatordomain.P
 		return err
 	}
 	// Revocation or rebinding during the project read must discard the result.
-	return r.mutate(ctx, actor, operatordomain.AccessManage, guard)
+	return r.mutate(ctx, actor, permissions[0], guard)
 }

@@ -7009,6 +7009,219 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/platform/projects/{id}/users": {
+            "get": {
+                "description": "Requires current platform.project_users.manage and fresh password/MFA before read and before disclosure. Exact ready/enabled project binding and version/generation. Read-only snapshot, nondeleted users only, exact normalized email/status filters, exclusive createdAt/UUID cursor. No offset, total count, project session, admission or session renewal. Returns no roles or credential secrets.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Users"
+                ],
+                "summary": "List users of an independent project from the platform",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Opaque nextCursor from previous page",
+                        "name": "before",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "pending",
+                            "active",
+                            "blocked"
+                        ],
+                        "type": "string",
+                        "description": "Account status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exact email, not substring search",
+                        "name": "email",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Page size 1..100, default 50",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/account_http.UserPageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "428": {
+                        "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/users/{userId}": {
+            "get": {
+                "description": "Requires BOTH current platform.project_users.manage and platform.project_access.manage plus fresh password/MFA before read and before disclosure. Exact ready/enabled project target. Same read-only snapshot for account, contacts and role metadata/accessVersion; no secrets or fabricated project actor. Retained soft-deleted accounts are readable by UUID but not restored. Contacts/providers/roles overflow returns conflict, never partial success. Use role/access versions in subsequent explicit grant/revoke calls.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Users"
+                ],
+                "summary": "Read a project user and current role assignments from the platform",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project user UUID",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/account_http.UserDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "428": {
+                        "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/platform/projects/{id}/users/{userId}/roles/{roleId}/grant": {
             "post": {
                 "description": "Runtime-enabled platform only. Fresh platform.project_access.manage and exact project/user/role versions. System roles are forbidden. Grant checks catalog/MFA capability, caps assignments, invalidates pre-grant active sessions, and atomically records a project receipt. Same operation UUID/payload replays its original result; unknown COMMIT never means rollback. No actor/target/action override in JSON. Project MFA-required grants fail closed until capability is assembled.",

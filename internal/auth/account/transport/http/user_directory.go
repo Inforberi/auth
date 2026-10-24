@@ -37,7 +37,7 @@ type UserSummaryResponse struct {
 	EmailVerified bool          `json:"emailVerified"`
 } // @name account_http.UserSummaryResponse
 
-func userSummaryResponse(user service.UserSummary) UserSummaryResponse {
+func NewUserSummaryResponse(user service.UserSummary) UserSummaryResponse {
 	return UserSummaryResponse{ID: user.ID, Status: user.Status, CreatedAt: user.CreatedAt, DisplayName: user.DisplayName, Email: user.Email, EmailVerified: user.EmailVerified}
 }
 
@@ -48,6 +48,10 @@ var userDirectoryErrors = []httpx.ErrorRule{
 	httpx.MatchError(domain.ErrAccountNotFound, 404, "user_not_found", "user not found"),
 	httpx.MatchError(domain.ErrUserDirectoryConflict, 409, "directory_conflict", "user directory data exceeds supported bounds"),
 	httpx.MatchError(accessdomain.ErrForbidden, 403, "forbidden", "forbidden"),
+}
+
+func UserDirectoryErrorRules() []httpx.ErrorRule {
+	return append([]httpx.ErrorRule(nil), userDirectoryErrors...)
 }
 
 func (h *UserDirectoryHandler) respondError(w http.ResponseWriter, r *http.Request, err error) {

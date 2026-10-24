@@ -16,11 +16,8 @@ func NewOperator(h Handlers) (http.Handler, error) {
 	if err := h.Config.ValidatePlatform(); err != nil {
 		return nil, err
 	}
-	if h.Projects != nil && h.ProjectCapacity == nil {
-		return nil, errors.New("project HTTP routes require capacity admission")
-	}
-	if h.ProjectRoles != nil && (h.Projects == nil || !h.Config.Platform.Runtime.Enabled) {
-		return nil, errors.New("project role routes require enabled runtime and the guarded catalog group")
+	if err := validateProjectHTTP(h); err != nil {
+		return nil, err
 	}
 	origin, err := url.Parse(h.Config.Platform.Origin)
 	if err != nil {
@@ -66,6 +63,16 @@ func NewOperator(h Handlers) (http.Handler, error) {
 	return r, nil
 }
 
+func validateProjectHTTP(h Handlers) error {
+	if h.Projects != nil && h.ProjectCapacity == nil {
+		return errors.New("project HTTP routes require capacity admission")
+	}
+	if (h.ProjectRoles != nil || h.ProjectUsers != nil) && (h.Projects == nil || !h.Config.Platform.Runtime.Enabled) {
+		return errors.New("project runtime routes require enabled runtime and the guarded catalog group")
+	}
+	return nil
+}
+
 func platformProjectRoutes(r chi.Router, h Handlers) {
 	if h.Projects == nil {
 		return
@@ -79,6 +86,10 @@ func platformProjectRoutes(r chi.Router, h Handlers) {
 		r.Post("/projects/{id}/suspend", h.Projects.Suspend)
 		r.Post("/projects/{id}/resume", h.Projects.Resume)
 		r.Post("/projects/{id}/retry", h.Projects.Retry)
+		if h.ProjectUsers != nil {
+			r.Get("/projects/{id}/users", h.ProjectUsers.List)
+			r.Get("/projects/{id}/users/{userId}", h.ProjectUsers.Read)
+		}
 		if h.ProjectRoles != nil {
 			r.Get("/projects/{id}/roles", h.ProjectRoles.ListRoles)
 			r.Get("/projects/{id}/roles/{roleId}", h.ProjectRoles.ReadRole)

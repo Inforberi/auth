@@ -89,6 +89,7 @@ func TestSwaggerMatchesPlatformRoutes(t *testing.T) {
 	h.Projects = projecthttp.New(&operatorReadCatalog{}, zap.NewNop())
 	h.Config.Platform.Runtime = roleRouteRuntime()
 	h.ProjectRoles = projecthttp.NewRoles(&operatorRoles{}, zap.NewNop())
+	h.ProjectUsers = projecthttp.NewUsers(&operatorUsers{}, zap.NewNop())
 	h.ProjectCapacity = func(next http.Handler) http.Handler { return next }
 	handler, err := NewOperator(h)
 	if err != nil {

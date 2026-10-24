@@ -2,13 +2,9 @@ package http
 
 import (
 	"net/http"
-	"net/url"
 	"strconv"
 
-	"github.com/go-chi/chi/v5"
-
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/service"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
@@ -31,32 +27,21 @@ func roleDirectoryQuery(w http.ResponseWriter, r *http.Request, list bool) (serv
 	if len(r.URL.RawQuery) > 1024 {
 		return invalid()
 	}
-	values, err := url.ParseQuery(r.URL.RawQuery)
-	if err != nil {
-		return invalid()
+	var allowed []string
+	if list {
+		allowed = []string{"afterKey", "limit"}
 	}
-	for name, items := range values {
-		if len(items) != 1 || (name != "expectedVersion" && name != "expectedGeneration" && (!list || (name != "afterKey" && name != "limit"))) {
-			return invalid()
-		}
+	values, target, ok := directoryQuery(w, r, allowed...)
+	if !ok {
+		return service.ProjectRoleQuery{}, false
 	}
-	version, err := strconv.ParseInt(values.Get("expectedVersion"), 10, 64)
-	if err != nil {
-		return invalid()
-	}
-	generation, err := strconv.ParseInt(values.Get("expectedGeneration"), 10, 64)
-	if err != nil {
-		return invalid()
-	}
-	query := service.ProjectRoleQuery{
-		Target:   domain.DirectoryTarget{ProjectID: domain.ID(chi.URLParam(r, "id")), ExpectedVersion: version, ExpectedGeneration: generation},
-		AfterKey: values.Get("afterKey"), Limit: 50,
-	}
+	query := service.ProjectRoleQuery{Target: target, AfterKey: values.Get("afterKey"), Limit: 50}
 	if _, ok := values["limit"]; ok {
-		query.Limit, err = strconv.Atoi(values.Get("limit"))
+		limit, err := strconv.Atoi(values.Get("limit"))
 		if err != nil {
 			return invalid()
 		}
+		query.Limit = limit
 	}
 	return query, true
 }

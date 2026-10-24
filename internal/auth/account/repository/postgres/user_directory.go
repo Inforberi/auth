@@ -1,5 +1,20 @@
 package postgres
 
+import (
+	"context"
+
+	"github.com/jackc/pgx/v5"
+)
+
+type directoryReader interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+// Transaction readers are persistence only. Their caller owns authority, target
+// binding and the transaction; local session readers always use directoryActor.
+const transactionDirectoryScope = `WITH directory_actor AS MATERIALIZED (SELECT true AS allowed) `
+
 const directoryActor = `WITH directory_actor AS MATERIALIZED (
 	SELECT EXISTS (
 		SELECT 1 FROM auth.role_bound_sessions s JOIN auth.users actor ON actor.id=s.user_id AND actor.auth_version=s.auth_version

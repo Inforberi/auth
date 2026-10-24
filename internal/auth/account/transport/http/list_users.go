@@ -61,7 +61,7 @@ func (h *UserDirectoryHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	response := UserPageResponse{Users: make([]UserSummaryResponse, 0, len(page.Users)), NextCursor: page.NextCursor}
 	for _, user := range page.Users {
-		response.Users = append(response.Users, userSummaryResponse(user))
+		response.Users = append(response.Users, NewUserSummaryResponse(user))
 	}
 	httpx.JSON(w, 200, response)
 }

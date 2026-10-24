@@ -6557,6 +6557,161 @@ paths:
       summary: Suspend an independent project
       tags:
       - Platform Projects
+  /api/v1/platform/projects/{id}/users:
+    get:
+      description: Requires current platform.project_users.manage and fresh password/MFA
+        before read and before disclosure. Exact ready/enabled project binding and
+        version/generation. Read-only snapshot, nondeleted users only, exact normalized
+        email/status filters, exclusive createdAt/UUID cursor. No offset, total count,
+        project session, admission or session renewal. Returns no roles or credential
+        secrets.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: Opaque nextCursor from previous page
+        in: query
+        name: before
+        type: string
+      - description: Account status
+        enum:
+        - pending
+        - active
+        - blocked
+        in: query
+        name: status
+        type: string
+      - description: Exact email, not substring search
+        in: query
+        name: email
+        type: string
+      - default: 50
+        description: Page size 1..100, default 50
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/account_http.UserPageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "428":
+          description: Precondition Required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: List users of an independent project from the platform
+      tags:
+      - Platform Users
+  /api/v1/platform/projects/{id}/users/{userId}:
+    get:
+      description: Requires BOTH current platform.project_users.manage and platform.project_access.manage
+        plus fresh password/MFA before read and before disclosure. Exact ready/enabled
+        project target. Same read-only snapshot for account, contacts and role metadata/accessVersion;
+        no secrets or fabricated project actor. Retained soft-deleted accounts are
+        readable by UUID but not restored. Contacts/providers/roles overflow returns
+        conflict, never partial success. Use role/access versions in subsequent explicit
+        grant/revoke calls.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Project user UUID
+        in: path
+        name: userId
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/account_http.UserDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "428":
+          description: Precondition Required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read a project user and current role assignments from the platform
+      tags:
+      - Platform Users
   /api/v1/platform/projects/{id}/users/{userId}/roles/{roleId}/grant:
     post:
       consumes:

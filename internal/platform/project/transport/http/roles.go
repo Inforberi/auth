@@ -93,7 +93,7 @@ func roleActor(w http.ResponseWriter, r *http.Request) (operatordomain.Principal
 	return actor, true
 }
 
-func emptyRoleBody(w http.ResponseWriter, r *http.Request) bool {
+func emptyRequestBody(w http.ResponseWriter, r *http.Request) bool {
 	if r.Body == nil {
 		return true
 	}

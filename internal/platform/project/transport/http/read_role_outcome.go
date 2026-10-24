@@ -27,7 +27,7 @@ import (
 // @Router /api/v1/platform/projects/{id}/role-operations/{operationId} [get]
 func (h *RoleHandler) Read(w http.ResponseWriter, r *http.Request) {
 	actor, ok := roleActor(w, r)
-	if !ok || !emptyRoleBody(w, r) {
+	if !ok || !emptyRequestBody(w, r) {
 		return
 	}
 	result, err := h.service.ReadRoleOutcome(r.Context(), actor, domain.ID(chi.URLParam(r, "id")), domain.ID(chi.URLParam(r, "operationId")))

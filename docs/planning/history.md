@@ -1,5 +1,15 @@
 # История реализации Auth
 
+## Результат MP2.7 user directory — 25 октября 2026
+
+Финальный отчёт Luna: PASS snapshot `auth-user-directory.033lrx45`. Task check (tests+lint), заданный host race, API/security, actual TLS TestPrepareCommandSQL и TestUserDirectorySchema — exit0. Все обязательные role/user directory и assignment nested cases выполнены без SKIP. Manifest81 совпал до/после, свои databases/roles/container/fixture удалены с проверкой отсутствия. Перед коммитом основной агент подтвердил совпадение всех81 source с проверенным снимком; последующие правки только документационные. Блок user directory проверен; это не приёмка всего MP2.7/MP4/fleet/UI.
+
+Добавлены opt-in GET списка пользователей и карточки с текущими назначениями/accessVersion. List требует current platform UsersManage; detail — UsersManage+AccessManage. Readonly project snapshot, initial/final authority/binding и3s deadline общие с role directory; в guard дополнительное разрешение проверяется отдельной row lock, без повторения identity/session/fresh-auth проверки. Account normalization/cursor/page и SQL projections/scanner/DTO mapper переиспользованы. Local SQL directoryActor/session/UsersRead сохранены, trusted tx readers не принимают local actor и вызываются только за platform guard. Нет новых schema/grants/ENV/dependencies, project sessions или UI. [Контракт](../features/platform-user-directory.md).
+
+Подготовлены service/HTTP/router cases и actual command SQL nested user-directory: pagination/exact filters/current assignments, независимые platform permissions, revoke during read без выдачи PII, retained deleted card/list exclusion. Штатный formatter обработал изменённый Go, Swagger1.16.6 с общими account DTO сгенерирован; diff review без whitespace ошибок. Основной чат тесты не запускал.
+
+Luna передан source snapshot `/private/tmp/auth-user-directory.033lrx45`, base `39de5c9b06f9f37865fc2064e36d11ad49206575`, manifest81 `/private/tmp/auth-user-directory-manifest.sha256` (предыдущие role/assignment sources и35 затронутых source нового блока), все совпали при упаковке. Запрошены task check, affected host race, API/scanner, полный actual TLS TestPrepareCommandSQL со всеми role/assignment/user nested cases и старый actual TestUserDirectorySchema на отдельной auth_schema_test. Логи `/private/tmp/auth-user-directory-{check,race,api,security,sql,local-sql,cleanup}.log`, manifest before/after. Результат pending; не считать source review, generation и host SQL skips реальными integration PASS. Следующие изменения статуса только документационные, snapshot source неизменен. Коммит39de5c9 сохраняет предыдущий проверенный каталог ролей; новый user directory пока не закоммичен.
+
 ## Результат MP2.7 role directory — 25 октября 2026
 
 Финальный targeted V2 lint PASS(exit0), manifest59 совпал до/после. Основной агент перед коммитом сверил59 source с тем же manifest. С учётом V1 tests/SQL/race/API/security блок каталога ролей проверен; assignment nested SQL gate тоже закрыт. Полный task check после двух форматирующих правок не повторялся, V1 lint FAIL сохранён ниже. Общие MP2.7/MP4/UI/fleet gates остаются открытыми.

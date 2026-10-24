@@ -15,7 +15,7 @@ import (
 
 func (r *RuntimeRoles) ListProjectRoles(ctx context.Context, actor operatordomain.Principal, query service.ProjectRoleQuery) ([]accessdomain.Role, error) {
 	var roles []accessdomain.Role
-	err := r.readDirectory(ctx, actor, query.Target, func(ctx context.Context, tx pgx.Tx) error {
+	err := r.readDirectory(ctx, actor, query.Target, r.registry, []operatordomain.Permission{operatordomain.AccessManage}, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
 		roles, err = accesspostgres.ListRolesInTransaction(ctx, tx, query.AfterKey, query.Limit+1)
 		return catalogError(ctx, err)
@@ -28,7 +28,7 @@ func (r *RuntimeRoles) ListProjectRoles(ctx context.Context, actor operatordomai
 
 func (r *RuntimeRoles) ReadProjectRole(ctx context.Context, actor operatordomain.Principal, target domain.DirectoryTarget, id accessdomain.RoleID) (accessdomain.Role, error) {
 	var role accessdomain.Role
-	err := r.readDirectory(ctx, actor, target, func(ctx context.Context, tx pgx.Tx) error {
+	err := r.readDirectory(ctx, actor, target, r.registry, []operatordomain.Permission{operatordomain.AccessManage}, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
 		role, err = accesspostgres.ReadRoleInTransaction(ctx, tx, id)
 		if errors.Is(err, accessdomain.ErrRoleNotFound) {

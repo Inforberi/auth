@@ -81,6 +81,7 @@ func roleHTTPDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Repository, a
 	handler, err := router.NewOperator(router.Handlers{
 		Config: cfg, Logger: zap.NewNop(), Projects: projecthttp.New(projectservice.New(managed, nil), zap.NewNop()),
 		ProjectRoles:    projecthttp.NewRoles(projectservice.NewRoles(catalog.NewRuntimeRoles(managed, registry, permissions)), zap.NewNop()),
+		ProjectUsers:    projecthttp.NewUsers(projectservice.NewUsers(catalog.NewRuntimeUsers(managed, registry)), zap.NewNop()),
 		ProjectCapacity: func(next http.Handler) http.Handler { return next }, PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfahttp.Handler{}, Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(roleHTTPSession{actor}, zap.NewNop()), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
 	})
 	require.NoError(t, err)

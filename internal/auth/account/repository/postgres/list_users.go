@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
@@ -13,7 +15,14 @@ import (
 )
 
 func (r *Repository) ListUsers(ctx context.Context, actor accessservice.Principal, q service.UserListQuery) ([]service.UserSummary, error) {
-	args := []any{actor.UserID, actor.TokenHash, settings.UsersRead}
+	return listDirectoryUsers(ctx, r.db, directoryActor, []any{actor.UserID, actor.TokenHash, settings.UsersRead}, q)
+}
+
+func ListUsersInTransaction(ctx context.Context, tx pgx.Tx, q service.UserListQuery) ([]service.UserSummary, error) {
+	return listDirectoryUsers(ctx, tx, transactionDirectoryScope, nil, q)
+}
+
+func listDirectoryUsers(ctx context.Context, db directoryReader, scope string, args []any, q service.UserListQuery) ([]service.UserSummary, error) {
 	where := "a.allowed AND candidate.deleted_at IS NULL"
 	if q.Status != "" {
 		args = append(args, q.Status)
@@ -28,13 +37,13 @@ func (r *Repository) ListUsers(ctx context.Context, actor accessservice.Principa
 		where += fmt.Sprintf(" AND (candidate.created_at,candidate.id)<($%d::timestamptz,$%d::uuid)", len(args)-1, len(args))
 	}
 	args = append(args, q.Limit+1)
-	query := directoryActor + `SELECT a.allowed,u.id::text,COALESCE(u.status,''),u.created_at,p.display_name,email.email::text,(email.verified_at IS NOT NULL)
+	query := scope + `SELECT a.allowed,u.id::text,COALESCE(u.status,''),u.created_at,p.display_name,email.email::text,(email.verified_at IS NOT NULL)
 		FROM directory_actor a LEFT JOIN LATERAL (
 			SELECT candidate.id,candidate.status,candidate.created_at FROM auth.users candidate WHERE ` + where + `
 			ORDER BY candidate.created_at DESC,candidate.id DESC LIMIT ` + fmt.Sprintf("$%d", len(args)) + `
 		) u ON true LEFT JOIN auth.user_profile p ON p.user_id=u.id ` + directoryEmail + `
 		ORDER BY u.created_at DESC,u.id DESC`
-	rows, err := r.db.Query(ctx, query, args...)
+	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

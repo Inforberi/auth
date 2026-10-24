@@ -105,6 +105,7 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 		Config: cfg, Logger: deps.log, Setup: setup, MFA: mfa.handler,
 		Projects:         projecthttp.New(projectservice.NewWithRuntime(projects, operator, observer), deps.log),
 		ProjectRoles:     roles,
+		ProjectUsers:     assembleProjectUsers(runtime, projects, deps.log),
 		ProjectCapacity:  projecthttp.Capacity(capacity),
 		PasswordHandler:  passwordhttp.New(password.service, deps.log),
 		Recovery:         passwordhttp.NewRecovery(password.recovery, deps.log),
