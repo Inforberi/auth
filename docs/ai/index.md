@@ -19,6 +19,7 @@
 | Профиль проектного SQL runtime | [identity/version/checksum/grants](../features/project-runtime-profile.md) | `Project/repository/postgres/{runtime_profile,onboarding_runtime}.go`, `Project/storage/postgres/schema_identity.go`, `migrations/project_identity.go`, `deploy/runtime*` |
 | Подключения к готовым проектам | [trusted targets, credential reader, bounded registry/leases](../features/project-runtime-registry.md) | `Project/runtime`, `Project/repository/postgres/{runtime_credentials,runtime_connection,role_runtime}.go`, `deploy/platform-runtime-reader-grants.sql` |
 | Сборка и lifecycle проектных пулов | [operational config, commit observer, shutdown](../features/project-runtime-lifecycle.md) | `internal/app/auth/project_runtime.go`, `internal/config/project_runtime.go`, `Project/runtime/lifecycle_observer.go`, `Project/service/change_state.go` |
+| Межэкземплярная сверка пулов | [bounded resident polling](../features/project-runtime-sync.md) | `Project/runtime/sync.go`, `Project/repository/postgres/runtime_{binding,state,credentials}.go`, `cmd/project-prepare/runtime_sync_integration_test.go` |
 | Сборка, lifecycle, изоляция | [архитектура](../architecture.md), [realm isolation](../features/realm-isolation.md) | `internal/app/auth/{app,realm,run,realm_security}.go`, `internal/config`, `internal/server/http`, `internal/infra/realmscope` |
 
 ## Auth и доступы

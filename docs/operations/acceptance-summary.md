@@ -6,6 +6,8 @@
 
 ## Открытые ограничения приёмки
 
+- MP4 resident sync,24 октября: [bounded metadata polling](../features/project-runtime-sync.md) проверен Luna: task check/lint0/host race, actual command+assembly TLS SQL PASS, новый sync scenario без SKIP. Не меняет immediate session authority/admission window и не означает fleet/partition/capacity sign-off; global budgets/полная Auth сборка/HTTP остаются открытыми.
+
 - MP2.7 authority/transport matrix,24 октября: [SQL row-lock и actual socket fault сценарии](platform-role-faults.md) проверены отдельным чатом Luna: task check/lint0/command race и TLS SQL PASS9.54s, без SKIP новых cases. Это не fleet partition/failover и не закрытие всей project-role/read-reconcile concurrency матрицы.
 
 - MP4 runtime lifecycle,24 октября: [опциональная assembly и local commit observer](../features/project-runtime-lifecycle.md) проверены Luna: Go tests/race/security, command TLS SQL и actual startup/shutdown SQL PASS; финальные targeted lint0/parser/runtime race PASS после4 исправлений. Полный task check ранее FAIL на lint, повторно не запускался. Fleet invalidation/credential rotation/полный MP4 ещё открыты. ENV examples default false, новых routes нет.

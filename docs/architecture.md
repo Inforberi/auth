@@ -4,6 +4,8 @@
 
 ## Профиль и границы
 
+MP4 resident sync: `project/runtime/sync.go` один worker на registry, только resident keys → batch metadata reader `repository/postgres/runtime_state.go`; shared binding SQL с cold loader. Failure/expired/incomplete evidence retiring исходный entry, active lease сохраняется; worker join перед закрытием private reader. [Контракт/verification status](features/project-runtime-sync.md). Не broker/full catalog scan/кеш permissions и не замена session authority.
+
 MP4 local lifecycle: опциональная сборка в `app/auth/project_runtime.go` владеет private catalog reader/codec и bounded registry; `project/service.ChangeState` передаёт confirmed SQL receipt через узкий observer, `runtime.Observe` retiring только старые snapshots нужного realm/project. Existing resources закрывают registry перед catalog pools. [Config/ограничения/статус проверки](features/project-runtime-lifecycle.md). Не fleet signal, не credential rotation и не полная Auth feature assembly.
 
 MP2.7 SQL registry: `internal/platform/project/runtime` владеет ограниченными project pools/leases и их cleanup; credential reader в project repository использует отдельный SELECT-only catalog pool, configured target задаёт transport. `ExecuteWithRuntime` соединяет registry с существующим role admission, без process-global current project или полного Auth.New на каждый проект. [Контракт и оставшиеся gates](features/project-runtime-registry.md). Production server/feature assembly/fleet budgets ещё не подключены.

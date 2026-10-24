@@ -87,6 +87,9 @@ func (r *Registry) Close(ctx context.Context) error {
 	if !r.closed {
 		r.closed = true
 		close(r.stopping)
+		if r.syncCancel != nil {
+			r.syncCancel()
+		}
 		for _, e := range r.entries {
 			if !e.retired && e.refs == 0 && e.pool != nil {
 				idle = append(idle, e)
@@ -98,9 +101,17 @@ func (r *Registry) Close(ctx context.Context) error {
 		}
 		r.signal()
 	}
+	worker := r.syncDone
 	r.mu.Unlock()
 	for _, e := range idle {
 		r.dispose(e)
+	}
+	if worker != nil {
+		select {
+		case <-worker:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 	select {
 	case <-r.done:

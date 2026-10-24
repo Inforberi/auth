@@ -8,6 +8,26 @@
 
 Стенд/fixture удалены Luna, нет project DB/временных project roles и Auth/platform schemas в test DB; source snapshot сохранён. Сценарии подтверждают local controlled socket cutoff/backend terminate и SQL lock ordering, не fleet/partition/failover/concurrent project-role/read-reconcile matrix. HTTP gate целиком не закрыт. Рабочие данные/ENV не менялись; основной чат не повторял длинные проверки.
 
+## Результат MP4 resident sync — 24 октября 2026
+
+Отдельный чат Luna проверил snapshot `/private/tmp/auth-runtime-sync-snapshot.nw4Gjw`, base569a098295e89463f99d75145bc8f64b3ae465b8 + patch SHA256 be45118cdddc43e85dd59863da907b30dfe468868ccccd4382e693f16c02ae6c и новые файлы. Все manifest hashes совпали; основной чат перед коммитом сверил13 Go файлов с verified manifest.
+
+- `task check` PASS exit0/lint0 (`/private/tmp/auth-runtime-sync-check.log`), после штатного повтора cache доступа. Host runtime/app/config/repository race PASS exit0 (`/private/tmp/auth-runtime-sync-race.log`), не SQL-race.
+- Actual PostgreSQL18.6 TLS TestPrepareCommandSQL PASS exit0, новый resident_state_synchronization без SKIP (`/private/tmp/auth-runtime-sync-sql.log`). TestProjectRuntimeAssemblySQL PASS exit0 без SKIP (`/private/tmp/auth-runtime-sync-assembly-sql.log`). Shared cold predicate и shutdown с sync-worker включены в regression.
+- Security scanner NOT RUN по согласованному заданию: dependencies/transport/crypto/grants не менялись. Metadata authority проверена actual SQL.
+- По отчёту Luna нет authp_* DB/project roles/Auth/platform schemas в catalog/assembly/provisioning в storage/private reader sessions. Собственный контейнер/cert/key/test binaries удалены, source snapshot сохранён. Рабочие ENV/БД не менялись.
+- `git diff --check`, local doc paths/status consistency — перед коммитом; длинные проверки основным чатом не повторялись.
+
+Два independent registry в одном process подтверждают описанный механизм, не реальное fleet deployment/partition/failover/GC/capacity. Global resource/rate budgets, credential rotation/полная Auth сборка/HTTP и весь MP4 остаются открытыми.
+
+## MP4 resident sync — подготовка,24 октября 2026
+
+[Контракт](../features/project-runtime-sync.md). Один process-local sync-worker проверяет только resident/opening snapshots через SELECT-only catalog metadata, batches≤128/общий cycle deadline. Shared cold-loader/batch binding SQL predicate; profile materialized один раз на batch, ciphertext не читается/не расшифровывается. Error/incomplete/expired evidence retiring исходные entries, active lease сохраняется, stale response не затрагивает replacement object с тем же key; Close cancel/join до private dependencies. Новые ENV interval default5s (1s..1m), timeout2s (0..3s], runtime default off. Broker/новых dependencies/schema/routes нет. SQL authority/session revoke/admission window прежние; это resource sync, не право выполнять stale mutation.
+
+Основной чат: formatter/targeted runtime/config/app/repository/command tests PASS (`/private/tmp/auth-runtime-sync-targeted.log`), docs/diff checks. Реальный SQL подготовлен: mixed current/stale/mismatched binding batch, два independent registry без Observe при suspend/version change, active vs idle backend, resume/current key, reader permission outage/recovery. Это один process/disposable instance, не deployment/fleet partition. SQL/race/final lint и command+assembly regression передаются отдельному чату Luna, до отчёта NOT RUN/unchecked. Рабочие ENV/БД не менялись, коммита нет.
+
+Задание передано в отдельный чат Luna: `/private/tmp/auth-runtime-sync-snapshot.nw4Gjw`, base569a098295e89463f99d75145bc8f64b3ae465b8, patch SHA256 be45118cdddc43e85dd59863da907b30dfe468868ccccd4382e693f16c02ae6c, manifest `/private/tmp/auth-runtime-sync-manifest.sha256`. Все изменённые Go совпали с snapshot. Основной поток не ждёт; до отчёта новые SQL/race/lint гарантии не объявлены PASS. Scanner не повторяется: нет изменения dependencies/transport/crypto/grants; metadata authority SQL regression поручена отдельно.
+
 ## Результат MP4 local runtime lifecycle — 24 октября 2026
 
 Повтор отдельного чата Luna на `/private/tmp/auth-runtime-lifecycle-fix.6pagnS`: targeted golangci-lint для infra/postgres/app/auth/project/runtime PASS exit0/0 issues (`/private/tmp/auth-runtime-lifecycle-lint-final.log`), existing TestConnectionConfig PASS (`/private/tmp/auth-runtime-lifecycle-parser-final.log`), runtime race PASS (`/private/tmp/auth-runtime-lifecycle-race-final.log`). Все Go SHA256 и patch совпали с manifest; metadata строка base не является строкой sha256sum, предупреждение проверки формата не означает mismatch. Основной чат дополнительно сверил все19 изменённых Go с verified manifest перед коммитом.

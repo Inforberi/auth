@@ -106,6 +106,9 @@ func projectRuntimeDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Reposit
 		return tx.Commit(ctx)
 	}
 	require.NoError(t, registry.Use(ctx, key, probe))
+	t.Run("resident state synchronization", func(t *testing.T) {
+		runtimeSyncDrill(t, admin, reader, key, target)
+	})
 	grant, err := managed.AdmitRoleCreation(ctx, actor, command)
 	require.NoError(t, err)
 	result, err := grant.ExecuteWithRuntime(ctx, registry, permissions, true)

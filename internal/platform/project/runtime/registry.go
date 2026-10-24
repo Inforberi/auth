@@ -17,15 +17,17 @@ type entry struct {
 }
 
 type Registry struct {
-	mu       sync.Mutex
-	config   Config
-	open     opener
-	entries  map[Key]*entry
-	changed  chan struct{}
-	stopping chan struct{}
-	done     chan struct{}
-	acquires chan struct{}
-	closed   bool
+	mu         sync.Mutex
+	config     Config
+	open       opener
+	entries    map[Key]*entry
+	changed    chan struct{}
+	stopping   chan struct{}
+	done       chan struct{}
+	acquires   chan struct{}
+	closed     bool
+	syncCancel context.CancelFunc
+	syncDone   chan struct{}
 }
 
 func newRegistry(cfg Config, open opener) *Registry {

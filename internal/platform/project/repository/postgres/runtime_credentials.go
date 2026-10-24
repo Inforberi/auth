@@ -71,16 +71,11 @@ func (r *RuntimeCredentialReader) LoadDatabaseCredential(ctx context.Context, ke
 	var version int
 	var keyID string
 	var payload []byte
-	err := r.db.QueryRow(ctx, `SELECT s.format_version,s.key_id,s.ciphertext
-		FROM platform.project_secrets s JOIN platform.projects p ON p.id=s.project_id
-		JOIN platform.project_preparations prep ON prep.project_id=p.id AND prep.reservation_id=s.reservation_id AND prep.secrets_created
-		CROSS JOIN platform.operator_realm realm
-		WHERE realm.id=$1 AND realm.initialized_at IS NOT NULL AND p.id=$2 AND s.reservation_id=$3
-		AND p.storage_target=$4 AND s.storage_target=p.storage_target AND prep.storage_target=p.storage_target
-		AND s.database_oid=$5 AND s.owner_oid=$6 AND s.runtime_oid=$7 AND s.schema_version=$8 AND p.schema_version=s.schema_version
-		AND p.version=$9 AND p.generation=$10 AND p.desired_state='enabled' AND p.phase='ready'
-		AND p.database_name='authp_'||replace(p.id::text,'-','') AND p.credential_ref IS NOT NULL
-		AND (`+runtimeCredentialProfile+`)`, b.RealmID, b.ProjectID, b.ReservationID, b.StorageTarget,
+	err := r.db.QueryRow(ctx, `WITH wanted AS (SELECT $1::uuid AS realm_id,$2::uuid AS project_id,$3::uuid AS reservation_id,
+		$4::text AS storage_target,$5::oid AS database_oid,$6::oid AS owner_oid,$7::oid AS runtime_oid,
+		$8::int AS schema_version,$9::bigint AS version,$10::bigint AS generation)
+		SELECT s.format_version,s.key_id,s.ciphertext FROM wanted CROSS JOIN `+runtimeSnapshotRelations+`
+		WHERE `+runtimeSnapshotPredicate+` AND (`+runtimeCredentialProfile+`)`, b.RealmID, b.ProjectID, b.ReservationID, b.StorageTarget,
 		b.DatabaseOID, b.OwnerOID, b.RuntimeOID, b.SchemaVersion, key.Version, key.Generation).Scan(&version, &keyID, &payload)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

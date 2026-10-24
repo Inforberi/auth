@@ -24,6 +24,8 @@ type ProjectRuntimeConfig struct {
 	AcquireTimeout        time.Duration `env:"PLATFORM_PROJECT_ACQUIRE_TIMEOUT" env-default:"2s"`
 	OpenTimeout           time.Duration `env:"PLATFORM_PROJECT_OPEN_TIMEOUT" env-default:"2s"`
 	IdleTimeout           time.Duration `env:"PLATFORM_PROJECT_IDLE_TIMEOUT" env-default:"5m"`
+	SyncInterval          time.Duration `env:"PLATFORM_PROJECT_SYNC_INTERVAL" env-default:"5s"`
+	SyncTimeout           time.Duration `env:"PLATFORM_PROJECT_SYNC_TIMEOUT" env-default:"2s"`
 }
 
 func (c ProjectRuntimeConfig) Registry() projectruntime.Config {
@@ -39,6 +41,9 @@ func (c ProjectRuntimeConfig) Validate() error {
 	}
 	if !c.Registry().Valid() || c.StorageHost == "" || c.StoragePort == 0 {
 		return errors.New("platform project runtime requires a storage host/port and valid bounded SQL budgets")
+	}
+	if c.SyncInterval < time.Second || c.SyncInterval > time.Minute || c.SyncTimeout <= 0 || c.SyncTimeout > 3*time.Second {
+		return errors.New("PLATFORM_PROJECT_SYNC_INTERVAL must be 1s..1m and PLATFORM_PROJECT_SYNC_TIMEOUT within (0,3s]")
 	}
 	if _, err := postgres.TrustedConfig(c.CatalogURL); err != nil {
 		return errors.New("PLATFORM_RUNTIME_CATALOG_URL requires one explicit trusted endpoint")

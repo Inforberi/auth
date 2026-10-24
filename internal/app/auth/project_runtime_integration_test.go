@@ -70,6 +70,7 @@ func TestProjectRuntimeAssemblySQL(t *testing.T) {
 			MasterKey: base64.StdEncoding.EncodeToString([]byte(strings.Repeat("a", 32))), MasterKeyID: "root-1",
 			StorageHost: "/var/run/postgresql", StoragePort: 5432, MaxRuntimes: 1, ConnectionsPerProject: 1, ConnectionBudget: 1,
 			MaxAcquiring: 2, AcquireTimeout: time.Second, OpenTimeout: time.Second, IdleTimeout: time.Minute,
+			SyncInterval: time.Minute, SyncTimeout: time.Second,
 		},
 	}
 	owned := &resources{}

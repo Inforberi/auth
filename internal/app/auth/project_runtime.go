@@ -75,6 +75,9 @@ func openProjectRuntime(ctx context.Context, cfg config.PlatformConfig, owned *r
 	owned.add(func() {
 		_ = registry.Close(context.WithoutCancel(ctx)) //nolint:gosec // An uncancelled final drain cannot return a context error.
 	})
+	if err := registry.StartSync(ctx, reader, c.SyncInterval, c.SyncTimeout); err != nil {
+		return nil, err
+	}
 	return &projectRuntime{registry: registry, reader: reader, realm: projectdomain.ID(cfg.RealmID)}, nil
 }
 

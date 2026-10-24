@@ -1,6 +1,6 @@
 # Сборка SQL runtime и изменения lifecycle
 
-MP4,24 октября2026. Реализация проверена отдельным чатом Luna: Go tests/race/security и actual command/assembly SQL PASS, финальный targeted lint0/parser/runtime race PASS. Первоначальный полный task check завершился FAIL на lint до исправлений; полный повтор не выполнялся. [Evidence](../planning/history.md#результат-mp4-local-runtime-lifecycle--24-октября-2026). HTTP role bridge не открыт; существующие platform suspend/resume/retry routes передают подтверждённые изменения локальному реестру при включении runtime.
+MP4,24 октября2026. Local assembly проверена отдельным чатом Luna: Go tests/race/security и actual command/assembly SQL PASS, финальный targeted lint0/parser/runtime race PASS. Первоначальный полный task check завершился FAIL на lint до исправлений; отдельного полного повтора этого этапа не было. [Evidence](../planning/history.md#результат-mp4-local-runtime-lifecycle--24-октября-2026). Следующий [periodic sync](project-runtime-sync.md) прошёл собственный полный task check и SQL regression. HTTP role bridge не открыт.
 
 ## Включение
 
@@ -38,7 +38,7 @@ Reader startup/readiness проверяют его SQL профиль и ожи�
 
 App.Close, как и прежний pgxpool.Close, синхронно ждёт своих активных операций; принудительного закрытия lease ради таймера нет. Registry.Close(ctx) по-прежнему позволяет отдельному caller ограничить ожидание; приложение при финальном cleanup использует uncancelled drain. Зависшие некорректные callbacks не объявлены автоматически безопасными: production lease consumers должны иметь bounded operation deadline, текущий role consumer ограничен admission.
 
-Это local lifecycle wiring одного API instance. Direct provisioning SQL/другая replica не посылают этому observer уведомления. Fleet watcher/polling/Redis signal, ordinary project request resolver/полная Auth assembly и role bridge HTTP остаются открытыми. Пока готовые проекты физически не готовятся автоматически этим флагом, target migration/restore/readiness правила не обходятся.
+Local Observe действует на одном API instance. Direct provisioning SQL/другая replica не посылают ему уведомления; проверенный [bounded resident sync](project-runtime-sync.md) сверяет общий каталог без уведомлений. Ordinary project request resolver/полная Auth assembly и role bridge HTTP остаются открытыми. Готовые проекты физически не готовятся автоматически этим флагом, migration/restore/readiness правила не обходятся.
 
 Credential rotation ещё не реализована. Её producer должен менять catalog generation/version и инвалидировать соответствующие runtimes; не менять password незаметно под тем же snapshot key. Source reload/изменение deployment ENV применяется перезапуском, не изменением process-global current project.
 
