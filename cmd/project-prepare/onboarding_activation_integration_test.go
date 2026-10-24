@@ -15,7 +15,7 @@ import (
 	storage "github.com/Inforberi/financial-intelligence/internal/platform/project/storage/postgres"
 )
 
-func onboardingActivationDrill(t *testing.T, physical *pgx.Conn, env func(string) string, repo *catalog.PreparationRepository, r domain.PreparationReservation, b credentials.Binding, codec *credentials.Codec) {
+func onboardingActivationDrill(t *testing.T, physical *pgx.Conn, env func(string) string, repo *catalog.PreparationRepository, r domain.PreparationReservation, b credentials.Binding, codec *credentials.Codec, markerBefore string) string {
 	t.Helper()
 	ctx := t.Context()
 	value, err := repo.ReadDatabaseCredential(ctx, r, b, codec)
@@ -70,7 +70,8 @@ func onboardingActivationDrill(t *testing.T, physical *pgx.Conn, env func(string
 	require.ErrorIs(t, err, domain.ErrConflict, "offline prepare must not advance an open journal")
 	require.Equal(t, xmin, check("open", true))
 	require.NoError(t, runtime.Ping(ctx))
-	t.Run("project role transaction", func(t *testing.T) { projectRoleDrill(t, physical, runtime, b) })
+	var markerAfterFaultDrill string
+	t.Run("project role transaction", func(t *testing.T) { markerAfterFaultDrill = projectRoleDrill(t, physical, runtime, b, markerBefore) })
 	t.Run("platform role admission", func(t *testing.T) { roleAdmissionDrill(t, physical, runtime, env, r, b) })
 	other, otherConn := open()
 	require.ErrorIs(t, other.CloseOnboarding(ctx, r, b, repo), storage.ErrBusy)
@@ -110,4 +111,5 @@ func onboardingActivationDrill(t *testing.T, physical *pgx.Conn, env func(string
 	check("closed", false)
 	require.NoError(t, conn.Close(ctx))
 	onboardingActivationFailures(t, physical, env, repo, r, b, codec, runtime, open, check)
+	return markerAfterFaultDrill
 }

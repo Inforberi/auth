@@ -30,7 +30,7 @@ func CreatePlatformRoleInTransaction(ctx context.Context, tx pgx.Tx, actor domai
 	if err != nil {
 		return domain.RoleCreationResult{}, err
 	}
-	if err := checkRoleTarget(ctx, tx, binding); err != nil {
+	if err := checkProjectRuntime(ctx, tx, binding); err != nil {
 		return domain.RoleCreationResult{}, err
 	}
 	if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {

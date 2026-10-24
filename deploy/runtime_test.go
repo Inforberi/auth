@@ -17,3 +17,11 @@ func TestRuntimeGrantsIdentifiers(t *testing.T) {
 		}
 	}
 }
+
+func TestRuntimeGrantsDollarQuotedIdentifiers(t *testing.T) {
+	sql := RuntimeGrants(`project$$db`, `runtime$grants$role`)
+	require.Contains(t, sql, `DO $grants_$`)
+	require.Equal(t, 2, strings.Count(sql, "$grants_$"))
+	require.Contains(t, sql, `TO "runtime$grants$role"`)
+	require.Contains(t, sql, `DATABASE "project$$db"`)
+}

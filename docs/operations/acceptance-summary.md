@@ -6,6 +6,8 @@
 
 ## Открытые ограничения приёмки
 
+- MP2.7 runtime-profile,24 октября: обязательная SQL identity/version/source-checksum/table-view-sequence ACL проверка и read-only metadata projection реализованы, SQL fault/reapply/no-update tests проверены. Это не trusted target/credential loader или bounded registry/lease, не transport/fleet приёмка и не разрешение открыть HTTP. Профиль сверяет установленный source marker, а не весь фактический DDL/недоверенный сервер. [Границы и проверки](../features/project-runtime-profile.md).
+
 - MP2.7,24 октября: SQL intent/admission/project receipt/outcome создания роли проверяется отдельной приёмкой; это не опубликованный platform API. Согласована граница **commit admission**: новые операции после revoke/suspend запрещены, уже допущенные могут завершиться в коротком окне. До HTTP: trusted cold-attested runtime/lease, реальные transport-fault и concurrent suspend/factor/role tests, bounded resource/rate admission, read/reconcile при утрате исходным actor прав. Lost-COMMIT-ack адаптер проверяет recovery после настоящего SQL commit, но не заменяет сетевой/fleet fault test. [Контракт](../features/platform-role-intents.md#окончательный-допуск-и-выполнение--24-октября-2026).
 
 Актуальная сводка перенесённых из текущей заметки ограничений. Датированные результаты ниже — evidence конкретного прогона, не текущая доступность стенда или production sign-off. Читать только затронутые задачей строки и профильный документ.

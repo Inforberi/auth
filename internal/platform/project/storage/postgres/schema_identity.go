@@ -24,6 +24,10 @@ func (t *Target) recordInstalledSchema(ctx context.Context, tx pgx.Tx, r domain.
 	if err != nil {
 		return unavailable(ctx)
 	}
+	role := pgx.Identifier{runtime}.Sanitize()
+	if _, err := tx.Exec(ctx, migrations.ProjectIdentityView+` REVOKE ALL ON auth.project_identity FROM `+role+`; GRANT SELECT ON auth.project_identity TO `+role); err != nil {
+		return unavailable(ctx)
+	}
 	_, err = tx.Exec(ctx, `INSERT INTO project_meta.identity SELECT true,$1,$2,$3,$4,$5,oid,$6,$7 FROM pg_roles WHERE rolname=$8`,
 		t.realm, r.ProjectID, r.ReservationID, resources.DatabaseOID, resources.OwnerOID, migrations.AuthVersion, checksum, runtime)
 	if err != nil {
@@ -54,6 +58,11 @@ func (t *Target) checkInstalledSchema(ctx context.Context, tx pgx.Tx, r domain.P
 		AND NOT has_function_privilege(role.oid,'auth.decide_mfa_recovery(uuid,uuid,bigint,boolean,text,text)','EXECUTE')
 		AND EXISTS(SELECT 1 FROM pg_namespace WHERE nspname='auth' AND nspowner=$5)
 		AND EXISTS(SELECT 1 FROM pg_namespace WHERE nspname='project_meta' AND nspowner=$5)
+		AND EXISTS(SELECT 1 FROM pg_class v JOIN pg_namespace ns ON ns.oid=v.relnamespace
+			WHERE ns.nspname='auth' AND v.relname='project_identity' AND v.relkind='v' AND v.relowner=$5
+			AND has_table_privilege(role.oid,v.oid,'SELECT')
+			AND NOT has_any_column_privilege(role.oid,v.oid,'INSERT,UPDATE,REFERENCES')
+			AND NOT has_table_privilege(role.oid,v.oid,'DELETE,TRIGGER,SELECT WITH GRANT OPTION'))
 		AND NOT EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace ns ON ns.oid=c.relnamespace
 			CROSS JOIN (VALUES('SELECT'),('INSERT'),('UPDATE'),('DELETE')) permission(name)
 			WHERE ns.nspname='auth' AND c.relkind IN ('r','p') AND (c.relname<>'restore_audit' OR permission.name='SELECT')

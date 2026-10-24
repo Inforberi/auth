@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"strings"
 	"time"
 
@@ -102,8 +100,7 @@ func (t *Target) installProjectSchema(ctx context.Context, conn *pgx.Conn, r dom
 	}
 	runtime := "authr_" + strings.TrimPrefix(resources.Owner, "autho_")
 	grants := deploy.RuntimeGrants(resources.Database, runtime)
-	digest := sha256.Sum256([]byte(migrations.InitialAuth() + "\x00" + grants))
-	checksum := hex.EncodeToString(digest[:])
+	checksum := migrations.ProjectSchemaChecksum(grants)
 	var installed bool
 	if err := tx.QueryRow(ctx, `SELECT to_regclass('project_meta.identity') IS NOT NULL`).Scan(&installed); err != nil {
 		return unavailable(ctx)

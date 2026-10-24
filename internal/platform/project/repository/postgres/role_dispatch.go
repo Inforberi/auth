@@ -17,7 +17,8 @@ type RoleProjectDatabase interface {
 	BeginTx(context.Context, pgx.TxOptions) (pgx.Tx, error)
 }
 
-// Execute requires a borrowed pool already cold-attested for this project.
+// Execute checks the actual transaction's project profile before mutation.
+// Pool/transport provenance belongs to trusted assembly, never request input.
 // Admission is final authorization: later platform revoke cannot undo this write.
 func (a *AdmittedRoleCreation) Execute(ctx context.Context, project RoleProjectDatabase, permissions settings.Catalog, mfaReady bool) (domain.RoleCreationResult, error) {
 	if a == nil || a.repository == nil || a.used == nil || !a.actor.Valid() || !time.Now().Before(a.until) {

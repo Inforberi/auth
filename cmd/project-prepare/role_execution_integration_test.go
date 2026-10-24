@@ -17,7 +17,7 @@ import (
 	catalog "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
 )
 
-func projectRoleDrill(t *testing.T, physical *pgx.Conn, runtime *pgxpool.Pool, binding credentials.Binding) {
+func projectRoleDrill(t *testing.T, physical *pgx.Conn, runtime *pgxpool.Pool, binding credentials.Binding, markerBefore string) string {
 	t.Helper()
 	ctx := t.Context()
 	cfg := physical.Config().Copy()
@@ -34,6 +34,9 @@ func projectRoleDrill(t *testing.T, physical *pgx.Conn, runtime *pgxpool.Pool, b
 		require.NoError(t, err)
 		require.NoError(t, admin.Close(cleanup))
 	})
+	var markerXmin string
+	require.NoError(t, admin.QueryRow(ctx, `SELECT xmin::text FROM project_meta.identity WHERE singleton`).Scan(&markerXmin))
+	require.Equal(t, markerBefore, markerXmin, "activation before the fault drill must not rewrite the marker")
 	permissions, err := settings.NewCatalog(nil)
 	require.NoError(t, err)
 	actor := domain.PlatformActor{RealmID: binding.RealmID, UserID: "e2000000-0000-4000-8000-000000000088", AdmissionID: "e2000000-0000-4000-8000-000000000080"}
@@ -60,6 +63,17 @@ func projectRoleDrill(t *testing.T, physical *pgx.Conn, runtime *pgxpool.Pool, b
 		}
 		return result, nil
 	}
+	t.Run("runtime profile", func(t *testing.T) {
+		projectRuntimeProfileDrill(t, admin, runtime, func(ctx context.Context) error {
+			tx, err := runtime.Begin(ctx)
+			if err != nil {
+				return err
+			}
+			defer func() { _ = tx.Rollback(ctx) }()
+			_, err = catalog.CreatePlatformRoleInTransaction(ctx, tx, actor, binding, command, permissions, true)
+			return err
+		})
+	})
 	first, err := apply(actor, binding, command, true)
 	require.NoError(t, err)
 	require.False(t, first.Replayed)
@@ -164,4 +178,8 @@ func projectRoleDrill(t *testing.T, physical *pgx.Conn, runtime *pgxpool.Pool, b
 		_, err := runtime.Exec(ctx, sql)
 		require.Error(t, err)
 	}
+	// The fault drill intentionally committed/restored marker values. From this
+	// checkpoint, later activation and replay must still perform no marker UPDATE.
+	require.NoError(t, admin.QueryRow(ctx, `SELECT xmin::text FROM project_meta.identity WHERE singleton`).Scan(&markerXmin))
+	return markerXmin
 }

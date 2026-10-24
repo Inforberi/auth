@@ -2,17 +2,19 @@
 
 Обновлено 24 октября 2026. [Карта](index.md) · [статусы](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui) · [приёмка](../operations/acceptance-summary.md#открытые-ограничения-приёмки). Git/staging и доступность стенда проверять по факту.
 
-## Последний результат — MP2.7 role admission
+## Последний результат — MP2.7 SQL runtime profile
 
-Внутренняя SQL-связка intent → committed admission до3s → project receipt → catalog outcome реализована. Пользователь согласовал границу: revoke/suspend запрещает новые допуски; уже окончательно допущенная команда может завершиться в коротком окне. Это не изменение обычного session revoke и не distributed transaction. One-use включает копии Go-объекта; unknown commit и потерянный catalog outcome восстанавливаются через новый current admission и receipt. [Контракт](../features/platform-role-intents.md#окончательный-допуск-и-выполнение--24-октября-2026), [evidence](../planning/history.md#результат-mp27-role-admission--24-октября-2026). Task check/lint/race/security и actual PostgreSQL18.6 SQL suites PASS; 1 прежняя module-only security находка. Временный стенд/binaries удалены, рабочие данные не менялись. HTTP/CLI/UI/dependencies не добавлены.
+Onboarding и actual role transaction используют один SQL identity/version/source-checksum/ACL profile. Private marker доступен runtime только через несекретную SELECT-only view; проверяются её точные колонки/owner, table/view/sequence права и protected exceptions. Grants/revokes атомарны, reapply сохраняет read-only view; source fingerprint общий с installer. [Контракт](../features/project-runtime-profile.md), [evidence](../planning/history.md#результат-mp27-runtime-profile--24-октября-2026). Go tests/финальный lint/race/security и actual PostgreSQL18.6 suite PASS; 1 прежняя module-only security находка. Временный стенд удалён, рабочие данные/ENV не менялись. HTTP/UI/dependencies не добавлены.
+
+Прежний role admission до3s/atomic receipt/outcome сохранён: revoke/suspend запрещает новые допуски, уже допущенная команда может завершиться. Это не обычный session revoke и не distributed transaction. [Role contract](../features/platform-role-intents.md).
 
 Владелец платформы управляет проектами и явно создаёт локальных администраторов без копии identity/обязательного первого local super_admin/raw setup token. [ADR005](../adr/005-independent-projects.md#3-одна-сессия-оператора-без-пользовательского-sso). Standalone setup не ослаблялся; owner-managed readiness ещё открыт.
 
-## Следующий шаг — trusted project runtime перед HTTP
+## Следующий шаг — trusted loader и bounded registry/leases
 
-Подключить registry/lease и полную cold-open schema/grants/checksum аттестацию exact current binding, не публиковать Execute с произвольным pool/DSN. Затем protected outcome read/reconcile при утрате исходным actor прав, реальные transport faults и concurrent admission/suspend/role/factor checks, resource bounds → HTTP. MP2.7 целиком открыт; другие users/access/settings actions ещё отдельные сценарии. Далее dispatcher/reconcile и owner-managed readiness → ready. [План](../planning/multi-project.md#результат-и-границы).
+Подключить trusted target/credential loader и bounded registry/pools/leases с exact binding/generation и profile на реальном соединении. SQL fingerprint не аутентифицирует произвольный сервер/DSN и не заменяет TLS/secret provenance. Затем protected outcome read/reconcile при утрате actor прав, реальные transport faults/admission matrix/resource bounds → HTTP. MP2.7/MP4 целиком открыты; users/access/settings actions ещё отдельные сценарии. Далее dispatcher/reconcile и owner-managed readiness → ready. [План](../planning/multi-project.md#результат-и-границы).
 
-Оба протокола пока вызывают только integration tests. Lost-commit-ack test — адаптер после настоящего commit, не сетевой/fleet test. Onboarding outage/reseal ограничения и background recovery — в [контракте](../features/project-onboarding-preparation.md); неизвестный commit не означает rollback/reset.
+Role orchestration и onboarding пока вызывают только integration tests. Lost-commit-ack — адаптер после настоящего commit, не сетевой/fleet test. Checksum — установленный source marker, не полный DDL-drift scanner. Onboarding outage/reseal ограничения — в [контракте](../features/project-onboarding-preparation.md); unknown commit не означает rollback/reset. Старым БД нужен controlled upgrade, source init их автоматически не обновляет.
 
 ## Нельзя потерять
 

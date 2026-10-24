@@ -36,6 +36,8 @@ Concurrent suspend может оставить уже установленную
 
 `project_meta.identity` в БД проекта хранит realm/project/reservation UUID, database/owner/runtime OID, schema version и SHA-256 source checksum. Schema, роль и marker коммитятся атомарно. Runtime не имеет USAGE/SELECT/записи в project_meta.
 
+Уточнение24 октября: installer также создаёт [read-only auth.project_identity](project-runtime-profile.md) с несекретной identity/version/checksum проекцией. Прямые private privileges не выдаются. Общая fingerprint function включает initial Auth SQL, конкретные runtime grants и SQL view; old source checksum не обновляется автоматически. Onboarding и проектная role transaction используют единый SQL profile на реальном соединении.
+
 Повтор проверяет marker и реальный runtime OID/имя, отсутствие LOGIN/elevated attributes/чужих memberships, owner schema и effective privileges. Несовпадение версии/source checksum — conflict, **не повторная initial migration поверх данных**. Утрата marker при surviving Auth schema/роли также не вызывает переустановку/adoption. Повтор не переписывает marker и не создаёт новые роли; временное открытие/закрытие БД остаётся необходимой offline проверкой.
 
 Checksum — идентичность установленного source, не полный schema-drift scanner и не защита от злонамеренного владельца БД. Инфраструктурные admins/executor остаются доверенными. Обновления initial SQL/grants после появления постоянных проектов потребуют явного versioned upgrade, а не редактирования baseline и автоматического обхода checksum.

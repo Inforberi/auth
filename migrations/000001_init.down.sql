@@ -1,3 +1,4 @@
+DROP VIEW IF EXISTS auth.project_identity;
 DROP TABLE IF EXISTS auth.initial_setup;
 DROP TABLE IF EXISTS auth.restore_audit;
 DROP TABLE IF EXISTS auth.retention_settings_audit;

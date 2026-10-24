@@ -127,7 +127,7 @@ func onboardingPreparationDrill(t *testing.T, physical *pgx.Conn, env func(strin
 			FROM project_meta.identity m CROSS JOIN auth.auth_settings p CROSS JOIN auth.initial_setup s`, policyXmin, setupXmin).Scan(&markerXmin, &unchanged))
 		require.True(t, unchanged)
 	})
-	onboardingActivationDrill(t, physical, env, repo, r, binding, codec)
+	markerXmin = onboardingActivationDrill(t, physical, env, repo, r, binding, codec, markerXmin)
 	require.NoError(t, run(ctx, args, env, io.Discard, io.Discard))
 	inspect(func(conn *pgx.Conn) {
 		var same bool
