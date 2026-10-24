@@ -9,6 +9,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
+	"github.com/Inforberi/financial-intelligence/internal/infra/redislimit"
 )
 
 type Limiter struct {
@@ -37,41 +38,13 @@ func (l *Limiter) Allow(ctx context.Context, key string, count int, window time.
 	return err == nil && current <= int64(count), err
 }
 
-const admissionScript = `
-for i,key in ipairs(KEYS) do
-  local value=redis.call('GET',key)
-  if value then
-    local count=tonumber(value)
-    if not count or (value~='0' and not string.match(value,'^[1-9]%d*$')) or redis.call('PTTL',key)<0 then
-      return redis.error_reply('invalid MFA admission counter')
-    end
-    if count>=tonumber(ARGV[i]) then return 0 end
-  end
-end
-for _,key in ipairs(KEYS) do
-  local count=redis.call('INCR',key)
-  if count==1 then redis.call('PEXPIRE',key,60000) end
-end
-return 1`
-
 func (l *Limiter) AllowAll(ctx context.Context, budgets []service.Budget) (bool, error) {
 	if len(budgets) == 0 || len(budgets) > 3 {
-		return false, errors.New("invalid MFA admission budgets")
+		return false, errors.New("invalid admission budgets")
 	}
-	keys, counts := make([]string, len(budgets)), make([]any, len(budgets))
+	shared := make([]redislimit.Budget, len(budgets))
 	for i, budget := range budgets {
-		if budget.Key == "" || len(budget.Key) > 256 || budget.Count < 1 || uint64(budget.Count) > 1<<53-1 {
-			return false, errors.New("invalid MFA admission budget")
-		}
-		keys[i], counts[i] = l.prefix+budget.Key, budget.Count
-		for j := 0; j < i; j++ {
-			if keys[j] == keys[i] {
-				return false, errors.New("duplicate MFA admission budget")
-			}
-		}
+		shared[i] = redislimit.Budget{Key: budget.Key, Count: budget.Count}
 	}
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-	allowed, err := l.client.Eval(ctx, admissionScript, keys, counts...).Int64()
-	return allowed == 1, err
+	return redislimit.AllowMinute(ctx, l.client, l.prefix, shared)
 }

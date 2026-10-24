@@ -20,6 +20,7 @@
 | Подключения к готовым проектам | [trusted targets, credential reader, bounded registry/leases](../features/project-runtime-registry.md) | `Project/runtime`, `Project/repository/postgres/{runtime_credentials,runtime_connection,role_runtime}.go`, `deploy/platform-runtime-reader-grants.sql` |
 | Сборка и lifecycle проектных пулов | [operational config, commit observer, shutdown](../features/project-runtime-lifecycle.md) | `internal/app/auth/project_runtime.go`, `internal/config/project_runtime.go`, `Project/runtime/lifecycle_observer.go`, `Project/service/change_state.go` |
 | Межэкземплярная сверка пулов | [bounded resident polling](../features/project-runtime-sync.md) | `Project/runtime/sync.go`, `Project/repository/postgres/runtime_{binding,state,credentials}.go`, `cmd/project-prepare/runtime_sync_integration_test.go` |
+| Ресурсы административных операций | [SQL deployment budget и HTTP/Redis admission](../features/platform-resource-bounds.md) | `internal/config/platform_resources.go`, `Project/admission`, `Project/transport/http/capacity.go`, `internal/infra/redislimit` |
 | Сборка, lifecycle, изоляция | [архитектура](../architecture.md), [realm isolation](../features/realm-isolation.md) | `internal/app/auth/{app,realm,run,realm_security}.go`, `internal/config`, `internal/server/http`, `internal/infra/realmscope` |
 
 ## Auth и доступы

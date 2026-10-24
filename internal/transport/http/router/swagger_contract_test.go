@@ -19,6 +19,7 @@ import (
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
@@ -75,12 +76,18 @@ func TestSwaggerMatchesRoutes(t *testing.T) {
 func TestSwaggerMatchesPlatformRoutes(t *testing.T) {
 	doc := readAPI(t)
 	h := contractHandlers("prod")
-	h.Config = &config.Config{Platform: config.PlatformConfig{Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example", ProjectAuthDomain: "auth.example", StorageTarget: "primary"}}
+	h.Config = &config.Config{Platform: config.PlatformConfig{
+		Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example",
+		ProjectAuthDomain: "auth.example", StorageTarget: "primary",
+		Operations: admission.DefaultConfig(), Resources: config.DefaultPlatformResources(),
+	}}
+	h.Config.Postgres.MaxConns = 6
 	h.Config.MFA.Enabled, h.Config.MFA.RecoveryEnabled, h.Config.InitialSetup.Enabled = true, true, true
 	h.Config.Browser.AllowedOrigins = []string{h.Config.Platform.Origin}
 	h.Config.Server.TLSCertFile, h.Config.Server.TLSKeyFile = "tls.crt", "tls.key"
 	h.Config.Password.ResetURL = h.Config.Platform.Origin + "/reset"
 	h.Projects = projecthttp.New(&operatorReadCatalog{}, zap.NewNop())
+	h.ProjectCapacity = func(next http.Handler) http.Handler { return next }
 	handler, err := NewOperator(h)
 	if err != nil {
 		t.Fatal(err)

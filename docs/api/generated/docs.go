@@ -6065,6 +6065,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "429": {
+                        "description": "code: rate_limited; Retry-After: 60",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "503": {
                         "description": "Service Unavailable",
                         "schema": {
@@ -6152,6 +6158,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "429": {
+                        "description": "code: rate_limited; Retry-After: 60",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "503": {
                         "description": "Service Unavailable",
                         "schema": {
@@ -6213,6 +6225,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited; Retry-After: 60",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -6307,6 +6325,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "429": {
+                        "description": "code: rate_limited; Retry-After: 60",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "503": {
                         "description": "Service Unavailable",
                         "schema": {
@@ -6397,6 +6421,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "429": {
+                        "description": "code: rate_limited; Retry-After: 60",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "503": {
                         "description": "Service Unavailable",
                         "schema": {
@@ -6483,6 +6513,12 @@ const docTemplate = `{
                     },
                     "428": {
                         "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited; Retry-After: 60",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }

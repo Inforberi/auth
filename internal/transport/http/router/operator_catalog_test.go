@@ -13,6 +13,7 @@ import (
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 	projectservice "github.com/Inforberi/financial-intelligence/internal/platform/project/service"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
@@ -53,15 +54,22 @@ func (s *operatorReadCatalog) ChangeState(context.Context, operatordomain.Princi
 }
 
 func TestOperatorCatalogRouteBoundary(t *testing.T) {
-	cfg := &config.Config{Platform: config.PlatformConfig{Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example", ProjectAuthDomain: "auth.example", StorageTarget: "primary"}}
+	cfg := &config.Config{Platform: config.PlatformConfig{Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example", ProjectAuthDomain: "auth.example", StorageTarget: "primary", Operations: admission.DefaultConfig(), Resources: config.DefaultPlatformResources()}}
+	cfg.Postgres.MaxConns = 6
 	cfg.MFA.Enabled = true
 	cfg.Browser.AllowedOrigins = []string{cfg.Platform.Origin}
 	cfg.Server.TLSCertFile, cfg.Server.TLSKeyFile = "tls.crt", "tls.key"
 	cfg.Password.ResetURL = cfg.Platform.Origin + "/reset"
 	sessions, catalog := &operatorReadSession{}, &operatorReadCatalog{}
 	h := Handlers{
-		Config: cfg, Projects: projecthttp.New(catalog, nil), PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfahttp.Handler{},
+		ProjectCapacity: func(next http.Handler) http.Handler { return next },
+		Config:          cfg, Projects: projecthttp.New(catalog, nil), PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfahttp.Handler{},
 		Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(sessions, nil), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
+	}
+	unguarded := h
+	unguarded.ProjectCapacity = nil
+	if _, err := NewOperator(unguarded); err == nil {
+		t.Fatal("project routes accepted without capacity admission")
 	}
 	router, err := NewOperator(h)
 	if err != nil {

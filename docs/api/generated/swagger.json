@@ -6062,6 +6062,12 @@
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "429": {
+                        "description": "code: rate_limited; Retry-After: 60",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "503": {
                         "description": "Service Unavailable",
                         "schema": {
@@ -6149,6 +6155,12 @@
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "429": {
+                        "description": "code: rate_limited; Retry-After: 60",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "503": {
                         "description": "Service Unavailable",
                         "schema": {
@@ -6210,6 +6222,12 @@
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited; Retry-After: 60",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -6304,6 +6322,12 @@
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "429": {
+                        "description": "code: rate_limited; Retry-After: 60",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "503": {
                         "description": "Service Unavailable",
                         "schema": {
@@ -6394,6 +6418,12 @@
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "429": {
+                        "description": "code: rate_limited; Retry-After: 60",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "503": {
                         "description": "Service Unavailable",
                         "schema": {
@@ -6480,6 +6510,12 @@
                     },
                     "428": {
                         "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited; Retry-After: 60",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }

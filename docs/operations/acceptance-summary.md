@@ -6,6 +6,8 @@
 
 ## Открытые ограничения приёмки
 
+- MP4 resource bounds: [реализация](../features/platform-resource-bounds.md) ожидает повторные check/router race после исправления Swagger fixture и первые live Redis/operator SQL на новом снимке. Отдельные lint/API/scanner PASS, первый check/router race FAIL записан в history; статическая проверка SQL не равна fleet/load приёмке.
+
 - MP4 resident sync,24 октября: [bounded metadata polling](../features/project-runtime-sync.md) проверен Luna: task check/lint0/host race, actual command+assembly TLS SQL PASS, новый sync scenario без SKIP. Не меняет immediate session authority/admission window и не означает fleet/partition/capacity sign-off; global budgets/полная Auth сборка/HTTP остаются открытыми.
 
 - MP2.7 authority/transport matrix,24 октября: [SQL row-lock и actual socket fault сценарии](platform-role-faults.md) проверены отдельным чатом Luna: task check/lint0/command race и TLS SQL PASS9.54s, без SKIP новых cases. Это не fleet partition/failover и не закрытие всей project-role/read-reconcile concurrency матрицы.

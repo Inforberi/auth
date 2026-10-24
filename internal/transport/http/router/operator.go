@@ -16,6 +16,9 @@ func NewOperator(h Handlers) (http.Handler, error) {
 	if err := h.Config.ValidatePlatform(); err != nil {
 		return nil, err
 	}
+	if h.Projects != nil && h.ProjectCapacity == nil {
+		return nil, errors.New("project HTTP routes require capacity admission")
+	}
 	origin, err := url.Parse(h.Config.Platform.Origin)
 	if err != nil {
 		return nil, err
@@ -40,6 +43,7 @@ func NewOperator(h Handlers) (http.Handler, error) {
 		if h.Projects != nil {
 			r.Route("/platform", func(r chi.Router) {
 				r.Use(browserProtection(h), h.Middleware.NoRefreshAuth)
+				r = r.With(h.ProjectCapacity)
 				r.Get("/projects", h.Projects.List)
 				r.Post("/projects", h.Projects.Create)
 				r.Get("/projects/{id}", h.Projects.Read)

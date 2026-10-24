@@ -5,10 +5,13 @@ import (
 	"net/url"
 
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
 type PlatformConfig struct {
+	Operations        admission.Config
+	Resources         PlatformResources
 	Runtime           ProjectRuntimeConfig
 	Enabled           bool   `env:"PLATFORM_ENABLED" env-default:"false"`
 	RealmID           string `env:"PLATFORM_REALM_ID"`
@@ -62,5 +65,11 @@ func (cfg Config) ValidatePlatform() error {
 	if err != nil || reset.Scheme+"://"+reset.Host != cfg.Platform.Origin {
 		return fmt.Errorf("platform PASSWORD_RESET_URL must use PLATFORM_ORIGIN")
 	}
-	return cfg.Platform.Runtime.Validate()
+	if err := cfg.Platform.Runtime.Validate(); err != nil {
+		return err
+	}
+	if err := cfg.Platform.Operations.Validate(); err != nil {
+		return err
+	}
+	return cfg.validatePlatformResources()
 }

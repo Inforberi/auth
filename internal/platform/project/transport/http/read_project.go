@@ -20,6 +20,7 @@ import (
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 404 {object} httpx.ErrorResponse
+// @Failure 429 {object} httpx.ErrorResponse "code: rate_limited; Retry-After: 60"
 // @Failure 503 {object} httpx.ErrorResponse
 // @Router /api/v1/platform/projects/{id} [get]
 func (h *Handler) Read(w http.ResponseWriter, r *http.Request) {

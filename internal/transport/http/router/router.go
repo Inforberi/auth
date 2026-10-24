@@ -27,6 +27,7 @@ import (
 )
 
 type Handlers struct {
+	ProjectCapacity   func(http.Handler) http.Handler
 	Projects          *projecthttp.Handler
 	Introspection     *tokenhttp.IntrospectionHandler
 	NativeTokens      *tokenhttp.NativeHandler

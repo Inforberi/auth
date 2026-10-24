@@ -2,17 +2,17 @@
 
 Обновлено24 октября2026. [Карта](index.md) · [статусы](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui) · [gates](../operations/acceptance-summary.md#открытые-ограничения-приёмки). Git/staging и доступность стенда проверять по факту.
 
-## Последний результат — MP4 resident sync
+## Текущий блок — MP4 resource bounds
 
-[Периодическая сверка](../features/project-runtime-sync.md): только resident/opening keys, batches128/общий deadline, empty registry без SQL. Error/incomplete/expired evidence retiring, active lease сохранена, stale response не закрывает replacement entry. Один worker на registry, cancel/join перед private catalog close. Общий binding predicate с cold loader, без ciphertext/decryption на poll; новые ENV5s/2s, runtime default off.
+[SQL deployment budget и административный admission](../features/platform-resource-bounds.md): configured API instances/surge, public/private catalog/project pool ceilings и external reserve. Local global/actor/project caps без очереди, shared Redis minute budgets для list/read/create/suspend/resume/retry. Общий Lua limiter переиспользован из MFA, её ключи не менялись; SQL authority и session guards сохранены.
 
-Luna: task check/lint0, host race, actual PostgreSQL TLS command regression с новым sync scenario и assembly SQL PASS без SKIP. Все13 Go совпали с manifest перед коммитом; [evidence](../planning/history.md#результат-mp4-resident-sync--24-октября-2026). Логи/manifest сохранены, временный стенд удалён Luna, рабочие ENV/БД не менялись. Scanner не повторяли без изменения dependencies/transport/crypto/grants. Это два registry в одном процессе, не fleet/partition/capacity/GC приёмка. Блок завершён, текущий commit/staging смотреть через Git.
+Первый отчёт Luna: lint/API/scanner PASS, общий check и router race FAIL на необновлённой fixture Swagger contract. Исправлена только эта fixture, целевой тест PASS. Остальные пакеты race PASS на предыдущем manifest. Live Redis/MFA/operator SQL тогда NOT RUN из-за отсутствующего тега образа; найден установленный redis:8.2-bookworm без pull. На новом снимке Luna сообщила промежуточные PASS полного task check и router race; live Redis/MFA/operator SQL ещё выполняются, финальный gate открыт. Коммит не означает завершение приёмки. [History](../planning/history.md#результат-mp4-resource-bounds--24-октября-2026) содержит первый FAIL и новые snapshot/log paths; не переписывать его как прошлый PASS. Коммит только по запросу. Предыдущий resident sync завершён:802cea6.
 
-Предыдущая [local assembly/lifecycle](../features/project-runtime-lifecycle.md) — commit569a098; [authority/socket faults](../operations/platform-role-faults.md) —45ad468; [protected role outcomes](../features/platform-role-outcomes.md) —e69bc71. Старые lint FAIL/targeted fixes сохранены в history, не переписаны как прошлый full PASS.
+## Следующий шаг
 
-## Следующий шаг — общие resource/rate bounds
+Уточнение пользователя: все исполняемые проверки и подготовка стенда — только отдельный чат Luna, включая быстрые tests. Здесь реализация/исправления и подготовка снимка; обратно только ошибки/блокировки, при успехе короткий PASS со snapshot ID, подробности в логах. Основной чат не ждёт. [Правило](development-workflow.md#проверки-параллельно-с-реализацией).
 
-Согласовать и реализовать общий бюджет SQL/catalog/worker resources по API instances и ограничение administrative admission, сохраняя существующие Redis/SQL guarantees. Не добавлять broker/универсальный workflow. Далее недостающая project-role/read-reconcile concurrency matrix, role bridge HTTP и остальные users/access/settings actions. Полная Auth feature assembly/worker scheduler/owner-managed readiness, credential rotation и весь MP4 ещё открыты. [План](../planning/multi-project.md).
+Прочитать компактный результат отдельного чата «Проверки Auth — Luna» (01a16eab-c777-78a0-a815-47b45ff0860d), устранить только найденные дефекты и повторить затронутые проверки. Затем project-role/read-reconcile concurrency matrix перед role bridge HTTP; остальное — [MP4](../planning/multi-project.md). Scheduler/полная feature assembly/owner-managed readiness/credential rotation ещё открыты. Здесь длинные проверки не ждать и не дублировать.
 
 ## Нельзя потерять
 

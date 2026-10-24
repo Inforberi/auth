@@ -22,6 +22,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
 	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/platform/operator/repository/postgres"
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
 	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
@@ -29,7 +30,7 @@ const operatorFixtureRole = "auth_platform_operator_test"
 
 func operatorConfig(realm string) *config.Config {
 	cfg := &config.Config{
-		Platform:     config.PlatformConfig{Enabled: true, RealmID: realm, Origin: "https://console.auth.example", ProjectAuthDomain: "auth.example", StorageTarget: "primary"},
+		Platform:     config.PlatformConfig{Enabled: true, RealmID: realm, Origin: "https://console.auth.example", ProjectAuthDomain: "auth.example", StorageTarget: "primary", Operations: admission.DefaultConfig(), Resources: config.DefaultPlatformResources()},
 		HTTP:         requestmiddleware.CapacityConfig{MaxInFlight: 16, RequestTimeout: 10 * time.Second},
 		Browser:      requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://console.auth.example"}},
 		Account:      accountservice.Config{URL: "https://console.auth.example/verify", EncryptionKey: "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=", TTL: 30 * time.Minute, ResendInterval: time.Minute, RegistrationIPLimit: 5, RegistrationGlobalLimit: 100},
@@ -40,6 +41,7 @@ func operatorConfig(realm string) *config.Config {
 		Capacity:     passwordservice.CapacityConfig{HashConcurrency: 1, LoginIPLimit: 30, LoginEmailLimit: 30, LoginGlobalLimit: 100},
 		Retention:    accountservice.RetentionConfig{EmailReservationDays: 30, SessionDays: 30, SecurityAuditDays: 180, BatchSize: 100, Interval: time.Minute},
 	}
+	cfg.Postgres.MaxConns = 6
 	cfg.Server.TLSCertFile, cfg.Server.TLSKeyFile = "test TLS", "test TLS"
 	return cfg
 }

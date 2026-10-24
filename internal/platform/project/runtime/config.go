@@ -41,6 +41,8 @@ type Config struct {
 	IdleTimeout           time.Duration
 }
 
+const ReaderMaxConnections int32 = 2
+
 func (c Config) Valid() bool {
 	return c.MaxRuntimes > 0 && c.ConnectionsPerProject > 0 &&
 		c.ConnectionBudget > 0 && c.MaxRuntimes <= c.ConnectionBudget/int(c.ConnectionsPerProject) &&

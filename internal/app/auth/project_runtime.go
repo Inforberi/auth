@@ -51,7 +51,7 @@ func openProjectRuntime(ctx context.Context, cfg config.PlatformConfig, owned *r
 		return nil, errors.New("project runtime reader configuration unavailable")
 	}
 	poolCfg.ConnConfig = connection
-	poolCfg.MaxConns, poolCfg.MinConns, poolCfg.MinIdleConns = 2, 0, 0
+	poolCfg.MaxConns, poolCfg.MinConns, poolCfg.MinIdleConns = projectruntime.ReaderMaxConnections, 0, 0
 	poolCfg.MaxConnLifetime, poolCfg.MaxConnIdleTime = 10*time.Minute, time.Minute
 	poolCfg.HealthCheckPeriod = time.Minute
 	private, err := pgxpool.NewWithConfig(ctx, poolCfg)

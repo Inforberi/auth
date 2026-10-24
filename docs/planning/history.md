@@ -1,5 +1,17 @@
 # История реализации Auth
 
+## Результат MP4 resource bounds — 24 октября 2026
+
+Первый снимок: `/private/tmp/auth-resource-bounds-snapshot.9ubupwae`, base802cea64a161e14bc2129cd58f5ce2db7446a439; patch `/private/tmp/auth-resource-bounds.patch`, SHA256 `997e9ae287399774c7f2e6a099973cbcbe60deb03ddadf567cad3ccb2ab82af7`; manifest27 Go `/private/tmp/auth-resource-bounds-manifest.sha256`. Все27 совпали перед передачей и после проверки. Отчёт Luna: `task check` FAIL exit201 и race FAIL exit1 на `TestSwaggerMatchesPlatformRoutes` (необновлённая тестовая platform config). Отдельный lint PASS0 issues, `task check:api` PASS, `task check:security` PASS0 reachable vulnerabilities после разрешённых сетевых повторов. Остальные пакеты race PASS; это host race. Логи `/private/tmp/auth-resource-bounds-{check,race,lint,api,security}.log`. Live Redis/MFA/operator SQL NOT RUN: указанного тега redis:8.2.6 локально нет; fixture не создавалась.
+
+Исправлена только конфигурация `TestSwaggerMatchesPlatformRoutes`: явные Operations/Resources/MaxConns и тестовый capacity middleware для проверки списка маршрутов. Сам middleware отдельно покрыт capacity/route boundary tests. Целевой тест PASS0.445s. Найдены локальные Redis8.2 bookworm/alpine; для живых проверок выбран уже установленный redis:8.2-bookworm, без pull и без изменения зависимостей проекта. Повторный снимок/результаты ниже; API/scanner не повторять из-за изменения только fixture.
+
+Повтор передан Luna: snapshot `/private/tmp/auth-resource-bounds-v2-snapshot.bii5ith0`, patch `/private/tmp/auth-resource-bounds-v2.patch` SHA256 `5b24da2666abf3dcd7235a3e1a88e9b32c5c36d6fe96c63d9d8b072e032ba6ef`, manifest28 Go `/private/tmp/auth-resource-bounds-v2-manifest.sha256`. С предыдущим снимком различается только `swagger_contract_test.go`; все28 source hashes сверены. Локальный Redis image ID `sha256:3055dc25265b0c19ec90a1756dad4e0faff6f79e2557a6ac3d1274e39ee906f6`, arm64, tag8.2-bookworm; actual patch version выяснить в fixture, не выдавать minor tag за8.2.6. Запрошены task check, router race и actual Redis/MFA/operator SQL; логи `/private/tmp/auth-resource-bounds-v2-*.log`. Остальные прежние race и API/scanner не повторяются. Итог повторной проверки pending; ожидания в основном чате нет. Перед коммитом получен промежуточный статус Luna: task check и router race PASS, живые проверки ещё выполняются. Коммит по запросу пользователя сохраняет этот открытый gate.
+
+
+Добавлены SQL deployment budget и platform project HTTP admission, общий атомарный Redis limiter выделен из MFA с сохранением её ключей. Контракт/ENV/Swagger — [описание](../features/platform-resource-bounds.md). Основной чат: formatter и целевые tests admission/HTTP/config/operator router PASS; MFA в первом целевом regex не запускалась (no tests to run); затем TestInvalidMFABatchBeforeRedis и app foreign-scope PASS. Это не live Redis проверка. Полный check/router race и live Redis/MFA/operator SQL ожидают повторного отчёта Luna; ранее успешные API/scanner не повторяются. Runtime workers/fleet/GC/предельный RPS не проверялись; рабочие БД/секреты не менялись.
+
+
 Архив результатов и проверок. Исторические слова «далее», открытые задачи и имена файлов относятся к моменту записи. Текущие статусы — в [roadmap](roadmap.md) и [implementation](implementation.md); архитектура — [отдельно](../architecture.md).
 
 ## Результат MP2.7 authority/transport — 24 октября 2026

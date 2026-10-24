@@ -1,10 +1,14 @@
 package config
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
+)
 
 func TestPlatformProfile(t *testing.T) {
 	base := validConfig()
-	base.Platform = PlatformConfig{Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example", ProjectAuthDomain: "auth.example", StorageTarget: "primary"}
+	base.Platform = PlatformConfig{Enabled: true, RealmID: "1c82c477-3a57-4823-8c49-a476550d8a21", Origin: "https://console.auth.example", ProjectAuthDomain: "auth.example", StorageTarget: "primary", Operations: admission.DefaultConfig(), Resources: DefaultPlatformResources()}
 	base.Browser.AllowedOrigins = []string{base.Platform.Origin}
 	base.MFA.Enabled = true
 	base.Server.TLSCertFile, base.Server.TLSKeyFile = "tls.crt", "tls.key"
