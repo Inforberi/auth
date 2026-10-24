@@ -26,6 +26,20 @@ func NewRuntimeCredentialReader(db *pgxpool.Pool, realm domain.ID, codec *creden
 	return &RuntimeCredentialReader{db: db, realm: realm, codec: codec}, nil
 }
 
+func (r *RuntimeCredentialReader) CheckRuntime(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	var safe bool
+	err := r.db.QueryRow(ctx, `SELECT (`+runtimeCredentialProfile+`) AND EXISTS(SELECT 1 FROM platform.operator_realm WHERE id=$1)`, r.realm).Scan(&safe)
+	if err != nil {
+		return catalogError(ctx, err)
+	}
+	if !safe {
+		return domain.ErrUnavailable
+	}
+	return nil
+}
+
 // This reader has no Auth access or catalog write/DDL privileges. The profile is
 // evaluated in the same snapshot as the ciphertext, including on cold retries.
 const runtimeCredentialProfile = `current_user=session_user
@@ -37,6 +51,9 @@ const runtimeCredentialProfile = `current_user=session_user
 	AND NOT has_schema_privilege(current_user,'auth','USAGE,CREATE')
 	AND NOT has_schema_privilege(current_user,'platform','CREATE')
 	AND NOT has_schema_privilege(current_user,'public','CREATE')
+	AND NOT EXISTS(SELECT 1 FROM (VALUES('platform.operator_realm'),('platform.projects'),
+		('platform.project_preparations'),('platform.project_secrets')) needed(relation)
+		WHERE NOT has_table_privilege(current_user,needed.relation,'SELECT'))
 	AND NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname IN ('auth','platform') AND pg_has_role(current_user,nspowner,'MEMBER'))
 	AND NOT EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace ns ON ns.oid=c.relnamespace
 		WHERE ns.nspname='platform' AND c.relkind IN ('r','p','v')

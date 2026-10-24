@@ -4,6 +4,8 @@
 
 ## Профиль и границы
 
+MP4 local lifecycle: опциональная сборка в `app/auth/project_runtime.go` владеет private catalog reader/codec и bounded registry; `project/service.ChangeState` передаёт confirmed SQL receipt через узкий observer, `runtime.Observe` retiring только старые snapshots нужного realm/project. Existing resources закрывают registry перед catalog pools. [Config/ограничения/статус проверки](features/project-runtime-lifecycle.md). Не fleet signal, не credential rotation и не полная Auth feature assembly.
+
 MP2.7 SQL registry: `internal/platform/project/runtime` владеет ограниченными project pools/leases и их cleanup; credential reader в project repository использует отдельный SELECT-only catalog pool, configured target задаёт transport. `ExecuteWithRuntime` соединяет registry с существующим role admission, без process-global current project или полного Auth.New на каждый проект. [Контракт и оставшиеся gates](features/project-runtime-registry.md). Production server/feature assembly/fleet budgets ещё не подключены.
 
 Проектный runtime проверяется [общим SQL profile](features/project-runtime-profile.md): установленный source checksum и несекретная read-only identity projection, actual connection/owners/ACL. Role mutation выполняет проверку на собственной transaction connection; onboarding добавляет свои условия к тому же predicate. Обычный Auth hot path не получает этот probe. Registry/transport trust и bounded pools — отдельные задачи, SQL marker не аутентифицирует произвольный сервер.

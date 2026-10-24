@@ -107,13 +107,13 @@ func TestRegistryRejectsUnknownTargetAndMismatchedCredential(t *testing.T) {
 
 func TestRegistryRejectsInvalidBudgets(t *testing.T) {
 	cfg := testConfig()
-	require.True(t, cfg.valid())
+	require.True(t, cfg.Valid())
 	cfg.MaxRuntimes = 2
-	require.False(t, cfg.valid())
+	require.False(t, cfg.Valid())
 	cfg.MaxRuntimes = 1
 	cfg.ConnectionsPerProject = 0
-	require.False(t, cfg.valid())
+	require.False(t, cfg.Valid())
 	cfg = testConfig()
 	cfg.MaxAcquiring = 0
-	require.False(t, cfg.valid())
+	require.False(t, cfg.Valid())
 }

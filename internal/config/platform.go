@@ -9,6 +9,7 @@ import (
 )
 
 type PlatformConfig struct {
+	Runtime           ProjectRuntimeConfig
 	Enabled           bool   `env:"PLATFORM_ENABLED" env-default:"false"`
 	RealmID           string `env:"PLATFORM_REALM_ID"`
 	Origin            string `env:"PLATFORM_ORIGIN"`
@@ -18,6 +19,9 @@ type PlatformConfig struct {
 
 func (cfg Config) ValidatePlatform() error {
 	if !cfg.Platform.Enabled {
+		if cfg.Platform.Runtime.Enabled {
+			return fmt.Errorf("PLATFORM_PROJECT_RUNTIME_ENABLED requires PLATFORM_ENABLED")
+		}
 		return nil
 	}
 	if !operatordomain.RealmID(cfg.Platform.RealmID).Valid() || !projectdomain.ValidOrigin(cfg.Platform.Origin) {
@@ -58,5 +62,5 @@ func (cfg Config) ValidatePlatform() error {
 	if err != nil || reset.Scheme+"://"+reset.Host != cfg.Platform.Origin {
 		return fmt.Errorf("platform PASSWORD_RESET_URL must use PLATFORM_ORIGIN")
 	}
-	return nil
+	return cfg.Platform.Runtime.Validate()
 }

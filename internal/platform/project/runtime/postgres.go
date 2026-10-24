@@ -20,7 +20,7 @@ type projectPool struct{ *pgxpool.Pool }
 func (p projectPool) acquire(ctx context.Context) (connection, error) { return p.Acquire(ctx) }
 
 func New(cfg Config, targets map[string]Target, loader CredentialLoader, check ProfileCheck) (*Registry, error) {
-	if !cfg.valid() || len(targets) == 0 || loader == nil || check == nil {
+	if !cfg.Valid() || len(targets) == 0 || loader == nil || check == nil {
 		return nil, ErrUnavailable
 	}
 	trusted := make(map[string]Target, len(targets))

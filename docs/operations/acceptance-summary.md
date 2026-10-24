@@ -6,7 +6,9 @@
 
 ## Открытые ограничения приёмки
 
-- MP2.7 authority/transport matrix,24 октября: [SQL row-lock и actual socket fault сценарии](platform-role-faults.md) подготовлены, длительная проверка передаётся отдельному чату Luna. До отчёта SQL/race/lint NOT RUN; это не разрешение открыть HTTP и не закрытие всей concurrent project-role/fleet матрицы.
+- MP2.7 authority/transport matrix,24 октября: [SQL row-lock и actual socket fault сценарии](platform-role-faults.md) проверены отдельным чатом Luna: task check/lint0/command race и TLS SQL PASS9.54s, без SKIP новых cases. Это не fleet partition/failover и не закрытие всей project-role/read-reconcile concurrency матрицы.
+
+- MP4 runtime lifecycle,24 октября: [опциональная assembly и local commit observer](../features/project-runtime-lifecycle.md) проверены Luna: Go tests/race/security, command TLS SQL и actual startup/shutdown SQL PASS; финальные targeted lint0/parser/runtime race PASS после4 исправлений. Полный task check ранее FAIL на lint, повторно не запускался. Fleet invalidation/credential rotation/полный MP4 ещё открыты. ENV examples default false, новых routes нет.
 
 - MP2.7 role outcomes,24 октября: read-own после потери write permission и receipt reconciliation без повторной мутации реализованы. Отдельная Luna проверила task check/lint/race и TLS SQL suite; final authority guard сохраняется. Полный отзыв/read revoke запрещает выдачу; cross-operator support доступа нет. Production wiring/автоматический invalidation, реальные transport-fault/concurrent authority matrix и fleet/rate bounds всё ещё до HTTP. [Контракт/evidence](../features/platform-role-outcomes.md).
 

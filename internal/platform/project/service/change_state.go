@@ -16,9 +16,16 @@ type ChangeStateInput struct {
 }
 
 func (s *Catalog) ChangeState(ctx context.Context, actor operatordomain.Principal, action domain.Action, input ChangeStateInput) (domain.TransitionReceipt, error) {
-	return s.repo.ApplyTransition(ctx, actor, domain.Transition{
+	result, err := s.repo.ApplyTransition(ctx, actor, domain.Transition{
 		ProjectID: input.ProjectID, OperationID: input.OperationID,
 		ExpectedVersion: input.ExpectedVersion, ExpectedGeneration: input.ExpectedGeneration,
 		Action: action, ActorKind: domain.OperatorActor, ActorID: domain.ID(actor.UserID), Reason: input.Reason,
 	})
+	if err != nil {
+		return domain.TransitionReceipt{}, err
+	}
+	if s.runtime != nil {
+		s.runtime.Observe(result)
+	}
+	return result, nil
 }

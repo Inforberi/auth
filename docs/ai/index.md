@@ -18,6 +18,7 @@
 | Authority/transport приёмка platform roles | [матрица и текущий verification gate](../operations/platform-role-faults.md) | `cmd/project-prepare/role_{authority,transport,wire}_integration_test.go` |
 | Профиль проектного SQL runtime | [identity/version/checksum/grants](../features/project-runtime-profile.md) | `Project/repository/postgres/{runtime_profile,onboarding_runtime}.go`, `Project/storage/postgres/schema_identity.go`, `migrations/project_identity.go`, `deploy/runtime*` |
 | Подключения к готовым проектам | [trusted targets, credential reader, bounded registry/leases](../features/project-runtime-registry.md) | `Project/runtime`, `Project/repository/postgres/{runtime_credentials,runtime_connection,role_runtime}.go`, `deploy/platform-runtime-reader-grants.sql` |
+| Сборка и lifecycle проектных пулов | [operational config, commit observer, shutdown](../features/project-runtime-lifecycle.md) | `internal/app/auth/project_runtime.go`, `internal/config/project_runtime.go`, `Project/runtime/lifecycle_observer.go`, `Project/service/change_state.go` |
 | Сборка, lifecycle, изоляция | [архитектура](../architecture.md), [realm isolation](../features/realm-isolation.md) | `internal/app/auth/{app,realm,run,realm_security}.go`, `internal/config`, `internal/server/http`, `internal/infra/realmscope` |
 
 ## Auth и доступы

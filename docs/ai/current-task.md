@@ -2,13 +2,15 @@
 
 Обновлено 24 октября 2026. [Карта](index.md) · [статусы](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui) · [приёмка](../operations/acceptance-summary.md#открытые-ограничения-приёмки). Git/staging и доступность стенда проверять по факту.
 
-## Текущий блок — MP2.7 authority/transport, ожидает отдельной проверки
+## Последний результат — MP4 local runtime lifecycle
 
-Задание передано в отдельный чат Luna. Snapshot `/private/tmp/auth-role-faults-snapshot.3YF8Ha`, base `e69bc71`, patch/новые file hashes `/private/tmp/auth-role-faults-manifest.sha256`. Отчёт получать из указанного чата; основной поток не ждёт его завершения. Снимок не менять, результаты относятся только к нему.
+Luna завершила проверку: Go tests/race/security/command TLS SQL и новый assembly SQL PASS; первоначальный `task check` FAIL на4 lint issues, после исправления targeted lint0/parser/runtime race PASS. Полный task check повторно не запускался и не переименован в PASS. Все19 изменённых Go совпали с verified manifest `/private/tmp/auth-runtime-lifecycle-fix-manifest.sha256`. [Evidence](../planning/history.md#результат-mp4-local-runtime-lifecycle--24-октября-2026). Новый код завершён; commit/staging проверять через Git.
 
-[Сценарии](../operations/platform-role-faults.md) подготовлены: session/AccessManage/TOTP/suspend по обе стороны commit admission с реальным row-lock wait, backend terminate до записи и TCP cutoff после durable commit до клиентского ответа. Последний сценарий проверяет receipt recovery без нового admission. Изменены только тесты и документация, runtime/API не менялись.
+[Опциональная assembly](../features/project-runtime-lifecycle.md): отдельный read-only catalog pool/codec/trusted target и bounded registry, startup/readiness profile, confirmed lifecycle receipt → local retirement старых snapshots, active lease/drain до закрытия catalog dependencies. Fleet invalidation и credential rotation не добавлены. Новые ENV только в examples, default false; реальные данные/ENV не менялись, HTTP role bridge закрыт.
 
-Здесь выполнены formatter и compile-only command test PASS (`/private/tmp/auth-role-faults-compile.log`, SQL не запускался). Длительные task check/race/actual TLS SQL переданы в отдельный чат «Проверки Auth — Luna» (`01a16eab-c777-78a0-a815-47b45ff0860d`) на отдельном source snapshot. До отчёта новые гарантии NOT RUN, MP2.7 gate открыт; текущий commit/staging проверять через Git. Не повторять проверки здесь параллельно с Luna.
+Длительные проверки выполнял отдельный чат «Проверки Auth — Luna» (`01a16eab-c777-78a0-a815-47b45ff0860d`); здесь они не дублировались. SQL startup/readiness/unsafe-grant refusal/failed-start cleanup и отсутствие private sessions после shutdown проверены, без SKIP. Контейнеры/cert/binaries убраны Luna; логи/manifest сохранены. Новых HTTP routes/schema/dependencies нет.
+
+Предыдущая [authority/transport матрица](../operations/platform-role-faults.md) уже проверена Luna: task check/lint0/command race и actual TLS SQL PASS9.54s, все новые cases без SKIP. [Evidence](../planning/history.md#результат-mp27-authoritytransport--24-октября-2026). Test changes вошли в `45ad468`; эту приёмку не путать с новой assembly. Текущий Git/staging проверять по факту.
 
 ## Последний завершённый блок — protected role outcomes
 
@@ -20,9 +22,9 @@ Outcome коммит `e69bc71`, прежние `94f1ea6` workflow / `fa901fb` re
 
 Владелец платформы управляет проектами и явно создаёт локальных администраторов без копии identity/обязательного первого local super_admin/raw setup token. [ADR005](../adr/005-independent-projects.md#3-одна-сессия-оператора-без-пользовательского-sso). Standalone setup не ослаблялся; owner-managed readiness ещё открыт.
 
-## Следующий шаг — отчёт отдельного чата, затем production wiring
+## Следующий шаг — межэкземплярный invalidation и resource bounds
 
-Получить отчёт Luna, исправить конкретные ошибки и повторить только затронутые проверки. До него продолжать лишь независимую работу. Затем production wiring/автоматический invalidation и fleet/rate/resource budgets → HTTP. Полная project-role/read-reconcile concurrency matrix, Auth feature assembly/worker scheduler/owner-managed readiness и другие users/access/settings actions остаются открытыми. Полностью отозванному/другому оператору outcome по UUID не выдаётся. MP2.7/MP4 целиком не закрыты. [План](../planning/multi-project.md#результат-и-границы).
+Определить механизм доставки/восстановления lifecycle changes между API instances: SQL остаётся authority, потеря уведомления не должна оставлять бесконечный stale runtime. Не вводить broker/универсальный event framework без необходимости. Затем согласованные fleet/resource/rate bounds, недостающая project-role/read-reconcile concurrency matrix и role bridge HTTP. Полная Auth feature assembly/worker scheduler/owner-managed readiness и другие users/access/settings actions остаются открытыми. Полностью отозванному/другому оператору outcome по UUID не выдаётся. MP2.7/MP4 целиком не закрыты. [План](../planning/multi-project.md#результат-и-границы).
 
 Role orchestration и onboarding пока вызывают только integration tests. Lost-commit-ack — адаптер после настоящего commit, не сетевой/fleet test. Checksum — установленный source marker, не полный DDL-drift scanner. Onboarding outage/reseal ограничения — в [контракте](../features/project-onboarding-preparation.md); unknown commit не означает rollback/reset. Старым БД нужен controlled upgrade, source init их автоматически не обновляет.
 

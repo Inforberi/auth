@@ -24,6 +24,7 @@ func (a *readAuthorityStub) AuthorizeRead(_ context.Context, actor operatordomai
 }
 
 type catalogStub struct {
+	receipt      *domain.TransitionReceipt
 	reads, lists int
 	query        ListQuery
 	page         Page
@@ -51,6 +52,9 @@ func (r *catalogStub) List(_ context.Context, q ListQuery) (Page, error) {
 
 func (r *catalogStub) ApplyTransition(_ context.Context, actor operatordomain.Principal, command domain.Transition) (domain.TransitionReceipt, error) {
 	r.actor, r.command = actor, command
+	if r.receipt != nil {
+		return *r.receipt, r.err
+	}
 	return domain.TransitionReceipt{ProjectID: command.ProjectID}, r.err
 }
 

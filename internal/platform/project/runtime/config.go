@@ -41,7 +41,7 @@ type Config struct {
 	IdleTimeout           time.Duration
 }
 
-func (c Config) valid() bool {
+func (c Config) Valid() bool {
 	return c.MaxRuntimes > 0 && c.ConnectionsPerProject > 0 &&
 		c.ConnectionBudget > 0 && c.MaxRuntimes <= c.ConnectionBudget/int(c.ConnectionsPerProject) &&
 		c.MaxAcquiring > 0 && c.AcquireTimeout > 0 && c.OpenTimeout > 0 && c.IdleTimeout > 0

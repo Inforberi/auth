@@ -50,6 +50,21 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 	if err := operator.CheckRuntime(ctx, cfg.InitialSetup.Enabled); err != nil {
 		return nil, err
 	}
+	owned := &resources{}
+	assembled := false
+	defer func() {
+		if !assembled {
+			owned.close()
+		}
+	}()
+	runtime, err := openProjectRuntime(ctx, cfg.Platform, owned)
+	if err != nil {
+		return nil, err
+	}
+	var observer projectservice.RuntimeObserver
+	if runtime != nil {
+		observer = runtime
+	}
 	account, repo, err := security.assembleAccount(deps.pool, deps.redis, mail, cfg.Account, postgres.DeliveryConfig{})
 	if err != nil {
 		return nil, err
@@ -79,7 +94,7 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 	}
 	handler, err := router.NewOperator(router.Handlers{
 		Config: cfg, Logger: deps.log, Setup: setup, MFA: mfa.handler,
-		Projects:         projecthttp.New(projectservice.New(projects, operator), deps.log),
+		Projects:         projecthttp.New(projectservice.NewWithRuntime(projects, operator, observer), deps.log),
 		PasswordHandler:  passwordhttp.New(password.service, deps.log),
 		Recovery:         passwordhttp.NewRecovery(password.recovery, deps.log),
 		Middleware:       sessionhttp.New(svc, deps.log),
@@ -91,14 +106,20 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 			if err := deps.pool.Ping(ctx); err != nil {
 				return err
 			}
+			if runtime != nil {
+				if err := runtime.reader.CheckRuntime(ctx); err != nil {
+					return err
+				}
+			}
 			return deps.redis.Ping(ctx).Err()
 		},
 	})
 	if err != nil {
 		return nil, err
 	}
+	assembled = true
 	return &realm{
-		handler: handler, resources: &resources{},
+		handler: handler, resources: owned,
 		retention: accountservice.NewRetention(repo, cfg.Retention),
 		workers:   realmDeliveryWorkers(password.recovery, account, mfa.delivery, nil),
 	}, nil

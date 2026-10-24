@@ -1,6 +1,6 @@
 # Отказы и конкурентный отзыв доступа при создании роли
 
-MP2.7,24 октября2026. Статус: сценарии подготовлены, SQL/race/lint передаются в отдельный чат «Проверки Auth — Luna». До фактического отчёта это NOT RUN, не закрытый security gate.
+MP2.7,24 октября2026. Статус: отдельный чат «Проверки Auth — Luna» выполнил task check/lint0, command race и actual PostgreSQL18.6 TLS suite PASS9.54s, все новые cases без SKIP. [Evidence](../planning/history.md#результат-mp27-authoritytransport--24-октября-2026). Это закрывает перечисленные локальные сценарии, не весь MP2.7/fleet security gate.
 
 ## Матрица SQL authority
 

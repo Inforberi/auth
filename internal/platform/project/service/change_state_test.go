@@ -29,3 +29,28 @@ func TestChangeStateUsesCurrentSQLMutationPort(t *testing.T) {
 		t.Fatal("SQL authority failure lost", err)
 	}
 }
+
+type runtimeObserverStub struct{ seen []domain.TransitionReceipt }
+
+func (r *runtimeObserverStub) Observe(change domain.TransitionReceipt) {
+	r.seen = append(r.seen, change)
+}
+
+func TestChangeStateObservesOnlyConfirmedReceiptIncludingReplay(t *testing.T) {
+	receipt := domain.TransitionReceipt{ProjectID: "22222222-2222-4222-8222-222222222222", Version: 8, Generation: 10, DesiredState: domain.Suspended, Phase: domain.Ready}
+	repo := &catalogStub{receipt: &receipt, err: operatordomain.ErrForbidden}
+	observer := &runtimeObserverStub{}
+	svc := NewWithRuntime(repo, &readAuthorityStub{}, observer)
+	input := ChangeStateInput{ProjectID: receipt.ProjectID}
+	if _, err := svc.ChangeState(t.Context(), operatordomain.Principal{}, domain.Suspend, input); err == nil || len(observer.seen) != 0 {
+		t.Fatal("failed/unknown transaction must not produce a successful lifecycle observation")
+	}
+	repo.err = nil
+	for _, replay := range []bool{false, true} {
+		receipt.Replayed = replay
+		result, err := svc.ChangeState(t.Context(), operatordomain.Principal{}, domain.Suspend, input)
+		if err != nil || result != receipt || observer.seen[len(observer.seen)-1] != receipt {
+			t.Fatal("must forward the committed receipt, never the request's expected version", err)
+		}
+	}
+}

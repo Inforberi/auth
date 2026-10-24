@@ -21,8 +21,17 @@ type ReadAuthority interface {
 type Catalog struct {
 	repo      Repository
 	authority ReadAuthority
+	runtime   RuntimeObserver
 }
 
 func New(repo Repository, authority ReadAuthority) *Catalog {
-	return &Catalog{repo: repo, authority: authority}
+	return NewWithRuntime(repo, authority, nil)
+}
+
+type RuntimeObserver interface {
+	Observe(domain.TransitionReceipt)
+}
+
+func NewWithRuntime(repo Repository, authority ReadAuthority, runtime RuntimeObserver) *Catalog {
+	return &Catalog{repo: repo, authority: authority, runtime: runtime}
 }
