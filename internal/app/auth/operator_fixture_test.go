@@ -131,7 +131,12 @@ func operatorFixture(t *testing.T) (*pgxpool.Pool, realmDependencies, *config.Co
 	t.Cleanup(func() {
 		cleanup, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		for _, purpose := range []string{"email-verification-limit", "password-limit", "mfa-limit"} {
+		for _, purpose := range []string{
+			"email-verification-limit",
+			"password-limit",
+			"mfa-limit",
+			"platform-project-admission",
+		} {
 			prefix, err := scope.RedisPrefix(purpose, "unused")
 			if err != nil {
 				t.Error(err)
