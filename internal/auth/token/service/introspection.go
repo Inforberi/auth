@@ -50,26 +50,11 @@ type IntrospectionResult struct {
 }
 
 func NewIntrospection(repo IntrospectionRepository, limiter IntrospectionLimiter, keys *authjwt.PublicKeys, cfg IntrospectionConfig, catalog accesssettings.Catalog) (*Introspection, error) {
-	if repo == nil || limiter == nil || cfg.ConsumerPerMinute < 1 || cfg.ConsumerPerMinute > 1_000_000 || cfg.ProjectPerMinute < 1 || cfg.ProjectPerMinute > 1_000_000 {
-		return nil, authjwt.ErrConfiguration
-	}
-	resources, err := audiencePolicies(cfg.Resources, catalog)
+	factory, err := NewIntrospectionFactory(limiter, keys, cfg, catalog)
 	if err != nil {
 		return nil, err
 	}
-	clients, err := introspectionClients(cfg.Clients, resources)
-	if err != nil {
-		return nil, err
-	}
-	policies := make([]authjwt.Expectations, 0, len(resources))
-	for audience, resource := range resources {
-		policies = append(policies, authjwt.Expectations{Issuer: cfg.Issuer, Audience: audience, Mode: resource.mode})
-	}
-	verifier, err := authjwt.NewIssuerVerifier(policies, keys)
-	if err != nil {
-		return nil, err
-	}
-	return &Introspection{repo: repo, verifier: verifier, limiter: limiter, resources: resources, clients: clients, config: cfg, admission: make(chan struct{}, 32)}, nil
+	return factory.Bind(repo)
 }
 
 func (s *Introspection) Inspect(ctx context.Context, client *IntrospectionClient, raw string) (IntrospectionResult, error) {

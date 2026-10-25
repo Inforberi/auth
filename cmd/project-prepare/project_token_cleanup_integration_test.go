@@ -17,6 +17,8 @@ func (f projectTokenFixture) cleanupTokenLimits(t *testing.T, ctx context.Contex
 	require.NoError(t, err)
 	lookup, err := scope.RedisPrefix("jwt-refresh-lookup", "auth:{jwt-refresh-lookup}:")
 	require.NoError(t, err)
+	introspection, err := scope.RedisPrefix("jwt-introspection", "auth:{jwt-introspection}:")
+	require.NoError(t, err)
 	password, err := scope.RedisPrefix("password-limit", "auth:password-recovery:limit:")
 	require.NoError(t, err)
 	mfa, err := scope.RedisPrefix("mfa-limit", "auth:mfa:limit:")
@@ -25,6 +27,7 @@ func (f projectTokenFixture) cleanupTokenLimits(t *testing.T, ctx context.Contex
 	pwd := ciphers["password-reset:v1"]
 	email := ciphers["email-login:v1"]
 	factor := ciphers["mfa:v1"]
+	*keys = append(*keys, introspection+"client:"+jwt.Digest(tokenConsumerID), introspection+"project")
 	*keys = append(*keys, jwtPrefix+"project", jwtPrefix+"ip:"+jwt.Digest(tokenFixtureIP), lookup+"project", lookup+"ip:"+jwt.Digest(tokenFixtureIP), password+pwd.Digest("login-ip:"+tokenFixtureIP), password+pwd.Digest("login-global"), mfa+"project", mfa+"login:ip:"+factor.Digest(tokenFixtureIP))
 	for i, user := range tokenFixtureUsers {
 		*keys = append(*keys, jwtPrefix+"actor:"+jwt.Digest(user), password+pwd.Digest("login-email:"+tokenFixtureEmails[i]), mfa+factor.Digest("user:"+user), mfa+factor.Digest("login:factor-user:"+user))

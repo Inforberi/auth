@@ -9,14 +9,23 @@ import (
 
 	tokendomain "github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
+	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
+var _ tokenhttp.IntrospectionService = (*ProjectTokens)(nil)
+
 func TestProjectTokensDisabledWithoutDependencies(t *testing.T) {
 	service, err := NewProjectTokens(t.Context(), projectruntime.Key{}, ProjectTokenConfig{}, ProjectTokenDependencies{})
 	require.NoError(t, err)
+	client, ok := service.Authenticate("reports-api", "synthetic")
+	require.False(t, ok)
+	require.Nil(t, client)
+	result, err := service.Inspect(t.Context(), nil, "synthetic")
+	require.ErrorIs(t, err, tokendomain.ErrUnavailable)
+	require.False(t, result.Active)
 	jwks, err := service.PublicJWKS(t.Context())
 	require.ErrorIs(t, err, authjwt.ErrConfiguration)
 	require.Nil(t, jwks)
@@ -41,4 +50,14 @@ func TestProjectTokenRedisRejectsRetryingClient(t *testing.T) {
 	require.ErrorIs(t, cfg.validate(deps), authjwt.ErrConfiguration)
 	_, err = NewProjectTokenRedis(nil)
 	require.ErrorIs(t, err, authjwt.ErrConfiguration)
+}
+
+func TestProjectTokensWithoutIntrospection(t *testing.T) {
+	service := &ProjectTokens{cfg: ProjectTokenConfig{Enabled: true}}
+	client, ok := service.Authenticate("reports-api", "synthetic")
+	require.False(t, ok)
+	require.Nil(t, client)
+	result, err := service.Inspect(t.Context(), nil, "synthetic")
+	require.ErrorIs(t, err, tokendomain.ErrUnavailable)
+	require.Equal(t, tokenservice.IntrospectionResult{}, result)
 }

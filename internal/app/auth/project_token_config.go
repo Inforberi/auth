@@ -25,14 +25,20 @@ type ProjectNativeConfig struct {
 	SMTPAllowedTargets []string
 }
 
+type ProjectIntrospectionConfig struct {
+	Clients                             []tokenservice.IntrospectionClientConfig
+	ConsumerPerMinute, ProjectPerMinute int
+}
+
 type ProjectTokenConfig struct {
-	Enabled bool
-	Issuer  string
-	Tokens  tokenservice.Config
-	Catalog accesssettings.Catalog
-	Limits  tokenredis.Limits
-	Native  ProjectNativeConfig
-	Timeout time.Duration
+	Introspection *ProjectIntrospectionConfig
+	Enabled       bool
+	Issuer        string
+	Tokens        tokenservice.Config
+	Catalog       accesssettings.Catalog
+	Limits        tokenredis.Limits
+	Native        ProjectNativeConfig
+	Timeout       time.Duration
 }
 
 type ProjectTokenDependencies struct {

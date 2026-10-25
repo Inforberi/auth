@@ -16,12 +16,13 @@ import (
 )
 
 type ProjectTokens struct {
-	cfg     ProjectTokenConfig
-	key     projectruntime.Key
-	deps    ProjectTokenDependencies
-	signer  *signing.Signer
-	factory *tokenservice.Factory
-	native  *projectNative
+	introspection *tokenservice.IntrospectionFactory
+	cfg           ProjectTokenConfig
+	key           projectruntime.Key
+	deps          ProjectTokenDependencies
+	signer        *signing.Signer
+	factory       *tokenservice.Factory
+	native        *projectNative
 }
 
 func NewProjectTokens(ctx context.Context, key projectruntime.Key, cfg ProjectTokenConfig, deps ProjectTokenDependencies) (*ProjectTokens, error) {
@@ -64,6 +65,10 @@ func NewProjectTokens(ctx context.Context, key projectruntime.Key, cfg ProjectTo
 	if err != nil {
 		return nil, err
 	}
+	introspection, err := newProjectIntrospection(limiter, signer.PublicJWKS(), cfg)
+	if err != nil {
+		return nil, err
+	}
 	native, err := newProjectNative(ctx, key, scope, configuration.EncryptionKey(), cfg, deps)
 	if err != nil {
 		return nil, err
@@ -72,13 +77,14 @@ func NewProjectTokens(ctx context.Context, key projectruntime.Key, cfg ProjectTo
 		return nil, err
 	}
 	// Factory copies resource/native policies; retain only the runtime flags/config needed by adapters.
+	cfg.Introspection = nil
 	cfg.Tokens.Resources = nil
 	if cfg.Tokens.Native != nil {
 		policy := *cfg.Tokens.Native
 		cfg.Tokens.Native = &policy
 	}
 	cfg.Native.EmailOTP.CheckPolicy = nil
-	return &ProjectTokens{cfg: cfg, key: key, deps: deps, signer: signer, factory: factory, native: native}, nil
+	return &ProjectTokens{cfg: cfg, key: key, deps: deps, signer: signer, factory: factory, native: native, introspection: introspection}, nil
 }
 
 func (p *ProjectTokens) use(ctx context.Context, operation func(context.Context, *pgxpool.Pool, *tokenservice.Service) error) error {

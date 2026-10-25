@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net"
 	"testing"
 	"time"
@@ -33,6 +35,8 @@ var (
 )
 
 const (
+	tokenConsumerID                                   = "reports-api"
+	tokenConsumerSecret                               = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 	tokenFixtureIP                                    = "192.0.2.86"
 	tokenFixturePermission accessdomain.PermissionKey = "reports.read"
 )
@@ -89,9 +93,11 @@ func (f projectTokenFixture) run(t *testing.T, ctx context.Context) {
 	base := projectPasswordFixtureConfig()
 	catalog, err := accesssettings.NewCatalog([]accesssettings.Permission{{Key: tokenFixturePermission, Name: "Read reports"}})
 	require.NoError(t, err)
+	consumerHash := sha256.Sum256([]byte(tokenConsumerSecret))
 	cfg := appauth.ProjectTokenConfig{
-		Enabled: true, Issuer: "https://project-token.example.test", Catalog: catalog, Limits: tokenredis.DefaultLimits(), Timeout: 15 * time.Second,
-		Tokens: tokenservice.Config{AccessTTL: 2 * time.Minute, Resources: []tokenservice.Resource{{Audience: "reports", Permissions: []accessdomain.PermissionKey{tokenFixturePermission}}}, Native: &tokenservice.NativePolicy{IdleTTL: time.Hour, AbsoluteTTL: 2 * time.Hour, Sessions: base.Session}},
+		Introspection: &appauth.ProjectIntrospectionConfig{Clients: []tokenservice.IntrospectionClientConfig{{ID: tokenConsumerID, SecretHashes: []string{hex.EncodeToString(consumerHash[:])}, Audiences: []string{"reports"}}}, ConsumerPerMinute: 100, ProjectPerMinute: 100},
+		Enabled:       true, Issuer: "https://project-token.example.test", Catalog: catalog, Limits: tokenredis.DefaultLimits(), Timeout: 15 * time.Second,
+		Tokens: tokenservice.Config{AccessTTL: 2 * time.Minute, Resources: []tokenservice.Resource{{Audience: "reports", Permissions: []accessdomain.PermissionKey{tokenFixturePermission}}, {Audience: "reports-export", Permissions: []accessdomain.PermissionKey{tokenFixturePermission}}}, Native: &tokenservice.NativePolicy{IdleTTL: time.Hour, AbsoluteTTL: 2 * time.Hour, Sessions: base.Session}},
 		Native: appauth.ProjectNativeConfig{PasswordEnabled: true, Capacity: base.Capacity, EmailOTP: otpservice.Config{Enabled: true, TTL: 5 * time.Minute, ResendInterval: time.Minute, RequestGlobalLimit: 100, ConfirmGlobalLimit: 1000}, MFA: mfaservice.Config{Enabled: true, Issuer: "Project tokens", ChallengeTTL: time.Minute, UserLimitPerMinute: 100, IPLimitPerMinute: 100, GlobalLimitPerMinute: 100}, SMTPAllowedTargets: []string{f.listener.Addr().String()}},
 	}
 	service, err := appauth.NewProjectTokens(ctx, f.key, cfg, appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, IssuanceRedis: client, Hash: f.hash})
@@ -116,10 +122,16 @@ func (f projectTokenFixture) run(t *testing.T, ctx context.Context) {
 	require.NoError(t, err)
 	_, err = foreign.VerifySignature(ctx, exchanged.Raw, time.Now())
 	require.Error(t, err)
+	f.introspectionIsolation(t, ctx, service, cfg, client, input, exchanged.Raw)
 	f.nativeTokenFlows(t, ctx, service, cfg, verifier, ciphers, scope, &keys)
 	_, err = f.db.Exec(ctx, `UPDATE auth.users SET status='blocked',auth_version=auth_version+1 WHERE id=$1`, tokenFixtureUsers[0])
 	require.NoError(t, err)
 	rejected, err := service.Exchange(ctx, input)
 	require.Error(t, err)
 	require.Nil(t, rejected)
+	consumer, ok := service.Authenticate(tokenConsumerID, tokenConsumerSecret)
+	require.True(t, ok)
+	inactive, err := service.Inspect(ctx, consumer, exchanged.Raw)
+	require.NoError(t, err)
+	require.Equal(t, tokenservice.IntrospectionResult{}, inactive, "blocked owner must return only inactive")
 }
