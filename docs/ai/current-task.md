@@ -8,6 +8,7 @@
 
 Добавлены actual SQL+Redis issuance/worker TLS-rejection/retry/confirm/reset/replay/suspend/page tests и unit URL/concurrency/cancellation. Formatter/diff выполняет main; все executable checks переданы отдельной Luna: Luna V3 task check exit0/lint0 и app/auth race exit0; V2 config/cmd race и actual full command SQL PASS без SKIP. Manifest11 совпал до/после и с main; после V2 менялся только тип counter, SQL/другие успешные наборы обоснованно не повторялись. Snapshot `/private/tmp/auth-project-email-v3.5mpw8ae3`, manifest `/private/tmp/auth-project-email-v3-manifest.sha256`, metadata `/private/tmp/auth-project-email-v3-snapshot.json`. Локальный gate закрыт. Реальная внешняя TLS delivery/public routing/registration/other queues/lifecycle auto-start/fleet bounds этим блоком не подтверждены.
 
+Будущее требование пользователя: [шаблоны писем](../planning/email-templates.md) — стандартные варианты, project HTML override/upload, preview/test/publish в A7 после backend; текущий scope и SMTP verification этим не меняются.
 
 ## Следующий шаг
 
