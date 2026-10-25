@@ -94,18 +94,7 @@ func (cfg Config) validateStorage() error {
 }
 
 func (cfg Config) validateSessions() error {
-	if cfg.Session.FreshAuthTTL < time.Minute || cfg.Session.FreshAuthTTL > 15*time.Minute {
-		return fmt.Errorf("SESSION_FRESH_AUTH_TTL must be between 1m and 15m")
-	}
-	if cfg.Session.SessionTTL <= 0 || cfg.Session.AbsoluteSessionTTL < cfg.Session.SessionTTL || cfg.Session.SessionRefreshThreshold <= 0 || cfg.Session.SessionRefreshThreshold >= cfg.Session.SessionTTL {
-		return fmt.Errorf("invalid session durations")
-	}
-	if cfg.Session.AdminIdleTimeout < time.Minute || cfg.Session.AdminAbsoluteTTL < cfg.Session.AdminIdleTimeout ||
-		cfg.Session.AdminActivityInterval < time.Second || cfg.Session.AdminActivityInterval > cfg.Session.AdminIdleTimeout/10 ||
-		cfg.Session.AdminIdleTimeout%time.Second != 0 || cfg.Session.AdminAbsoluteTTL%time.Second != 0 || cfg.Session.AdminActivityInterval%time.Second != 0 {
-		return fmt.Errorf("admin session durations must be whole seconds: idle >= 1m, absolute >= idle, activity interval 1s..idle/10")
-	}
-	return nil
+	return cfg.Session.Validate()
 }
 
 func (cfg Config) validateRecovery() error {

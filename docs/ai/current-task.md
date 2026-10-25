@@ -2,22 +2,22 @@
 
 Обновлено25 октября2026. [Карта](index.md) · [статусы](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui) · [gates](../operations/acceptance-summary.md#открытые-ограничения-приёмки). Git/staging проверять по факту.
 
-## Текущий блок — MP4.1a project Auth loader
+## Завершённый блок — MP4.1b project password/session
 
-[Решение и контракт](../features/project-auth-loader.md). Добавлены узкий AuthKey и read-only LoadAuthConfiguration: общий с DB loader exact catalog/profile SQL, AEAD binding, stored policy через readonly RepeatableRead под существующим registry lease, финальная проверка current key. Не выдаются DB password/setup/signing; fmt/JSON скрывают объект. Общий timeout3s; нет ENV fallback/Initialize/новых pools/routes/workers/capabilities. На ошибке нет частичного результата.
+[Контракт](../features/project-password-runtime.md). Registry.UsePool удерживает логический entry lease/MaxAcquiring slot без physical connection во время hash. ProjectPassword.New/Login используют data key/scoped limiter MP4.1a, borrowed process hasher/Redis/reader и existing password/session/settings services на том же pool. Early policy и final SQL active/auth_version/verification/MFA guards сохранены; current key/profile до login и перед выдачей raw result. Session config validator централизован без изменения правил. Новых pools/workers/routes/ENV seed/capabilities нет.
 
-Luna V1 task check/affected race PASS; V2 полный actual TestPrepareCommandSQL PASS без SKIP, включая loader и четыре subtests, runtime/roles/onboarding/managed и parent replay/wrong-root. Targeted lint cmd/project-prepare PASS (0 issues). Manifest7 совпал до/после и main перед коммитом. Snapshot `/private/tmp/auth-project-loader-v2.taex8bqe`, base515f62c, manifest `/private/tmp/auth-project-loader-v2-manifest.sha256`, metadata `/private/tmp/auth-project-loader-v2-snapshot.json`. Ownfixture удалена; [evidence](../planning/history.md#результат-mp41a-project-auth-loader--25-октября-2026). Пользователь разрешил commit и следующий блок.
+Luna: task check/lint0, affected race и полный actual TestPrepareCommandSQL PASS без SKIP, включая восемь password/session cases и прежние loader/runtime/downstream/parent replay. Snapshot `/private/tmp/auth-project-password.xss82yb3`, base672162d, manifest9 `/private/tmp/auth-project-password-manifest.sha256`, metadata `/private/tmp/auth-project-password-snapshot.json` совпали до/после и перед коммитом. Own PostgreSQL/Redis удалены, DB15 пуста. [Evidence](../planning/history.md#результат-mp41b-project-password-session--25-октября-2026). Пользователь разрешил commit; полного MP4/HTTP/readiness/fleet sign-off это не даёт.
 
 ## Следующий шаг
 
-MP4.1b: собрать существующие feature services для selected project с project data key/scope и сохранёнными settings, без ENV auto-seed и дополнительных pools. Важно: registry callback выдаёт leased connection, его нельзя сохранить в realm/services/workers после callback. Полный Auth runtime lifecycle требует явного решения reuse/leases/eviction и bounded workers; не подменять это скрытым pool или global current project.
+Полная project MFA challenge/session assembly, затем выбранные SMTP/provider/token dependencies, bounded workers и отдельные readiness/MP5 host routing guards. Этот первый Login не реализует MFA challenge: enrolled/role-required MFA fail-closed. Current platform availableMethods остаются false; normal traffic/UI не опубликованы.
 
-Loader — assembly snapshot, не admission/cache/public-ready. Проверка actual delivery/providers/token dependencies и policy version перед serving остаётся далее; current settings bridge capabilities пусты. Managed provisioning/ready publication имеет отдельные stage guards, normal loader допускает только ready/enabled. Existing sessions/JWT policy автоматически не отзывает.
+UsePool callback держит MaxAcquiring slot до выхода; нельзя вкладывать registry acquisitions или сохранять pool/services/async работу. Pool закрывает owner после drain. TTL/capacity — trusted constructor inputs, не новый UI settings API. Old object pinned epoch не переключает проект: stale catalog даёт отказ, пересборка остаётся manager. Capacity/GC/fleet — только по фактическим измерениям.
 
-## Нельзя потерять
+## Процесс и ограничения
 
-- Предыдущий блок515f62c project Auth policy: Luna V1–V5 PASS, full command SQL без SKIP; [evidence](../planning/history.md#результат-mp27-project-auth-policy--25-октября-2026). Source68 совпал перед коммитом. Controlled upgrade initial schema/grants — отдельная операция, рабочие БД не менялись.
-- Committed admission до3s — окончательная авторизация точной команды: revoke/suspend запрещает новые admissions, уже принятая может завершиться. Unknown commit не означает rollback. Owner не копируется в project users; standalone setup сохраняется.
-- PostgreSQL + обязательный Redis, без SQL-only/fallback. Новые зависимости только с разрешения; здесь не добавлены. Реальные БД/ENV/secrets/staging сохранять. Go1.27.3 согласован.
-- До UI: MP1–MP6 → MP6R security/refactor → MP7 → MP8 → отдельно согласованный UI. Перед UI заранее предупредить и согласовать переход/стек/макеты/экраны. Frontend сейчас не начинать. Capacity/GC/fleet только по измерениям.
-- Все tests/fixtures в отдельном чате «Проверки Auth — Luna», exact snapshot/cwd обязателен: worktree6377/auth — другой stale проект. Здесь не ждать/не дублировать. [Процесс](development-workflow.md).
+- По последнему согласованию: основной исполнитель Sol medium; разведка незнакомого участка — локальному субагенту Luna medium в этом чате, краткая карта файлов/символов/связей. Main затем читает изменяемый код и критичные контракты, не повторяет общий обзор. Для мелких правок отдельный поиск не нужен. Отдельный чат Luna — только тестирование/проверки, разведку туда больше не отправлять.
+- Verification — «Проверки Auth — Luna»01a16eab-c777-78a0-a815-47b45ff0860d на exact snapshot/cwd; worktree6377/auth stale. Main не ждёт/не дублирует successful наборы. [Процесс](development-workflow.md).
+- Committed admin admission до3s — отдельный контракт. Final current check не обещает distributed мгновенную отмену in-flight commit; при stale result raw token не выдаётся, массовый revoke не добавлен.
+- PostgreSQL + обязательный Redis без fallback. Новые зависимости только с разрешения; здесь нет новых. Реальные ENV/БД/secrets/staging сохранять. Go1.27.3 согласован. Owner без копии identity в проектах, standalone setup сохраняется.
+- До UI: MP1–MP6 → MP6R security/refactor → MP7 → MP8 → отдельно согласованный UI. Перед UI заранее предупредить и согласовать стек/макеты/экраны. Frontend сейчас не начинать. Commit только по запросу.

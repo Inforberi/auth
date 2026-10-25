@@ -1,0 +1,39 @@
+package auth
+
+import (
+	"testing"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/require"
+
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
+	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
+	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
+)
+
+func TestProjectPasswordConfiguration(t *testing.T) {
+	cfg := ProjectPasswordConfig{Timeout: 5 * time.Second, Capacity: passwordservice.CapacityConfig{HashConcurrency: 1, LoginIPLimit: 30, LoginEmailLimit: 10, LoginGlobalLimit: 100}, Session: sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, SessionRefreshThreshold: time.Minute, FreshAuthTTL: 5 * time.Minute, AdminIdleTimeout: 30 * time.Minute, AdminAbsoluteTTL: 12 * time.Hour, AdminActivityInterval: time.Minute}}
+	deps := ProjectPasswordDependencies{Registry: &projectruntime.Registry{}, Reader: &projectpostgres.RuntimeCredentialReader{}, Redis: &redis.Client{}, Hash: &hasher.Bounded{}}
+	require.NoError(t, cfg.validate(deps))
+	for _, change := range []func(*ProjectPasswordConfig){
+		func(c *ProjectPasswordConfig) { c.Timeout = 0 }, func(c *ProjectPasswordConfig) { c.Timeout = 31 * time.Second },
+		func(c *ProjectPasswordConfig) { c.Capacity.LoginGlobalLimit = 0 }, func(c *ProjectPasswordConfig) { c.Session.SessionTTL = 0 },
+	} {
+		invalid := cfg
+		change(&invalid)
+		_, err := NewProjectPassword(t.Context(), projectruntime.Key{}, invalid, deps)
+		require.Error(t, err)
+	}
+	for _, change := range []func(*ProjectPasswordDependencies){
+		func(d *ProjectPasswordDependencies) { d.Registry = nil }, func(d *ProjectPasswordDependencies) { d.Reader = nil },
+		func(d *ProjectPasswordDependencies) { d.Redis = nil }, func(d *ProjectPasswordDependencies) { d.Hash = nil },
+	} {
+		invalid := deps
+		change(&invalid)
+		_, err := NewProjectPassword(t.Context(), projectruntime.Key{}, cfg, invalid)
+		require.Error(t, err)
+	}
+}

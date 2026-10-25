@@ -1712,3 +1712,21 @@ Formatter/diff PASS. Передан V2 `/private/tmp/auth-project-loader-v2.taex
 Luna V2: полный actual TestPrepareCommandSQL PASS без SKIP: loader/four subtests, последующие runtime/role/onboarding/managed и parent secrets replay/wrong-root. `golangci-lint run ./cmd/project-prepare` PASS,0 issues. Manifest7 совпал до/после, ownfixture PostgreSQL удалена, source/commit Luna не меняла. Snapshot `/private/tmp/auth-project-loader-v2.taex8bqe`, base515f62c, manifest `/private/tmp/auth-project-loader-v2-manifest.sha256`, metadata `/private/tmp/auth-project-loader-v2-snapshot.json`; main перед коммитом сверил7source. V1 task check и affected race PASS сохраняются: V2 поменял только parent test, production source неизменён. Повтор независимых successful наборов формально не выполнялся. Логи `/private/tmp/auth-project-loader*.log`.
 
 Локальный gate MP4.1a закрыт. Полная project Auth assembly/public-ready/fleet не заявлены. Пользователь разрешил коммит и продолжение MP4.1b, UI не начинался.
+
+## Реализация MP4.1b project password/session — 25 октября 2026
+
+Loader672162d закоммичен по просьбе пользователя, затем начат следующий блок. Узкая read-only разведка Luna: фактические pool/realm ownership, policy/email/MFA SQL checks и reuse существующего command fixture; main читал выбранные definitions/конструкторы/необходимый SQL, без повторного общего обзора.
+
+[Решение](../features/project-password-runtime.md): первый практический внутренний Login на existing PasswordService+SessionService через Registry.UsePool. Entry lease/MaxAcquiring slot удерживаются до callback exit, physical connection во время hash не занята. Borrowed process dependencies/root data key/Redis scope, live early policy и locked SQL final checks, currentcatalog guards. Session config validation централизована в service.Config.Validate без изменения existing bounds/errors. Нет новых pools/workers/publicroutes/capabilities/schema/dependencies; MFA-required users до полного MFA flow получают отказ.
+
+Добавлены unit lifetime/budget/drain/error/panic/config tests и actual SQL+Redis drill в существующем prepared project fixture: реальный Argon2, project session, wrong/disabled/unverified/blocked/MFA, one-connection live probe while hash paused, suspend without token disclosure, cancellation и scoped cleanup. Redis fixture только loopback DB15 с explicit test ENV. Main formatter/diff выполнены; executable checks передаются Luna, результат pending. Не коммитить новый блок без запроса.
+
+Передан frozen snapshot `/private/tmp/auth-project-password.xss82yb3`, base672162d, manifest9 `/private/tmp/auth-project-password-manifest.sha256`, metadata/deleted `/private/tmp/auth-project-password-snapshot.json`. Luna: task check, affected race и полный actual command SQL+own RedisDB15. Итог pending; main не запускает/не дублирует executable checks.
+
+## Результат MP4.1b project password/session — 25 октября 2026
+
+Luna: task check PASS (lint0); affected host race `./internal/platform/project/... ./internal/app/auth ./internal/auth/session/... ./internal/config ./cmd/project-prepare` PASS; полный TestPrepareCommandSQL PASS без SKIP, включая восемь project_password_session cases, loader/runtime/downstream и parent replay. PostgreSQL18.6 TLS/SCRAM и scoped RedisDB15 synthetic fixtures удалены, RedisDB15 пуста. Source/commit Luna не меняла.
+
+Snapshot `/private/tmp/auth-project-password.xss82yb3`, base672162d; manifest9 `/private/tmp/auth-project-password-manifest.sha256`, metadata/deleted `/private/tmp/auth-project-password-snapshot.json`. Manifest совпал до/после и main перед коммитом, дополнительных source изменений нет. Логи `/private/tmp/auth-project-password*.log`. API/scanner/unrelated operator/localSettings checks формально не повторялись: routes/schema/grants/dependencies не менялись, изменённые security guarantees проверены unit/race/actual SQL+Redis.
+
+Локальный gate внутреннего password/session блока закрыт; full MFA challenge/прочие методы, public routes/readiness/MP4/fleet остаются далее. Пользователь запросил коммит. Для следующих задач уточнён процесс: разведка локальным субагентом Luna medium здесь, main Sol medium читает только нужные первоисточники и пишет код, отдельный чат Luna используется только для verification. Мелкие изменения не требуют отдельной разведки.

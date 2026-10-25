@@ -6,6 +6,9 @@
 
 ## Открытые ограничения приёмки
 
+- MP4.1b internal project password/session: локальные task check/race/full SQL+Redis проверки Luna PASS без SKIP. [Контракт](../features/project-password-runtime.md). Без public routes/readiness/MFA challenge; logical pool lease и SQL policy/MFA guards прошли actual SQL+Redis regression.
+
+
 - MP4.1a project Auth loader: локальные проверки Luna V1/V2 PASS, полный command SQL без SKIP. [Контракт](../features/project-auth-loader.md). Не является полной feature assembly/admission/public readiness; policy/credential version необходимо учитывать при сборке и invalidation.
 
 
