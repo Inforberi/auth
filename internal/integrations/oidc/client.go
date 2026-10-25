@@ -53,6 +53,13 @@ func (c *Client) WithCredentials(id, secret string) *Client {
 	}
 }
 
+// WithRedirectURI returns an immutable callback view sharing the owner's transport and key cache.
+func (c *Client) WithRedirectURI(uri string) *Client {
+	view := *c
+	view.oauth.RedirectURL = uri
+	return &view
+}
+
 func (c *Client) Close() { c.cancel(); c.http.transport.CloseIdleConnections() }
 
 func (c *Client) AuthorizationURL(state string, flow domain.Flow) string {

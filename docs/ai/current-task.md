@@ -2,15 +2,17 @@
 
 Обновлено 25 октября 2026. [Карта](index.md) · [план](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui) · [gates](../operations/acceptance-summary.md#открытые-ограничения-приёмки). Git/staging проверять по факту.
 
-## Текущий блок — MP4.1i project email OTP
+## Текущий блок — MP4.1j project Google/Telegram OIDC
 
-[Контракт](../features/project-email-otp-runtime.md). Добавлены внутренние ProjectEmailOTP Request/Confirm и email reauthentication, общий private projectMFA coordinator для password/OTP и OTP delivery через существующий bounded runner. Primary/reauth flags независимы, текущая SQL policy не заменяется caller hook, scoped cipher/Redis и current-key guards сохранены. При MFA сначала challenge, обычная сессия после фактора. Recovery при потере всех факторов закрыт. Нет новых SQL/deps/ENV/HTTP/readiness/UI.
+[Контракт](../features/project-oidc-runtime.md). Добавлены внутренние ProjectOIDC Start/Callback/StartLink/Unlink и shared MFA. Сохранённые provider credentials/revision читаются на операцию; scope Redis/cipher, SQL policy/identity/session/revision guards и current runtime до/после сохраняются. Два process HTTP/JWKS owners ProjectOIDCClients заимствуются immutable views с project callback/credentials. Закрывает owner процесс после drain; lifecycle/public HTTP/readiness не подключены. Нет новых SQL/deps/ENV/SSO, loss-all-factors recovery закрыт.
 
-Main: formatter и diff check; Helmholtz targeted review, tests/edits не выполнял. Luna V2: task check exit0/lint0, полный TestPrepareCommandSQL exit0 без SKIP, включая OTP/reauth/MFA/delivery и прежние password/MFA regressions. Affected race app/auth+cmd V1 PASS; после него только эквивалентные selectors и исправленный synthetic seed. Manifest13 совпал до/после и с main. RedisDB15 пуста, disposable PostgreSQL/Redis удалены. Snapshot `/private/tmp/auth-project-email-otp-v2.jyhbf526`, manifest `/private/tmp/auth-project-email-otp-v2.jyhbf526-manifest.sha256`, metadata `/private/tmp/auth-project-email-otp-v2.jyhbf526-snapshot.json`. Блок проверен; пользователь запросил коммит. Git/staging и факт коммита проверять через Git.
+Main formatter golangci-lint/v2.14.0 fmt exit0 (existing gofumpt warning), targeted review Helmholtz без конкретных ошибок; tests не запускал. Callback host — только trusted assembly config, public origin/host/cookie matrix остаётся MP5. Добавлены unit disabled/config/MFA issuer, shared immutable credential/redirect view race и actual project SQL/Redis start/binding/cross-method/cross-scope/revision/replay/policy fixture без внешней сети. Полный реальный provider login/link/MFA NOT RUN.
+
+Luna проверяет immutable snapshot `/private/tmp/auth-project-oidc-v1.16gzx6jf`, manifest `/private/tmp/auth-project-oidc-v1.16gzx6jf-manifest.sha256`, metadata `/private/tmp/auth-project-oidc-v1.16gzx6jf-snapshot.json`. Luna: task check exit0/lint0, affected race exit0 с loopback access, local TLS OIDC/full command SQL exit0 без SKIP. Manifest10 совпал до/после и с main; RedisDB15 пуста, собственные containers удалены. Блок проверен, пользователь запросил коммит; факт коммита проверять через Git.
 
 ## Следующий шаг
 
-После фиксации проверенного блока продолжить provider/token assembly и readiness/MP5 guards; remaining MFA recovery/retention/fleet fairness/MP6R/MP7/MP8 отдельно. UI не начинать до отдельного согласования; [email templates](../planning/email-templates.md) — A7 после backend.
+После фиксации проверенного блока продолжить project token/JWT assembly и readiness/MP5 guards; remaining MFA recovery/retention/fleet fairness/MP6R/MP7/MP8 отдельно. UI не начинать до отдельного согласования; [email templates](../planning/email-templates.md) — A7 после backend.
 
 ## Процесс и ограничения
 
@@ -18,4 +20,4 @@ Main: formatter и diff check; Helmholtz targeted review, tests/edits не вы�
 - Executable checks — отдельная «Проверки Auth — Luna»01a16eab-c777-78a0-a815-47b45ff0860d на exact snapshot/cwd; default6377/auth stale. Main не дублирует и не ждёт полный прогон. [Процесс](development-workflow.md).
 - UsePool не сохраняет pool/services/async за callback. Final guard не обещает rollback committed in-flight действий. Shared resources закрываются owner после drain.
 - Component flags не подменяют SQL policy/permissions и не разрешают platform operator proof вместо project session. Target scope/host routing/issuer/cookie matrix — MP5.
-- PostgreSQL+Redis; новые deps только с разрешения. Реальные ENV/БД/secrets/staging сохранять. Commit только по запросу. Предыдущий account `7ca3296` проверен/закоммичен; его PASS не подтверждает этот diff.
+- PostgreSQL+Redis; новые deps только с разрешения. Реальные ENV/БД/secrets/staging сохранять. Commit только по запросу. Предыдущий OTP d8a1dd3 проверен/закоммичен; его PASS не подтверждает этот diff.

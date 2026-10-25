@@ -11,6 +11,7 @@ import (
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	mfatotp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
@@ -26,7 +27,7 @@ func newProjectMFALogin(scope realmscope.Scope, root string, cfg mfaservice.Conf
 	if !cfg.Enabled {
 		return nil, nil
 	}
-	if primary != "password" && primary != "emailotp" {
+	if primary != "password" && primary != "emailotp" && !settingsdomain.ValidProvider(primary) {
 		return nil, errors.New("unsupported project MFA primary")
 	}
 	cipher, err := (realmSecurity{scope: scope}).cipher(root, "mfa:v1")
@@ -38,7 +39,7 @@ func newProjectMFALogin(scope realmscope.Scope, root string, cfg mfaservice.Conf
 		return nil, err
 	}
 	return &projectMFALogin{cipher: cipher, limits: limits, config: mfaservice.LoginConfig{
-		Issuer: cfg.Issuer, AllowPrimary: func(method, issuer string) bool { return method == primary && issuer == "" },
+		Issuer: cfg.Issuer, AllowPrimary: func(method, issuer string) bool { return settingsdomain.PrimaryMethod(method, issuer) == primary },
 		ChallengeTTL: cfg.ChallengeTTL, SessionTTL: session.SessionTTL, AbsoluteSessionTTL: session.AbsoluteSessionTTL,
 		AdminIdleTimeout: session.AdminIdleTimeout, AdminAbsoluteTTL: session.AdminAbsoluteTTL, AdminActivityInterval: session.AdminActivityInterval,
 		UserLimitPerMinute: cfg.UserLimitPerMinute, IPLimitPerMinute: cfg.IPLimitPerMinute, GlobalLimitPerMinute: cfg.GlobalLimitPerMinute,
