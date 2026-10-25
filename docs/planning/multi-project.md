@@ -151,6 +151,8 @@ SSO, регистрация нескольких приложений внутр
 
   MP4.1j: [проектный Google/Telegram OIDC](../features/project-oidc-runtime.md) — внутренняя сборка start/callback/link/unlink и MFA, shared transport/JWKS с immutable project credentials/redirect; локальные task check/lint0/race/full command SQL проверки Luna PASS. Public callbacks/readiness/реальная внешняя приёмка остаются закрыты.
 
+  MP4.1k: [проектный token runtime](../features/project-token-runtime.md) — prepared signing key/JWKS, exchange/native/refresh/logout, shared Redis owner и request-local Factory Bind добавлены; локальные task check/lint0/race/security/full command SQL/token-native regressions Luna PASS. Public readiness, introspection/consumer, managed key rotation и fleet/issuer matrix остаются отдельно.
+
 - [ ] MP4.2. Переиспользовать ограниченный runtime проекта между запросами: single-flight открытие, lease на время запроса/работы, закрытие неиспользуемого runtime, invalidation по версии настроек/credentials. Eviction не закрывает pool под активным запросом и не уничтожает SQL-сессии пользователей.
   SQL-часть реализована24 октября в [runtime registry](../features/project-runtime-registry.md): trusted reader/targets, exact snapshot pools, bounded acquiring/idle cleanup/shutdown, роль через lease. Это не полная feature assembly и не автоматическая рассылка invalidation из lifecycle/rotation; MP4.2 целиком остаётся открыт.
   [Local lifecycle assembly](../features/project-runtime-lifecycle.md) добавляет opt-in server/private reader/config и commit observer после platform ChangeState; Go tests/race/security/SQL и финальный targeted lint проверены Luna. Fleet рассылки/direct provisioning observer и credential rotation нет; полный MP4 остаётся открыт.

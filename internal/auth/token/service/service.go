@@ -44,20 +44,9 @@ type Service struct {
 }
 
 func New(repo Repository, signer Signer, limiter Limiter, tokens TokenGenerator, cfg Config, catalog settings.Catalog) (*Service, error) {
-	resources, err := resourcePolicies(cfg, catalog)
+	factory, err := NewFactory(signer, limiter, tokens, cfg, catalog)
 	if err != nil {
 		return nil, err
 	}
-	if repo == nil || signer == nil || limiter == nil || tokens == nil {
-		return nil, authjwt.ErrConfiguration
-	}
-	s := &Service{repo: repo, signer: signer, limiter: limiter, tokens: tokens, resources: resources, ttl: cfg.AccessTTL, admission: make(chan struct{}, 8)}
-	if cfg.Native != nil {
-		if err := cfg.Native.Validate(); err != nil {
-			return nil, err
-		}
-		policy := *cfg.Native
-		s.native = &policy
-	}
-	return s, nil
+	return factory.Bind(repo)
 }

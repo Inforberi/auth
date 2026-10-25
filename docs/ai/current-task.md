@@ -2,22 +2,22 @@
 
 Обновлено 25 октября 2026. [Карта](index.md) · [план](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui) · [gates](../operations/acceptance-summary.md#открытые-ограничения-приёмки). Git/staging проверять по факту.
 
-## Текущий блок — MP4.1j project Google/Telegram OIDC
+## Текущий блок — MP4.1k project token/native
 
-[Контракт](../features/project-oidc-runtime.md). Добавлены внутренние ProjectOIDC Start/Callback/StartLink/Unlink и shared MFA. Сохранённые provider credentials/revision читаются на операцию; scope Redis/cipher, SQL policy/identity/session/revision guards и current runtime до/после сохраняются. Два process HTTP/JWKS owners ProjectOIDCClients заимствуются immutable views с project callback/credentials. Закрывает owner процесс после drain; lifecycle/public HTTP/readiness не подключены. Нет новых SQL/deps/ENV/SSO, loss-all-factors recovery закрыт.
+[Контракт](../features/project-token-runtime.md). Внутренний ProjectTokens: prepared project key/JWKS, Exchange, native password/email OTP, native MFA/enrollment, refresh/logout. Existing SQL ledger/primary/policy/revoke/reuse гарантии, scoped Redis/HMAC, current runtime guards сохранены. Новых SQL/schema/deps/ENV/HTTP/readiness нет. Key loader отдаёт только redacted SigningKey; private PEM потребляется/очищается через Use, existing codec всё ещё декодирует весь bundle, нулевой Goheap не обещаем.
 
-Main formatter golangci-lint/v2.14.0 fmt exit0 (existing gofumpt warning), targeted review Helmholtz без конкретных ошибок; tests не запускал. Callback host — только trusted assembly config, public origin/host/cookie matrix остаётся MP5. Добавлены unit disabled/config/MFA issuer, shared immutable credential/redirect view race и actual project SQL/Redis start/binding/cross-method/cross-scope/revision/replay/policy fixture без внешней сети. Полный реальный provider login/link/MFA NOT RUN.
+Service.Factory хранит immutable policy/admission8 без repo; Bind создаёт request-local Service с repository. Проектный компонент resident по exact key, не конструировать на каждый запрос. Signer admission сохраняется. NewProjectTokenRedis — один process owner no-retry pool8/таймауты1s, shared проектами, close после drain. Go-redis9.19 Options нормализует input -1 в0, сверено Context7+installed source; обычный Redis не меняется. Native MFA infrastructure enabled не делает фактор обязательным для каждого пользователя.
 
-Luna проверяет immutable snapshot `/private/tmp/auth-project-oidc-v1.16gzx6jf`, manifest `/private/tmp/auth-project-oidc-v1.16gzx6jf-manifest.sha256`, metadata `/private/tmp/auth-project-oidc-v1.16gzx6jf-snapshot.json`. Luna: task check exit0/lint0, affected race exit0 с loopback access, local TLS OIDC/full command SQL exit0 без SKIP. Manifest10 совпал до/после и с main; RedisDB15 пуста, собственные containers удалены. Блок проверен, пользователь запросил коммит; факт коммита проверять через Git.
+Main formatter/diff и targeted review Helmholtz; tests не запускал. Luna: task check/lint0 и affected race PASS; V2 security PASS (нет вызываемых кодом уязвимостей; одна в dependency недостижима по scanner); TestPostgresSchema PASS, включая token/native regressions. Полный TestPrepareCommandSQL V3 retry PASS exit0 на Linux ARM64 binary/read-only source, PG18.6 TLS/SCRAM и Redis8.2DB15 после исправления fixture profile. Перед retry подтверждены TLS/wrong-password deny/Redis PONG. Manifest20 совпал до/после и с main. Собственные containers/network/certs/binary удалены. Snapshot `/private/tmp/auth-project-token-v3.7cllhrm_`, manifest `/private/tmp/auth-project-token-v3.7cllhrm_-manifest.sha256`, metadata `/private/tmp/auth-project-token-v3.7cllhrm_-snapshot.json`; лог `/private/tmp/auth-project-token-v3-prepare-sql-retry.log`. Блок проверен; пользователь запросил коммит. Git/staging и факт коммита проверять через Git.
 
 ## Следующий шаг
 
-После фиксации проверенного блока продолжить project token/JWT assembly и readiness/MP5 guards; remaining MFA recovery/retention/fleet fairness/MP6R/MP7/MP8 отдельно. UI не начинать до отдельного согласования; [email templates](../planning/email-templates.md) — A7 после backend.
+После фиксации проверенного блока продолжить проектную introspection/consumer assembly, readiness/MP5 issuer/host/cookie guards; managed key rotation/overlap, remaining MFA recovery/retention/fleet fairness/MP6R/MP7/MP8 отдельно. UI не начинать до отдельного согласования; [email templates](../planning/email-templates.md) — A7 после backend.
 
 ## Процесс и ограничения
 
 - Local read-only researcher Helmholtz (gpt-6-luna medium), ID01a17292-5405-7341-bae9-f5884a755889, сохранять для reuse. Bohr закрыт по просьбе пользователя.
-- Executable checks — отдельная «Проверки Auth — Luna»01a16eab-c777-78a0-a815-47b45ff0860d на exact snapshot/cwd; default6377/auth stale. Main не дублирует и не ждёт полный прогон. [Процесс](development-workflow.md).
+- Executable checks — отдельная «Проверки Auth — Luna»01a16eab-c777-78a0-a815-47b45ff0860d на exact snapshot/cwd; default6377/auth stale. Main не дублирует/не ждёт полный прогон. [Процесс](development-workflow.md).
 - UsePool не сохраняет pool/services/async за callback. Final guard не обещает rollback committed in-flight действий. Shared resources закрываются owner после drain.
-- Component flags не подменяют SQL policy/permissions и не разрешают platform operator proof вместо project session. Target scope/host routing/issuer/cookie matrix — MP5.
-- PostgreSQL+Redis; новые deps только с разрешения. Реальные ENV/БД/secrets/staging сохранять. Commit только по запросу. Предыдущий OTP d8a1dd3 проверен/закоммичен; его PASS не подтверждает этот diff.
+- Component flags не подменяют SQL policy/permissions и не разрешают platform operator proof вместо project session. Crypto-only verification не проверяет текущий revoke; strict online и local expiry сохраняют разные гарантии.
+- PostgreSQL+Redis; новые deps только с разрешения. Реальные ENV/БД/secrets/staging сохранять. Commit только по запросу. Предыдущий OIDC697476f проверен/закоммичен; его PASS не подтверждает этот diff.

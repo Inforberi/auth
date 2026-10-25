@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP4.1k-project-token, 25 октября — локальные проверки Luna V1–V3 PASS.** [Контракт](../features/project-token-runtime.md): prepared project signer/JWKS, session exchange/native password+email/MFA/refresh/logout на existing SQL; shared no-retry Redis и immutable Factory с общим admission для request-local repositories. Нет новых SQL/deps/ENV/HTTP/readiness; introspection/consumer и managed rotation gates отдельно.
+
 - [x] **MP4.1j-project-oidc, 25 октября — локальные проверки Luna PASS.** [Контракт](../features/project-oidc-runtime.md): внутренний проектный Google/Telegram start/callback/link/unlink, scoped state/current saved credentials и общий MFA. Общие process HTTP/JWKS owners, immutable callback view; без новых SQL/deps/ENV/HTTP/readiness. External login NOT RUN.
 
 - [x] **MP4.1i-project-email-otp, 25 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/project-email-otp-runtime.md): проектный browser email-вход/reauth, общий MFA coordinator и OTP delivery через существующий runner. Новых SQL/deps/routes/readiness нет; recovery при потере всех факторов закрыт. Добавлены unit и реальные SQL/Redis fixtures.
