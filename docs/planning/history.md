@@ -1907,3 +1907,21 @@ MP5.1b V1 Luna: actual Linux ARM64 полный TestPrepareCommandSQL (nested pr
 
 
 MP5.1b V2 финал Luna: task check и go test -race ./internal/transport/http/router -count=1 PASS; manifest24 совпал после прогона и с main. Предыдущие API/security/SQL и остальные affected race PASS V1 сохраняются, изменения V2 их не затрагивают. Cursor001f5739-f635-4e82-85da-0f9c06b859c7:82. Пользователь ранее разрешил коммит после PASS. Production server wiring/полная MP5 matrix/UI остаются открытыми.
+
+
+## MP5.1c server/deployment integration — 25 октября 2026
+
+Предыдущий HTTP bindings MP5.1b V2 принят после task check/router race PASS, manifest24 совпал с main; по прежнему разрешению пользователя создан7c179fd. Новый блок: default-off config.Platform.HTTP, same existing directTLS listener Host split, limited browser password/MFA/email source. Никаких global provider/JWT secrets/enable flags fallback. Общий registry/Redis/hasher, отдельный bounded admission; совокупные ceilings описаны, не RPS. Source шлёт project URLs и очищает EMAIL_OUTBOX_KEY, остальные keys/SMTP из existing project factories.
+
+assembleOperator подключает handler и idempotent drain owner; realm.run drain выполняется перед worker join/resources, signal context может остановить worker раньше. Нет новых listeners/pools/deps/workers/schema, реальные ENV не трогались. OIDC/OTP/native/JWT deployment manifests/capabilities остаются отдельно; не полная публикация phase-ready/UI.
+
+Main formatter exit0/existing warning, diff/source review, researcher конкретных проблем не нашёл. Unit config/defaultoff/host split/source copies/secret separation/drain order и actual runtime assembly SQL child TLS/empty catalog/no fallback добавлены. Snapshot `/private/tmp/auth-project-http-deployment-v1._683nwr7`, manifest `/private/tmp/auth-project-http-deployment-v1._683nwr7-manifest.sha256`, metadata `/private/tmp/auth-project-http-deployment-v1._683nwr7-snapshot.json`, base7c179fd. Luna task check/affected app+config race/security/actual runtime assembly и operator SQLHTTPS PENDING. Предыдущий command SQL V1 MP5.1b остаётся своим evidence; текущий блок не менял его routes/adapters и не закрывает полную MP5 matrix.
+
+
+MP5.1c V1 Luna: runtime assembly и operator SQLHTTPS PASS Linux ARM64 без SKIP, TLS verify-full/SCRAM wrong-password deny/RedisDB15PONG подтверждены. Security PASS (достижимых уязвимостей нет), manifest9 совпал, свой стенд очищен. Task check и app race FAIL на TestProjectHTTPDisabledDoesNotCreateOwners require.Same для function handler (config race PASS). Lint: contextcheck/cyclop/G104. Main заменил сравнение функциональной проверкой ответа, передал ctx в assembler и WithoutCancel(ctx) для drain с обработкой ошибки, собрал optional project worker в existing typed-nil filter realmDeliveryWorkers вместо отдельного if в operator. Дополнительные слои/suppressions не вводились, SQL/transport/authority contracts unchanged. V2 snapshot `/private/tmp/auth-project-http-deployment-v2.uhycr1rn`, manifest `/private/tmp/auth-project-http-deployment-v2.uhycr1rn-manifest.sha256`, metadata `/private/tmp/auth-project-http-deployment-v2.uhycr1rn-snapshot.json`. Task check/app race PENDING; прошлые SQL/security PASS сохраняются для незатронутых гарантий.
+
+
+MP5.1c V2 compile FAIL: operator.go128 omitted cfg after adding ctx; task check/race stopped, manifest9 совпал. Main вернул cfg в единственный вызов, остальные source V2 unchanged. V3 snapshot `/private/tmp/auth-project-http-deployment-v3.4_v0opea`, manifest `/private/tmp/auth-project-http-deployment-v3.4_v0opea-manifest.sha256`, metadata `/private/tmp/auth-project-http-deployment-v3.4_v0opea-snapshot.json`. Повтор task check/app+config race PENDING; SQL/security V1 evidence unchanged.
+
+
+MP5.1c V3 финал Luna: task check и go test -race ./internal/app/auth ./internal/config -count=1 PASS, manifest9 совпал после прогона и с main; оба ENV examples также совпали с проверенным снимком. Source verifier не менял. V1 actual TestProjectRuntimeAssemblySQL/TestOperatorProfileSQLHTTPS без SKIP и security PASS сохранены для незатронутых гарантий. Cursor001f5739-f635-4e82-85da-0f9c06b859c7:85. Пользователь разрешил коммит. External/OTP/native/JWT deployment capabilities, полная MP5/MP7/MP8/UI gates остаются открытыми; flag default-off.

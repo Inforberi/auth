@@ -95,6 +95,7 @@ type realm struct {
 	Provisioning       *accountservice.ProvisionService
 	TemporaryPasswords *passwordservice.TemporaryPasswordService
 	handler            http.Handler
+	drainHTTP          func()
 	retention          retentionWorker
 	workers            []deliveryWorker
 	resources          *resources

@@ -57,7 +57,7 @@ type deliveryWorker interface {
 	RunDelivery(context.Context, func(error))
 }
 
-func realmDeliveryWorkers(recovery *passwordservice.RecoveryService, account *accountservice.Service, mfa *mfaservice.RecoveryDelivery, email *otpservice.Delivery) []deliveryWorker {
+func realmDeliveryWorkers(recovery *passwordservice.RecoveryService, account *accountservice.Service, mfa *mfaservice.RecoveryDelivery, email *otpservice.Delivery, projects ...*ProjectDelivery) []deliveryWorker {
 	var workers []deliveryWorker
 	// Check concrete pointers before conversion: a typed nil is a non-nil interface.
 	if recovery != nil {
@@ -71,6 +71,11 @@ func realmDeliveryWorkers(recovery *passwordservice.RecoveryService, account *ac
 	}
 	if email != nil {
 		workers = append(workers, email)
+	}
+	for _, project := range projects {
+		if project != nil {
+			workers = append(workers, project)
+		}
 	}
 	return workers
 }
@@ -122,5 +127,10 @@ func (r *realm) run(ctx context.Context, log *zap.Logger, serve func(context.Con
 		r.retention.RunRetention(ctx, func(error) { log.Warn("retention processing failed") })
 	})
 	defer stopRetention()
-	return runWithDelivery(ctx, log, serve, active...)
+	return runWithDelivery(ctx, log, func(ctx context.Context) error {
+		if r.drainHTTP != nil {
+			defer r.drainHTTP()
+		}
+		return serve(ctx)
+	}, active...)
 }

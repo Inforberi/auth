@@ -79,6 +79,7 @@ func TestProjectRuntimeAssemblySQL(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, runtime.reader.CheckRuntime(ctx))
 	t.Run("project delivery lifecycle", func(t *testing.T) { projectDeliveryLifecycleDrill(t, admin, cfg, runtime) })
+	t.Run("project HTTP deployment", func(t *testing.T) { projectHTTPDeploymentDrill(t, cfg, runtime) })
 	_, err = admin.Exec(ctx, `GRANT UPDATE(name) ON platform.projects TO auth_runtime_assembly_reader`)
 	require.NoError(t, err)
 	require.Error(t, runtime.reader.CheckRuntime(ctx))

@@ -1,0 +1,68 @@
+package auth
+
+import (
+	"context"
+	"errors"
+	"net/http"
+
+	"github.com/Inforberi/financial-intelligence/internal/config"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
+	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
+)
+
+func assembleProjectHTTP(ctx context.Context, cfg *config.Config, runtime *projectRuntime, delivery *ProjectDelivery, deps realmDependencies, owned *resources, operator http.Handler) (http.Handler, func(), error) {
+	c := cfg.Platform.HTTP
+	if !c.Enabled {
+		return operator, nil, nil
+	}
+	if runtime == nil || operator == nil {
+		return nil, nil, errors.New("project HTTP requires runtime and operator handler")
+	}
+	if err := cfg.ValidatePlatform(); err != nil {
+		return nil, nil, err
+	}
+	profile, err := NewProjectHTTP(ProjectHTTPConfig{
+		PlatformOrigin: cfg.Platform.Origin,
+		Residents:      projecthttp.RuntimeDispatcherConfig{MaxProfiles: c.MaxProfiles, MaxBuilding: c.MaxBuilding, BuildTimeout: c.BuildTimeout, MaxAge: c.MaxAge},
+		Capacity:       middleware.CapacityConfig{MaxInFlight: c.MaxInFlight, RequestTimeout: cfg.HTTP.RequestTimeout}, Proxy: cfg.Proxy,
+	}, ProjectProfileDependencies{ProjectTokenDependencies: ProjectTokenDependencies{Registry: runtime.registry, Reader: runtime.reader, Redis: deps.redis, Hash: deps.hash}, Delivery: delivery}, projectBrowserDeployment(cfg), deps.log)
+	if err != nil {
+		return nil, nil, err
+	}
+	drain := func() {
+		if err := profile.Close(context.WithoutCancel(ctx)); err != nil {
+			deps.log.Error("project HTTP drain failed")
+		}
+	}
+	owned.add(drain)
+	return projectHostRouter(cfg.Platform.Origin, operator, profile), drain, nil
+}
+
+func projectHostRouter(platformOrigin string, operator, project http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if "https://"+r.Host == platformOrigin {
+			operator.ServeHTTP(w, r)
+			return
+		}
+		project.ServeHTTP(w, r)
+	})
+}
+
+func projectBrowserDeployment(cfg *config.Config) ProjectProfileSource {
+	// Capture only operational values; never retain a platform encryption key or provider secret.
+	session, mfa, capacity := cfg.Session, cfg.MFA, cfg.Capacity
+	mfa.RecoveryEnabled = false
+	verification, recovery := cfg.Account, cfg.Password
+	verification.EncryptionKey = ""
+	withMail, timeout := cfg.Platform.Delivery.Enabled, cfg.Platform.HTTP.BuildTimeout
+	return func(_ context.Context, _ projectruntime.Key, origin string) (ProjectProfileConfig, error) {
+		profile := ProjectProfileConfig{BrowserEnabled: true, Timeout: timeout, Password: &ProjectPasswordConfig{Session: session, MFA: mfa, Capacity: capacity, Timeout: timeout}}
+		if withMail {
+			verify, reset := verification, recovery
+			verify.URL, reset.ResetURL = origin+"/verify-email", origin+"/reset-password"
+			profile.Verification, profile.Recovery = &verify, &reset
+		}
+		return profile, nil
+	}
+}

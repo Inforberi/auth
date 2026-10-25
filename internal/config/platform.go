@@ -14,6 +14,7 @@ type PlatformConfig struct {
 	Resources         PlatformResources
 	Runtime           ProjectRuntimeConfig
 	Delivery          ProjectDeliveryConfig
+	HTTP              ProjectHTTPConfig
 	Enabled           bool   `env:"PLATFORM_ENABLED" env-default:"false"`
 	RealmID           string `env:"PLATFORM_REALM_ID"`
 	Origin            string `env:"PLATFORM_ORIGIN"`
@@ -22,6 +23,9 @@ type PlatformConfig struct {
 }
 
 func (cfg Config) ValidatePlatform() error {
+	if err := cfg.validateProjectHTTP(); err != nil {
+		return err
+	}
 	if err := cfg.validateProjectDelivery(); err != nil {
 		return err
 	}

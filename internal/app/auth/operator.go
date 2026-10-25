@@ -124,13 +124,15 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 	if err != nil {
 		return nil, err
 	}
-	workers := realmDeliveryWorkers(password.recovery, account, mfa.delivery, nil)
-	if delivery != nil {
-		workers = append(workers, delivery)
+	workers := realmDeliveryWorkers(password.recovery, account, mfa.delivery, nil, delivery)
+	handler, drainHTTP, err := assembleProjectHTTP(ctx, cfg, runtime, delivery, deps, owned, handler)
+	if err != nil {
+		return nil, err
 	}
 	assembled = true
 	return &realm{
 		handler: handler, resources: owned,
+		drainHTTP: drainHTTP,
 		retention: accountservice.NewRetention(repo, cfg.Retention),
 		workers:   workers,
 	}, nil

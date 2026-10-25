@@ -11,7 +11,7 @@ MP5.1b, 25 октября 2026. Реализован внутренний HTTP f
 
 ## Использование и владение
 
-`app/auth.NewProjectHTTP` принимает доверенный `ProjectProfileSource`, existing profile dependencies и `ProjectHTTPConfig`. Source возвращает operational config для переданных key/origin, не берёт проект из body/cookie/JWT. Это программная сборка для deployment: основной production router и реальные ENV этим блоком не меняются. Созданный handler нужно подключать отдельной явной настройкой сервера после полной приёмки.
+`app/auth.NewProjectHTTP` принимает доверенный `ProjectProfileSource`, existing profile dependencies и `ProjectHTTPConfig`. Source возвращает operational config для переданных key/origin, не берёт проект из body/cookie/JWT. Это программная сборка для deployment: основной production router и реальные ENV в MP5.1b не менялись. Следующий [deployment opt-in](project-http-deployment.md) подключает первый ограниченный профиль; его проверки и полная приёмка имеют отдельные gates.
 
 `router.NewProjectRuntime` создаёт общий base middleware/admission один раз, затем exact TLS/authority boundary и resident dispatcher. `NewProjectRoutes` — внутренний leaf router, который используется за этой границей, сам по себе не является project selector. `projectHTTPRoutes` дополнительно проверяет совпадение immutable selection с профилем. В нём нет setup/admin/link/unlink/MFA management/account CRUD endpoints; отсутствующий обработчик или неизвестный protection не превращается в открытый fallback.
 

@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP5.1c-project-http-deployment, 25 октября — локальные проверки Luna V1/V3 PASS.** [Контракт/ENV](../features/project-http-deployment.md): default-off подключение browser password/MFA/email profile на существующем TLS listener, exact platform/project host split, isolated source и dispatcher drain до worker join/resources. Global external/native/JWT flags не наследуются; их deployment source и полная MP5 приёмка отдельно.
+
 - [x] **MP5.1b-project-http-routes, 25 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/project-http-routes.md): явные project HTTP bindings/protection, bounded resident dispatcher/current policy guard и lazy rebuild/drain. Узкие public handlers без копирования логики; actual TLS login/block/settings/suspend fixtures. Main production router/ENV/phase-ready/UI не включены; последующая интеграция и полная MP5 матрица отдельно.
 
 - [x] **MP5.1a-project-feature-readiness, 25 октября — локальные проверки Luna PASS.** [Контракт](../features/project-feature-readiness.md): единая сборка selected browser/native/JWT функций, локальная readiness по реальным зависимостям, current origin/key/policy guard и копируемый route plan. Независимые готовые методы сохраняются; публикации HTTP/phase-ready/UI ещё нет.

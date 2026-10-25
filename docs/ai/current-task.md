@@ -2,26 +2,23 @@
 
 Обновлено 25 октября 2026. [Карта](index.md) · [план](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui). Git/staging проверять по факту.
 
-## Текущий блок — MP5.1b project HTTP routes
+## Завершённый блок — MP5.1c deployment opt-in
 
-[Контракт](../features/project-http-routes.md). NewProjectHTTP программно соединяет existing exact TLS boundary, общий base middleware/admission и bounded resident dispatcher с selected-feature ProjectProfile. Явные browser/callback/native/service/session_no_refresh/JWKS bindings, без admin/setup/management fallback. Existing DTO/API сохранены, узкие public password/verification handlers без копии логики.
+[Контракт/ENV](../features/project-http-deployment.md). Default-off PLATFORM_PROJECT_HTTP_ENABLED подключает browser password/MFA/email verification/recovery через existing TLS listener. Exact platform Host → operator, остальные → project boundary/current catalog, без default-DB fallback. Общие registry/Redis/hasher и отдельный bounded project admission. Source копирует operational config, очищает platform email key, формирует project URLs; secrets/SMTP/policy только scoped. OIDC/OTP/native/JWT deployment source не подключён автоматически.
 
-Кеш сборок не кеширует authority: warm request проверяет full SQL policy/current catalog, boundary key переиспользуется без второго originlookup. Stale profile404/remove/next-request rebuild, dependency503, bounded residents/builds/age и no wait queue. Close прекращает admission/drains, shared pools/clients остаются у прежних owners. SMTP-related routes проверяют живой delivery runner. Production router/ENV/phase-ready автоматически не включены; UI не начинается.
+HTTP dispatcher drain выполняется после server shutdown до worker join/resources. При signal cancellation workers могут завершаться раньше; порядок владельцев сохраняется. Новых pools/listeners/workers/deps/schema нет, реальные ENV/TLS/БД не трогались. UI не начинать.
 
-Main formatter exit0 (existing gofumpt deprecation warning), diff/source review завершён. Read-only Helmholtz нашёл только unbounded fixture cleanup contexts — исправлены deadlines; финальные interface/cache/transport и HTTP key/policy guard review без конкретных проблем. Tests не запускал. Luna V1: API/security/actual full SQL PASS, manifest23 совпал. Task check и router race FAIL: promoted public methods при nil/zero PasswordHandler вызывали panic во время регистрации маршрутов; lint QF1008 избыточный selector. Main исправил guard на наличие public handler и selector. V2 task check +router race PASS, manifest24 совпал с main; повтор SQL/API/security не нужен: их гарантии не менялись. Новый actual TLS child проверяет login/cookie/Origin/no-refresh SQL session/block/policy rebuild/suspend.
+Main formatter/diff/source review завершён. Luna V1 actual runtime assembly/operator SQLHTTPS без SKIP и security PASS. V1 test/lint и V2 compile ошибки исправлены; V3 task check и app/config race PASS. Manifest9 совпал после прогона и с main, ENV examples совпали. Своё SQL окружение Luna очистила. Пользователь разрешил коммит; его факт проверять Git.
 
-Snapshot `/private/tmp/auth-project-http-routes-v1.r_a3wvbg`, manifest `/private/tmp/auth-project-http-routes-v1.r_a3wvbg-manifest.sha256`, metadata `/private/tmp/auth-project-http-routes-v1.r_a3wvbg-snapshot.json`, base3a18a3c. Manifest исходников сверять до/после и с main. Успех старого MP5.1a не подтверждает этот diff.
+Snapshot `/private/tmp/auth-project-http-deployment-v3.4_v0opea`, manifest `/private/tmp/auth-project-http-deployment-v3.4_v0opea-manifest.sha256`, metadata `/private/tmp/auth-project-http-deployment-v3.4_v0opea-snapshot.json`, base7c179fd. V1 SQL/security evidence и неудачные повторы — в history. Luna cursor001f5739-f635-4e82-85da-0f9c06b859c7:85.
 
 ## Следующий шаг
 
-V2 PASS принят, пользователь разрешил коммит. Факт коммита проверять Git. Далее явная integration с основным server/deployment source/lifecycle и полная MP5 two-project cookies/CORS/CSRF/callback/redirect/token matrix. Account/session/MFA management mounting, settings capabilities/phase-ready, managed rotation/MFA recovery/fleet/MP6R/MP7/MP8 отдельно. UI только после предупреждения и отдельного согласования.
+Отдельные project deployment capabilities для OIDC/OTP/native/JWT и manifests без global fallback; затем полная MP5 two-project matrix, account/session/MFA management, settings capabilities/phase-ready. Rotation/retention/fleet/MP6R/MP7/MP8 отдельно. UI только после предупреждения и отдельного согласования.
 
 ## Процесс и ограничения
 
-- Researcher Helmholtz gpt-6-luna medium01a17292-5405-7341-bae9-f5884a755889, read-only, сохранять для reuse. Bohr закрыт.
-- Все исполняемые проверки — отдельный Luna01a16eab-c777-78a0-a815-47b45ff0860d, host local, exact snapshot/cwd. Default6377/auth stale. Main не дублирует/не ждёт полный прогон. [Процесс](development-workflow.md).
-- Actual SQL recipe: собственный Linux ARM64 postgres18.6 container, source readonly /src; admin socket trust, TCP127 SCRAM/wrong-password deny, TLS+SAN127, Redis8.2 shared networkDB15. SCRAM_HOST=127.0.0.1/TLS_CA/ROOT/src/Redis127 env обязательны. Не macHost/randomport/trustTCP.
-- Source/loader обязан соблюдать deadlines; отсутствие внешних provider secrets не закрывает external acceptance. Context deadline Close не разрешает закрывать shared resource до окончания активной операции. Новых deps/schema/ENV/workers нет; реальные secrets/БД/staging сохранять.
-- HEAD3a18a3c проверен/закоммичен. Вердикт текущих tests PASS, внешние provider/SMTP/two-project full matrix/fleet/GC/RPS/UI gates открыты.
-
-Текущий V2 snapshot `/private/tmp/auth-project-http-routes-v2.aja58y44`, manifest `/private/tmp/auth-project-http-routes-v2.aja58y44-manifest.sha256`, metadata `/private/tmp/auth-project-http-routes-v2.aja58y44-snapshot.json`. Проверки привязаны к V2; V1 snapshot в предыдущем абзаце — сохранённое evidence. Cursor Luna V1:001f5739-f635-4e82-85da-0f9c06b859c7:80. Commit разрешён пользователем только после успешного повтора.
+- Researcher Helmholtz01a17292-5405-7341-bae9-f5884a755889, gpt-6-luna medium, read-only/reuse; Bohr закрыт.
+- Все executable checks — Luna01a16eab-c777-78a0-a815-47b45ff0860d, host local, exact snapshot/cwd; default6377/auth stale. Main не дублирует/не ждёт полный прогон. [Процесс](development-workflow.md).
+- Actual SQL: own Linux ARM64 postgres18.6, readonly source/src, admin socket trust, TCP127 SCRAM wrong-password deny/TLS SAN127, Redis8.2 shared networkDB15. Runtime assembly dedicated auth_runtime_assembly_test, operator auth_platform_test. Fixtures отказываются от чужих данных.
+- Предельная нагрузка/GC/fleet/external provider/SMTP/two-project release gates открыты. Новые deps только с разрешения, реальные secrets/staging сохранять. Commit только по запросу.
