@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"go.uber.org/zap/zapcore"
 )
@@ -98,17 +97,7 @@ func (cfg Config) validateSessions() error {
 }
 
 func (cfg Config) validateRecovery() error {
-	if cfg.Password.ResetGlobalLimit < 1 {
-		return fmt.Errorf("PASSWORD_RESET_GLOBAL_LIMIT must be positive")
-	}
-	if cfg.Password.ResetTokenTTL < time.Minute || cfg.Password.ResetTokenTTL > time.Hour {
-		return fmt.Errorf("PASSWORD_RESET_TOKEN_TTL must be between 1m and 1h")
-	}
-	reset, err := url.Parse(cfg.Password.ResetURL)
-	if err != nil || len(cfg.Password.ResetURL) > 2048 || reset.Hostname() == "" || reset.User != nil || reset.RawQuery != "" || reset.Fragment != "" || (reset.Scheme != "https" && reset.Scheme != "http") {
-		return fmt.Errorf("invalid PASSWORD_RESET_URL")
-	}
-	return nil
+	return cfg.Password.Validate()
 }
 
 func (cfg Config) validateDelivery() error {

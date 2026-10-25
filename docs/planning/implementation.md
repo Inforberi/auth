@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP4.1e-project-email,25 октября — локальные проверки Luna V2/V3 PASS.** [Контракт и ограничения](../features/project-email-runtime.md): verification/recovery assembly, project HTTPS URLs/scoped outbox, no nested registry acquisition, bounded private-reader keyset discovery и opt-in delivery runner. Сохраняются SQL claim/retry и no public-ready. Автоматическое lifecycle/config/fleet budget включение — отдельный gate.
+
 - [x] **MP4.1d-project-smtp,25 октября — локальные проверки Luna PASS.** [Контракт](../features/project-smtp-runtime.md): project-only saved SMTP, scoped decryption, trusted allowlist/strict TLS, source refresh под UsePool/current guards без SQL lease во время сети. Нет Initialize/ENV fallback/new deps/schema/public-ready; email/outbox consumers и bounded workers далее.
 
 - [x] **MP4.1c-project-mfa,25 октября — локальные проверки Luna V1/V2 PASS.** [Решение и матрица](../features/project-mfa-runtime.md): подключить существующий MFA challenge/TOTP/recovery/session flow к проектной password assembly с current policy/auth_version/role/epoch guards и project scopes, без дублирования SQL/crypto или public-ready. Обязательные mail/outbox prerequisites проверить до публикации, не заменять fake delivery. Локальный Luna medium исследует код, отдельная Luna выполняет verification.

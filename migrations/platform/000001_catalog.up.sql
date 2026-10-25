@@ -30,6 +30,7 @@ CREATE TABLE platform.projects (
 
 CREATE INDEX projects_page ON platform.projects(created_at DESC,id DESC);
 CREATE INDEX projects_phase_page ON platform.projects(phase,created_at DESC,id DESC);
+CREATE INDEX projects_delivery_page ON platform.projects(created_at DESC,id DESC) WHERE phase='ready' AND desired_state='enabled';
 REVOKE ALL ON platform.projects FROM PUBLIC;
 
 -- Immutable creation snapshot is both audit and idempotency receipt, independent of later lifecycle.

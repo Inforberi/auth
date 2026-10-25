@@ -2,20 +2,21 @@
 
 Обновлено25 октября2026. [Карта](index.md) · [план](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui) · [gates](../operations/acceptance-summary.md#открытые-ограничения-приёмки). Git/staging проверять по факту.
 
-## Текущий блок — MP4.1d project SMTP
+## Текущий блок — MP4.1e project email/outbox
 
-[Контракт](../features/project-smtp-runtime.md). Добавлен NewProjectMailer: existing settings/mail transport, project data key, scoped Redis и trusted allowlist; Credentials под UsePool/current guards, network после освобождения lease. Сохранённые настройки проверяются при сборке и перечитываются перед отправкой. Нет Initialize/ENV fallback/new deps/schema/pool/worker/public route/readiness. Без SMTP password/TOTP работают независимо; email consumer получает явный отказ сборки.
+[Контракт](../features/project-email-runtime.md). Добавлены NewProjectEmail (verification Resend/Confirm и password Forgot/Reset), private reader PageRuntimes и opt-in ProjectDelivery.Run с bounded pages/parallelism. Existing scoped ciphers/Redis/claim/retry/transport; source credentialsInPool исключает nested acquisition. Origin/URLs trusted HTTPS, no ENV seed/fallback/newdeps/новой миграции. Partial ready/enabled index добавлен только в initial catalog schema. Данные рабочей БД не менялись.
 
-Добавлен actual SQL fixture projectSMTPDrill в TestPrepareCommandSQL: no-init, scoped decrypt, allowlist clone, unchanged xmin, refresh/rejection/missing/corrupt/TLS, suspend, free single SQL connection during SMTP I/O и отсутствие Redis probe writes. Проверки переданы отдельной Luna: snapshot `/private/tmp/auth-project-smtp-v1.wqg_6uf0`, base07c448b, manifest3 `/private/tmp/auth-project-smtp-v1-manifest.sha256`, metadata `/private/tmp/auth-project-smtp-v1-snapshot.json`; Luna: affected race и actual full command SQL PASS без SKIP; task check повтор с доступом к loopback PASS exit0/lint0. Первый sandbox bind failure был ограничением окружения. Manifest3 совпал до/после и с main; source не менялся. Локальный verification gate этого блока закрыт. Сервер без STARTTLS проверяет безопасный отказ, не успешную внешнюю доставку.
+Добавлены actual SQL+Redis issuance/worker TLS-rejection/retry/confirm/reset/replay/suspend/page tests и unit URL/concurrency/cancellation. Formatter/diff выполняет main; все executable checks переданы отдельной Luna: Luna V3 task check exit0/lint0 и app/auth race exit0; V2 config/cmd race и actual full command SQL PASS без SKIP. Manifest11 совпал до/после и с main; после V2 менялся только тип counter, SQL/другие успешные наборы обоснованно не повторялись. Snapshot `/private/tmp/auth-project-email-v3.5mpw8ae3`, manifest `/private/tmp/auth-project-email-v3-manifest.sha256`, metadata `/private/tmp/auth-project-email-v3-snapshot.json`. Локальный gate закрыт. Реальная внешняя TLS delivery/public routing/registration/other queues/lifecycle auto-start/fleet bounds этим блоком не подтверждены.
+
 
 ## Следующий шаг
 
-Продолжить selected email/outbox consumers и bounded delivery workers/provider/token assembly после фиксации проверенного SMTP-блока. Не публиковать availableMethods/readiness до prerequisites. MP5 routing, MP6R security/refactor, MP7/MP8 и согласование UI остаются дальше. UI не начинать.
+После фиксации проверенного блока продолжить operational/lifecycle подключение bounded delivery, remaining email/registration/provider/token assembly и отдельные readiness/MP5 guards. Полный MP4.4/4.5 не закрывать внутренним opt-in runner. UI не начинать; дальше MP6R security/refactor, MP7/MP8 и отдельное согласование UI.
 
 ## Процесс и ограничения
 
-- Локальный исследователь Helmholtz (gpt-6-luna medium), ID01a17292-5405-7341-bae9-f5884a755889, переиспользуется; прочитал только targeted SMTP/fixtures карту, tests не запускает. Не закрывать после каждого отчёта. Bohr закрыт по запросу пользователя.
-- Все executable checks/tests/fixtures — «Проверки Auth — Luna»01a16eab-c777-78a0-a815-47b45ff0860d на explicit snapshot/cwd; default worktree6377/auth stale. Здесь только форматирование/diff/snapshot, не ждать весь прогон. [Процесс](development-workflow.md).
-- UsePool callback не сохраняет pool/service/async работу и не вкладывает registry acquisitions. Shared dependencies не закрывать. Current-key guard не обещает распределённую мгновенную отмену SMTP side effect после финальной проверки.
-- PostgreSQL + обязательный Redis без fallback. Новые зависимости — только с разрешения. Реальные ENV/БД/secrets/staging сохранять. Коммит только по запросу.
-- Предыдущие password/MFA blocks проверены и закоммичены:186adf5/cae37b9; процесс07c448b. MFA evidence — в history. Их PASS не подтверждает текущий SMTP diff.
+- Единственный локальный исследователь Helmholtz (gpt-6-luna medium), ID01a17292-5405-7341-bae9-f5884a755889. Targeted read-only SMTP/worker/catalog/fixture карта; tests не запускает. Переиспользовать, не закрывать после ответа. Bohr закрыт по просьбе пользователя.
+- Все executable checks — отдельный чат «Проверки Auth — Luna»01a16eab-c777-78a0-a815-47b45ff0860d на explicit immutable snapshot/cwd; default6377/auth stale. Main не дублирует tests и не ждёт весь прогон. [Процесс](development-workflow.md).
+- UsePool callback не сохраняет pool/service/async работу. Delivery держит bounded logical lease до completion; physical connection во время SMTP/hash не удерживается. Передавать pool-bound source наружу нельзя. Shared dependencies закрывает owner после drain.
+- Current key guard не обещает мгновенную отмену SMTP/committed operations после финальной сверки. SQL authority/lease/retry scopes сохранять.
+- PostgreSQL+обязательный Redis. Новые deps только с разрешения; реальные ENV/БД/secrets/staging сохранять. Коммит только по запросу. Предыдущий SMTP блок закоммичен f7914c4; его PASS не подтверждает текущие изменения.

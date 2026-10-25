@@ -44,21 +44,9 @@ func NewProjectMailer(ctx context.Context, key projectruntime.Key, allowed []str
 	if err != nil {
 		return nil, err
 	}
-	scope, err := realmscope.New("project", string(key.Binding.ProjectID))
+	source, err := newProjectSMTP(key, configuration.EncryptionKey(), allowed, deps)
 	if err != nil {
 		return nil, err
-	}
-	cipher, err := (realmSecurity{scope: scope}).cipher(configuration.EncryptionKey(), "smtp-settings:v1")
-	if err != nil {
-		return nil, err
-	}
-	limits, err := settingsredis.NewSMTPScoped(deps.Redis, scope)
-	if err != nil {
-		return nil, err
-	}
-	source := &projectSMTP{
-		key: key, registry: deps.Registry, reader: deps.Reader,
-		cipher: cipher, limits: limits, allowed: slices.Clone(allowed),
 	}
 	if _, err := source.credentials(ctx); err != nil {
 		return nil, err
@@ -66,36 +54,62 @@ func NewProjectMailer(ctx context.Context, key projectruntime.Key, allowed []str
 	return mailer.NewWithSource(source.credentials), nil
 }
 
+func newProjectSMTP(key projectruntime.Key, root string, allowed []string, deps ProjectSMTPDependencies) (*projectSMTP, error) {
+	scope, err := realmscope.New("project", string(key.Binding.ProjectID))
+	if err != nil {
+		return nil, err
+	}
+	cipher, err := (realmSecurity{scope: scope}).cipher(root, "smtp-settings:v1")
+	if err != nil {
+		return nil, err
+	}
+	limits, err := settingsredis.NewSMTPScoped(deps.Redis, scope)
+	if err != nil {
+		return nil, err
+	}
+	return &projectSMTP{
+		key: key, registry: deps.Registry, reader: deps.Reader,
+		cipher: cipher, limits: limits, allowed: slices.Clone(allowed),
+	}, nil
+}
+
 func (s *projectSMTP) credentials(ctx context.Context) (mailer.Config, error) {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	var result mailer.Config
 	err := s.registry.UsePool(ctx, s.key, func(ctx context.Context, pool *pgxpool.Pool) error {
-		if err := s.requireCurrent(ctx); err != nil {
-			return err
-		}
-		svc, err := settingsservice.NewSMTP(settingspostgres.New(pool), s.cipher,
-			func(ctx context.Context, c settingsdomain.SMTPConfig, password string) error {
-				return mailer.CheckContext(ctx, smtpMailerConfig(c, password))
-			}, s.limits, s.allowed, true)
-		if err != nil {
-			return err
-		}
-		c, password, err := svc.Credentials(ctx)
-		if err != nil {
-			return err
-		}
-		if err := s.requireCurrent(ctx); err != nil {
-			return err
-		}
-		result = smtpMailerConfig(c, password)
-		return nil
+		var err error
+		result, err = s.credentialsInPool(ctx, pool)
+		return err
 	})
 	if err != nil {
 		return mailer.Config{}, err
 	}
 	// Only configuration leaves the lease; SMTP I/O never retains a project pool or connection.
 	return result, nil
+}
+
+func (s *projectSMTP) credentialsInPool(ctx context.Context, pool *pgxpool.Pool) (mailer.Config, error) {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	if err := s.requireCurrent(ctx); err != nil {
+		return mailer.Config{}, err
+	}
+	svc, err := settingsservice.NewSMTP(settingspostgres.New(pool), s.cipher,
+		func(ctx context.Context, c settingsdomain.SMTPConfig, password string) error {
+			return mailer.CheckContext(ctx, smtpMailerConfig(c, password))
+		}, s.limits, s.allowed, true)
+	if err != nil {
+		return mailer.Config{}, err
+	}
+	c, password, err := svc.Credentials(ctx)
+	if err != nil {
+		return mailer.Config{}, err
+	}
+	if err := s.requireCurrent(ctx); err != nil {
+		return mailer.Config{}, err
+	}
+	return smtpMailerConfig(c, password), nil
 }
 
 func (s *projectSMTP) requireCurrent(ctx context.Context) error {

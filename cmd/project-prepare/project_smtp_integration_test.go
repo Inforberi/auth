@@ -127,6 +127,7 @@ func projectSMTPDrill(t *testing.T, admin *pgx.Conn, reader *catalog.RuntimeCred
 			require.NoError(t, err)
 		})
 	}
+	t.Run("project email scenarios and delivery", func(t *testing.T) { projectEmailDrill(t, admin, db, rdb, key, deps, listener) })
 	_, err = admin.Exec(ctx, `UPDATE platform.projects SET desired_state='suspended',version=version+1 WHERE id=$1`, key.Binding.ProjectID)
 	require.NoError(t, err)
 	t.Cleanup(func() {
