@@ -31,7 +31,7 @@ func (r *Repository) readDirectory(ctx context.Context, actor operatordomain.Pri
 				return catalogError(ctx, err)
 			}
 		}
-		binding, _, err := lockRoleTarget(ctx, tx, target.ProjectID, target.ExpectedVersion, target.ExpectedGeneration)
+		binding, _, err := lockProjectTarget(ctx, tx, target.ProjectID, target.ExpectedVersion, target.ExpectedGeneration)
 		if err != nil {
 			return err
 		}

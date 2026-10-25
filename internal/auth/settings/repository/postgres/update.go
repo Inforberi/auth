@@ -18,23 +18,11 @@ func (r *Repository) Update(ctx context.Context, input service.UpdateInput) (dom
 		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, input.Actor, "", settings.AuthSettingsManage); err != nil {
 			return err
 		}
-		before, err := scanSnapshot(tx.QueryRow(ctx, `SELECT `+policyColumns+` FROM auth.auth_settings WHERE singleton FOR UPDATE`))
+		before, err := LockPolicyInTransaction(ctx, tx)
 		if err != nil {
 			return err
 		}
-		if before.Version != input.ExpectedVersion {
-			return domain.ErrPolicyConflict
-		}
-		if !r.runtimeConfigured {
-			return domain.ErrMethodNotReady
-		}
-		if err := input.Policy.RequireAvailable(r.available); err != nil {
-			return err
-		}
-		if input.Policy.TokenIssuance.SessionExchange && !r.tokens.SessionExchange || input.Policy.TokenIssuance.Native && !r.tokens.Native {
-			return domain.ErrMethodNotReady
-		}
-		if err := requireProviderSettings(ctx, tx, input.Policy); err != nil {
+		if err := CheckPolicyChange(ctx, tx, before, input.ExpectedVersion, input.Policy, r.runtime); err != nil {
 			return err
 		}
 		if before.Policy == input.Policy {
@@ -46,11 +34,7 @@ func (r *Repository) Update(ctx context.Context, input service.UpdateInput) (dom
 				return err
 			}
 		}
-		result, err = scanSnapshot(tx.QueryRow(ctx, `UPDATE auth.auth_settings SET version=version+1,
-			password_enabled=$1,email_otp_enabled=$2,google_enabled=$3,telegram_enabled=$4,
-			registration_enabled=$5,google_registration_enabled=$6,telegram_registration_enabled=$7,password_email_verification=$8,
-			token_session_exchange_enabled=$9,token_native_enabled=$10
-			WHERE singleton RETURNING `+policyColumns, policyValues(input.Policy)...))
+		result, err = ApplyPolicyChange(ctx, tx, input.Policy)
 		if err != nil {
 			return err
 		}

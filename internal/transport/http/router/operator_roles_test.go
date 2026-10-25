@@ -18,6 +18,7 @@ import (
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
@@ -70,6 +71,23 @@ func (s *operatorRoles) ReconcileRoleOutcome(context.Context, operatordomain.Pri
 	return domain.RoleOutcome{}, nil
 }
 
+type operatorPolicy struct{ calls int }
+
+func (s *operatorPolicy) ReadAuthPolicy(context.Context, operatordomain.Principal, domain.DirectoryTarget) (settingsdomain.Snapshot, error) {
+	s.calls++
+	return settingsdomain.Snapshot{}, nil
+}
+
+func (s *operatorPolicy) UpdateAuthPolicy(context.Context, operatordomain.Principal, domain.AuthPolicyUpdate) (domain.AuthPolicyResult, error) {
+	s.calls++
+	return domain.AuthPolicyResult{}, nil
+}
+
+func (s *operatorPolicy) ReadAuthPolicyOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.AuthPolicyOutcome, error) {
+	s.calls++
+	return domain.AuthPolicyOutcome{}, nil
+}
+
 func roleRouteRuntime() config.ProjectRuntimeConfig {
 	return config.ProjectRuntimeConfig{
 		Enabled: true, CatalogURL: "postgres://reader@/catalog?host=/var/run/postgresql&sslmode=disable",
@@ -90,8 +108,9 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 	roles := &operatorRoles{}
 	capacityCalls := 0
 	users := &operatorUsers{}
+	policy := &operatorPolicy{}
 	h := Handlers{
-		Config: cfg, Projects: projecthttp.New(&operatorReadCatalog{}, nil), ProjectRoles: projecthttp.NewRoles(roles, nil), ProjectUsers: projecthttp.NewUsers(users, nil), PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfahttp.Handler{}, Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(&operatorReadSession{}, nil), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
+		Config: cfg, Projects: projecthttp.New(&operatorReadCatalog{}, nil), ProjectRoles: projecthttp.NewRoles(roles, nil), ProjectUsers: projecthttp.NewUsers(users, nil), ProjectAuthPolicy: projecthttp.NewAuthPolicy(policy, settingsdomain.PublicMethods{}, nil), PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfahttp.Handler{}, Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(&operatorReadSession{}, nil), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
 		ProjectCapacity: func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				capacityCalls++
@@ -101,6 +120,7 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 		},
 	}
 	for _, path := range []string{
+		"/projects/project/auth/settings", "/projects/project/auth/settings?expectedVersion=1&expectedGeneration=1", "/projects/project/auth/settings/operations/op",
 		"/projects/project/roles", "/projects/project/role-operations/op", "/projects/project/role-operations/op/reconcile",
 		"/projects/project/users/user/roles/role/grant", "/projects/project/users/user/roles/role/revoke",
 		"/projects/project/roles?expectedVersion=1&expectedGeneration=1",
@@ -125,6 +145,9 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 					status = 201
 				}
 			}
+			if path == "/projects/project/auth/settings" {
+				body = `{"policy":{"methods":{"password":false,"emailOtp":false,"google":false,"telegram":false},"registration":{"enabled":false,"google":false,"telegram":false},"passwordEmailVerification":"disabled","tokenIssuance":{"sessionExchange":false,"native":false}}}`
+			}
 			if strings.HasSuffix(path, "/op") {
 				method = "GET"
 			}
@@ -139,16 +162,16 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 			if tc.cookie {
 				r.AddCookie(&http.Cookie{Name: sessionhttp.SessionCookieName, Value: strings.Repeat("A", 43)})
 			}
-			before := roles.calls + users.calls
+			before := roles.calls + users.calls + policy.calls
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, r)
 			require.Equal(t, status, w.Code)
 			if status >= 400 {
-				require.Equal(t, before, roles.calls+users.calls)
+				require.Equal(t, before, roles.calls+users.calls+policy.calls)
 			}
 		}
 	}
-	require.Equal(t, 9, capacityCalls)
+	require.Equal(t, 12, capacityCalls)
 	unsafe := h
 	unsafe.ProjectCapacity = nil
 	_, err := NewOperator(unsafe)
@@ -161,6 +184,7 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 	require.Error(t, err)
 	unsafe.ProjectRoles = nil
 	unsafe.ProjectUsers = nil
+	unsafe.ProjectAuthPolicy = nil
 	disabled, err := NewOperator(unsafe)
 	require.NoError(t, err)
 	request := httptest.NewRequest("POST", cfg.Platform.Origin+"/api/v1/platform/projects/project/roles", strings.NewReader("{}"))

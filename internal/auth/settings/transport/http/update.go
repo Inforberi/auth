@@ -38,21 +38,21 @@ type UpdateRequest struct {
 	Policy          *PolicyRequest `json:"policy" binding:"required"`
 } // @name auth_settings_http.UpdateRequest
 
-func (input UpdateRequest) policy() (domain.Policy, bool) {
-	if input.Policy == nil || input.Policy.Methods == nil || input.Policy.Registration == nil || input.Policy.TokenIssuance == nil {
+func (input *PolicyRequest) Domain() (domain.Policy, bool) {
+	if input == nil || input.Methods == nil || input.Registration == nil || input.TokenIssuance == nil {
 		return domain.Policy{}, false
 	}
-	methods, registration := input.Policy.Methods, input.Policy.Registration
+	methods, registration := input.Methods, input.Registration
 	if methods.Password == nil || methods.EmailOTP == nil || methods.Google == nil || methods.Telegram == nil ||
 		registration.Enabled == nil || registration.Google == nil || registration.Telegram == nil ||
-		input.Policy.TokenIssuance.SessionExchange == nil || input.Policy.TokenIssuance.Native == nil {
+		input.TokenIssuance.SessionExchange == nil || input.TokenIssuance.Native == nil {
 		return domain.Policy{}, false
 	}
 	return domain.Policy{
 		Methods:                   domain.PublicMethods{Password: *methods.Password, EmailOTP: *methods.EmailOTP, Google: *methods.Google, Telegram: *methods.Telegram},
 		Registration:              domain.PublicRegistration{Enabled: *registration.Enabled, Google: *registration.Google, Telegram: *registration.Telegram},
-		PasswordEmailVerification: input.Policy.PasswordEmailVerification,
-		TokenIssuance:             domain.TokenIssuance{SessionExchange: *input.Policy.TokenIssuance.SessionExchange, Native: *input.Policy.TokenIssuance.Native},
+		PasswordEmailVerification: input.PasswordEmailVerification,
+		TokenIssuance:             domain.TokenIssuance{SessionExchange: *input.TokenIssuance.SessionExchange, Native: *input.TokenIssuance.Native},
 	}, true
 }
 
@@ -80,7 +80,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 400, "invalid_json", "invalid JSON")
 		return
 	}
-	policy, ok := input.policy()
+	policy, ok := input.Policy.Domain()
 	if !ok {
 		httpx.Error(w, 400, "invalid_json", "complete policy required")
 		return

@@ -18,7 +18,7 @@ func TestPlatformAssignmentHTTP(t *testing.T) {
 		for _, unknown := range []bool{false, true} {
 			s := &roleServiceStub{assigned: domain.RoleAssignmentResult{RoleAssignmentSnapshot: domain.RoleAssignmentSnapshot{AccessVersion: 2, Changed: true}}}
 			if unknown {
-				s.err = domain.ErrRoleOutcomeUnknown
+				s.err = domain.ErrOperationOutcomeUnknown
 			}
 			h := NewRoles(s, nil)
 			router := chi.NewRouter()

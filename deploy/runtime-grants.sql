@@ -16,6 +16,9 @@ GRANT INSERT(operation_id,realm_id,actor_id,project_id,binding,request,role_id,r
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON auth.platform_role_assignments FROM auth_runtime;
 GRANT INSERT(operation_id,realm_id,actor_id,project_id,binding,request,user_id,role_id,role_snapshot,access_version,changed,admission_id)
   ON auth.platform_role_assignments TO auth_runtime;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON auth.platform_auth_policy_updates FROM auth_runtime;
+GRANT INSERT(operation_id,realm_id,actor_id,admission_id,project_id,binding,request,previous_policy,next_policy,changed)
+  ON auth.platform_auth_policy_updates TO auth_runtime;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA auth TO auth_runtime;
 -- Project-only projection may not exist in a standalone database.
   IF to_regclass('auth.project_identity') IS NOT NULL THEN

@@ -112,6 +112,7 @@ func onboardingPreparationDrill(t *testing.T, physical *pgx.Conn, env func(strin
 	managedArgs := append(append([]string{}, passwordArgs...), "-managed")
 	require.ErrorIs(t, run(ctx, managedArgs, env, io.Discard, io.Discard), domain.ErrConflict)
 	var markerXmin, policyXmin, setupXmin string
+	var policyBefore []byte
 	inspect(func(conn *pgx.Conn) {
 		var safe bool
 		require.NoError(t, conn.QueryRow(ctx, `SELECT m.configuration_prepared AND m.setup_operator_hash=$1 AND p.version=1 AND p.password_enabled
@@ -119,8 +120,8 @@ func onboardingPreparationDrill(t *testing.T, physical *pgx.Conn, env func(strin
 			OR p.telegram_registration_enabled OR p.token_session_exchange_enabled OR p.token_native_enabled)
 			AND p.password_email_verification='disabled' AND s.operator_hash=$1 AND s.initialized_at IS NULL AND s.administrator_id IS NULL
 			AND s.payload IS NULL AND NOT EXISTS(SELECT 1 FROM auth.users) AND NOT EXISTS(SELECT 1 FROM auth.roles),
-			m.xmin::text,p.xmin::text,s.xmin::text FROM project_meta.identity m CROSS JOIN auth.auth_settings p CROSS JOIN auth.initial_setup s`,
-			proof.Digest()).Scan(&safe, &markerXmin, &policyXmin, &setupXmin))
+			m.xmin::text,p.xmin::text,s.xmin::text,to_jsonb(p) FROM project_meta.identity m CROSS JOIN auth.auth_settings p CROSS JOIN auth.initial_setup s`,
+			proof.Digest()).Scan(&safe, &markerXmin, &policyXmin, &setupXmin, &policyBefore))
 		require.True(t, safe)
 	})
 	onboardingRuntimeDrill(t, physical, env, repo, r, binding, codec)
@@ -133,6 +134,12 @@ func onboardingPreparationDrill(t *testing.T, physical *pgx.Conn, env func(strin
 		require.True(t, unchanged)
 	})
 	markerXmin = onboardingActivationDrill(t, physical, env, repo, r, binding, codec, markerXmin)
+	inspect(func(conn *pgx.Conn) {
+		// The policy drill writes and restores settings; measure replay from that restored row.
+		var restored bool
+		require.NoError(t, conn.QueryRow(ctx, `SELECT xmin::text,to_jsonb(p)=$1::jsonb FROM auth.auth_settings p`, policyBefore).Scan(&policyXmin, &restored))
+		require.True(t, restored, "administrative drills must restore the exact prepared policy")
+	})
 	require.NoError(t, run(ctx, args, env, io.Discard, io.Discard))
 	inspect(func(conn *pgx.Conn) {
 		var same bool

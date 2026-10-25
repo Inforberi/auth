@@ -215,7 +215,7 @@ func roleAdmissionDrill(t *testing.T, physical *pgx.Conn, project *pgxpool.Pool,
 		a, err := repo.AdmitRoleCreation(ctx, actor, c)
 		require.NoError(t, err)
 		_, err = a.Execute(ctx, lostRoleCommitDatabase{project}, permissions, true)
-		require.ErrorIs(t, err, domain.ErrRoleOutcomeUnknown)
+		require.ErrorIs(t, err, domain.ErrOperationOutcomeUnknown)
 		var committed bool
 		require.NoError(t, project.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.platform_role_creations WHERE operation_id=$1)`, c.OperationID).Scan(&committed))
 		require.True(t, committed, "real project COMMIT happened before injected reply loss")

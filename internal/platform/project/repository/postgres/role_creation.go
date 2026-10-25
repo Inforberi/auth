@@ -24,11 +24,11 @@ func (r *Repository) PrepareRoleCreation(ctx context.Context, actor operatordoma
 		if err != nil {
 			return domain.ErrInvalidProject
 		}
-		target, binding, err := lockRoleTarget(ctx, tx, command.ProjectID, command.ExpectedVersion, command.ExpectedGeneration)
+		target, binding, err := lockProjectTarget(ctx, tx, command.ProjectID, command.ExpectedVersion, command.ExpectedGeneration)
 		if err != nil {
 			return err
 		}
-		result, err = insertRoleIntent(ctx, tx, roleIntentRecord{
+		result, err = insertRoleIntent(ctx, tx, operationIntentRecord{
 			operation: command.OperationID, project: command.ProjectID, realm: target.RealmID, actor: domain.ID(actor.UserID),
 			version: command.ExpectedVersion, generation: command.ExpectedGeneration, binding: binding, request: request,
 		})

@@ -10,9 +10,14 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
-func executeRoleTransaction(ctx context.Context, project RoleProjectDatabase, until time.Time, used *atomic.Bool, apply func(context.Context, pgx.Tx) error) error {
+type ProjectDatabase interface {
+	BeginTx(context.Context, pgx.TxOptions) (pgx.Tx, error)
+}
+
+func executeProjectTransaction(ctx context.Context, project ProjectDatabase, until time.Time, used *atomic.Bool, apply func(context.Context, pgx.Tx) error) error {
 	if !time.Now().Before(until) {
 		return domain.ErrAdmissionExpired
 	}
@@ -45,7 +50,19 @@ func executeRoleTransaction(ctx context.Context, project RoleProjectDatabase, un
 		return errors.Join(domain.ErrAdmissionExpired, err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return errors.Join(domain.ErrRoleOutcomeUnknown, ctx.Err())
+		return errors.Join(domain.ErrOperationOutcomeUnknown, ctx.Err())
 	}
 	return nil
+}
+
+func withProjectRuntime[T any](ctx context.Context, registry *projectruntime.Registry, key projectruntime.Key, until time.Time, execute func(context.Context, projectruntime.Database) (T, error)) (T, error) {
+	ctx, cancel := context.WithDeadline(ctx, until)
+	defer cancel()
+	var result T
+	err := registry.Use(ctx, key, func(ctx context.Context, db projectruntime.Database) error {
+		var err error
+		result, err = execute(ctx, db)
+		return err
+	})
+	return result, err
 }

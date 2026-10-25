@@ -42,7 +42,7 @@ func (r *Repository) AdmitRoleCreation(ctx context.Context, actor operatordomain
 		if err != nil {
 			return err
 		}
-		binding, snapshot, err := lockRoleTarget(ctx, tx, command.ProjectID, command.ExpectedVersion, command.ExpectedGeneration)
+		binding, snapshot, err := lockProjectTarget(ctx, tx, command.ProjectID, command.ExpectedVersion, command.ExpectedGeneration)
 		if err != nil {
 			return err
 		}
@@ -50,7 +50,7 @@ func (r *Repository) AdmitRoleCreation(ctx context.Context, actor operatordomain
 		if err != nil {
 			return domain.ErrInvalidProject
 		}
-		a.id, remaining, err = issueRoleAdmission(ctx, tx, roleIntentRecord{
+		a.id, remaining, err = issueRoleAdmission(ctx, tx, operationIntentRecord{
 			operation: command.OperationID, project: command.ProjectID, realm: binding.RealmID, actor: domain.ID(actor.UserID),
 			version: command.ExpectedVersion, generation: command.ExpectedGeneration, binding: snapshot, request: request,
 		}, proofDeadline)

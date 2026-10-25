@@ -218,6 +218,25 @@ CREATE TABLE auth.platform_role_assignments (
 );
 REVOKE ALL ON auth.platform_role_assignments FROM PUBLIC;
 
+CREATE TABLE auth.platform_auth_policy_updates (
+  operation_id UUID PRIMARY KEY CHECK (operation_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  realm_id UUID NOT NULL CHECK (realm_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  actor_id UUID NOT NULL CHECK (actor_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  admission_id UUID NOT NULL CHECK (admission_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  project_id UUID NOT NULL CHECK (project_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  binding JSONB NOT NULL CHECK (jsonb_typeof(binding)='object' AND octet_length(binding::text)<=1024),
+  request JSONB NOT NULL CHECK (jsonb_typeof(request)='object' AND octet_length(request::text)<=8192),
+  previous_policy JSONB NOT NULL CHECK (jsonb_typeof(previous_policy)='object' AND octet_length(previous_policy::text)<=8192),
+  next_policy JSONB NOT NULL CHECK (jsonb_typeof(next_policy)='object' AND octet_length(next_policy::text)<=8192),
+  changed BOOLEAN NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  CHECK (COALESCE((previous_policy->>'Version')::bigint,0)>0 AND COALESCE((next_policy->>'Version')::bigint,0)>0),
+  CHECK (COALESCE(jsonb_typeof(previous_policy->'Policy')='object',false) AND COALESCE(jsonb_typeof(next_policy->'Policy')='object',false)),
+  CHECK ((changed AND (next_policy->>'Version')::bigint=(previous_policy->>'Version')::bigint+1
+      AND previous_policy->'Policy'<>next_policy->'Policy') OR (NOT changed AND previous_policy=next_policy))
+);
+REVOKE ALL ON auth.platform_auth_policy_updates FROM PUBLIC;
+
 CREATE TABLE auth.linked_identities (
   issuer TEXT COLLATE "C" NOT NULL CHECK (octet_length(issuer) BETWEEN 1 AND 512 AND btrim(issuer) <> ''),
   subject TEXT COLLATE "C" NOT NULL CHECK (octet_length(subject) BETWEEN 1 AND 255 AND btrim(subject) <> ''),

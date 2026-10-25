@@ -6,6 +6,7 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA auth TO auth_platform_
 REVOKE INSERT,UPDATE,DELETE,TRUNCATE ON auth.restore_audit FROM auth_platform_runtime;
 REVOKE ALL ON auth.platform_role_creations FROM auth_platform_runtime;
 REVOKE ALL ON auth.platform_role_assignments FROM auth_platform_runtime;
+REVOKE ALL ON auth.platform_auth_policy_updates FROM auth_platform_runtime;
 GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA auth TO auth_platform_runtime;
 
 GRANT SELECT ON platform.operator_realm TO auth_platform_runtime;
@@ -24,6 +25,10 @@ GRANT INSERT(operation_id,created_at,expires_at) ON platform.project_role_admiss
 GRANT INSERT(operation_id,admission_id,role_snapshot) ON platform.project_role_outcomes TO auth_platform_runtime;
 GRANT INSERT(operation_id,project_id,realm_id,actor_id,version,generation,binding,request)
   ON platform.project_role_intents TO auth_platform_runtime;
+GRANT SELECT ON platform.project_auth_policy_intents,platform.project_auth_policy_admissions TO auth_platform_runtime;
+GRANT INSERT(operation_id,project_id,realm_id,actor_id,version,generation,binding,request)
+  ON platform.project_auth_policy_intents TO auth_platform_runtime;
+GRANT INSERT(operation_id,created_at,expires_at) ON platform.project_auth_policy_admissions TO auth_platform_runtime;
 -- Row-locking SELECT requires UPDATE on at least one column of operator_permissions.
 GRANT UPDATE(permission_key) ON platform.operator_permissions TO auth_platform_runtime;
 GRANT UPDATE(desired_state,phase,version,generation,updated_at) ON platform.projects TO auth_platform_runtime;

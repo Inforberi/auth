@@ -1,3 +1,5 @@
+DROP TABLE platform.project_auth_policy_admissions;
+DROP TABLE platform.project_auth_policy_intents;
 DROP TABLE platform.project_role_outcomes;
 DROP TABLE platform.project_role_admissions;
 DROP TABLE platform.project_role_intents;

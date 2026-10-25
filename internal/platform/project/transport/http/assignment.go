@@ -35,7 +35,7 @@ type PlatformAssignmentResponse struct {
 } // @name project_http.PlatformAssignmentResponse
 
 func (h *RoleHandler) changeAssignment(w http.ResponseWriter, r *http.Request, action domain.RoleAction) {
-	actor, ok := roleActor(w, r)
+	actor, ok := operationActor(w, r)
 	if !ok {
 		return
 	}
@@ -51,7 +51,7 @@ func (h *RoleHandler) changeAssignment(w http.ResponseWriter, r *http.Request, a
 		OperationID: input.OperationID, ProjectID: project, ExpectedVersion: input.ExpectedVersion, ExpectedGeneration: input.ExpectedGeneration,
 		Action: action, UserID: user, RoleID: accessdomain.RoleID(chi.URLParam(r, "roleId")), ExpectedRoleVersion: input.ExpectedRoleVersion, ExpectedAccessVersion: input.ExpectedAccessVersion, Reason: input.Reason,
 	})
-	if err != nil && !errors.Is(err, domain.ErrRoleOutcomeUnknown) {
+	if err != nil && !errors.Is(err, domain.ErrOperationOutcomeUnknown) {
 		h.respondError(w, r, err)
 		return
 	}

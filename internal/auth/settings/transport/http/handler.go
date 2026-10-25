@@ -79,9 +79,15 @@ func methodsResponse(methods domain.PublicMethods) MethodsResponse {
 }
 
 func (h *Handler) respond(w http.ResponseWriter, snapshot domain.Snapshot) {
-	policy := snapshot.Policy
 	w.Header().Set("Cache-Control", "no-store")
-	httpx.JSON(w, 200, SettingsResponse{
+	response := SettingsResponseFrom(snapshot, h.available)
+	response.TokenProfiles = h.tokens
+	httpx.JSON(w, 200, response)
+}
+
+func SettingsResponseFrom(snapshot domain.Snapshot, available domain.PublicMethods) SettingsResponse {
+	policy := snapshot.Policy
+	return SettingsResponse{
 		Version: snapshot.Version,
 		Policy: PolicyResponse{
 			Methods:                   methodsResponse(policy.Methods),
@@ -89,7 +95,7 @@ func (h *Handler) respond(w http.ResponseWriter, snapshot domain.Snapshot) {
 			PasswordEmailVerification: policy.PasswordEmailVerification,
 			TokenIssuance:             TokenIssuanceResponse{SessionExchange: policy.TokenIssuance.SessionExchange, Native: policy.TokenIssuance.Native},
 		},
-		AvailableMethods: methodsResponse(h.available),
-		TokenProfiles:    h.tokens,
-	})
+		AvailableMethods: methodsResponse(available),
+		TokenProfiles:    tokenProfilesResponse(domain.TokenDeployment{}),
+	}
 }

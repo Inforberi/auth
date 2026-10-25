@@ -20,6 +20,10 @@ var settingsErrors = []httpx.ErrorRule{
 	httpx.MatchError(accessdomain.ErrForbidden, 403, "forbidden", "forbidden"),
 }
 
+func SettingsErrorRules() []httpx.ErrorRule {
+	return append([]httpx.ErrorRule(nil), settingsErrors...)
+}
+
 func (h *Handler) respondError(w http.ResponseWriter, r *http.Request, err error) {
 	httpx.RespondError(w, r, h.log, "auth_settings", err, settingsErrors,
 		httpx.Failure{Status: 503, Code: "temporarily_unavailable", Message: "temporarily unavailable"})

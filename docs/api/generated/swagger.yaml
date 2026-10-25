@@ -1107,6 +1107,22 @@ definitions:
       version:
         type: integer
     type: object
+  project_http.ProjectAuthPolicyResponse:
+    properties:
+      changed:
+        type: boolean
+      operationId:
+        type: string
+      replayed:
+        type: boolean
+      settings:
+        type: object
+      status:
+        enum:
+        - committed
+        - unknown
+        type: string
+    type: object
   project_http.ProjectPageResponse:
     properties:
       nextCursor:
@@ -1172,6 +1188,28 @@ definitions:
         type: boolean
       version:
         type: integer
+    type: object
+  project_http.UpdateProjectAuthPolicyRequest:
+    properties:
+      expectedGeneration:
+        type: integer
+      expectedPolicyVersion:
+        type: integer
+      expectedVersion:
+        type: integer
+      operationId:
+        type: string
+      policy:
+        type: object
+      reason:
+        type: string
+    required:
+    - expectedGeneration
+    - expectedPolicyVersion
+    - expectedVersion
+    - operationId
+    - policy
+    - reason
     type: object
   provider_settings_http.SettingsResponse:
     properties:
@@ -6004,6 +6042,219 @@ paths:
       summary: Read an independent project
       tags:
       - Platform Projects
+  /api/v1/platform/projects/{id}/auth/settings:
+    get:
+      description: Requires current platform.project_settings.manage and fresh password/MFA
+        before read and before disclosure. Exact ready/enabled target version/generation;
+        readonly snapshot. No secret values or project actor impersonation. availableMethods
+        reflects actual trusted assembly, not stored enable switches. Current project
+        Auth assembly is incomplete, so production bridge reports all methods unavailable.
+        GET never initializes missing settings or renews sessions.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth_settings_http.SettingsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "428":
+          description: Precondition Required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read a project's public authentication policy
+      tags:
+      - Platform Auth settings
+    post:
+      consumes:
+      - application/json
+      description: Requires current platform.project_settings.manage and fresh password/MFA.
+        Full policy including explicit false values. Project version/generation and
+        policy version prevent stale writes. Current authority commits an exact admission
+        for at most 3 seconds; already admitted work may finish after a later revoke.
+        Project change and platform-attributed receipt/audit commit together, with
+        no fake local user. No-op/replay do not rewrite settings. Methods, stored
+        provider credentials, required delivery and token adapters must be ready;
+        deployment cannot be supplied in the request. Current production bridge rejects
+        enabling unassembled methods. Existing sessions/JWT are not automatically
+        revoked. 202 means unknown commit, not rollback; retry the same operation/payload
+        or read its result. No query parameters. Body at most 8 KiB.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Complete policy, immutable operation and expected versions
+        in: body
+        name: body
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/project_http.UpdateProjectAuthPolicyRequest'
+          - properties:
+              policy:
+                $ref: '#/definitions/auth_settings_http.PolicyRequest'
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/project_http.ProjectAuthPolicyResponse'
+            - properties:
+                settings:
+                  $ref: '#/definitions/auth_settings_http.SettingsResponse'
+              type: object
+        "202":
+          description: Accepted
+          schema:
+            allOf:
+            - $ref: '#/definitions/project_http.ProjectAuthPolicyResponse'
+            - properties:
+                settings:
+                  $ref: '#/definitions/auth_settings_http.SettingsResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "428":
+          description: Precondition Required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Replace a project's public authentication policy
+      tags:
+      - Platform Auth settings
+  /api/v1/platform/projects/{id}/auth/settings/operations/{operationId}:
+    get:
+      description: Requires current platform.project_settings.manage and fresh password/MFA.
+        Exact project/caller/operation scope is checked before opening a project connection;
+        current binding and authority are checked again before disclosure. Reads the
+        immutable project receipt and verifies its original durable admission. status=unknown
+        means no committed receipt was found, not rollback. Project must be online/ready
+        with the original binding/version; no offline catalog completion cache. Never
+        re-executes a mutation or creates an admission. Returned policy is historical
+        evidence, not the current policy or current access.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Operation UUID
+        in: path
+        name: operationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/project_http.ProjectAuthPolicyResponse'
+            - properties:
+                settings:
+                  $ref: '#/definitions/auth_settings_http.SettingsResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "428":
+          description: Precondition Required
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read the caller's authentication-policy operation result
+      tags:
+      - Platform Auth settings
   /api/v1/platform/projects/{id}/resume:
     post:
       consumes:

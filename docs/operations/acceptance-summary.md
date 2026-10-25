@@ -6,6 +6,9 @@
 
 ## Открытые ограничения приёмки
 
+- MP2.7 project Auth policy: локальная приёмка Luna PASS (V1–V5), full command SQL без SKIP; [контракт и ограничения](../features/platform-auth-settings.md). Новые initial SQL/grants/profile guards прошли live SQL regression; controlled upgrade существующих БД остаётся отдельной операцией. Production Auth adapters/ready publication этим API не реализованы.
+
+
 - MP2.7: [grant/revoke](../features/platform-role-assignments.md), [каталог ролей](../features/platform-role-directory.md) и [user directory](../features/platform-user-directory.md) прошли свои проверки; [evidence](../planning/history.md#результат-mp27-user-directory--25-октября-2026). MP3.7a [закрытая managed configuration](../features/project-managed-readiness.md) прошла task check/race/security и общую actual onboarding SQL-регрессию, включая managed и legacy cases без SKIP. Это не готовая публикация ready или полная project Auth assembly. Initial assignment schema/checksum требуют controlled upgrade для существующих БД; рабочих данных не касались. UI/project capability и полный MP4 остаются отдельно.
 
 - MP2.7 role HTTP: [opt-in create/read/reconcile](../features/platform-roles-api.md) реализованы, V1 tests/race/actual TLS SQL/API/scanner/operator regression PASS;3 lint замечания исправлены и закрыты targeted V2 lint/race PASS. Новая project MFA-required capability пока недоступна, independent catalogs/полная project Auth assembly отдельно.

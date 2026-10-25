@@ -66,20 +66,20 @@ func (r *Repository) AdmitRoleAssignment(ctx context.Context, actor operatordoma
 	return a, nil
 }
 
-func assignmentIntent(ctx context.Context, tx pgx.Tx, actor operatordomain.Principal, command domain.RoleAssignment) (domain.RoleAssignment, roleIntentRecord, credentials.Binding, error) {
+func assignmentIntent(ctx context.Context, tx pgx.Tx, actor operatordomain.Principal, command domain.RoleAssignment) (domain.RoleAssignment, operationIntentRecord, credentials.Binding, error) {
 	command, err := command.Normalize()
 	if err != nil {
-		return command, roleIntentRecord{}, credentials.Binding{}, err
+		return command, operationIntentRecord{}, credentials.Binding{}, err
 	}
-	binding, snapshot, err := lockRoleTarget(ctx, tx, command.ProjectID, command.ExpectedVersion, command.ExpectedGeneration)
+	binding, snapshot, err := lockProjectTarget(ctx, tx, command.ProjectID, command.ExpectedVersion, command.ExpectedGeneration)
 	if err != nil {
-		return command, roleIntentRecord{}, binding, err
+		return command, operationIntentRecord{}, binding, err
 	}
 	request, err := json.Marshal(command)
 	if err != nil {
-		return command, roleIntentRecord{}, binding, domain.ErrInvalidProject
+		return command, operationIntentRecord{}, binding, domain.ErrInvalidProject
 	}
-	return command, roleIntentRecord{
+	return command, operationIntentRecord{
 		operation: command.OperationID, project: command.ProjectID, realm: binding.RealmID, actor: domain.ID(actor.UserID),
 		version: command.ExpectedVersion, generation: command.ExpectedGeneration, binding: snapshot, request: request,
 	}, binding, nil

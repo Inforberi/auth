@@ -124,3 +124,7 @@ Fixture допускает только localhost, пользователя/БД
 ## Платформенные назначения ролей
 
 Initial Auth schema содержит `auth.platform_role_assignments`: immutable project receipt/audit с platform realm/actor/admission, target user/role, binding/request, role snapshot/access_version/changed. Actor не связан FK с project users; target/role разрешаются только внутри выбранной БД. Runtime имеет SELECT и ограниченный column INSERT, не UPDATE/DELETE/TRUNCATE/INSERT времени. Общие catalog role ledgers переиспользованы с typed Action в request. [Контракт и upgrade ограничения](features/platform-role-assignments.md). Рабочие БД автоматически не обновлялись, initial checksum/grants изменены; новые SQL tests у Luna pending.
+
+## Project Auth policy bridge — 25 октября 2026
+
+Initial catalog schema: `platform.project_auth_policy_intents` (immutable exact command/binding) и `platform.project_auth_policy_admissions` (committed admission до3s). Initial Auth schema: `auth.platform_auth_policy_updates` — immutable receipt/audit с platform realm/actor/admission, binding/request, previous/next snapshot и changed. Нет FK actor к project users; policy и receipt атомарны. Column INSERT без created_at, без UPDATE/DELETE/TRUNCATE; grants/runtime/checksum guards обновлены. [Контракт](features/platform-auth-settings.md). Рабочие БД не менялись, controlled upgrade нужен отдельно. Локальные SQL-проверки Luna PASS (V1–V5), включая full command SQL без SKIP.

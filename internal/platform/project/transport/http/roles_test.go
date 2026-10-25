@@ -76,7 +76,7 @@ func TestCreatePlatformRoleHTTP(t *testing.T) {
 		{"create", domain.RoleCreationResult{Role: accessdomain.Role{Key: "editor"}, CatalogRecorded: true}, nil, 201},
 		{"replay", domain.RoleCreationResult{Replayed: true, CatalogRecorded: true}, nil, 200},
 		{"missing catalog evidence", domain.RoleCreationResult{}, nil, 201},
-		{"unknown", domain.RoleCreationResult{}, domain.ErrRoleOutcomeUnknown, 202},
+		{"unknown", domain.RoleCreationResult{}, domain.ErrOperationOutcomeUnknown, 202},
 		{"role conflict", domain.RoleCreationResult{}, accessdomain.ErrConflict, 409},
 		{"MFA unavailable", domain.RoleCreationResult{}, accessdomain.ErrMFANotReady, 409},
 		{"revoked", domain.RoleCreationResult{}, operatordomain.ErrForbidden, 403},

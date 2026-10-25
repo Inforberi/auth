@@ -29,6 +29,7 @@ import (
 type Handlers struct {
 	ProjectRoles      *projecthttp.RoleHandler
 	ProjectUsers      *projecthttp.UserHandler
+	ProjectAuthPolicy *projecthttp.AuthPolicyHandler
 	ProjectCapacity   func(http.Handler) http.Handler
 	Projects          *projecthttp.Handler
 	Introspection     *tokenhttp.IntrospectionHandler

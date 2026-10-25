@@ -35,6 +35,7 @@ import (
 )
 
 type apiSchema struct {
+	AllOf      []apiSchema          `json:"allOf"`
 	Ref        string               `json:"$ref"`
 	Type       string               `json:"type"`
 	Properties map[string]apiSchema `json:"properties"`

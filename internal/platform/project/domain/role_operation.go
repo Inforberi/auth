@@ -1,16 +1,10 @@
 package domain
 
 import (
-	"errors"
 	"time"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-)
-
-var (
-	ErrAdmissionExpired   = errors.New("role operation admission expired")
-	ErrRoleOutcomeUnknown = errors.New("role operation outcome unknown")
 )
 
 type RoleAction string

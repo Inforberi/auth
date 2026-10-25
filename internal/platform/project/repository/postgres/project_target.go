@@ -10,7 +10,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
-func lockRoleTarget(ctx context.Context, tx pgx.Tx, project domain.ID, version, generation int64) (credentials.Binding, []byte, error) {
+func lockProjectTarget(ctx context.Context, tx pgx.Tx, project domain.ID, version, generation int64) (credentials.Binding, []byte, error) {
 	b := credentials.Binding{ProjectID: project}
 	var snapshot []byte
 	// Lifecycle writers lock the project first; runtime cannot alter private metadata.

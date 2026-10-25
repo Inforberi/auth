@@ -77,18 +77,3 @@ func providerReplacement(before service.ProviderStored, input service.ProviderUp
 }
 
 // Access mutations serialize this readiness read with credential changes.
-func requireProviderSettings(ctx context.Context, tx pgx.Tx, policy domain.Policy) error {
-	var ready bool
-	err := tx.QueryRow(ctx, `SELECT CASE WHEN EXISTS(SELECT 1 FROM auth.provider_settings)
-		OR EXISTS(SELECT 1 FROM auth.initial_setup WHERE initialized_at IS NOT NULL)
-		THEN (NOT $1 OR EXISTS(SELECT 1 FROM auth.provider_settings WHERE provider='google' AND client_id<>'' AND secret_set))
-		AND (NOT $2 OR EXISTS(SELECT 1 FROM auth.provider_settings WHERE provider='telegram' AND client_id<>'' AND secret_set))
-		ELSE true END`, policy.Methods.Google, policy.Methods.Telegram).Scan(&ready)
-	if err != nil {
-		return err
-	}
-	if !ready {
-		return domain.ErrMethodNotReady
-	}
-	return nil
-}

@@ -54,7 +54,7 @@ type CreatePlatformRoleResponse struct {
 // @Failure 503 {object} httpx.ErrorResponse
 // @Router /api/v1/platform/projects/{id}/roles [post]
 func (h *RoleHandler) Create(w http.ResponseWriter, r *http.Request) {
-	actor, ok := roleActor(w, r)
+	actor, ok := operationActor(w, r)
 	if !ok {
 		return
 	}
@@ -69,7 +69,7 @@ func (h *RoleHandler) Create(w http.ResponseWriter, r *http.Request) {
 		OperationID: input.OperationID, ProjectID: project, ExpectedVersion: input.ExpectedVersion, ExpectedGeneration: input.ExpectedGeneration,
 		Key: input.Key, Name: input.Name, Description: input.Description, Permissions: input.Permissions, MFARequired: input.MFARequired, Reason: input.Reason,
 	})
-	if err != nil && !errors.Is(err, domain.ErrRoleOutcomeUnknown) {
+	if err != nil && !errors.Is(err, domain.ErrOperationOutcomeUnknown) {
 		h.respondError(w, r, err)
 		return
 	}

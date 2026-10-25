@@ -1896,3 +1896,7 @@ Method/path, timestamp и timezone, HTTP status/code, безопасный reque
 Организация руководства: подключение → сценарии → карточки методов → ошибки → ограничения. Это удобно переносить в отдельный documentation UI без изменения API.
 
 В качестве примера подачи использован публичный раздел [«Как подключить Alfa API»](https://developers.alfabank.ru/products/alfa-api/documentation/articles/connection/articles/instruction/instruction) и формат [карточки метода Alfa API](https://developers.alfabank.ru/products/alfa-api/documentation/articles/customer-info/customer-info). Указанная пользователем страница Client Secret при проверке не открылась (timeout). Банковские auth mechanisms, endpoints и требования не перенесены в наш сервис.
+
+## Управление Auth policy проекта из общей панели
+
+[Подробный контракт](features/platform-auth-settings.md): operator session + current `platform.project_settings.manage` и fresh password/MFA; GET/POST `/api/v1/platform/projects/{id}/auth/settings`, GET `/api/v1/platform/projects/{id}/auth/settings/operations/{operationId}`. Полная несекретная policy, отдельные expected project/policy versions и immutable operation UUID. 202 — неизвестный результат commit: повторить тот же запрос или прочитать свою операцию. Изменения не отзывают существующие sessions/JWT. Production project adapters пока не собраны, включение неподготовленных функций отклоняется. Локальные проверки Luna PASS (V1–V5), включая полный command SQL без SKIP.

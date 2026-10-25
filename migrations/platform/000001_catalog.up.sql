@@ -129,3 +129,25 @@ CREATE TABLE platform.project_role_outcomes (
   FOREIGN KEY(operation_id,admission_id) REFERENCES platform.project_role_admissions(operation_id,admission_id)
 );
 REVOKE ALL ON platform.project_role_outcomes FROM PUBLIC;
+
+CREATE TABLE platform.project_auth_policy_intents (
+  operation_id UUID PRIMARY KEY CHECK (operation_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  project_id UUID NOT NULL REFERENCES platform.projects(id),
+  realm_id UUID NOT NULL CHECK (realm_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  actor_id UUID NOT NULL CHECK (actor_id <> '00000000-0000-0000-0000-000000000000'::uuid),
+  version BIGINT NOT NULL CHECK (version>0),
+  generation BIGINT NOT NULL CHECK (generation>0),
+  binding JSONB NOT NULL CHECK (jsonb_typeof(binding)='object' AND octet_length(binding::text)<=1024),
+  request JSONB NOT NULL CHECK (jsonb_typeof(request)='object' AND octet_length(request::text)<=8192),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+REVOKE ALL ON platform.project_auth_policy_intents FROM PUBLIC;
+
+CREATE TABLE platform.project_auth_policy_admissions (
+  admission_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  operation_id UUID NOT NULL REFERENCES platform.project_auth_policy_intents(operation_id),
+  created_at TIMESTAMPTZ NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL CHECK (expires_at>created_at AND expires_at<=created_at+interval '3 seconds'),
+  UNIQUE(operation_id,admission_id)
+);
+REVOKE ALL ON platform.project_auth_policy_admissions FROM PUBLIC;

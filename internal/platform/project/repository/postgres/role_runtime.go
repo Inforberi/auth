@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"time"
 
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
@@ -48,19 +47,7 @@ func (a *AdmittedRoleCreation) ExecuteWithRuntime(ctx context.Context, registry 
 		return domain.RoleCreationResult{}, domain.ErrConflict
 	}
 	key := projectruntime.Key{Binding: a.binding, Version: a.command.ExpectedVersion, Generation: a.command.ExpectedGeneration}
-	return withRoleRuntime(ctx, registry, key, a.until, func(ctx context.Context, db projectruntime.Database) (domain.RoleCreationResult, error) {
+	return withProjectRuntime(ctx, registry, key, a.until, func(ctx context.Context, db projectruntime.Database) (domain.RoleCreationResult, error) {
 		return a.Execute(ctx, db, permissions, mfaReady)
 	})
-}
-
-func withRoleRuntime[T any](ctx context.Context, registry *projectruntime.Registry, key projectruntime.Key, until time.Time, execute func(context.Context, projectruntime.Database) (T, error)) (T, error) {
-	ctx, cancel := context.WithDeadline(ctx, until)
-	defer cancel()
-	var result T
-	err := registry.Use(ctx, key, func(ctx context.Context, db projectruntime.Database) error {
-		var err error
-		result, err = execute(ctx, db)
-		return err
-	})
-	return result, err
 }

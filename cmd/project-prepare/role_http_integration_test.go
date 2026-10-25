@@ -23,6 +23,7 @@ import (
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
@@ -80,9 +81,10 @@ func roleHTTPDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Repository, a
 	// reject revoked proofs; login/session transport is covered by its own suite.
 	handler, err := router.NewOperator(router.Handlers{
 		Config: cfg, Logger: zap.NewNop(), Projects: projecthttp.New(projectservice.New(managed, nil), zap.NewNop()),
-		ProjectRoles:    projecthttp.NewRoles(projectservice.NewRoles(catalog.NewRuntimeRoles(managed, registry, permissions)), zap.NewNop()),
-		ProjectUsers:    projecthttp.NewUsers(projectservice.NewUsers(catalog.NewRuntimeUsers(managed, registry)), zap.NewNop()),
-		ProjectCapacity: func(next http.Handler) http.Handler { return next }, PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfahttp.Handler{}, Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(roleHTTPSession{actor}, zap.NewNop()), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
+		ProjectRoles:      projecthttp.NewRoles(projectservice.NewRoles(catalog.NewRuntimeRoles(managed, registry, permissions)), zap.NewNop()),
+		ProjectAuthPolicy: projecthttp.NewAuthPolicy(projectservice.NewAuthPolicy(catalog.NewRuntimeAuthPolicy(managed, registry, settingsdomain.PolicyRuntime{Configured: true})), settingsdomain.PublicMethods{}, zap.NewNop()),
+		ProjectUsers:      projecthttp.NewUsers(projectservice.NewUsers(catalog.NewRuntimeUsers(managed, registry)), zap.NewNop()),
+		ProjectCapacity:   func(next http.Handler) http.Handler { return next }, PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfahttp.Handler{}, Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(roleHTTPSession{actor}, zap.NewNop()), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
 	})
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)
@@ -139,6 +141,8 @@ func roleHTTPDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Repository, a
 	require.NoError(t, json.Unmarshal(call(t, "POST", createPath, input, 200), &replay))
 	require.True(t, replay.Replayed)
 	require.Equal(t, first.Role.ID, replay.Role.ID)
+
+	t.Run("project auth policy", func(t *testing.T) { authPolicyHTTPDrill(t, admin, managed, actor, base, binding, registry, call) })
 
 	t.Run("project role directory", func(t *testing.T) {
 		roleDirectoryHTTPDrill(t, admin, actor, base, binding, *first.Role, call, send)

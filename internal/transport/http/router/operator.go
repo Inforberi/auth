@@ -67,7 +67,7 @@ func validateProjectHTTP(h Handlers) error {
 	if h.Projects != nil && h.ProjectCapacity == nil {
 		return errors.New("project HTTP routes require capacity admission")
 	}
-	if (h.ProjectRoles != nil || h.ProjectUsers != nil) && (h.Projects == nil || !h.Config.Platform.Runtime.Enabled) {
+	if (h.ProjectRoles != nil || h.ProjectUsers != nil || h.ProjectAuthPolicy != nil) && (h.Projects == nil || !h.Config.Platform.Runtime.Enabled) {
 		return errors.New("project runtime routes require enabled runtime and the guarded catalog group")
 	}
 	return nil
@@ -86,6 +86,11 @@ func platformProjectRoutes(r chi.Router, h Handlers) {
 		r.Post("/projects/{id}/suspend", h.Projects.Suspend)
 		r.Post("/projects/{id}/resume", h.Projects.Resume)
 		r.Post("/projects/{id}/retry", h.Projects.Retry)
+		if h.ProjectAuthPolicy != nil {
+			r.Get("/projects/{id}/auth/settings", h.ProjectAuthPolicy.Read)
+			r.Post("/projects/{id}/auth/settings", h.ProjectAuthPolicy.Update)
+			r.Get("/projects/{id}/auth/settings/operations/{operationId}", h.ProjectAuthPolicy.ReadOutcome)
+		}
 		if h.ProjectUsers != nil {
 			r.Get("/projects/{id}/users", h.ProjectUsers.List)
 			r.Get("/projects/{id}/users/{userId}", h.ProjectUsers.Read)

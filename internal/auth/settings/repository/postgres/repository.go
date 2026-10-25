@@ -12,16 +12,14 @@ import (
 )
 
 type Repository struct {
-	db                *pgxpool.Pool
-	available         domain.PublicMethods
-	runtimeConfigured bool
-	tokens            domain.TokenIssuance
+	db      *pgxpool.Pool
+	runtime domain.PolicyRuntime
 }
 
 func New(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
 
 func NewWithRuntime(db *pgxpool.Pool, available domain.PublicMethods, tokens domain.TokenIssuance) *Repository {
-	return &Repository{db: db, available: available, tokens: tokens, runtimeConfigured: true}
+	return &Repository{db: db, runtime: domain.PolicyRuntime{Configured: true, Methods: available, Tokens: tokens}}
 }
 
 const policyColumns = `version,password_enabled,email_otp_enabled,google_enabled,telegram_enabled,

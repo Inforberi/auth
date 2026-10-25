@@ -81,7 +81,7 @@ func roleOperationLocation(project, operation domain.ID) string {
 	return "/api/v1/platform/projects/" + string(project) + "/role-operations/" + string(operation)
 }
 
-func roleActor(w http.ResponseWriter, r *http.Request) (operatordomain.Principal, bool) {
+func operationActor(w http.ResponseWriter, r *http.Request) (operatordomain.Principal, bool) {
 	actor, ok := requestActor(w, r)
 	if !ok {
 		return actor, false

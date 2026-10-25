@@ -6244,6 +6244,310 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/platform/projects/{id}/auth/settings": {
+            "get": {
+                "description": "Requires current platform.project_settings.manage and fresh password/MFA before read and before disclosure. Exact ready/enabled target version/generation; readonly snapshot. No secret values or project actor impersonation. availableMethods reflects actual trusted assembly, not stored enable switches. Current project Auth assembly is incomplete, so production bridge reports all methods unavailable. GET never initializes missing settings or renews sessions.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Auth settings"
+                ],
+                "summary": "Read a project's public authentication policy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth_settings_http.SettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "428": {
+                        "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Requires current platform.project_settings.manage and fresh password/MFA. Full policy including explicit false values. Project version/generation and policy version prevent stale writes. Current authority commits an exact admission for at most 3 seconds; already admitted work may finish after a later revoke. Project change and platform-attributed receipt/audit commit together, with no fake local user. No-op/replay do not rewrite settings. Methods, stored provider credentials, required delivery and token adapters must be ready; deployment cannot be supplied in the request. Current production bridge rejects enabling unassembled methods. Existing sessions/JWT are not automatically revoked. 202 means unknown commit, not rollback; retry the same operation/payload or read its result. No query parameters. Body at most 8 KiB.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Auth settings"
+                ],
+                "summary": "Replace a project's public authentication policy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Complete policy, immutable operation and expected versions",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/project_http.UpdateProjectAuthPolicyRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "policy": {
+                                            "$ref": "#/definitions/auth_settings_http.PolicyRequest"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/project_http.ProjectAuthPolicyResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "settings": {
+                                            "$ref": "#/definitions/auth_settings_http.SettingsResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/project_http.ProjectAuthPolicyResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "settings": {
+                                            "$ref": "#/definitions/auth_settings_http.SettingsResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "428": {
+                        "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/auth/settings/operations/{operationId}": {
+            "get": {
+                "description": "Requires current platform.project_settings.manage and fresh password/MFA. Exact project/caller/operation scope is checked before opening a project connection; current binding and authority are checked again before disclosure. Reads the immutable project receipt and verifies its original durable admission. status=unknown means no committed receipt was found, not rollback. Project must be online/ready with the original binding/version; no offline catalog completion cache. Never re-executes a mutation or creates an admission. Returned policy is historical evidence, not the current policy or current access.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Auth settings"
+                ],
+                "summary": "Read the caller's authentication-policy operation result",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Operation UUID",
+                        "name": "operationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/project_http.ProjectAuthPolicyResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "settings": {
+                                            "$ref": "#/definitions/auth_settings_http.SettingsResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "428": {
+                        "description": "Precondition Required",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/platform/projects/{id}/resume": {
             "post": {
                 "description": "Platform deployment only. Requires current platform.projects.manage and fresh password/MFA proofs. Restores desired state without re-provisioning an already prepared database. Returns the committed receipt, not a fresh project card. Pending or failed preparation does not become ready.",
@@ -9372,6 +9676,30 @@ const docTemplate = `{
                 }
             }
         },
+        "project_http.ProjectAuthPolicyResponse": {
+            "type": "object",
+            "properties": {
+                "changed": {
+                    "type": "boolean"
+                },
+                "operationId": {
+                    "type": "string"
+                },
+                "replayed": {
+                    "type": "boolean"
+                },
+                "settings": {
+                    "type": "object"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "committed",
+                        "unknown"
+                    ]
+                }
+            }
+        },
         "project_http.ProjectPageResponse": {
             "type": "object",
             "properties": {
@@ -9470,6 +9798,37 @@ const docTemplate = `{
                 },
                 "version": {
                     "type": "integer"
+                }
+            }
+        },
+        "project_http.UpdateProjectAuthPolicyRequest": {
+            "type": "object",
+            "required": [
+                "expectedGeneration",
+                "expectedPolicyVersion",
+                "expectedVersion",
+                "operationId",
+                "policy",
+                "reason"
+            ],
+            "properties": {
+                "expectedGeneration": {
+                    "type": "integer"
+                },
+                "expectedPolicyVersion": {
+                    "type": "integer"
+                },
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "operationId": {
+                    "type": "string"
+                },
+                "policy": {
+                    "type": "object"
+                },
+                "reason": {
+                    "type": "string"
                 }
             }
         },

@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP2.7-project-auth-policy,25 октября — локальные проверки Luna PASS (V1–V5).** [Основная Auth policy проекта](../features/platform-auth-settings.md): opt-in GET/POST и read-own operation, current SettingsManage/fresh-auth, exact target/policy versions, короткий committed admission и atomic project receipt/audit. Shared local SQL rules сохраняют standalone guards; production bridge fail-closed до сборки реальных adapters. Initial SQL/grants/profile изменены, рабочие БД/ENV не тронуты. MP2.7/MP3.8/MP4/public-ready не закрыты.
+
 - [x] **MP3.7a-managed-configuration,25 октября — проверки Luna PASS.** [Закрытая подготовка владельцем](../features/project-managed-readiness.md): отдельный CLI -managed, все public Auth/registration/token flows выключены; нет обязательного local admin/SMTP. Shared transactional initializer, typed cold SQL probe/activation без setup HTTP admission/ready publication, existing epoch/journal/cleanup. Старый first-admin flow сохранён и несовместим по policy. Новых schema/grants/ENV/deps нет; финальная публикация и выбор функций ещё MP3.8/MP4.
 
 - [x] **MP2.7-user-directory,25 октября — проверки Luna PASS.** [Список и карточка пользователей](../features/platform-user-directory.md): UsersManage для списка, UsersManage+AccessManage для карточки с назначениями; current authority/binding до/после readonly snapshot. Общие account query normalization/cursor/SQL projections/DTO, локальная SQL actor authority сохранена. User management mutations/owner readiness остаются отдельно. Task check/race/API/security, actual HTTPS project SQL и старый TestUserDirectorySchema PASS, nested cases без SKIP. [Evidence](history.md#результат-mp27-user-directory--25-октября-2026).

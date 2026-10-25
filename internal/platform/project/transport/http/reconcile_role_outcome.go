@@ -26,7 +26,7 @@ import (
 // @Failure 503 {object} httpx.ErrorResponse
 // @Router /api/v1/platform/projects/{id}/role-operations/{operationId}/reconcile [post]
 func (h *RoleHandler) Reconcile(w http.ResponseWriter, r *http.Request) {
-	actor, ok := roleActor(w, r)
+	actor, ok := operationActor(w, r)
 	if !ok || !emptyRequestBody(w, r) {
 		return
 	}

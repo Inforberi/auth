@@ -17,6 +17,7 @@ import (
 	oidchttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
@@ -90,6 +91,7 @@ func TestSwaggerMatchesPlatformRoutes(t *testing.T) {
 	h.Config.Platform.Runtime = roleRouteRuntime()
 	h.ProjectRoles = projecthttp.NewRoles(&operatorRoles{}, zap.NewNop())
 	h.ProjectUsers = projecthttp.NewUsers(&operatorUsers{}, zap.NewNop())
+	h.ProjectAuthPolicy = projecthttp.NewAuthPolicy(&operatorPolicy{}, settingsdomain.PublicMethods{}, zap.NewNop())
 	h.ProjectCapacity = func(next http.Handler) http.Handler { return next }
 	handler, err := NewOperator(h)
 	if err != nil {
@@ -287,15 +289,36 @@ func TestSwaggerRequestAndResponseReferences(t *testing.T) {
 				t.Fatalf("%s: no responses", path)
 			}
 			for status, response := range operation.Responses {
-				if response.Schema.Ref != "" {
-					name := strings.TrimPrefix(response.Schema.Ref, "#/definitions/")
-					if _, ok := doc.Definitions[name]; !ok {
-						t.Errorf("%s %s: broken schema reference %s", path, status, name)
-					}
-				} else if response.Schema.Type != "string" && status != "204" && status != "304" {
-					t.Errorf("%s %s: unknown inline response schema", path, status)
+				if response.Schema.Type == "string" || status == "204" || status == "304" {
+					continue
 				}
+				assertResponseSchema(t, doc, response.Schema, path+" "+status, false)
 			}
 		}
 	}
+}
+
+// Swag emits allOf when a shared DTO supplies a nested feature contract.
+func assertResponseSchema(t *testing.T, doc apiDocument, schema apiSchema, location string, component bool) {
+	t.Helper()
+	if schema.Ref != "" {
+		name, local := strings.CutPrefix(schema.Ref, "#/definitions/")
+		if _, ok := doc.Definitions[name]; !local || !ok {
+			t.Errorf("%s: broken schema reference %s", location, schema.Ref)
+		}
+		return
+	}
+	if len(schema.AllOf) > 0 {
+		for _, part := range schema.AllOf {
+			assertResponseSchema(t, doc, part, location, true)
+		}
+		return
+	}
+	if component && schema.Type == "object" && len(schema.Properties) > 0 {
+		for field, property := range schema.Properties {
+			assertResponseSchema(t, doc, property, location+"."+field, false)
+		}
+		return
+	}
+	t.Errorf("%s: unknown inline response schema", location)
 }

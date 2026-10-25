@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgx/v5"
+
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
@@ -13,6 +15,15 @@ import (
 // Load is an internal configuration read, not an authenticated administrator API.
 func (r *Repository) Load(ctx context.Context) (domain.Snapshot, error) {
 	return scanSnapshot(r.db.QueryRow(ctx, `SELECT `+policyColumns+` FROM auth.auth_settings WHERE singleton`))
+}
+
+// Transaction readers expose persistence only; their caller owns authority and binding.
+func ReadPolicyInTransaction(ctx context.Context, tx pgx.Tx) (domain.Snapshot, error) {
+	return scanSnapshot(tx.QueryRow(ctx, `SELECT `+policyColumns+` FROM auth.auth_settings WHERE singleton`))
+}
+
+func LockPolicyInTransaction(ctx context.Context, tx pgx.Tx) (domain.Snapshot, error) {
+	return scanSnapshot(tx.QueryRow(ctx, `SELECT `+policyColumns+` FROM auth.auth_settings WHERE singleton FOR UPDATE`))
 }
 
 const settingsReadGuard = `EXISTS(

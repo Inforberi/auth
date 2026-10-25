@@ -48,7 +48,7 @@ func roleTransportDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Reposito
 			require.True(t, terminated)
 			_, executionErr := grant.Execute(ctx, db, permissions, true)
 			require.Error(t, executionErr)
-			require.NotErrorIs(t, executionErr, domain.ErrRoleOutcomeUnknown, "failure occurred before a transaction could start")
+			require.NotErrorIs(t, executionErr, domain.ErrOperationOutcomeUnknown, "failure occurred before a transaction could start")
 			return nil
 		})
 		require.NoError(t, err)
@@ -100,7 +100,7 @@ func roleTransportDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Reposito
 		}
 		waitRoleSQL(t, ctx, projectAdmin, `SELECT EXISTS(SELECT 1 FROM auth.platform_role_creations WHERE operation_id=$1)`, command.OperationID)
 		require.NoError(t, gate.Close())
-		require.ErrorIs(t, <-attempt, domain.ErrRoleOutcomeUnknown)
+		require.ErrorIs(t, <-attempt, domain.ErrOperationOutcomeUnknown)
 		_, err = admin.Exec(ctx, `INSERT INTO platform.operator_permissions(user_id,permission_key) VALUES($1,'platform.projects.read')`, actor.UserID)
 		require.NoError(t, err)
 		defer func() {
