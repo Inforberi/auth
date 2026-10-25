@@ -22,7 +22,7 @@ MP4.1e,25 октября2026. Решение перед реализацией.
 
 ## Текущие ограничения
 
-Это внутренние assembly API и запускаемый runner, а не автоматически включённая server job. Подключение к process lifecycle, operational config и суммарный бюджет SMTP/SQL по API instances остаются отдельным gate MP4.4/4.5. Доставка не зависит от HTTP-трафика при запущенном runner. HTTP/routing/readiness, registration assembly и остальные email очереди этим блоком не открываются. Успешная внешняя TLS-доставка не подтверждена SMTP mock без STARTTLS.
+Это внутренние assembly API. [MP4.1f](project-delivery-lifecycle.md) добавляет default-off включение runner в server lifecycle и operational concurrency budget; его verification gate отделён от проверок MP4.1e. Полные fleet fairness и MP4.4/4.5 ещё не закрыты. Доставка не зависит от HTTP-трафика при запущенном runner. HTTP/routing/readiness, registration assembly и остальные email очереди этим блоком не открываются. Успешная внешняя TLS-доставка не подтверждена SMTP mock без STARTTLS.
 
 ## Проверки
 

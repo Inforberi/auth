@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP4.1f-project-delivery-lifecycle,25 октября — локальные проверки Luna V1/V2 PASS.** [Контракт/ENV](../features/project-delivery-lifecycle.md): default-off operator assembly, shared registry/reader/Redis, existing worker cancel/join before resources, explicit allowlist, lease reserve и объявленный fleet concurrency cap. Нет новых pools/schema/deps/public readiness. Remaining queues/fairness/MP8 отдельно.
+
 - [x] **MP4.1e-project-email,25 октября — локальные проверки Luna V2/V3 PASS.** [Контракт и ограничения](../features/project-email-runtime.md): verification/recovery assembly, project HTTPS URLs/scoped outbox, no nested registry acquisition, bounded private-reader keyset discovery и opt-in delivery runner. Сохраняются SQL claim/retry и no public-ready. Автоматическое lifecycle/config/fleet budget включение — отдельный gate.
 
 - [x] **MP4.1d-project-smtp,25 октября — локальные проверки Luna PASS.** [Контракт](../features/project-smtp-runtime.md): project-only saved SMTP, scoped decryption, trusted allowlist/strict TLS, source refresh под UsePool/current guards без SQL lease во время сети. Нет Initialize/ENV fallback/new deps/schema/public-ready; email/outbox consumers и bounded workers далее.

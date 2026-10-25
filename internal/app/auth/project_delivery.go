@@ -8,6 +8,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+
+	"github.com/Inforberi/financial-intelligence/internal/config"
 	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
@@ -104,4 +107,21 @@ func (d *ProjectDelivery) deliverProject(ctx context.Context, key projectruntime
 	}
 	resetErr := runtime.deliver(ctx, false)
 	return errors.Join(verificationErr, resetErr)
+}
+
+func assembleProjectDelivery(cfg config.PlatformConfig, runtime *projectRuntime, rdb *redis.Client) (*ProjectDelivery, error) {
+	if !cfg.Delivery.Enabled {
+		return nil, nil
+	}
+	if runtime == nil {
+		return nil, errors.New("project delivery requires project runtime")
+	}
+	c := cfg.Delivery
+	return NewProjectDelivery(ProjectDeliveryConfig{Parallelism: c.Parallelism, PageSize: c.PageSize, Interval: c.Interval, SMTPAllowedTargets: c.Targets()}, ProjectSMTPDependencies{Registry: runtime.registry, Reader: runtime.reader, Redis: rdb})
+}
+
+func (d *ProjectDelivery) RunDelivery(ctx context.Context, report func(error)) {
+	if err := d.Run(ctx, report); err != nil && ctx.Err() == nil {
+		report(err)
+	}
 }

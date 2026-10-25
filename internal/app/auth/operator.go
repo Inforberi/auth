@@ -62,6 +62,10 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 	if err != nil {
 		return nil, err
 	}
+	delivery, err := assembleProjectDelivery(cfg.Platform, runtime, deps.redis)
+	if err != nil {
+		return nil, err
+	}
 	var observer projectservice.RuntimeObserver
 	if runtime != nil {
 		observer = runtime
@@ -120,11 +124,15 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 	if err != nil {
 		return nil, err
 	}
+	workers := realmDeliveryWorkers(password.recovery, account, mfa.delivery, nil)
+	if delivery != nil {
+		workers = append(workers, delivery)
+	}
 	assembled = true
 	return &realm{
 		handler: handler, resources: owned,
 		retention: accountservice.NewRetention(repo, cfg.Retention),
-		workers:   realmDeliveryWorkers(password.recovery, account, mfa.delivery, nil),
+		workers:   workers,
 	}, nil
 }
 

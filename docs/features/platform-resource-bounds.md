@@ -20,7 +20,7 @@
 instances × (MAX_CONNS + 2 + MAX_RUNTIMES × MAX_CONNECTIONS) + external_reserve <= SQL_CONNECTION_BUDGET
 ```
 
-`2` — private catalog reader, используемый также периодической сверкой. `MAX_RUNTIMES`/`MAX_CONNECTIONS` — переменные с префиксом `PLATFORM_PROJECT_`. Если runtime выключен, private/project pools в сумму не входят. Workers, уже использующие основной pool, не добавляются повторно. Отдельный будущий scheduler обязан соблюдать свой резерв, эта настройка его не реализует.
+`2` — private catalog reader, используемый также периодической сверкой. `MAX_RUNTIMES`/`MAX_CONNECTIONS` — переменные с префиксом `PLATFORM_PROJECT_`. Если runtime выключен, private/project pools в сумму не входят. Workers, уже использующие основной pool, не добавляются повторно. [Project delivery lifecycle](project-delivery-lifecycle.md) добавляет opt-in scheduler на этих же pools: worker connections не прибавляются повторно. Его parallelism резервирует acquiring capacity и проверяется отдельно по числу instances; это не distributed fleet allocator.
 
 Пример: 10 основных + 2 reader + 8 × 4 проектных = 44 на API. Два API и резерв4 требуют минимум92; default80 такой deployment отклонит. Расчёт проверяет верхнюю границу без переполнения, а не ожидаемое среднее число открытых соединений. Project MinConns остаётся0, существующие pool/registry limits действуют дополнительно.
 

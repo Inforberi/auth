@@ -13,6 +13,7 @@ type PlatformConfig struct {
 	Operations        admission.Config
 	Resources         PlatformResources
 	Runtime           ProjectRuntimeConfig
+	Delivery          ProjectDeliveryConfig
 	Enabled           bool   `env:"PLATFORM_ENABLED" env-default:"false"`
 	RealmID           string `env:"PLATFORM_REALM_ID"`
 	Origin            string `env:"PLATFORM_ORIGIN"`
@@ -21,6 +22,9 @@ type PlatformConfig struct {
 }
 
 func (cfg Config) ValidatePlatform() error {
+	if err := cfg.validateProjectDelivery(); err != nil {
+		return err
+	}
 	if !cfg.Platform.Enabled {
 		if cfg.Platform.Runtime.Enabled {
 			return fmt.Errorf("PLATFORM_PROJECT_RUNTIME_ENABLED requires PLATFORM_ENABLED")
