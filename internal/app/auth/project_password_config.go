@@ -15,10 +15,11 @@ import (
 )
 
 type ProjectPasswordConfig struct {
-	MFA      mfaservice.Config
-	Session  sessionservice.Config
-	Capacity passwordservice.CapacityConfig
-	Timeout  time.Duration
+	RegistrationVerification *ProjectRegistrationVerification
+	MFA                      mfaservice.Config
+	Session                  sessionservice.Config
+	Capacity                 passwordservice.CapacityConfig
+	Timeout                  time.Duration
 }
 
 type ProjectPasswordDependencies struct {

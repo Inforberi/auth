@@ -32,3 +32,7 @@ Luna: task check PASS/lint0, affected host race PASS, полный actual TestPr
 ## Расширение MP4.1c
 
 [Project MFA runtime](project-mfa-runtime.md) добавляет optional MFA Login/Complete и required enrollment поверх этого pool ownership. Код добавлен, checks pending; прежний Enabled=false профиль сохраняется. Завершённый MP4.1b PASS относится к предыдущему коммиту186adf5, новая MFA wiring требует отдельной проверки. Public routes/readiness всё ещё не включаются.
+
+## Расширение MP4.1g
+
+[Project registration](project-registration-runtime.md) добавляет внутренний Register, shared password/session assembly и optional project verification producer. Это не новый HTTP endpoint или readiness publication. Локальные проверки этого diff отделены от исходного MP4.1b PASS.

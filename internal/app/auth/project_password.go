@@ -21,15 +21,16 @@ import (
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
-// ProjectPassword owns no pool, worker or process dependency; each Login holds its own lease.
+// ProjectPassword borrows process dependencies; each operation holds its own lease.
 type ProjectPassword struct {
-	mfa      *projectMFALogin
-	key      projectruntime.Key
-	cfg      ProjectPasswordConfig
-	registry *projectruntime.Registry
-	reader   *projectpostgres.RuntimeCredentialReader
-	hash     *hasher.Bounded
-	limits   *passwordservice.LoginLimit
+	mfa          *projectMFALogin
+	registration *projectRegistration
+	key          projectruntime.Key
+	cfg          ProjectPasswordConfig
+	registry     *projectruntime.Registry
+	reader       *projectpostgres.RuntimeCredentialReader
+	hash         *hasher.Bounded
+	limits       *passwordservice.LoginLimit
 }
 
 func NewProjectPassword(ctx context.Context, key projectruntime.Key, cfg ProjectPasswordConfig, deps ProjectPasswordDependencies) (*ProjectPassword, error) {
@@ -56,8 +57,13 @@ func NewProjectPassword(ctx context.Context, key projectruntime.Key, cfg Project
 	if err != nil {
 		return nil, err
 	}
+	registration, err := newProjectRegistration(scope, configuration.EncryptionKey(), cfg.RegistrationVerification, deps.Redis)
+	if err != nil {
+		return nil, err
+	}
+	cfg.RegistrationVerification = nil
 	return &ProjectPassword{
-		mfa: mfa,
+		mfa: mfa, registration: registration,
 		key: key, cfg: cfg, registry: deps.Registry, reader: deps.Reader, hash: deps.Hash,
 		limits: passwordservice.NewLoginLimit(limits, cipher, cfg.Capacity),
 	}, nil
@@ -71,20 +77,10 @@ func (p *ProjectPassword) Login(ctx context.Context, input passwordservice.Login
 		if err := p.requireCurrent(ctx); err != nil {
 			return err
 		}
-		policy := settingsservice.New(settingspostgres.New(pool))
-		sessions := sessionservice.New(clock.UTCClock{}, sessionpostgres.New(pool), tokengenerate.New(), p.cfg.Session)
-		login := sessionservice.NewLogin(sessions, nil)
-		if p.mfa != nil {
-			loginMFA, err := p.mfa.newLogin(pool)
-			if err != nil {
-				return err
-			}
-			login = sessionservice.NewLogin(sessions, loginMFA)
+		passwords, err := p.passwordService(pool, passwordpostgres.New(pool))
+		if err != nil {
+			return err
 		}
-		passwords := passwordservice.New(passwordpostgres.New(pool), login, p.hash, p.limits).WithPublicPolicy(func(ctx context.Context, registration bool) error {
-			return policy.CheckPublic(ctx, "password", registration)
-		})
-		var err error
 		result, err = passwords.Login(ctx, input)
 		if err != nil {
 			return err
@@ -107,4 +103,21 @@ func (p *ProjectPassword) requireCurrent(ctx context.Context) error {
 		return projectdomain.ErrConflict
 	}
 	return nil
+}
+
+func (p *ProjectPassword) passwordService(pool *pgxpool.Pool, repo *passwordpostgres.PasswordRepo) (*passwordservice.PasswordService, error) {
+	policy := settingsservice.New(settingspostgres.New(pool))
+	sessions := sessionservice.New(clock.UTCClock{}, sessionpostgres.New(pool), tokengenerate.New(), p.cfg.Session)
+	login := sessionservice.NewLogin(sessions, nil)
+	if p.mfa != nil {
+		loginMFA, err := p.mfa.newLogin(pool)
+		if err != nil {
+			return nil, err
+		}
+		login = sessionservice.NewLogin(sessions, loginMFA)
+	}
+	passwords := passwordservice.New(repo, login, p.hash, p.limits).WithPublicPolicy(func(ctx context.Context, registration bool) error {
+		return policy.CheckPublic(ctx, "password", registration)
+	})
+	return passwords, nil
 }

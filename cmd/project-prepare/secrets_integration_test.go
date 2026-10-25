@@ -101,7 +101,11 @@ func secretsPreparationDrill(t *testing.T, admin, physical *pgx.Conn, env func(s
 	require.NotContains(t, response.String(), root)
 	require.NoError(t, physical.QueryRow(ctx, `SELECT rolpassword IS NULL FROM pg_authid WHERE oid=$1`, binding.RuntimeOID).Scan(&clean))
 	require.True(t, clean, "-secrets alone must not install a password")
+	cancel()
 	passwordPreparationDrill(t, physical, protected, args, repo, reservation, binding, codec)
+	// Nested drills have their own deadlines; bound this continuation as a separate phase.
+	ctx, cancel = context.WithTimeout(t.Context(), 15*time.Second)
+	defer cancel()
 	// Nested fault drills deliberately tamper/restore secrets; verify bytes before measuring wrong-root calls.
 	var restored []byte
 	require.NoError(t, admin.QueryRow(ctx, `SELECT ciphertext,xmin::text FROM platform.project_secrets WHERE project_id=$1`, binding.ProjectID).Scan(&restored, &xmin))

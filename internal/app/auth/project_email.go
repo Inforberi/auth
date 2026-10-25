@@ -55,17 +55,21 @@ func NewProjectEmail(ctx context.Context, key projectruntime.Key, cfg ProjectEma
 }
 
 func (c ProjectEmailConfig) validate() error {
-	origin, err := url.Parse(c.Origin)
-	if err != nil || origin.Scheme != "https" || origin.Hostname() == "" || origin.User != nil || origin.Path != "" || origin.RawQuery != "" || origin.Fragment != "" {
-		return errors.New("project email requires a trusted HTTPS origin")
-	}
 	if err := c.Verification.Validate(true); err != nil {
 		return err
 	}
 	if err := c.Password.Validate(); err != nil {
 		return err
 	}
-	for _, raw := range []string{c.Verification.URL, c.Password.ResetURL} {
+	return validateProjectEmailOrigin(c.Origin, c.Verification.URL, c.Password.ResetURL)
+}
+
+func validateProjectEmailOrigin(originURL string, urls ...string) error {
+	origin, err := url.Parse(originURL)
+	if err != nil || origin.Scheme != "https" || origin.Hostname() == "" || origin.User != nil || origin.Path != "" || origin.RawQuery != "" || origin.Fragment != "" {
+		return errors.New("project email requires a trusted HTTPS origin")
+	}
+	for _, raw := range urls {
 		target, err := url.Parse(raw)
 		if err != nil || target.Scheme != origin.Scheme || target.Host != origin.Host {
 			return errors.New("project email URL must use its trusted origin")
