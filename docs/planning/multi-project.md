@@ -169,6 +169,8 @@ SSO, регистрация нескольких приложений внутр
 
 ## MP5. Изоляция всех способов входа и настроек
 
+- [x] MP5.0. [HTTP authority boundary](../features/project-http-boundary.md): exact-origin restricted resolver и TLS/Host/Origin/context selection добавлены; локальные task check/lint0/race/security/actual command SQL проверки Luna PASS. Нет Auth routes/capabilities/readiness публикации. Следом — coherent dependency readiness и явные resident route profiles, затем полная матрица ниже.
+
 - [ ] MP5.1. Проверить пользователей/contacts/credentials/external identities/roles/settings/audit и все pending flows. UUID не считается глобальным доказательством принадлежности: доступ разрешается только внутри подтверждённого проекта. Внешний backend также проверяет ожидаемые project/issuer/audience, а не принимает любой выданный Auth token.
 - [ ] MP5.2. Redis namespace включает неизменяемый project ID и назначение: session coordination, throttling, OIDC state, OTP/MFA, idempotency и cache. Keyspace scan/FLUSHDB не используется для избирательного отключения проекта. Health общей Redis-зависимости и проектные ошибки различаются.
 - [ ] MP5.3. Cookie/session/refresh proof одного проекта не принимается другим. Проверить rotation/logout/revoke/block/delete/reset/change email/mandatory MFA в проекте без влияния на соседний; сохранить немедленную SQL authority в существующих strict сценариях.

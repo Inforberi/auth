@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP5.0-project-http-boundary, 25 октября — локальные проверки Luna PASS.** [Контракт](../features/project-http-boundary.md): restricted exact-origin runtime key resolver и direct-TLS/Host/Origin boundary с immutable context, без fallback/cache/new pools. Не feature-readiness/publication; явные route profiles/issuer/cookie/callback matrix и lifecycle остаются следующим подэтапом. Actual SQL+TLS fixture добавлена.
+
 - [x] **MP4.1l-project-introspection, 25 октября — локальные проверки Luna V2 PASS.** [Контракт](../features/project-introspection-runtime.md): optional project consumer manifests, shared immutable introspection factory/admission32, request-local SQL authority под current key guards. Existing consumer SDK/HTTP interface; без нового pool/schema/deps/ENV/routes/readiness. Actual isolation/block/logout cases добавлены; полноценная MP5/MP7 приёмка отдельно.
 
 - [x] **MP4.1k-project-token, 25 октября — локальные проверки Luna V1–V3 PASS.** [Контракт](../features/project-token-runtime.md): prepared project signer/JWKS, session exchange/native password+email/MFA/refresh/logout на existing SQL; shared no-retry Redis и immutable Factory с общим admission для request-local repositories. Нет новых SQL/deps/ENV/HTTP/readiness; introspection/consumer и managed rotation gates отдельно.

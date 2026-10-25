@@ -69,10 +69,15 @@ func projectRuntimeDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Reposit
 	stale.Generation++
 	_, err = reader.LoadDatabaseCredential(ctx, stale)
 	require.ErrorIs(t, err, domain.ErrConflict)
+	var origin string
+	require.NoError(t, admin.QueryRow(ctx, `SELECT origin FROM platform.projects WHERE id=$1`, binding.ProjectID).Scan(&origin))
 	_, err = admin.Exec(ctx, `GRANT UPDATE(name) ON platform.projects TO auth_platform_runtime_reader_test`)
 	require.NoError(t, err)
 	_, err = reader.LoadDatabaseCredential(ctx, key)
 	require.ErrorIs(t, err, domain.ErrConflict, "reader with extra write privileges must fail closed")
+	resolved, err := reader.ResolveRuntime(ctx, origin)
+	require.ErrorIs(t, err, domain.ErrUnavailable)
+	require.Equal(t, projectruntime.Key{}, resolved)
 	_, err = admin.Exec(ctx, `REVOKE UPDATE(name) ON platform.projects FROM auth_platform_runtime_reader_test`)
 	require.NoError(t, err)
 	_, err = private.Exec(ctx, `UPDATE platform.projects SET name=name`)
@@ -106,6 +111,7 @@ func projectRuntimeDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Reposit
 		return tx.Commit(ctx)
 	}
 	require.NoError(t, registry.Use(ctx, key, probe))
+	t.Run("project HTTP authority", func(t *testing.T) { projectOriginHTTPDrill(t, admin, reader, registry, key, origin) })
 	t.Run("project auth configuration", func(t *testing.T) { authConfigurationDrill(t, admin, reader, key, registry, codec) })
 	t.Run("project SMTP source", func(t *testing.T) { projectSMTPDrill(t, admin, reader, key, registry) })
 	t.Run("project password session", func(t *testing.T) { projectPasswordDrill(t, admin, reader, key, registry) })
@@ -133,7 +139,13 @@ func projectRuntimeDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Reposit
 	_, err = admin.Exec(ctx, `UPDATE platform.projects SET desired_state='suspended' WHERE id=$1`, binding.ProjectID)
 	require.NoError(t, err)
 	require.ErrorIs(t, registry.Use(ctx, key, probe), projectruntime.ErrUnavailable)
+	resolved, err = reader.ResolveRuntime(ctx, origin)
+	require.ErrorIs(t, err, domain.ErrNotFound)
+	require.Equal(t, projectruntime.Key{}, resolved)
 	_, err = admin.Exec(ctx, `UPDATE platform.projects SET desired_state='enabled' WHERE id=$1`, binding.ProjectID)
 	require.NoError(t, err)
 	require.NoError(t, registry.Use(ctx, key, probe))
+	resolved, err = reader.ResolveRuntime(ctx, origin)
+	require.NoError(t, err)
+	require.Equal(t, key, resolved)
 }
