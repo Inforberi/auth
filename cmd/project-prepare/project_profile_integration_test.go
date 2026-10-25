@@ -17,12 +17,13 @@ import (
 )
 
 type projectProfileFixture struct {
-	admin, db *pgx.Conn
-	rdb       *redis.Client
-	key       projectruntime.Key
-	deps      appauth.ProjectSMTPDependencies
-	hash      *hasher.Bounded
-	listener  net.Listener
+	admin, db            *pgx.Conn
+	rdb                  *redis.Client
+	key                  projectruntime.Key
+	deps                 appauth.ProjectSMTPDependencies
+	hash                 *hasher.Bounded
+	listener             net.Listener
+	sourceUser, password string
 }
 
 func (f projectProfileFixture) run(t *testing.T, ctx context.Context) {
@@ -67,6 +68,7 @@ func (f projectProfileFixture) run(t *testing.T, ctx context.Context) {
 	f.providerProfile(t, ctx, origin)
 	f.verificationProfile(t, ctx, origin)
 	f.tokenProfile(t, ctx, origin)
+	t.Run("project HTTP profiles", func(t *testing.T) { f.httpProfile(t, ctx, origin) })
 }
 
 func profileFeature(t *testing.T, profile *appauth.ProjectProfile, feature string) appauth.ProjectFeatureState {

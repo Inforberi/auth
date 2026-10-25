@@ -36,7 +36,7 @@ type RegisterResponse struct {
 // @Failure 409 {object} httpx.ErrorResponse "code: email_already_exists"
 // @Failure 500 {object} httpx.ErrorResponse "code: internal_error"
 // @Router /api/v1/auth/register/email [post]
-func (h *PasswordHandler) Register(w http.ResponseWriter, r *http.Request) {
+func (h *PublicPasswordHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var input RegisterRequest
 	if err := httpx.DecodeJSON(w, r, &input); err != nil {
 		httpx.Error(w, http.StatusBadRequest, errInvalidJSON.code, errInvalidJSON.message)

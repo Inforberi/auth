@@ -25,6 +25,6 @@ var verifiedErrors = []httpx.ErrorRule{
 	httpx.MatchError(domain.ErrEmailUnverified, 403, "email_not_verified", "email not verified"),
 }
 
-func (h *Handler) respondError(w http.ResponseWriter, r *http.Request, err error, operation string, rules []httpx.ErrorRule) {
+func (h *VerificationHandler) respondError(w http.ResponseWriter, r *http.Request, err error, operation string, rules []httpx.ErrorRule) {
 	httpx.RespondError(w, r, h.log, operation, err, rules, dependencyFailure)
 }

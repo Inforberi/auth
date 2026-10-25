@@ -17,5 +17,5 @@ import "net/http"
 // @Failure 500 {object} httpx.ErrorResponse "code: internal_error"
 // @Router /api/v1/admin/auth/login/email [post]
 func (h *PasswordHandler) LoginAdministrator(w http.ResponseWriter, r *http.Request) {
-	h.login(w, r, true)
+	h.login(w, r, h.service.LoginAdministrator)
 }

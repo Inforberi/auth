@@ -23,7 +23,7 @@ type ConfirmRequest struct {
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
 // @Router /api/v1/auth/email/verify [post]
-func (h *Handler) Confirm(w http.ResponseWriter, r *http.Request) {
+func (h *VerificationHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 	var input ConfirmRequest
 	if err := httpx.DecodeJSON(w, r, &input); err != nil {
 		httpx.Error(w, 400, "invalid_json", "invalid JSON")

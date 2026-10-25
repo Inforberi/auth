@@ -9,9 +9,8 @@ import (
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 )
 
-type PasswordService interface {
+type PublicPasswordService interface {
 	Login(ctx context.Context, input passwordservice.LoginInput) (*passwordservice.LoginResult, error)
-	LoginAdministrator(ctx context.Context, input passwordservice.LoginInput) (*passwordservice.LoginResult, error)
 	Register(
 		ctx context.Context,
 		email,
@@ -19,6 +18,11 @@ type PasswordService interface {
 		userAgent,
 		IP string,
 	) (*passwordservice.RegisterResult, error)
+}
+
+type PasswordService interface {
+	PublicPasswordService
+	LoginAdministrator(ctx context.Context, input passwordservice.LoginInput) (*passwordservice.LoginResult, error)
 	ChangePassword(
 		ctx context.Context,
 		userID accountdomain.UserID,
@@ -28,13 +32,22 @@ type PasswordService interface {
 	) error
 }
 
-type PasswordHandler struct {
-	service PasswordService
+type PublicPasswordHandler struct {
+	service PublicPasswordService
 	log     *zap.Logger
 }
 
+type PasswordHandler struct {
+	*PublicPasswordHandler
+	service PasswordService
+}
+
 func New(service PasswordService, log *zap.Logger) *PasswordHandler {
-	return &PasswordHandler{service: service, log: log}
+	return &PasswordHandler{PublicPasswordHandler: NewPublic(service, log), service: service}
+}
+
+func NewPublic(service PublicPasswordService, log *zap.Logger) *PublicPasswordHandler {
+	return &PublicPasswordHandler{service: service, log: log}
 }
 
 type RecoveryService interface {

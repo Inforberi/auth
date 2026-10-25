@@ -23,7 +23,7 @@ type ResendRequest struct {
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
 // @Router /api/v1/auth/email/resend [post]
-func (h *Handler) Resend(w http.ResponseWriter, r *http.Request) {
+func (h *VerificationHandler) Resend(w http.ResponseWriter, r *http.Request) {
 	var input ResendRequest
 	if err := httpx.DecodeJSON(w, r, &input); err != nil {
 		httpx.Error(w, 400, "invalid_json", "invalid JSON")

@@ -29,7 +29,7 @@ Google/Telegram требуют сохранённых credentials и callback с
 
 `RoutePlan()` возвращает новую копию metadata для готовых функций: feature, method, path, protection. Protection обозначает требуемый профиль будущего HTTP-mounting: browser, callback, public_keys, native, service либо session_no_refresh. Последний нужен для reauthentication/exchange с действующей сессией без её продления. Эти строки не заменяют middleware или проверку полномочий. OPTIONS также требует соответствующего существующего transport protector.
 
-Маршруты ещё не подключены к серверу. Resident handler cache/lifecycle, account/session/MFA management profiles, настройки capabilities и phase-ready publication остаются следующим блоком. Полная cookies/CORS/CSRF/callback/redirect matrix и cross-project acceptance открыты. Cross-origin браузерный доступ этим изменением не включён. UI не начинается.
+В MP5.1a маршруты не подключались к серверу. Следующий [проектный HTTP factory/dispatcher](project-http-routes.md) реализует отдельный route mounting и bounded resident cache; его проверки и production server wiring имеют собственный gate. Account/session/MFA management profiles, настройки capabilities и phase-ready publication остаются открытыми. Полная cookies/CORS/CSRF/callback/redirect matrix и cross-project acceptance открыты. Cross-origin браузерный доступ этим изменением не включён. UI не начинается.
 
 ## Проверки
 

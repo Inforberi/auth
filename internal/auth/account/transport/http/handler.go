@@ -12,20 +12,33 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
-type VerificationService interface {
-	AllowRegistration(context.Context, string) error
+type EmailVerificationService interface {
 	Resend(context.Context, string, string) error
 	Confirm(context.Context, string, string) error
+}
+
+type VerificationService interface {
+	EmailVerificationService
+	AllowRegistration(context.Context, string) error
 	RequireVerified(context.Context, domain.UserID) error
 }
 
-type Handler struct {
-	service VerificationService
+type VerificationHandler struct {
+	service EmailVerificationService
 	log     *zap.Logger
 }
 
+type Handler struct {
+	*VerificationHandler
+	service VerificationService
+}
+
 func New(service VerificationService, log *zap.Logger) *Handler {
-	return &Handler{service: service, log: log}
+	return &Handler{VerificationHandler: NewVerification(service, log), service: service}
+}
+
+func NewVerification(service EmailVerificationService, log *zap.Logger) *VerificationHandler {
+	return &VerificationHandler{service: service, log: log}
 }
 
 type VerificationResponse struct {

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 
 	"go.uber.org/zap"
@@ -36,11 +37,11 @@ type LoginByEmailResponse struct {
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited; Retry-After: 60"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
 // @Router /api/v1/auth/login/email [post]
-func (h *PasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
-	h.login(w, r, false)
+func (h *PublicPasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
+	h.login(w, r, h.service.Login)
 }
 
-func (h *PasswordHandler) login(w http.ResponseWriter, r *http.Request, administrative bool) {
+func (h *PublicPasswordHandler) login(w http.ResponseWriter, r *http.Request, authenticate func(context.Context, passwordservice.LoginInput) (*passwordservice.LoginResult, error)) {
 	var input LoginByEmailRequest
 	if err := httpx.DecodeJSON(w, r, &input); err != nil {
 		httpx.Error(
@@ -57,10 +58,6 @@ func (h *PasswordHandler) login(w http.ResponseWriter, r *http.Request, administ
 		Password:  input.Password,
 		UserAgent: httpx.UserAgent(r),
 		IP:        httpx.IP(r),
-	}
-	authenticate := h.service.Login
-	if administrative {
-		authenticate = h.service.LoginAdministrator
 	}
 	login, err := authenticate(r.Context(), inputService)
 	if err != nil {

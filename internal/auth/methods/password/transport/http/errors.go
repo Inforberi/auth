@@ -88,7 +88,7 @@ var changePasswordErrors = []httpx.ErrorRule{
 	httpx.MatchError(ErrPasswordMismatch, http.StatusBadRequest, errConfirmPassword.code, errConfirmPassword.message),
 }
 
-func (h *PasswordHandler) respondError(w http.ResponseWriter, r *http.Request, err error, operation string, rules []httpx.ErrorRule) {
+func (h *PublicPasswordHandler) respondError(w http.ResponseWriter, r *http.Request, err error, operation string, rules []httpx.ErrorRule) {
 	if settingshttp.RespondPolicyError(w, r, h.log, err) {
 		return
 	}

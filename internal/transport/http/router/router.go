@@ -151,24 +151,26 @@ func New(h Handlers) *chi.Mux {
 			if h.EmailChange != nil {
 				emailChangeRoutes(r, h)
 			}
-			r.Route("/register", func(r chi.Router) {
-				if h.Account != nil {
-					r.Use(h.Account.LimitRegistration)
-				}
-				r.Post("/email", h.PasswordHandler.Register)
-			})
+			if h.PasswordHandler != nil && h.PasswordHandler.PublicPasswordHandler != nil {
+				r.Route("/register", func(r chi.Router) {
+					if h.Account != nil {
+						r.Use(h.Account.LimitRegistration)
+					}
+					r.Post("/email", h.PasswordHandler.Register)
+				})
 
-			r.Route("/login", func(r chi.Router) {
-				r.Post("/email", h.PasswordHandler.LoginByEmail)
-			})
+				r.Route("/login", func(r chi.Router) {
+					r.Post("/email", h.PasswordHandler.LoginByEmail)
+				})
 
-			r.Group(func(r chi.Router) {
-				r.Use(h.Middleware.NoRefreshAuth)
-				if h.Account != nil {
-					r.Use(h.Account.RequireVerified)
-				}
-				r.Post("/change-password", h.PasswordHandler.ChangePassword)
-			})
+				r.Group(func(r chi.Router) {
+					r.Use(h.Middleware.NoRefreshAuth)
+					if h.Account != nil {
+						r.Use(h.Account.RequireVerified)
+					}
+					r.Post("/change-password", h.PasswordHandler.ChangePassword)
+				})
+			}
 		})
 
 		if h.MailTest != nil && h.Config != nil && h.Config.Logger.Env == "dev" {

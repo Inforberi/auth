@@ -89,6 +89,10 @@ func (p *ProjectProfile) CheckCurrent(ctx context.Context) error {
 	if currentKey != p.key {
 		return projectdomain.ErrConflict
 	}
+	return p.checkPolicyCurrent(ctx)
+}
+
+func (p *ProjectProfile) checkPolicyCurrent(ctx context.Context) error {
 	return p.deps.Registry.UsePool(ctx, p.key, func(ctx context.Context, pool *pgxpool.Pool) error {
 		current, err := settingspostgres.New(pool).Load(ctx)
 		if err != nil {
