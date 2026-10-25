@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP4.1a-project-auth-loader,25 октября — локальные проверки Luna V1/V2 PASS.** [Read-only production loader](../features/project-auth-loader.md): узкий project encryption key без password/setup/signing, shared exact catalog snapshot/profile guard с DB loader, stored policy через readonly registry lease и финальная сверка current key. Нет ENV fallback/Initialize/новых pools/routes/capabilities. Это первый блок входных данных assembly; actual feature runtime/SMTP/provider/token/ready publication остаются далее.
+
 - [x] **MP2.7-project-auth-policy,25 октября — локальные проверки Luna PASS (V1–V5).** [Основная Auth policy проекта](../features/platform-auth-settings.md): opt-in GET/POST и read-own operation, current SettingsManage/fresh-auth, exact target/policy versions, короткий committed admission и atomic project receipt/audit. Shared local SQL rules сохраняют standalone guards; production bridge fail-closed до сборки реальных adapters. Initial SQL/grants/profile изменены, рабочие БД/ENV не тронуты. MP2.7/MP3.8/MP4/public-ready не закрыты.
 
 - [x] **MP3.7a-managed-configuration,25 октября — проверки Luna PASS.** [Закрытая подготовка владельцем](../features/project-managed-readiness.md): отдельный CLI -managed, все public Auth/registration/token flows выключены; нет обязательного local admin/SMTP. Shared transactional initializer, typed cold SQL probe/activation без setup HTTP admission/ready publication, existing epoch/journal/cleanup. Старый first-admin flow сохранён и несовместим по policy. Новых schema/grants/ENV/deps нет; финальная публикация и выбор функций ещё MP3.8/MP4.

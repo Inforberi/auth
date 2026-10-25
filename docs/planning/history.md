@@ -1686,3 +1686,29 @@ V4 Luna: новый policy SQL drill дошёл до unknowncommit и обеих
 Сохраняются успешные результаты предыдущих версий по неизменённым гарантиям: V2 task check/targeted race/operator SQL+HTTPS/runtime assembly и пять local settings/provider/token/public-policy/profile-transition SQL tests; V4 affected `go test -race ./internal/platform/project/... ./cmd/project-prepare -count=1` и lint (0 issues); V1 API reproducibility/security scanner. После V4 изменён только parent onboarding test: V5 full SQL и targeted lint проверили его. Повтор всех независимых успешных наборов формально не выполнялся. Логи: `/private/tmp/auth-platform-policy-*.log`, `/private/tmp/auth-platform-policy-v2-*.log`, `/private/tmp/auth-platform-policy-v3-*.log`, `/private/tmp/auth-platform-policy-v4-*.log`, `/private/tmp/auth-platform-policy-v5-*.log`; подробная история исправлений выше.
 
 Локальный gate блока закрыт. Production project Auth assembly/ready publication, остальной MP2.7/MP3.8/MP4, fleet/load/GC и controlled upgrade существующих БД не объявляются завершёнными. UI не начинался; перед ним требуется отдельное согласование. Пользователь разрешил commit при успешной проверке Luna, условие выполнено.
+
+## Реализация MP4.1a project Auth loader — 25 октября 2026
+
+[Контракт](../features/project-auth-loader.md). Read-only input loader для ближайшей project Auth assembly: узкий data-encryption key, stored policy snapshot, same catalog/profile predicates с DB loader, readonly registry lease/SQL profile, final current-key check и общий3s deadline. Data object redacted; DB password/setup/signing не выдаются. Новых tables/schema/ENV/dependencies/routes/pools/workers нет; capabilities не включаются. До реализации зафиксировано разделение input loader и полной feature runtime assembly.
+
+Main: formatter и diff inspection. Crypto/redaction tests и actual command SQL scenarios добавлены; executable checks передаются Луне на frozen snapshot, результат пока pending. Не объявлять полной MP4/production Auth/readiness/fleet приёмкой. Реальные данные/ключи не читались и не менялись, коммит не выполнялся.
+
+Передан Luna frozen snapshot `/private/tmp/auth-project-loader.p482y6e7`, base515f62c, manifest6 `/private/tmp/auth-project-loader-manifest.sha256`, metadata/deleted `/private/tmp/auth-project-loader-snapshot.json`. Заказаны task check, affected race и полный actual TestPrepareCommandSQL на изолированном PG18.6 TLS/SCRAM. Результат pending; successful unrelated API/scanner/operator/localSettings наборы предыдущего блока формально не дублируются, их контракты здесь не менялись.
+
+### MP4.1a loader verification V1 — конфликт test baseline
+
+Luna: task check и `go test -race ./internal/platform/project/... ./cmd/project-prepare -count=1` PASS. Новый project_auth_configuration и четыре subtests PASS; subsequent runtime/role cases PASS. Full TestPrepareCommandSQL FAIL в secretsPreparationDrill, secrets_integration_test.go:112: ciphertext равен исходному, но xmin строки изменён deliberate tamper/restore вложенного loader test (829 →1265). SKIP не было, source manifest совпал до/после, ownfixture PostgreSQL удалена. Source/commit Luna не меняла.
+
+Пользователь разрешил исправление. Перед изменением запрошена узкая разведка Luna по parent replay boundary и deliberate ciphertext mutation, без повторного чтения соседних модулей main. Требование no-UPDATE для replay/wrong-root и exact restored ciphertext сохраняется; общий SQL gate пока открыт.
+
+### MP4.1a loader V2 — изолированные replay assertions
+
+По узкой карте Luna main прочитал только изменяемый участок secretsPreparationDrill и проверяемый ciphertext fault case. Исправлен только secrets_integration_test.go: непосредственный no-UPDATE assertion после secrets replay; после вложенных fault drills проверяется byte-for-byte восстановление ciphertext и фиксируется xmin восстановленной строки; каждый wrong-root вызов немедленно проверяется по ciphertext+xmin. Assertions не охватывают намеренные изменения другого сценария, no-UPDATE/wrong-root/AEAD проверки сохранены.
+
+Formatter/diff PASS. Передан V2 `/private/tmp/auth-project-loader-v2.taex8bqe`, base515f62c, manifest7 `/private/tmp/auth-project-loader-v2-manifest.sha256`, metadata `/private/tmp/auth-project-loader-v2-snapshot.json`. SHA compare с V1: изменён только secrets_integration_test.go. Luna повторяет полный actual TestPrepareCommandSQL без SKIP и targeted lint cmd/project-prepare; предыдущие успешные task check/race не дублируются, production source неизменны. Результат pending, коммита нет.
+
+## Результат MP4.1a project Auth loader — 25 октября 2026
+
+Luna V2: полный actual TestPrepareCommandSQL PASS без SKIP: loader/four subtests, последующие runtime/role/onboarding/managed и parent secrets replay/wrong-root. `golangci-lint run ./cmd/project-prepare` PASS,0 issues. Manifest7 совпал до/после, ownfixture PostgreSQL удалена, source/commit Luna не меняла. Snapshot `/private/tmp/auth-project-loader-v2.taex8bqe`, base515f62c, manifest `/private/tmp/auth-project-loader-v2-manifest.sha256`, metadata `/private/tmp/auth-project-loader-v2-snapshot.json`; main перед коммитом сверил7source. V1 task check и affected race PASS сохраняются: V2 поменял только parent test, production source неизменён. Повтор независимых successful наборов формально не выполнялся. Логи `/private/tmp/auth-project-loader*.log`.
+
+Локальный gate MP4.1a закрыт. Полная project Auth assembly/public-ready/fleet не заявлены. Пользователь разрешил коммит и продолжение MP4.1b, UI не начинался.

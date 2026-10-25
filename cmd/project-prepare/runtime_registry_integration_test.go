@@ -106,6 +106,7 @@ func projectRuntimeDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Reposit
 		return tx.Commit(ctx)
 	}
 	require.NoError(t, registry.Use(ctx, key, probe))
+	t.Run("project auth configuration", func(t *testing.T) { authConfigurationDrill(t, admin, reader, key, registry, codec) })
 	t.Run("resident state synchronization", func(t *testing.T) {
 		runtimeSyncDrill(t, admin, reader, key, target)
 	})

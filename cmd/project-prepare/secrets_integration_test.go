@@ -86,13 +86,27 @@ func secretsPreparationDrill(t *testing.T, admin, physical *pgx.Conn, env func(s
 	require.NoError(t, codec.Verify(binding, credentials.Version, "root-1", payload))
 	credentialsReadDrill(t, admin, repo, reservation, binding, codec, payload)
 	require.NoError(t, admin.QueryRow(ctx, `SELECT xmin::text FROM platform.project_secrets`).Scan(&xmin))
+	assertUnchanged := func(expectedXmin string) {
+		t.Helper()
+		var actual []byte
+		var actualXmin string
+		require.NoError(t, admin.QueryRow(ctx, `SELECT ciphertext,xmin::text FROM platform.project_secrets WHERE project_id=$1`, binding.ProjectID).Scan(&actual, &actualXmin))
+		require.Equal(t, payload, actual, "ciphertext must remain byte-for-byte identical")
+		require.Equal(t, expectedXmin, actualXmin, "replay and wrong roots must not rewrite ciphertext")
+	}
 	var response bytes.Buffer
 	require.NoError(t, run(ctx, args, protected, &response, io.Discard))
+	assertUnchanged(xmin)
 	require.Contains(t, response.String(), `"stage":"secrets_stored"`)
 	require.NotContains(t, response.String(), root)
 	require.NoError(t, physical.QueryRow(ctx, `SELECT rolpassword IS NULL FROM pg_authid WHERE oid=$1`, binding.RuntimeOID).Scan(&clean))
 	require.True(t, clean, "-secrets alone must not install a password")
 	passwordPreparationDrill(t, physical, protected, args, repo, reservation, binding, codec)
+	// Nested fault drills deliberately tamper/restore secrets; verify bytes before measuring wrong-root calls.
+	var restored []byte
+	require.NoError(t, admin.QueryRow(ctx, `SELECT ciphertext,xmin::text FROM platform.project_secrets WHERE project_id=$1`, binding.ProjectID).Scan(&restored, &xmin))
+	require.Equal(t, payload, restored, "nested drills must restore the exact original ciphertext")
+
 	for _, override := range []map[string]string{
 		{"PROVISIONER_MASTER_KEY": base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{18}, 32))},
 		{"PROVISIONER_MASTER_KEY_ID": "root-2"},
@@ -104,12 +118,9 @@ func secretsPreparationDrill(t *testing.T, admin, physical *pgx.Conn, env func(s
 			return protected(key)
 		}
 		require.ErrorIs(t, run(ctx, args, wrong, io.Discard, io.Discard), credentials.ErrUnavailable)
+		assertUnchanged(xmin)
 	}
-	var repeated []byte
-	var repeatedXmin string
-	require.NoError(t, admin.QueryRow(ctx, `SELECT ciphertext,xmin::text FROM platform.project_secrets`).Scan(&repeated, &repeatedXmin))
-	require.Equal(t, payload, repeated)
-	require.Equal(t, xmin, repeatedXmin, "replay and wrong roots must not rewrite ciphertext")
+
 	_, err = admin.Exec(ctx, `UPDATE platform.project_secrets SET runtime_oid=(runtime_oid::bigint+1)::oid`)
 	require.NoError(t, err)
 	require.ErrorIs(t, repo.EnsureSecrets(ctx, reservation, binding, codec), domain.ErrConflict)

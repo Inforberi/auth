@@ -6,6 +6,9 @@
 
 ## Открытые ограничения приёмки
 
+- MP4.1a project Auth loader: локальные проверки Luna V1/V2 PASS, полный command SQL без SKIP. [Контракт](../features/project-auth-loader.md). Не является полной feature assembly/admission/public readiness; policy/credential version необходимо учитывать при сборке и invalidation.
+
+
 - MP2.7 project Auth policy: локальная приёмка Luna PASS (V1–V5), full command SQL без SKIP; [контракт и ограничения](../features/platform-auth-settings.md). Новые initial SQL/grants/profile guards прошли live SQL regression; controlled upgrade существующих БД остаётся отдельной операцией. Production Auth adapters/ready publication этим API не реализованы.
 
 

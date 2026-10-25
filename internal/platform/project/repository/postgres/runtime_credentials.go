@@ -61,28 +61,41 @@ const runtimeCredentialProfile = `current_user=session_user
 		OR has_any_column_privilege(current_user,c.oid,'INSERT,UPDATE,REFERENCES')
 		OR has_table_privilege(current_user,c.oid,'DELETE,TRUNCATE,TRIGGER,SELECT WITH GRANT OPTION')))`
 
+type sealedRuntimeCredential struct {
+	version int
+	keyID   string
+	payload []byte
+}
+
 func (r *RuntimeCredentialReader) LoadDatabaseCredential(ctx context.Context, key projectruntime.Key) (credentials.DatabaseCredential, error) {
+	sealed, err := r.readRuntimeCredential(ctx, key)
+	if err != nil {
+		return credentials.DatabaseCredential{}, err
+	}
+	defer clear(sealed.payload)
+	return r.codec.OpenDatabase(key.Binding, sealed.version, sealed.keyID, sealed.payload)
+}
+
+func (r *RuntimeCredentialReader) readRuntimeCredential(ctx context.Context, key projectruntime.Key) (sealedRuntimeCredential, error) {
 	b := key.Binding
 	if !key.Valid() || b.RealmID != r.realm {
-		return credentials.DatabaseCredential{}, domain.ErrConflict
+		return sealedRuntimeCredential{}, domain.ErrConflict
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	var version int
-	var keyID string
-	var payload []byte
+	var sealed sealedRuntimeCredential
 	err := r.db.QueryRow(ctx, `WITH wanted AS (SELECT $1::uuid AS realm_id,$2::uuid AS project_id,$3::uuid AS reservation_id,
 		$4::text AS storage_target,$5::oid AS database_oid,$6::oid AS owner_oid,$7::oid AS runtime_oid,
 		$8::int AS schema_version,$9::bigint AS version,$10::bigint AS generation)
 		SELECT s.format_version,s.key_id,s.ciphertext FROM wanted CROSS JOIN `+runtimeSnapshotRelations+`
 		WHERE `+runtimeSnapshotPredicate+` AND (`+runtimeCredentialProfile+`)`, b.RealmID, b.ProjectID, b.ReservationID, b.StorageTarget,
-		b.DatabaseOID, b.OwnerOID, b.RuntimeOID, b.SchemaVersion, key.Version, key.Generation).Scan(&version, &keyID, &payload)
+		b.DatabaseOID, b.OwnerOID, b.RuntimeOID, b.SchemaVersion, key.Version, key.Generation).Scan(&sealed.version, &sealed.keyID, &sealed.payload)
 	if err != nil {
+		clear(sealed.payload)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return credentials.DatabaseCredential{}, domain.ErrConflict
+			return sealedRuntimeCredential{}, domain.ErrConflict
 		}
-		return credentials.DatabaseCredential{}, catalogError(ctx, err)
+		return sealedRuntimeCredential{}, catalogError(ctx, err)
 	}
-	defer clear(payload)
-	return r.codec.OpenDatabase(b, version, keyID, payload)
+	return sealed, nil
 }
