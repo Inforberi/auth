@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP5.1d-project-auth-deployment, 25 октября — локальные проверки Luna PASS.** [Контракт/manifest](../features/project-auth-deployment.md): UUID source для OTP/reauth/Google/Telegram/JWT/native/introspection, scoped credentials и immutable per-project resources/consumers. Shared owners только при selected capabilities, strict JSON reused с access catalog. Actual HTTPS source/native-policy/service transport fixtures добавлены; внешний OAuth/SMTP и полная MP5 матрица отдельно.
+
 - [x] **MP5.1c-project-http-deployment, 25 октября — локальные проверки Luna V1/V3 PASS.** [Контракт/ENV](../features/project-http-deployment.md): default-off подключение browser password/MFA/email profile на существующем TLS listener, exact platform/project host split, isolated source и dispatcher drain до worker join/resources. Global external/native/JWT flags не наследуются; их deployment source и полная MP5 приёмка отдельно.
 
 - [x] **MP5.1b-project-http-routes, 25 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/project-http-routes.md): явные project HTTP bindings/protection, bounded resident dispatcher/current policy guard и lazy rebuild/drain. Узкие public handlers без копирования логики; actual TLS login/block/settings/suspend fixtures. Main production router/ENV/phase-ready/UI не включены; последующая интеграция и полная MP5 матрица отдельно.

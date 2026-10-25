@@ -105,6 +105,8 @@ func projectHTTPDeploymentDrill(t *testing.T, runtimeConfig config.PlatformConfi
 	cfg := operatorConfig(runtimeConfig.RealmID)
 	cfg.Platform.Runtime = runtimeConfig.Runtime
 	cfg.Platform.HTTP = config.ProjectHTTPConfig{Enabled: true, MaxProfiles: 1, MaxBuilding: 1, BuildTimeout: 5 * time.Second, MaxAge: time.Minute, MaxInFlight: 1}
+	deploymentTokenDefaults(cfg)
+	cfg.Platform.HTTP.ManifestFile = writeProjectManifest(t, []byte(`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","browser":true,"google":true,"jwt":{"permissions":[{"key":"reports.read","name":"Read reports"}],"resources":[{"audience":"reports","permissions":["reports.read"]}]}}]}`))
 	rdb := redis.NewClient(&redis.Options{Addr: "127.0.0.1:1", MaxRetries: -1})
 	t.Cleanup(func() { require.NoError(t, rdb.Close()) })
 	owned := &resources{}

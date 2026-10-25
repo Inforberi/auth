@@ -1,12 +1,11 @@
 package settings
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-	"unicode/utf8"
+
+	"github.com/Inforberi/financial-intelligence/internal/infra/jsonconfig"
 )
 
 type Config struct {
@@ -18,16 +17,11 @@ func Load(reader io.Reader) (Document, error) {
 	if err != nil {
 		return Document{}, fmt.Errorf("read catalog: %w", err)
 	}
-	if len(data) > MaxCatalogBytes || !utf8.Valid(data) {
+	if len(data) > MaxCatalogBytes {
 		return Document{}, ErrInvalidCatalog
 	}
-	if err := checkJSONKeys(data); err != nil {
-		return Document{}, ErrInvalidCatalog
-	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
 	var definition Definition
-	if err := decoder.Decode(&definition); err != nil {
+	if err := jsonconfig.Decode(data, &definition); err != nil {
 		return Document{}, ErrInvalidCatalog
 	}
 	return NewDocument(definition)

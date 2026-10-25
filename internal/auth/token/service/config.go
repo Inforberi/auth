@@ -29,6 +29,16 @@ type Config struct {
 	Native    *NativePolicy
 }
 
+func ValidateConfiguration(cfg Config, catalog settings.Catalog) error {
+	if _, err := resourcePolicies(cfg, catalog); err != nil {
+		return err
+	}
+	if cfg.Native != nil {
+		return cfg.Native.Validate()
+	}
+	return nil
+}
+
 func (s *Service) requestedResource(audience string, scope []accessdomain.PermissionKey) (resourcePolicy, []accessdomain.PermissionKey, error) {
 	resource, ok := s.resources[audience]
 	if !ok || len(scope) == 0 || len(scope) > 64 {

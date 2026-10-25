@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "projects": [
+    {
+      "id": "c2000000-0000-4000-8000-000000000002",
+      "browser": true,
+      "emailOTP": true,
+      "reauthentication": true,
+      "google": true,
+      "telegram": true,
+      "jwt": {
+        "native": true,
+        "password": true,
+        "permissions": [
+          { "key": "reports.read", "name": "Чтение отчётов" }
+        ],
+        "resources": [
+          { "audience": "reports", "mode": "strict", "permissions": ["reports.read"] }
+        ]
+      }
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 
+	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
@@ -13,6 +14,15 @@ type IntrospectionClientConfig struct {
 	ID           string   `json:"id"`
 	SecretHashes []string `json:"secretHashes"`
 	Audiences    []string `json:"audiences"`
+}
+
+func ValidateIntrospectionClients(clients []IntrospectionClientConfig, resources []Resource, catalog settings.Catalog) error {
+	policies, err := audiencePolicies(resources, catalog)
+	if err != nil {
+		return err
+	}
+	_, err = introspectionClients(clients, policies)
+	return err
 }
 
 type IntrospectionClient struct {

@@ -36,3 +36,6 @@ V1 Luna: actual TestProjectRuntimeAssemblySQL и TestOperatorProfileSQLHTTPS (Li
 
 
 Финал V3: task check (tests/lint) и app/config race PASS; manifest9 и ENV examples совпадают с main. V1 actual runtime assembly/operator SQLHTTPS и security PASS остаются evidence незатронутых гарантий. V2 omitted cfg compile failure исправлен в V3. Внешние provider/SMTP, полный two-project запуск, fleet/capacity/GC и UI не проверялись этим блоком; deployment флаг остаётся выключенным по умолчанию.
+
+
+Следующий [MP5.1d deployment source](project-auth-deployment.md) расширяет opt-in через UUID manifest для OTP/OIDC/JWT/native, с отдельным verification gate. Историческое описание первого password/email source выше относится к MP5.1c.

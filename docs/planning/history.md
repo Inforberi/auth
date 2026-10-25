@@ -1925,3 +1925,15 @@ MP5.1c V2 compile FAIL: operator.go128 omitted cfg after adding ctx; task check/
 
 
 MP5.1c V3 финал Luna: task check и go test -race ./internal/app/auth ./internal/config -count=1 PASS, manifest9 совпал после прогона и с main; оба ENV examples также совпали с проверенным снимком. Source verifier не менял. V1 actual TestProjectRuntimeAssemblySQL/TestOperatorProfileSQLHTTPS без SKIP и security PASS сохранены для незатронутых гарантий. Cursor001f5739-f635-4e82-85da-0f9c06b859c7:85. Пользователь разрешил коммит. External/OTP/native/JWT deployment capabilities, полная MP5/MP7/MP8/UI gates остаются открытыми; flag default-off.
+
+
+## MP5.1d project auth deployment source — 25 октября 2026
+
+Добавлен optional bounded1MiB startup UUID manifest с browser/OTP/reauth/OIDC/JWT/native capabilities и project resource/catalog/hashedconsumers. No file legacy limited source; missing UUID in explicit file closed. No global key/provider secret/resource fallback; issuer/callback current origin, signing/SMTP/provider actual project stores. Independent config snapshots/realm fence; source exported для actualfixture reuse. Resources/native/clienthash ранняя validation через existing predicates, межпроектный reuse consumer hash запрещён.
+
+Shared OIDC clients/no-retry token Redis owner8 создаются только для selected deployment capabilities, LIFO послеHTTP drain. Existing access JSON key checker перенесён в infra/jsonconfig.Decode для общего strict unknown/duplicate/case-duplicate/trailing/UTF8 rules, без копии в manifest. Существующие access regression должны сохраниться. Новых deps/schema/workers/UI/SSO/phase-ready нет. ENV examples+synthetic deploy example/docs обновлены, real ENV untouched.
+
+Researcher отметил nil/zero public source panic и late config diagnostics, main исправил nil guards/early validator wrappers. Unit copy/scope/JSON/closed/invalid resources/consumerhash cases, actual TLS command nativeSQLgate/introspection transport через реальный source и runtime-emptycatalog conditional owners добавлены. Main formatter exit0/existing warning/diff; executable checks НЕ запускал. Snapshot `/private/tmp/auth-project-auth-source-v1.i39k2ilp`, manifest `/private/tmp/auth-project-auth-source-v1.i39k2ilp-manifest.sha256`, metadata `/private/tmp/auth-project-auth-source-v1.i39k2ilp-snapshot.json`, basec9fd5bf; task check/affected race/security/actual command+runtime SQL Luna PENDING. Full MP5/two-project/external/fleet/GC/RPS/UI gates открыты.
+
+
+MP5.1d финал Luna: task check/targeted race/security и Linux ARM64 actual TestPrepareCommandSQL/TestProjectRuntimeAssemblySQL/TestOperatorProfileSQLHTTPS PASS, no SKIP. TLS verify/SCRAM wrong-password reject/RedisDB15 preflight подтверждены. Manifest13 совпал после прогона и с main; deleted access/settings/json_keys.go отсутствует; ENV examples и deploy JSON совпали со snapshot. Свои containers/network/fixture/binaries очищены, source не менялся. Cursor001f5739-f635-4e82-85da-0f9c06b859c7:86. Пользователь разрешил коммит. Full MP5/two-project/external provider/SMTP/fleet/GC/RPS/UI gates открыты.

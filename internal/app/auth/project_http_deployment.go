@@ -22,11 +22,32 @@ func assembleProjectHTTP(ctx context.Context, cfg *config.Config, runtime *proje
 	if err := cfg.ValidatePlatform(); err != nil {
 		return nil, nil, err
 	}
+	deployment, err := LoadProjectAuthDeployment(cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	dependencies := ProjectProfileDependencies{ProjectTokenDependencies: ProjectTokenDependencies{Registry: runtime.registry, Reader: runtime.reader, Redis: deps.redis, Hash: deps.hash}, Delivery: delivery}
+	if deployment.oidc {
+		dependencies.OIDCClients = NewProjectOIDCClients(ctx)
+		owned.add(dependencies.OIDCClients.Close)
+	}
+	if deployment.jwt {
+		dependencies.IssuanceRedis, err = NewProjectTokenRedis(deps.redis)
+		if err != nil {
+			return nil, nil, err
+		}
+		owned.add(func() {
+			if err := dependencies.IssuanceRedis.Close(); err != nil {
+				deps.log.Error("project token Redis close failed")
+			}
+		})
+	}
 	profile, err := NewProjectHTTP(ProjectHTTPConfig{
 		PlatformOrigin: cfg.Platform.Origin,
 		Residents:      projecthttp.RuntimeDispatcherConfig{MaxProfiles: c.MaxProfiles, MaxBuilding: c.MaxBuilding, BuildTimeout: c.BuildTimeout, MaxAge: c.MaxAge},
 		Capacity:       middleware.CapacityConfig{MaxInFlight: c.MaxInFlight, RequestTimeout: cfg.HTTP.RequestTimeout}, Proxy: cfg.Proxy,
-	}, ProjectProfileDependencies{ProjectTokenDependencies: ProjectTokenDependencies{Registry: runtime.registry, Reader: runtime.reader, Redis: deps.redis, Hash: deps.hash}, Delivery: delivery}, projectBrowserDeployment(cfg), deps.log)
+		SessionValidation: &cfg.Session,
+	}, dependencies, deployment.Profile, deps.log)
 	if err != nil {
 		return nil, nil, err
 	}

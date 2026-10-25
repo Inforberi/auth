@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -13,11 +16,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
-	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
-	tokenredis "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/redis"
-	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	tokensettings "github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
+	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
@@ -33,17 +35,25 @@ func (f projectProfileFixture) httpProfile(t *testing.T, ctx context.Context, or
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, issuance.Close()) })
 	password := projectPasswordFixtureConfig()
-	catalog, err := accesssettings.NewCatalog([]accesssettings.Permission{{Key: "reports.read", Name: "Read reports"}})
+	deploymentConfig := &config.Config{
+		Session: password.Session, Capacity: password.Capacity,
+		MFA: mfaservice.Config{Enabled: true, Issuer: "Project", ChallengeTTL: time.Minute, UserLimitPerMinute: 30, IPLimitPerMinute: 50, GlobalLimitPerMinute: 100},
+		JWT: tokensettings.Config{AccessTTL: time.Minute, RefreshIdleTTL: time.Hour, RefreshAbsoluteTTL: 2 * time.Hour, ActorPerMinute: 30, SessionPerMinute: 10, IPPerMinute: 30, ProjectPerMinute: 3000, IntrospectionConsumerPerMinute: 100, IntrospectionProjectPerMinute: 1000},
+	}
+	deploymentConfig.Platform.RealmID = string(f.key.Binding.RealmID)
+	deploymentConfig.Platform.HTTP.BuildTimeout = 5 * time.Second
+	deploymentConfig.Platform.HTTP.ManifestFile = filepath.Join(t.TempDir(), "project-auth.json")
+	manifest := fmt.Sprintf(`{"version":1,"projects":[{"id":%q,"browser":true,"jwt":{"native":true,"password":true,"permissions":[{"key":"reports.read","name":"Read reports"}],"resources":[{"audience":"reports","permissions":["reports.read"]}],"clients":[{"id":"consumer","secretHashes":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],"audiences":["reports"]}]}}]}`, string(f.key.Binding.ProjectID))
+	require.NoError(t, os.WriteFile(deploymentConfig.Platform.HTTP.ManifestFile, []byte(manifest), 0o600))
+	deployment, err := appauth.LoadProjectAuthDeployment(deploymentConfig)
 	require.NoError(t, err)
-	tokens := appauth.ProjectTokenConfig{Enabled: true, Issuer: origin, Catalog: catalog, Limits: tokenredis.DefaultLimits(), Timeout: 5 * time.Second, Tokens: tokenservice.Config{AccessTTL: time.Minute, Resources: []tokenservice.Resource{{Audience: "reports", Permissions: []accessdomain.PermissionKey{"reports.read"}}}}}
-	features := appauth.ProjectProfileConfig{BrowserEnabled: true, Password: &password, Tokens: &tokens, Timeout: 10 * time.Second}
 	deps := appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, IssuanceRedis: issuance, Hash: f.hash}}
 	var builds atomic.Int32
 	handler, err := appauth.NewProjectHTTP(appauth.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 20 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &password.Session,
-	}, deps, func(context.Context, projectruntime.Key, string) (appauth.ProjectProfileConfig, error) {
+	}, deps, func(ctx context.Context, key projectruntime.Key, origin string) (appauth.ProjectProfileConfig, error) {
 		builds.Add(1)
-		return features, nil
+		return deployment.Profile(ctx, key, origin)
 	}, nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)
@@ -98,6 +108,20 @@ func (f projectProfileFixture) httpProfile(t *testing.T, ctx context.Context, or
 	code, _ = request("/api/v1/auth/token/exchange", origin, cookie, `!`)
 	require.Equal(t, 400, code, "valid SQL session reaches existing JSON handler")
 	require.EqualValues(t, 1, builds.Load(), "warm requests must not rebuild profile")
+	code, _ = request("/api/v1/internal/auth/token/introspect", "", "", `!`)
+	require.Equal(t, 401, code)
+	code, _ = request("/api/v1/internal/auth/token/introspect", origin, "", `!`)
+	require.Equal(t, 403, code)
+	code, _ = request("/api/v1/auth/native/password/login", "", "", `!`)
+	require.Equal(t, 404, code)
+	_, err = f.db.Exec(ctx, `UPDATE auth.auth_settings SET version=version+1,token_native_enabled=true`)
+	require.NoError(t, err)
+	code, _ = request("/api/v1/auth/native/password/login", "", "", `!`)
+	require.Equal(t, 404, code)
+	code, _ = request("/api/v1/auth/native/password/login", "", "", `!`)
+	require.Equal(t, 400, code, "current enabled native profile reaches strict JSON handler")
+	require.EqualValues(t, 2, builds.Load())
+
 	_, err = f.db.Exec(ctx, `UPDATE auth.users SET status='blocked' WHERE id=$1`, f.sourceUser)
 	require.NoError(t, err)
 	t.Cleanup(func() {
@@ -114,7 +138,7 @@ func (f projectProfileFixture) httpProfile(t *testing.T, ctx context.Context, or
 	require.Equal(t, 404, code, "stale profile is rejected")
 	code, _ = request("/api/v1/auth/login/email", origin, "", `{}`)
 	require.Equal(t, 404, code, "rebuilt profile does not mount disabled password")
-	require.EqualValues(t, 2, builds.Load())
+	require.EqualValues(t, 3, builds.Load())
 	code, _ = request("/api/v1/admin/auth/login/email", origin, "", `{}`)
 	require.Equal(t, 404, code)
 	_, err = f.admin.Exec(ctx, `UPDATE platform.projects SET desired_state='suspended',version=version+1 WHERE id=$1`, f.key.Binding.ProjectID)
@@ -127,7 +151,7 @@ func (f projectProfileFixture) httpProfile(t *testing.T, ctx context.Context, or
 	})
 	code, _ = request("/api/v1/auth/token/exchange", origin, cookie, `!`)
 	require.Equal(t, 404, code)
-	require.EqualValues(t, 2, builds.Load(), "suspended projects never load profiles")
+	require.EqualValues(t, 3, builds.Load(), "suspended projects never load profiles")
 }
 
 func (f projectProfileFixture) httpLoginLimitCleanup(t *testing.T, ctx context.Context) {
