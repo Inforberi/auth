@@ -80,9 +80,14 @@ func (p *projectEmailRuntime) recovery(pool *pgxpool.Pool, mail *mailer.Mailer, 
 }
 
 func (p *projectEmailRuntime) deliver(ctx context.Context, verification bool) error {
+	return p.deliverAccount(ctx, verification, accountpostgres.DeliveryConfig{})
+}
+
+func (p *projectEmailRuntime) deliverAccount(ctx context.Context, verification bool, cfg accountpostgres.DeliveryConfig) error {
 	return p.use(ctx, func(ctx context.Context, pool *pgxpool.Pool, mail *mailer.Mailer) error {
 		if verification {
-			return p.verification(pool, mail, accountservice.Config{}).DeliverOne(ctx)
+			worker := accountservice.New(accountpostgres.NewWithDelivery(pool, cfg), p.verificationLimits, p.verificationCipher, mail, accountservice.Config{})
+			return worker.DeliverOne(ctx)
 		}
 		// Delivery consumes an existing encrypted body; it never hashes or builds a reset URL.
 		_, err := p.recovery(pool, mail, nil, passwordservice.Config{}).DeliverOne(ctx)

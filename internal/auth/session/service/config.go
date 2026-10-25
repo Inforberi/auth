@@ -16,8 +16,8 @@ type Config struct {
 }
 
 func (cfg Config) Validate() error {
-	if cfg.FreshAuthTTL < time.Minute || cfg.FreshAuthTTL > 15*time.Minute {
-		return fmt.Errorf("SESSION_FRESH_AUTH_TTL must be between 1m and 15m")
+	if err := ValidateFreshAuthTTL(cfg.FreshAuthTTL); err != nil {
+		return err
 	}
 	if cfg.SessionTTL <= 0 || cfg.AbsoluteSessionTTL < cfg.SessionTTL || cfg.SessionRefreshThreshold <= 0 || cfg.SessionRefreshThreshold >= cfg.SessionTTL {
 		return fmt.Errorf("invalid session durations")
@@ -26,6 +26,13 @@ func (cfg Config) Validate() error {
 		cfg.AdminActivityInterval < time.Second || cfg.AdminActivityInterval > cfg.AdminIdleTimeout/10 ||
 		cfg.AdminIdleTimeout%time.Second != 0 || cfg.AdminAbsoluteTTL%time.Second != 0 || cfg.AdminActivityInterval%time.Second != 0 {
 		return fmt.Errorf("admin session durations must be whole seconds: idle >= 1m, absolute >= idle, activity interval 1s..idle/10")
+	}
+	return nil
+}
+
+func ValidateFreshAuthTTL(ttl time.Duration) error {
+	if ttl < time.Minute || ttl > 15*time.Minute {
+		return fmt.Errorf("SESSION_FRESH_AUTH_TTL must be between 1m and 15m")
 	}
 	return nil
 }

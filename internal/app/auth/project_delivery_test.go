@@ -17,7 +17,7 @@ import (
 )
 
 func TestProjectEmailTrustedURLs(t *testing.T) {
-	cfg := ProjectEmailConfig{Origin: "https://project.example.test", Verification: accountservice.Config{
+	cfg := ProjectEmailConfig{VerificationEnabled: true, RecoveryEnabled: true, Origin: "https://project.example.test", Verification: accountservice.Config{
 		URL: "https://project.example.test/verify-email", EncryptionKey: base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{7}, 32)),
 		TTL: 30 * time.Minute, ResendInterval: time.Minute, RegistrationIPLimit: 5, RegistrationGlobalLimit: 100,
 	}, Password: passwordservice.Config{ResetURL: "https://project.example.test/reset-password", ResetTokenTTL: time.Hour, ResetGlobalLimit: 100}}

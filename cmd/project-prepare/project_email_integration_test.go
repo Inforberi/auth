@@ -80,7 +80,7 @@ func projectEmailDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key
 		require.NoError(t, err)
 		require.Zero(t, count)
 	})
-	cfg := appauth.ProjectEmailConfig{Origin: "https://runtime-email.example.test", Verification: accountservice.Config{
+	cfg := appauth.ProjectEmailConfig{VerificationEnabled: true, RecoveryEnabled: true, Origin: "https://runtime-email.example.test", Verification: accountservice.Config{
 		URL: "https://runtime-email.example.test/verify-email", TTL: 30 * time.Minute, ResendInterval: time.Minute, RegistrationIPLimit: 5, RegistrationGlobalLimit: 100,
 	}, Password: passwordservice.Config{ResetURL: "https://runtime-email.example.test/reset-password", ResetTokenTTL: time.Hour, ResetGlobalLimit: 100}}
 	service, err := appauth.NewProjectEmail(ctx, key, cfg, []string{listener.Addr().String()}, appauth.ProjectEmailDependencies{ProjectSMTPDependencies: deps, Hash: hash})
@@ -180,6 +180,9 @@ func projectEmailDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key
 	require.NoError(t, db.QueryRow(ctx, `SELECT e.verified_at IS NOT NULL,p.password_hash FROM auth.user_emails e JOIN auth.password_credentials p ON p.email_id=e.id WHERE e.id=$1`, contact).Scan(&verified, &actualHash))
 	require.True(t, verified)
 	require.NoError(t, hash.Compare(ctx, replacement, actualHash))
+	t.Run("remaining project account scenarios", func(t *testing.T) {
+		(projectAccountFixture{sourceUser: user, password: replacement, db: db, rdb: rdb, key: key, deps: deps, hash: hash, cfg: cfg, ciphers: ciphers}).run(t, ctx)
+	})
 	_, err = admin.Exec(ctx, `UPDATE platform.projects SET desired_state='suspended',version=version+1 WHERE id=$1`, key.Binding.ProjectID)
 	require.NoError(t, err)
 	t.Cleanup(func() {

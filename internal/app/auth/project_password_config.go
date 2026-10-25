@@ -15,6 +15,7 @@ import (
 )
 
 type ProjectPasswordConfig struct {
+	TemporaryPassword        passwordservice.TemporaryPasswordConfig
 	RegistrationVerification *ProjectRegistrationVerification
 	MFA                      mfaservice.Config
 	Session                  sessionservice.Config
@@ -43,6 +44,9 @@ func (c ProjectPasswordConfig) validate(deps ProjectPasswordDependencies) error 
 		return err
 	}
 	if err := c.MFA.Validate(); err != nil {
+		return err
+	}
+	if err := c.TemporaryPassword.Validate(); err != nil {
 		return err
 	}
 	if c.MFA.RecoveryEnabled {

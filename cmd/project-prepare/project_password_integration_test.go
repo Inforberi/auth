@@ -97,7 +97,7 @@ func projectPasswordDrill(t *testing.T, admin *pgx.Conn, reader *catalog.Runtime
 		require.NoError(t, err)
 		require.Zero(t, count)
 	})
-	pcfg := appauth.ProjectPasswordConfig{Timeout: 5 * time.Second, Capacity: passwordservice.CapacityConfig{HashConcurrency: 1, LoginIPLimit: 100, LoginEmailLimit: 100, LoginGlobalLimit: 100}, Session: sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, SessionRefreshThreshold: time.Minute, FreshAuthTTL: 5 * time.Minute, AdminIdleTimeout: 30 * time.Minute, AdminAbsoluteTTL: 12 * time.Hour, AdminActivityInterval: time.Minute}}
+	pcfg := projectPasswordFixtureConfig()
 	deps := appauth.ProjectPasswordDependencies{Registry: registry, Reader: reader, Redis: rdb, Hash: bounded}
 	svc, err := appauth.NewProjectPassword(ctx, key, pcfg, deps)
 	require.NoError(t, err)
@@ -290,4 +290,8 @@ func projectPasswordHashDrill(t *testing.T, admin *pgx.Conn, key projectruntime.
 		require.NoError(t, received.err)
 		require.NotEmpty(t, received.result.Token)
 	}
+}
+
+func projectPasswordFixtureConfig() appauth.ProjectPasswordConfig {
+	return appauth.ProjectPasswordConfig{Timeout: 5 * time.Second, Capacity: passwordservice.CapacityConfig{HashConcurrency: 1, LoginIPLimit: 100, LoginEmailLimit: 100, LoginGlobalLimit: 100}, Session: sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, SessionRefreshThreshold: time.Minute, FreshAuthTTL: 5 * time.Minute, AdminIdleTimeout: 30 * time.Minute, AdminAbsoluteTTL: 12 * time.Hour, AdminActivityInterval: time.Minute}}
 }

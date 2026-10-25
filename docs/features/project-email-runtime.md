@@ -27,3 +27,7 @@ MP4.1e,25 октября2026. Решение перед реализацией.
 ## Проверки
 
 Добавлены unit tests trusted URLs, worker concurrency/fairness/cancellation и actual project SQL/Redis drill: issuance двух encrypted outbox, разные purposes, private-reader keyset selection без HTTP, worker safe TLS failure/retry, email confirm/reset+replay, новый password hash и suspend/selection exclusion. Luna V3: task check exit0/lint0, app/auth race exit0; V2 config/cmd race и actual full TestPrepareCommandSQL exit0 без SKIP. Manifest11 совпал до/после и с main; owned PostgreSQL/Redis cleanup подтверждён. После V2 изменён только тип счётчика scheduler, поэтому успешный SQL-прогон не повторялся. Evidence — history, snapshot `/private/tmp/auth-project-email-v3.5mpw8ae3`.
+
+## Расширение MP4.1h
+
+[Project account runtime](project-account-runtime.md) добавляет invitation/binding/change/protected recovery и независимые component flags. VerificationEnabled/RecoveryEnabled выбираются явно; исходные MP4.1e callers обновлены. Basic consumer disabled возвращает unavailable до pool, selected binding-only не требует reset URL. Доставка расширена ротацией очередей за полный обход; новые проверки отделены от исторического MP4.1e PASS.

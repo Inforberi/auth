@@ -25,6 +25,7 @@ import (
 type ProjectPassword struct {
 	mfa          *projectMFALogin
 	registration *projectRegistration
+	temporary    *projectTemporary
 	key          projectruntime.Key
 	cfg          ProjectPasswordConfig
 	registry     *projectruntime.Registry
@@ -61,9 +62,13 @@ func NewProjectPassword(ctx context.Context, key projectruntime.Key, cfg Project
 	if err != nil {
 		return nil, err
 	}
+	var temporary *projectTemporary
+	if cfg.TemporaryPassword.Enabled {
+		temporary = &projectTemporary{limits: limits, digest: cipher.Digest}
+	}
 	cfg.RegistrationVerification = nil
 	return &ProjectPassword{
-		mfa: mfa, registration: registration,
+		mfa: mfa, registration: registration, temporary: temporary,
 		key: key, cfg: cfg, registry: deps.Registry, reader: deps.Reader, hash: deps.Hash,
 		limits: passwordservice.NewLoginLimit(limits, cipher, cfg.Capacity),
 	}, nil

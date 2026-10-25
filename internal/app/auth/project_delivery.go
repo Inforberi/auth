@@ -10,6 +10,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
@@ -43,6 +44,7 @@ func (d *ProjectDelivery) Run(ctx context.Context, report func(error)) error {
 	}
 	defer d.running.Store(false)
 	var cursor projectpostgres.RuntimeCursor
+	var accountTurn uint8
 	for ctx.Err() == nil {
 		keys, next, err := d.deps.Reader.PageRuntimes(ctx, cursor, d.cfg.PageSize)
 		if err != nil {
@@ -50,8 +52,13 @@ func (d *ProjectDelivery) Run(ctx context.Context, report func(error)) error {
 				report(err)
 			}
 		} else {
-			deliverProjectPage(ctx, keys, d.cfg.Parallelism, d.deliverProject, report)
+			deliverProjectPage(ctx, keys, d.cfg.Parallelism, func(ctx context.Context, key projectruntime.Key) error {
+				return d.deliverProject(ctx, key, accountTurn)
+			}, report)
 			cursor = next
+			if next.CreatedAt.IsZero() {
+				accountTurn = (accountTurn + 1) % 4
+			}
 		}
 		timer := time.NewTimer(d.cfg.Interval)
 		select {
@@ -88,7 +95,7 @@ func deliverProjectPage(ctx context.Context, keys []projectruntime.Key, parallel
 	}
 }
 
-func (d *ProjectDelivery) deliverProject(ctx context.Context, key projectruntime.Key) error {
+func (d *ProjectDelivery) deliverProject(ctx context.Context, key projectruntime.Key, accountTurn uint8) error {
 	configuration, err := d.deps.Reader.LoadAuthConfiguration(ctx, key, d.deps.Registry)
 	if err != nil {
 		return err
@@ -101,7 +108,7 @@ func (d *ProjectDelivery) deliverProject(ctx context.Context, key projectruntime
 	if _, err := runtime.smtp.credentials(ctx); err != nil {
 		return err
 	}
-	verificationErr := runtime.deliver(ctx, true)
+	verificationErr := runtime.deliverAccount(ctx, true, projectAccountDelivery(accountTurn))
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -124,4 +131,9 @@ func (d *ProjectDelivery) RunDelivery(ctx context.Context, report func(error)) {
 	if err := d.Run(ctx, report); err != nil && ctx.Err() == nil {
 		report(err)
 	}
+}
+
+// Rotate once per complete catalog sweep, not by a project count that can pin one queue forever.
+func projectAccountDelivery(turn uint8) accountpostgres.DeliveryConfig {
+	return accountpostgres.DeliveryConfig{EmailChanges: turn%4 == 1, Invitations: turn%4 == 2, EmailBinding: turn%4 == 3}
 }
