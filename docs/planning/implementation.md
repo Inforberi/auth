@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP4.1i-project-email-otp, 25 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/project-email-otp-runtime.md): проектный browser email-вход/reauth, общий MFA coordinator и OTP delivery через существующий runner. Новых SQL/deps/routes/readiness нет; recovery при потере всех факторов закрыт. Добавлены unit и реальные SQL/Redis fixtures.
+
 - [x] **MP4.1h-project-account,25 октября — локальные проверки Luna V1/V3 PASS.** [Контракт](../features/project-account-runtime.md): project invitation/temporary/binding/change+protected recovery на existing services/SQL/proofs, independent component flags и bounded account queue rotation по полным catalog sweeps. Temporary secret только one-time API response, не новый mail flow. No HTTP/readiness/deps/schema; actual SQL+Redis/queue tests Luna V3 PASS.
 
 - [x] **MP4.1g-project-registration,25 октября — локальные проверки Luna V2 PASS.** [Контракт](../features/project-registration-runtime.md): ProjectPassword.Register через существующий transactional account/outbox adapter и общий session/MFA/policy coordinator; scoped IP/global limits/hash, optional trusted verification config, disabled без SMTP. Нет нового SQL/HTTP/readiness; final key guard не обещает rollback committed in-flight account.

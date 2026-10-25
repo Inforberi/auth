@@ -183,6 +183,9 @@ func projectEmailDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key
 	t.Run("remaining project account scenarios", func(t *testing.T) {
 		(projectAccountFixture{sourceUser: user, password: replacement, db: db, rdb: rdb, key: key, deps: deps, hash: hash, cfg: cfg, ciphers: ciphers}).run(t, ctx)
 	})
+	t.Run("project email OTP scenarios", func(t *testing.T) {
+		projectEmailOTPDrill(t, ctx, db, rdb, key, deps, user)
+	})
 	_, err = admin.Exec(ctx, `UPDATE platform.projects SET desired_state='suspended',version=version+1 WHERE id=$1`, key.Binding.ProjectID)
 	require.NoError(t, err)
 	t.Cleanup(func() {

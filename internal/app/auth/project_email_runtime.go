@@ -9,16 +9,20 @@ import (
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountredis "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/redis"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	otppostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/repository/postgres"
+	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/redis"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
+	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type projectEmailRuntime struct {
+	otpCipher          *secretbox.Cipher
 	smtp               *projectSMTP
 	verificationCipher accountservice.Cipher
 	verificationLimits accountservice.Limiter
@@ -52,7 +56,11 @@ func newProjectEmailRuntime(key projectruntime.Key, root string, allowed []strin
 	if err != nil {
 		return nil, err
 	}
-	return &projectEmailRuntime{smtp: smtp, verificationCipher: verificationCipher, verificationLimits: verificationLimits, resetCipher: resetCipher, resetLimits: resetLimits}, nil
+	otpCipher, err := security.cipher(root, "email-login:v1")
+	if err != nil {
+		return nil, err
+	}
+	return &projectEmailRuntime{smtp: smtp, otpCipher: otpCipher, verificationCipher: verificationCipher, verificationLimits: verificationLimits, resetCipher: resetCipher, resetLimits: resetLimits}, nil
 }
 
 func (p *projectEmailRuntime) use(ctx context.Context, operation func(context.Context, *pgxpool.Pool, *mailer.Mailer) error) error {
@@ -91,6 +99,13 @@ func (p *projectEmailRuntime) deliverAccount(ctx context.Context, verification b
 		}
 		// Delivery consumes an existing encrypted body; it never hashes or builds a reset URL.
 		_, err := p.recovery(pool, mail, nil, passwordservice.Config{}).DeliverOne(ctx)
+		return err
+	})
+}
+
+func (p *projectEmailRuntime) deliverEmailOTP(ctx context.Context) error {
+	return p.use(ctx, func(ctx context.Context, pool *pgxpool.Pool, mail *mailer.Mailer) error {
+		_, err := otpservice.NewDelivery(otppostgres.New(pool), p.otpCipher, mail).DeliverOne(ctx)
 		return err
 	})
 }

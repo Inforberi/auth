@@ -43,14 +43,11 @@ func (c ProjectPasswordConfig) validate(deps ProjectPasswordDependencies) error 
 	if err := c.Session.Validate(); err != nil {
 		return err
 	}
-	if err := c.MFA.Validate(); err != nil {
+	if err := validateProjectMFA(c.MFA); err != nil {
 		return err
 	}
 	if err := c.TemporaryPassword.Validate(); err != nil {
 		return err
-	}
-	if c.MFA.RecoveryEnabled {
-		return errors.New("project loss-all-factors recovery is not assembled")
 	}
 	return nil
 }

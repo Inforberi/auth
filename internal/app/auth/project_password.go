@@ -16,14 +16,13 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 // ProjectPassword borrows process dependencies; each operation holds its own lease.
 type ProjectPassword struct {
-	mfa          *projectMFALogin
+	*projectMFA
 	registration *projectRegistration
 	temporary    *projectTemporary
 	key          projectruntime.Key
@@ -54,7 +53,7 @@ func NewProjectPassword(ctx context.Context, key projectruntime.Key, cfg Project
 	if err != nil {
 		return nil, err
 	}
-	mfa, err := newProjectMFALogin(scope, configuration.EncryptionKey(), cfg, deps)
+	mfa, err := newProjectMFALogin(scope, configuration.EncryptionKey(), cfg.MFA, cfg.Session, deps.Redis, "password")
 	if err != nil {
 		return nil, err
 	}
@@ -66,9 +65,13 @@ func NewProjectPassword(ctx context.Context, key projectruntime.Key, cfg Project
 	if cfg.TemporaryPassword.Enabled {
 		temporary = &projectTemporary{limits: limits, digest: cipher.Digest}
 	}
+	var coordinator *projectMFA
+	if mfa != nil {
+		coordinator = &projectMFA{factory: mfa, key: key, registry: deps.Registry, reader: deps.Reader, timeout: cfg.Timeout}
+	}
 	cfg.RegistrationVerification = nil
 	return &ProjectPassword{
-		mfa: mfa, registration: registration, temporary: temporary,
+		projectMFA: coordinator, registration: registration, temporary: temporary,
 		key: key, cfg: cfg, registry: deps.Registry, reader: deps.Reader, hash: deps.Hash,
 		limits: passwordservice.NewLoginLimit(limits, cipher, cfg.Capacity),
 	}, nil
@@ -100,22 +103,15 @@ func (p *ProjectPassword) Login(ctx context.Context, input passwordservice.Login
 }
 
 func (p *ProjectPassword) requireCurrent(ctx context.Context) error {
-	current, err := p.reader.CurrentRuntimes(ctx, []projectruntime.Key{p.key})
-	if err != nil {
-		return err
-	}
-	if !current[0] {
-		return projectdomain.ErrConflict
-	}
-	return nil
+	return requireProjectCurrent(ctx, p.reader, p.key)
 }
 
 func (p *ProjectPassword) passwordService(pool *pgxpool.Pool, repo *passwordpostgres.PasswordRepo) (*passwordservice.PasswordService, error) {
 	policy := settingsservice.New(settingspostgres.New(pool))
 	sessions := sessionservice.New(clock.UTCClock{}, sessionpostgres.New(pool), tokengenerate.New(), p.cfg.Session)
 	login := sessionservice.NewLogin(sessions, nil)
-	if p.mfa != nil {
-		loginMFA, err := p.mfa.newLogin(pool)
+	if p.projectMFA != nil {
+		loginMFA, err := p.factory.newLogin(pool)
 		if err != nil {
 			return nil, err
 		}
