@@ -27,9 +27,11 @@ func TestProjectRouteProfilesAndAllowlist(t *testing.T) {
 		{Method: "POST", Path: "/login", Protection: "browser", Handler: endpoint},
 		{Method: "GET", Path: "/callback", Protection: "callback", Handler: endpoint},
 		{Method: "POST", Path: "/exchange", Protection: "session_no_refresh", Handler: endpoint},
+		{Method: "GET", Path: "/me", Protection: "session", Handler: endpoint},
+		{Method: "POST", Path: "/logout", Protection: "session_logout", Handler: endpoint},
 		{Method: "POST", Path: "/native", Protection: "native", Handler: endpoint},
 		{Method: "OPTIONS", Path: "/native", Protection: "native", Handler: endpoint},
-	}, ProjectRouteProtection{SessionNoRefresh: session, Native: native.Protect})
+	}, ProjectRouteProtection{Session: session, SessionNoRefresh: session, SessionLogout: session, Native: native.Protect})
 	require.NoError(t, err)
 	for _, test := range []struct {
 		method, path, origin, cookie string
@@ -42,6 +44,12 @@ func TestProjectRouteProfilesAndAllowlist(t *testing.T) {
 		{"GET", "/callback", "https://beta.auth.test", "", 403},
 		{"POST", "/exchange", "https://alpha.auth.test", "", 401},
 		{"POST", "/exchange", "https://alpha.auth.test", "__Host-session=opaque", 204},
+		{"GET", "/me", "", "", 401},
+		{"GET", "/me", "", "__Host-session=opaque", 204},
+		{"GET", "/me", "https://beta.auth.test", "__Host-session=opaque", 403},
+		{"POST", "/logout", "", "__Host-session=opaque", 403},
+		{"POST", "/logout", "https://alpha.auth.test", "", 401},
+		{"POST", "/logout", "https://alpha.auth.test", "__Host-session=opaque", 204},
 		{"POST", "/native", "", "", 204},
 		{"POST", "/native", "https://alpha.auth.test", "", 403},
 		{"POST", "/native", "", "__Host-session=opaque", 400},
@@ -63,11 +71,11 @@ func TestProjectRouteProfilesAndAllowlist(t *testing.T) {
 			require.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
 		})
 	}
-	require.Equal(t, 4, called)
+	require.Equal(t, 6, called)
 }
 
 func TestProjectRoutesFailClosedForMissingProtection(t *testing.T) {
-	for _, protection := range []string{"session_no_refresh", "native", "unknown"} {
+	for _, protection := range []string{"session", "session_no_refresh", "session_logout", "native", "unknown"} {
 		_, err := NewProjectRoutes("https://alpha.auth.test", []ProjectRoute{{Method: "POST", Path: "/probe", Protection: protection, Handler: http.NotFoundHandler()}}, ProjectRouteProtection{})
 		require.Error(t, err)
 	}

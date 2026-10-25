@@ -13,6 +13,8 @@ func (p *ProjectProfile) buildProfileMethods(ctx context.Context, cfg ProjectPro
 	if !cfg.BrowserEnabled {
 		return
 	}
+	// Existing sessions remain manageable when login methods are disabled.
+	p.state("sessions", "")
 	methods := p.policy.Policy.Methods
 	if methods.Password {
 		p.buildProfilePassword(ctx, cfg, redisReady)

@@ -21,19 +21,24 @@ func (p *ProjectProfile) httpRoutes(fallback *sessionservice.Config, log *zap.Lo
 	if native != nil {
 		protection.Native = native.Protect
 	}
+	if p.featureReady("sessions") || p.featureReady("exchange") || p.featureReady("reauthentication") {
+		cfg, err := p.httpSessionConfig(fallback)
+		if err != nil {
+			return nil, err
+		}
+		sessions := &projectHTTPSessions{profile: p, cfg: cfg}
+		guard := sessionhttp.New(sessions, log)
+		protection.Session, protection.SessionNoRefresh, protection.SessionLogout = guard.Auth, guard.NoRefreshAuth, guard.LogoutAuth
+		if p.featureReady("sessions") {
+			sessions.bindHandlers(handlers, log)
+		}
+	}
 	plan := p.RoutePlan()
 	routes := make([]router.ProjectRoute, 0, len(plan))
 	for _, route := range plan {
 		handler := handlers[route.Path]
 		if handler == nil {
 			return nil, errors.New("missing project HTTP scenario")
-		}
-		if route.Protection == "session_no_refresh" && protection.SessionNoRefresh == nil {
-			cfg, err := p.httpSessionConfig(fallback)
-			if err != nil {
-				return nil, err
-			}
-			protection.SessionNoRefresh = sessionhttp.New(&projectHTTPSessions{profile: p, cfg: cfg}, log).NoRefreshAuth
 		}
 		routes = append(routes, router.ProjectRoute{Method: route.Method, Path: route.Path, Protection: route.Protection, Handler: http.HandlerFunc(handler)})
 	}

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -49,11 +50,8 @@ func (s *projectHTTPSessions) ValidateSessionWithoutRefresh(ctx context.Context,
 
 func (s *projectHTTPSessions) validate(ctx context.Context, raw string, refresh bool) (*sessionservice.ValidationResult, error) {
 	var result *sessionservice.ValidationResult
-	err := s.profile.deps.Registry.UsePool(ctx, s.profile.key, func(ctx context.Context, pool *pgxpool.Pool) error {
-		if err := requireProjectCurrent(ctx, s.profile.deps.Reader, s.profile.key); err != nil {
-			return err
-		}
-		sessions := sessionservice.New(clock.UTCClock{}, sessionpostgres.New(pool), tokengenerate.New(), s.cfg)
+	err := s.use(ctx, func(ctx context.Context, repo *sessionpostgres.Repository) error {
+		sessions := sessionservice.New(clock.UTCClock{}, repo, tokengenerate.New(), s.cfg)
 		validate := sessions.ValidateSessionWithoutRefresh
 		if refresh {
 			validate = sessions.ValidateSession
@@ -63,10 +61,24 @@ func (s *projectHTTPSessions) validate(ctx context.Context, raw string, refresh 
 		if err != nil {
 			return err
 		}
-		return requireProjectCurrent(ctx, s.profile.deps.Reader, s.profile.key)
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
+}
+
+func (s *projectHTTPSessions) use(ctx context.Context, operation func(context.Context, *sessionpostgres.Repository) error) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	return s.profile.deps.Registry.UsePool(ctx, s.profile.key, func(ctx context.Context, pool *pgxpool.Pool) error {
+		if err := requireProjectCurrent(ctx, s.profile.deps.Reader, s.profile.key); err != nil {
+			return err
+		}
+		if err := operation(ctx, sessionpostgres.New(pool)); err != nil {
+			return err
+		}
+		return requireProjectCurrent(ctx, s.profile.deps.Reader, s.profile.key)
+	})
 }

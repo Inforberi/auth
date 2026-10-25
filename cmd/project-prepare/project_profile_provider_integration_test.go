@@ -24,7 +24,10 @@ func (f projectProfileFixture) providerProfile(t *testing.T, ctx context.Context
 	missing, err := appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.False(t, missing.Readiness().Ready)
-	require.Empty(t, missing.RoutePlan())
+	require.Len(t, missing.RoutePlan(), 7)
+	for _, route := range missing.RoutePlan() {
+		require.Equal(t, "sessions", route.Feature)
+	}
 	require.Equal(t, "provider_credentials_unavailable", profileFeature(t, missing, "google").Reason)
 	configuration, err := f.deps.Reader.LoadAuthConfiguration(ctx, f.key, f.deps.Registry)
 	require.NoError(t, err)
@@ -42,14 +45,14 @@ func (f projectProfileFixture) providerProfile(t *testing.T, ctx context.Context
 	ready, err := appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.True(t, ready.Readiness().Ready)
-	require.Len(t, ready.RoutePlan(), 2)
+	require.Len(t, ready.RoutePlan(), 9)
 	// A missing password config must not remove an independently assembled Google flow.
 	_, err = f.db.Exec(ctx, `UPDATE auth.auth_settings SET version=version+1,password_enabled=true,password_email_verification='disabled'`)
 	require.NoError(t, err)
 	partial, err := appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.False(t, partial.Readiness().Ready)
-	require.Len(t, partial.RoutePlan(), 2)
+	require.Len(t, partial.RoutePlan(), 9)
 	require.True(t, profileFeature(t, partial, "google").Ready)
 	require.Equal(t, "missing_configuration", profileFeature(t, partial, "password").Reason)
 	foreign := google
@@ -57,6 +60,9 @@ func (f projectProfileFixture) providerProfile(t *testing.T, ctx context.Context
 	cfg.Google = &foreign
 	blocked, err := appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
-	require.Empty(t, blocked.RoutePlan())
+	require.Len(t, blocked.RoutePlan(), 7)
+	for _, route := range blocked.RoutePlan() {
+		require.Equal(t, "sessions", route.Feature)
+	}
 	require.Equal(t, "origin_or_provider_mismatch", profileFeature(t, blocked, "google").Reason)
 }

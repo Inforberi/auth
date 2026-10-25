@@ -21,7 +21,7 @@ type ProjectHTTPConfig struct {
 	Residents      projecthttp.RuntimeDispatcherConfig
 	Capacity       middleware.CapacityConfig
 	Proxy          middleware.ProxyConfig
-	// Used only by session-protected JWT-only profiles with no browser session configuration.
+	// Also keeps existing browser sessions manageable when all login methods are disabled.
 	SessionValidation *sessionservice.Config
 }
 

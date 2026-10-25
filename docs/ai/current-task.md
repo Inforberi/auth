@@ -2,19 +2,17 @@
 
 Обновлено 25 октября 2026. [Карта](index.md) · [план](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui). Git/staging проверять по факту.
 
-## Завершённый блок — MP5.1e settings actual readiness
+## Завершённый блок — MP5.1f project session management
 
-[Контракт](../features/project-settings-readiness.md). Same ProjectHTTP/source/owners оценивает потенциальные capabilities независимо от disabled SQL methods. Inspection profile не публикуется; basic password оценивается безverification, отдельный verification/delivery prerequisite проверяется при сохранении. GET/POST возвращают safe methods/tokenProfiles/optional readiness observation; historical outcomes не обещают current readiness. Resources из trusted source, не очищенного service config.
+[Контракт](../features/project-session-management.md). Семь browser routes: me/list/logout/logout-all/revoke/activity/rotate на существующих session handlers/services/SQL. Scoped repo внутри одного UsePool, deadline5s/current key до/после; Auth/NoRefreshAuth/LogoutAuth, exact Origin. Browser deployment сохраняет управление после отключения login methods; SessionValidation fallback проверяется при HTTP assembly. Нет новых SQL/deps/ENV/workers/UI.
 
-RuntimeAuthPolicy dynamic callback вне SQL locks/lease и до3s committed admission. Current actor/target/policy до/после; selected SMTP/provider revisions FOR SHARE передcommit. Replay receipt доguards, отключение broken метода разрешено. openProjectHTTP доoperatorrouter обеспечивает одни owners/source; static/HTTP-disabled constructors прежние закрытые. Новых deps/schema/ENV/UI/phase-ready нет.
+Main formatter/source review; Helmholtz read-only review без findings. V1 Luna API/security/race/runtime/operator SQL PASS; исправлены lint QF1003 и старые RoutePlan assertions. V2 task check/router race/full Linux ARM64 TestPrepareCommandSQL PASS; новый session HTTP fixture выполнен без skips, своё окружение очищено. Все14source hashes совпали после проверки и с main. Evidence в history.
 
-Main formatter/Swagger generation/diff. Luna V1 API/race/security/lint и actual command/runtime/operator SQL PASS (noSKIP, dynamic readiness3.19s). Единственный V1 taskcheckFAIL — устаревший Swagger count4; V2 schema assertion исправлен до5+optional, taskcheck/lint0 PASS. Manifest27 и Swagger JSON/YAML совпали после прогона и с main. Собственный стенд очищен, source verifier не менял. Пользователь разрешил коммит; факт проверять Git.
-
-Snapshot `/private/tmp/auth-project-settings-readiness-v2.vbirfzms`, manifest `/private/tmp/auth-project-settings-readiness-v2.vbirfzms-manifest.sha256`, metadata `/private/tmp/auth-project-settings-readiness-v2.vbirfzms-snapshot.json`, base3bab1fb. V1 SQL/API/race/security evidence — history и сохранённые логи. Luna cursor001f5739-f635-4e82-85da-0f9c06b859c7:88.
+Snapshot `/private/tmp/auth-project-session-management-v2.1qyf4nfr`, manifest sameprefix-manifest.sha256, metadata sameprefix-snapshot.json. Luna cursor001f5739-f635-4e82-85da-0f9c06b859c7:90. Пользователь разрешил коммит; факт проверять Git.
 
 ## Следующий шаг
 
-Account/session/MFA management и полная MP5 two-project matrix/phase-ready; rotation/retention/fleet/MP6R/MP7/MP8 отдельно. External provider/SMTP/DNS/TLS/GC/RPS не считать закрытыми. UI только после предупреждения и отдельного согласования.
+После приёмки блока — account/identity/MFA management HTTP и полная MP5 two-project matrix/phase-ready. Rotation/retention/fleet/MP6R/MP7/MP8 отдельно. External provider/SMTP/DNS/TLS/GC/RPS не считать закрытыми. UI только после предупреждения и отдельного согласования.
 
 ## Процесс
 

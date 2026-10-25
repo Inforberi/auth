@@ -19,7 +19,9 @@ type ProjectRoute struct {
 }
 
 type ProjectRouteProtection struct {
+	Session          func(http.Handler) http.Handler
 	SessionNoRefresh func(http.Handler) http.Handler
+	SessionLogout    func(http.Handler) http.Handler
 	Native           func(http.Handler) http.Handler
 }
 
@@ -40,11 +42,18 @@ func NewProjectRoutes(origin string, routes []ProjectRoute, protection ProjectRo
 		switch route.Protection {
 		case "browser", "callback":
 			handler = browser(handler)
-		case "session_no_refresh":
-			if protection.SessionNoRefresh == nil {
+		case "session", "session_no_refresh", "session_logout":
+			protect := protection.SessionNoRefresh
+			switch route.Protection {
+			case "session":
+				protect = protection.Session
+			case "session_logout":
+				protect = protection.SessionLogout
+			}
+			if protect == nil {
 				return nil, errors.New("missing project session protection")
 			}
-			handler = browser(protection.SessionNoRefresh(handler))
+			handler = browser(protect(handler))
 		case "native":
 			if protection.Native == nil {
 				return nil, errors.New("missing project native protection")

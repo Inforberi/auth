@@ -32,6 +32,10 @@ func (p *ProjectProfile) RoutePlan() []ProjectRoute {
 	add("tokens", "public_keys", "GET", "/.well-known/jwks.json")
 	add("tokens", "public_keys", "HEAD", "/.well-known/jwks.json")
 	add("exchange", "session_no_refresh", "POST", "/api/v1/auth/token/exchange")
+	add("sessions", "session", "GET", "/api/v1/auth/me", "/api/v1/auth/sessions")
+	add("sessions", "session_logout", "POST", "/api/v1/auth/logout")
+	add("sessions", "session_no_refresh", "POST", "/api/v1/auth/logout-all", "/api/v1/auth/session/activity", "/api/v1/auth/session/rotate")
+	add("sessions", "session_no_refresh", "DELETE", "/api/v1/auth/sessions/{id}")
 	for _, method := range []string{"POST", "OPTIONS"} {
 		add("native_password", "native", method, "/api/v1/auth/native/password/login")
 		add("native_email", "native", method, "/api/v1/auth/native/email/request", "/api/v1/auth/native/email/confirm")

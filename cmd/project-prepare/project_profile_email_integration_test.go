@@ -58,7 +58,7 @@ func (f projectProfileFixture) verificationProfile(t *testing.T, ctx context.Con
 	require.NoError(t, err)
 	require.True(t, reauth.Readiness().Ready)
 	require.True(t, profileFeature(t, reauth, "reauthentication").Ready)
-	require.Len(t, reauth.RoutePlan(), 2)
+	require.Len(t, reauth.RoutePlan(), 9)
 	stop()
 	select {
 	case err := <-done:

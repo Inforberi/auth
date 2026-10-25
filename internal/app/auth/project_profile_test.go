@@ -44,6 +44,18 @@ func TestClosedProfileAndRedisSelection(t *testing.T) {
 	require.False(t, profile.needsProfileVerification(ProjectProfileConfig{BrowserEnabled: true}))
 }
 
+func TestBrowserSessionManagementDoesNotDependOnLoginMethods(t *testing.T) {
+	profile := &ProjectProfile{states: map[string]ProjectFeatureState{}}
+	profile.buildProfileMethods(t.Context(), ProjectProfileConfig{BrowserEnabled: false}, false)
+	require.Empty(t, profile.RoutePlan())
+	profile.buildProfileMethods(t.Context(), ProjectProfileConfig{BrowserEnabled: true}, false)
+	require.True(t, profile.featureReady("sessions"))
+	require.Len(t, profile.RoutePlan(), 7)
+	for _, route := range profile.RoutePlan() {
+		require.Equal(t, "sessions", route.Feature)
+	}
+}
+
 func TestProfileRejectsInconsistentBrowserSessionPolicies(t *testing.T) {
 	profile := &ProjectProfile{states: map[string]ProjectFeatureState{}, password: &ProjectPassword{cfg: ProjectPasswordConfig{Session: sessionservice.Config{SessionTTL: time.Hour}}}, google: &ProjectOIDC{cfg: ProjectOIDCConfig{Provider: "google", Session: sessionservice.Config{SessionTTL: 2 * time.Hour}}}}
 	profile.state("password", "")
