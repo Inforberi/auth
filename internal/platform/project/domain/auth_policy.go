@@ -2,6 +2,7 @@ package domain
 
 import (
 	"strings"
+	"time"
 
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
@@ -27,6 +28,20 @@ type AuthPolicyResult struct {
 	Snapshot           settingsdomain.Snapshot
 	Changed, Replayed  bool
 	ReceiptAdmissionID ID
+	Readiness          *AuthPolicyReadiness
+}
+
+type AuthPolicyReadiness struct {
+	Runtime       settingsdomain.PolicyRuntime
+	Tokens        settingsdomain.TokenDeployment
+	Features      []settingsdomain.FeatureReadiness
+	ObservedAt    time.Time
+	PolicyVersion int64
+}
+
+type AuthPolicyView struct {
+	Snapshot  settingsdomain.Snapshot
+	Readiness AuthPolicyReadiness
 }
 
 type AuthPolicyOutcome struct {

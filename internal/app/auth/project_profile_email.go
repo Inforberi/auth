@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
@@ -35,7 +36,10 @@ func (p *ProjectProfile) profileEmail(ctx context.Context, feature string, cfg P
 		return nil
 	}
 	email, err := NewProjectEmail(ctx, p.key, cfg, p.deps.Delivery.cfg.SMTPAllowedTargets, ProjectEmailDependencies{ProjectSMTPDependencies: ProjectSMTPDependencies{Registry: p.deps.Registry, Reader: p.deps.Reader, Redis: p.deps.Redis}, Hash: p.deps.Hash})
-	p.feature(feature, err)
+	if err != nil {
+		reason = projectMailFailure(err)
+	}
+	p.state(feature, reason)
 	return email
 }
 
@@ -73,7 +77,7 @@ func (p *ProjectProfile) buildProfileOTP(ctx context.Context, cfg ProjectProfile
 		var err error
 		p.emailOTP, err = NewProjectEmailOTP(ctx, p.key, otp, p.deps.Delivery.cfg.SMTPAllowedTargets, ProjectSMTPDependencies{Registry: p.deps.Registry, Reader: p.deps.Reader, Redis: p.deps.Redis})
 		if err != nil {
-			reason = "component_unavailable"
+			reason = projectMailFailure(err)
 		}
 	}
 	if primary {
@@ -81,5 +85,16 @@ func (p *ProjectProfile) buildProfileOTP(ctx context.Context, cfg ProjectProfile
 	}
 	if reauthentication {
 		p.state("reauthentication", reason)
+	}
+}
+
+func projectMailFailure(err error) string {
+	switch {
+	case errors.Is(err, settingsdomain.ErrNotInitialized):
+		return "smtp_not_configured"
+	case errors.Is(err, settingsdomain.ErrInvalidSMTP):
+		return "invalid_smtp_configuration"
+	default:
+		return "component_unavailable"
 	}
 }

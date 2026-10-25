@@ -16,6 +16,15 @@ type RuntimeAuthPolicy struct {
 	*Repository
 	registry  *projectruntime.Registry
 	available settingsdomain.PolicyRuntime
+	readiness AuthPolicyReadinessSource
+}
+
+type AuthPolicyReadinessSource func(context.Context, projectruntime.Key, string) (domain.AuthPolicyReadiness, error)
+
+func (r *RuntimeAuthPolicy) WithReadiness(source AuthPolicyReadinessSource) *RuntimeAuthPolicy {
+	copy := *r
+	copy.readiness = source
+	return &copy
 }
 
 func NewRuntimeAuthPolicy(repo *Repository, registry *projectruntime.Registry, available settingsdomain.PolicyRuntime) *RuntimeAuthPolicy {
@@ -36,9 +45,20 @@ func (r *RuntimeAuthPolicy) ReadAuthPolicy(ctx context.Context, actor operatordo
 }
 
 func (r *RuntimeAuthPolicy) UpdateAuthPolicy(ctx context.Context, actor operatordomain.Principal, command domain.AuthPolicyUpdate) (domain.AuthPolicyResult, error) {
+	available := r.available
+	var readiness *domain.AuthPolicyReadiness
+	if r.readiness != nil {
+		view, err := r.ReadAuthPolicyView(ctx, actor, domain.DirectoryTarget{ProjectID: command.ProjectID, ExpectedVersion: command.ExpectedVersion, ExpectedGeneration: command.ExpectedGeneration})
+		if err != nil {
+			return domain.AuthPolicyResult{}, err
+		}
+		available, readiness = view.Readiness.Runtime, &view.Readiness
+	}
 	admitted, err := r.AdmitAuthPolicy(ctx, actor, command)
 	if err != nil {
 		return domain.AuthPolicyResult{}, err
 	}
-	return admitted.ExecuteWithRuntime(ctx, r.registry, r.available)
+	result, err := admitted.ExecuteWithRuntime(ctx, r.registry, available)
+	result.Readiness = readiness
+	return result, err
 }

@@ -48,6 +48,10 @@ type ProjectProfile struct {
 }
 
 func BuildProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies) (*ProjectProfile, error) {
+	return buildProjectProfile(ctx, key, origin, cfg, deps, false)
+}
+
+func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies, assess bool) (*ProjectProfile, error) {
 	if deps.Registry == nil || deps.Reader == nil || cfg.Timeout <= 0 || cfg.Timeout > 30*time.Second {
 		return nil, projectdomain.ErrUnavailable
 	}
@@ -65,13 +69,17 @@ func BuildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 		return nil, err
 	}
 	p := &ProjectProfile{key: key, origin: origin, policy: configuration.Policy(), deps: deps, states: make(map[string]ProjectFeatureState)}
+	observed := p.policy
+	if assess {
+		p.selectAssessmentPolicy(cfg)
+	}
 	redisReady := !profileNeedsRedis(cfg, p.policy.Policy) || profileRedisReady(ctx, deps.Redis)
 	p.buildProfileEmail(ctx, cfg, redisReady)
 	p.buildProfileMethods(ctx, cfg, redisReady)
 	p.buildProfileTokens(ctx, cfg, redisReady)
 	p.bindProfileMFA(configuration.EncryptionKey())
 	p.finishProfileRegistration(cfg)
-	if err := p.CheckCurrent(ctx); err != nil {
+	if err := p.checkSnapshotCurrent(ctx, observed); err != nil {
 		return nil, err
 	}
 	p.observedAt = time.Now().UTC()
@@ -80,6 +88,10 @@ func BuildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 
 // CheckCurrent rejects a stale route plan; the caller must rebuild it after a conflict.
 func (p *ProjectProfile) CheckCurrent(ctx context.Context) error {
+	return p.checkSnapshotCurrent(ctx, p.policy)
+}
+
+func (p *ProjectProfile) checkSnapshotCurrent(ctx context.Context, observed settingsdomain.Snapshot) error {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	currentKey, err := p.deps.Reader.ResolveRuntime(ctx, p.origin)
@@ -89,16 +101,20 @@ func (p *ProjectProfile) CheckCurrent(ctx context.Context) error {
 	if currentKey != p.key {
 		return projectdomain.ErrConflict
 	}
-	return p.checkPolicyCurrent(ctx)
+	return p.checkPolicySnapshot(ctx, observed)
 }
 
 func (p *ProjectProfile) checkPolicyCurrent(ctx context.Context) error {
+	return p.checkPolicySnapshot(ctx, p.policy)
+}
+
+func (p *ProjectProfile) checkPolicySnapshot(ctx context.Context, observed settingsdomain.Snapshot) error {
 	return p.deps.Registry.UsePool(ctx, p.key, func(ctx context.Context, pool *pgxpool.Pool) error {
 		current, err := settingspostgres.New(pool).Load(ctx)
 		if err != nil {
 			return err
 		}
-		if current != p.policy {
+		if current != observed {
 			return settingsdomain.ErrPolicyConflict
 		}
 		return requireProjectCurrent(ctx, p.deps.Reader, p.key)

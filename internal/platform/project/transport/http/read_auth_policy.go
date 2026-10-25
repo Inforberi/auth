@@ -3,12 +3,12 @@ package http
 import (
 	"net/http"
 
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
 // @Summary Read a project's public authentication policy
-// @Description Requires current platform.project_settings.manage and fresh password/MFA before read and before disclosure. Exact ready/enabled target version/generation; readonly snapshot. No secret values or project actor impersonation. availableMethods reflects actual trusted assembly, not stored enable switches. Current project Auth assembly is incomplete, so production bridge reports all methods unavailable. GET never initializes missing settings or renews sessions.
+// @Description Requires current platform.project_settings.manage and fresh password/MFA before read and disclosure. Exact ready/enabled target version/generation. availableMethods/tokenProfiles/readiness are target-specific trusted assembly observations, independent of stored enable switches; dependencies are rechecked when saving policy. Password verification has a separate readiness prerequisite. No secrets or external delivery guarantee; HTTP-disabled deployment reports closed capabilities. GET never initializes settings or renews sessions.
 // @Tags Platform Auth settings
 // @Produce json
 // @Param id path string true "Project UUID"
@@ -32,10 +32,18 @@ func (h *AuthPolicyHandler) Read(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	snapshot, err := h.service.ReadAuthPolicy(r.Context(), actor, target)
+	var view domain.AuthPolicyView
+	var readiness *domain.AuthPolicyReadiness
+	var err error
+	if h.inspection != nil {
+		view, err = h.inspection.ReadAuthPolicyView(r.Context(), actor, target)
+		readiness = &view.Readiness
+	} else {
+		view.Snapshot, err = h.service.ReadAuthPolicy(r.Context(), actor, target)
+	}
 	if err != nil {
 		h.respondError(w, r, err)
 		return
 	}
-	httpx.JSON(w, 200, settingshttp.SettingsResponseFrom(snapshot, h.available))
+	httpx.JSON(w, 200, h.settings(view.Snapshot, readiness))
 }

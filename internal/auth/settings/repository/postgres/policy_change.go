@@ -24,6 +24,14 @@ func CheckPolicyChange(ctx context.Context, tx pgx.Tx, before domain.Snapshot, e
 	if runtime.RequireStoredProviders && next.RequiresEmailDelivery() && !runtime.EmailDeliveryReady {
 		return domain.ErrMethodNotReady
 	}
+	if runtime.Dependencies != nil {
+		if next.Methods.Password && next.PasswordEmailVerification != domain.VerificationDisabled && !runtime.VerificationReady {
+			return domain.ErrMethodNotReady
+		}
+		if err := checkDependencyVersions(ctx, tx, next, *runtime.Dependencies); err != nil {
+			return err
+		}
+	}
 	return checkStoredPolicyDependencies(ctx, tx, next, runtime.RequireStoredProviders)
 }
 

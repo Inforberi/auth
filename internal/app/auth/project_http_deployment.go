@@ -11,14 +11,15 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
-func assembleProjectHTTP(ctx context.Context, cfg *config.Config, runtime *projectRuntime, delivery *ProjectDelivery, deps realmDependencies, owned *resources, operator http.Handler) (http.Handler, func(), error) {
+func openProjectHTTP(ctx context.Context, cfg *config.Config, runtime *projectRuntime, delivery *ProjectDelivery, deps realmDependencies, owned *resources) (*ProjectHTTP, func(), error) {
 	c := cfg.Platform.HTTP
 	if !c.Enabled {
-		return operator, nil, nil
+		return nil, nil, nil
 	}
-	if runtime == nil || operator == nil {
-		return nil, nil, errors.New("project HTTP requires runtime and operator handler")
+	if runtime == nil {
+		return nil, nil, errors.New("project HTTP requires runtime")
 	}
+
 	if err := cfg.ValidatePlatform(); err != nil {
 		return nil, nil, err
 	}
@@ -57,10 +58,13 @@ func assembleProjectHTTP(ctx context.Context, cfg *config.Config, runtime *proje
 		}
 	}
 	owned.add(drain)
-	return projectHostRouter(cfg.Platform.Origin, operator, profile), drain, nil
+	return profile, drain, nil
 }
 
-func projectHostRouter(platformOrigin string, operator, project http.Handler) http.Handler {
+func projectHostRouter(platformOrigin string, operator http.Handler, project *ProjectHTTP) http.Handler {
+	if project == nil {
+		return operator
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if "https://"+r.Host == platformOrigin {
 			operator.ServeHTTP(w, r)

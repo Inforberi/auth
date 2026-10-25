@@ -143,8 +143,11 @@ func TestAuthSettingsSwagger(t *testing.T) {
 		}
 	}
 	response := doc.Definitions["auth_settings_http.SettingsResponse"]
-	if len(response.Properties) != 4 || response.Properties["availableMethods"].Ref != "#/definitions/auth_settings_http.MethodsResponse" || response.Properties["tokenProfiles"].Ref != "#/definitions/auth_settings_http.TokenProfilesResponse" {
+	if len(response.Properties) != 5 || response.Properties["availableMethods"].Ref != "#/definitions/auth_settings_http.MethodsResponse" || response.Properties["tokenProfiles"].Ref != "#/definitions/auth_settings_http.TokenProfilesResponse" || response.Properties["readiness"].Ref != "#/definitions/http.ReadinessResponse" {
 		t.Fatal("unexpected settings response fields", response)
+	}
+	if slices.Contains(response.Required, "readiness") {
+		t.Fatal("readiness must remain optional for legacy/local responses")
 	}
 }
 

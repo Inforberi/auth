@@ -105,12 +105,16 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 	if err != nil {
 		return nil, err
 	}
+	projectHTTP, drainHTTP, err := openProjectHTTP(ctx, cfg, runtime, delivery, deps, owned)
+	if err != nil {
+		return nil, err
+	}
 	handler, err := router.NewOperator(router.Handlers{
 		Config: cfg, Logger: deps.log, Setup: setup, MFA: mfa.handler,
 		Projects:          projecthttp.New(projectservice.NewWithRuntime(projects, operator, observer), deps.log),
 		ProjectRoles:      roles,
 		ProjectUsers:      assembleProjectUsers(runtime, projects, deps.log),
-		ProjectAuthPolicy: assembleProjectAuthPolicy(runtime, projects, deps.log),
+		ProjectAuthPolicy: assembleProjectAuthPolicy(runtime, projects, projectHTTP, deps.log),
 		ProjectCapacity:   projecthttp.Capacity(capacity),
 		PasswordHandler:   passwordhttp.New(password.service, deps.log),
 		Recovery:          passwordhttp.NewRecovery(password.recovery, deps.log),
@@ -125,10 +129,7 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 		return nil, err
 	}
 	workers := realmDeliveryWorkers(password.recovery, account, mfa.delivery, nil, delivery)
-	handler, drainHTTP, err := assembleProjectHTTP(ctx, cfg, runtime, delivery, deps, owned, handler)
-	if err != nil {
-		return nil, err
-	}
+	handler = projectHostRouter(cfg.Platform.Origin, handler, projectHTTP)
 	assembled = true
 	return &realm{
 		handler: handler, resources: owned,

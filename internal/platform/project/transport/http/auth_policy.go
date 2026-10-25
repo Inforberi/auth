@@ -19,14 +19,33 @@ type authPolicyService interface {
 	ReadAuthPolicyOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.AuthPolicyOutcome, error)
 }
 
+type authPolicyReadinessService interface {
+	authPolicyService
+	ReadAuthPolicyView(context.Context, operatordomain.Principal, domain.DirectoryTarget) (domain.AuthPolicyView, error)
+}
+
 type AuthPolicyHandler struct {
-	service   authPolicyService
-	available settingsdomain.PublicMethods
-	log       *zap.Logger
+	inspection authPolicyReadinessService
+	service    authPolicyService
+	available  settingsdomain.PublicMethods
+	log        *zap.Logger
 }
 
 func NewAuthPolicy(service authPolicyService, available settingsdomain.PublicMethods, log *zap.Logger) *AuthPolicyHandler {
 	return &AuthPolicyHandler{service: service, available: available, log: log}
+}
+
+func NewAuthPolicyWithReadiness(service authPolicyReadinessService, log *zap.Logger) *AuthPolicyHandler {
+	return &AuthPolicyHandler{service: service, inspection: service, log: log}
+}
+
+func (h *AuthPolicyHandler) settings(snapshot settingsdomain.Snapshot, readiness *domain.AuthPolicyReadiness) settingshttp.SettingsResponse {
+	if readiness == nil {
+		return settingshttp.SettingsResponseFrom(snapshot, h.available)
+	}
+	response := settingshttp.SettingsResponseWithDeployment(snapshot, readiness.Runtime.Methods, readiness.Tokens)
+	response.Readiness = &settingshttp.ReadinessResponse{PolicyVersion: readiness.PolicyVersion, ObservedAt: readiness.ObservedAt, Features: readiness.Features}
+	return response
 }
 
 type ProjectAuthPolicyResponse struct {
@@ -40,7 +59,7 @@ type ProjectAuthPolicyResponse struct {
 func (h *AuthPolicyHandler) result(operation domain.ID, committed bool, result domain.AuthPolicyResult) ProjectAuthPolicyResponse {
 	response := ProjectAuthPolicyResponse{OperationID: operation, Status: "unknown"}
 	if committed {
-		snapshot := settingshttp.SettingsResponseFrom(result.Snapshot, h.available)
+		snapshot := h.settings(result.Snapshot, result.Readiness)
 		response.Status, response.Settings, response.Changed, response.Replayed = "committed", &snapshot, &result.Changed, result.Replayed
 	}
 	return response

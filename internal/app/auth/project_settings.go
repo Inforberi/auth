@@ -9,12 +9,16 @@ import (
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 )
 
-func assembleProjectAuthPolicy(runtime *projectRuntime, repo *projectpostgres.Repository, log *zap.Logger) *projecthttp.AuthPolicyHandler {
+func assembleProjectAuthPolicy(runtime *projectRuntime, repo *projectpostgres.Repository, project *ProjectHTTP, log *zap.Logger) *projecthttp.AuthPolicyHandler {
 	if runtime == nil {
 		return nil
 	}
-	// SQL connectivity is not assembled Auth/delivery/provider/token capability.
+	// The disabled HTTP profile keeps all public capabilities closed.
 	available := settingsdomain.PolicyRuntime{Configured: true}
 	backend := projectpostgres.NewRuntimeAuthPolicy(repo, runtime.registry, available)
-	return projecthttp.NewAuthPolicy(projectservice.NewAuthPolicy(backend), available.Methods, log)
+	if project == nil {
+		return projecthttp.NewAuthPolicy(projectservice.NewAuthPolicy(backend), available.Methods, log)
+	}
+	backend = backend.WithReadiness(project.Assess)
+	return projecthttp.NewAuthPolicyWithReadiness(projectservice.NewAuthPolicyWithReadiness(backend), log)
 }

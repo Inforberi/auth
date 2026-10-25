@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -72,7 +73,20 @@ type SettingsResponse struct {
 	Policy           PolicyResponse        `json:"policy"`
 	AvailableMethods MethodsResponse       `json:"availableMethods"`
 	TokenProfiles    TokenProfilesResponse `json:"tokenProfiles"`
+	Readiness        *ReadinessResponse    `json:"readiness,omitempty"`
 } // @name auth_settings_http.SettingsResponse
+
+type ReadinessResponse struct {
+	PolicyVersion int64                     `json:"policyVersion"`
+	ObservedAt    time.Time                 `json:"observedAt"`
+	Features      []domain.FeatureReadiness `json:"features"`
+}
+
+func SettingsResponseWithDeployment(snapshot domain.Snapshot, available domain.PublicMethods, deployment domain.TokenDeployment) SettingsResponse {
+	response := SettingsResponseFrom(snapshot, available)
+	response.TokenProfiles = tokenProfilesResponse(deployment)
+	return response
+}
 
 func methodsResponse(methods domain.PublicMethods) MethodsResponse {
 	return MethodsResponse{Password: methods.Password, EmailOTP: methods.EmailOTP, Google: methods.Google, Telegram: methods.Telegram}

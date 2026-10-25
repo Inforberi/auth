@@ -6246,7 +6246,7 @@ const docTemplate = `{
         },
         "/api/v1/platform/projects/{id}/auth/settings": {
             "get": {
-                "description": "Requires current platform.project_settings.manage and fresh password/MFA before read and before disclosure. Exact ready/enabled target version/generation; readonly snapshot. No secret values or project actor impersonation. availableMethods reflects actual trusted assembly, not stored enable switches. Current project Auth assembly is incomplete, so production bridge reports all methods unavailable. GET never initializes missing settings or renews sessions.",
+                "description": "Requires current platform.project_settings.manage and fresh password/MFA before read and disclosure. Exact ready/enabled target version/generation. availableMethods/tokenProfiles/readiness are target-specific trusted assembly observations, independent of stored enable switches; dependencies are rechecked when saving policy. Password verification has a separate readiness prerequisite. No secrets or external delivery guarantee; HTTP-disabled deployment reports closed capabilities. GET never initializes settings or renews sessions.",
                 "produces": [
                     "application/json"
                 ],
@@ -8582,6 +8582,9 @@ const docTemplate = `{
                 "policy": {
                     "$ref": "#/definitions/auth_settings_http.PolicyResponse"
                 },
+                "readiness": {
+                    "$ref": "#/definitions/http.ReadinessResponse"
+                },
                 "tokenProfiles": {
                     "$ref": "#/definitions/auth_settings_http.TokenProfilesResponse"
                 },
@@ -8740,6 +8743,20 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.FeatureReadiness": {
+            "type": "object",
+            "properties": {
+                "feature": {
+                    "type": "string"
+                },
+                "ready": {
+                    "type": "boolean"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
         "emailotp_http.ConfirmCodeRequest": {
             "type": "object",
             "properties": {
@@ -8812,6 +8829,23 @@ const docTemplate = `{
                 },
                 "userId": {
                     "type": "string"
+                }
+            }
+        },
+        "http.ReadinessResponse": {
+            "type": "object",
+            "properties": {
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.FeatureReadiness"
+                    }
+                },
+                "observedAt": {
+                    "type": "string"
+                },
+                "policyVersion": {
+                    "type": "integer"
                 }
             }
         },

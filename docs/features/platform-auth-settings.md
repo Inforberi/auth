@@ -32,7 +32,7 @@ GET операции не создаёт admission и не повторяет mu
 
 ## Готовность и текущее ограничение
 
-Production assembler пока передаёт пустые capabilities: `availableMethods` — false, token deployment выключен. Можно сохранять закрытую policy и dormant настройки регистрации/verification, но включение входа или issuance будет отклонено до сборки MP3.8/MP4. Это административный API, не публикация normal Auth traffic.
+До MP5.1e production assembler передавал пустые capabilities: `availableMethods` — false, token deployment выключен. Можно сохранять закрытую policy и dormant настройки регистрации/verification, но включение входа или issuance отклонялось до сборки Auth. Это административный API, не публикация normal Auth traffic.
 
 В проектном пути нет ENV fallback для Google/Telegram: дополнительно требуются сохранённые provider settings. Email OTP и password verification optional/required требуют trusted delivery readiness и сохранённый SMTP. Для password без verification, Google/Telegram-only либо dormant verification SMTP не становится общим искусственным условием. Recovery/уведомления проверяются своими сценариями; эта policy не объявляет их readiness. SMTP row и secret_set сами по себе не подтверждают сетевой probe.
 
@@ -47,3 +47,6 @@ Runtime получает только необходимые INSERT-колонк
 ## Проверки
 
 Добавлены HTTP shape/error/unknown-result tests, router Origin/session/capacity/opt-in и Swagger contract, live SQL policy/update/replay/no-op/atomic rollback/provider/delivery/current authority/concurrency/lost commit сценарии внутри `TestPrepareCommandSQL`, а также negative ACL cases для receipt. Luna: task check, affected race, API reproducibility, security scan, operator SQL/HTTPS, runtime assembly и local Auth settings/provider/token/public-policy SQL PASS. Финальный V5 full TestPrepareCommandSQL PASS без SKIP, включая policy unknown commit/concurrency и subsequent onboarding/managed cases; targeted lint PASS (0 issues). Manifest68 совпал до/после и перед коммитом. [Evidence](../planning/history.md#результат-mp27-project-auth-policy--25-октября-2026). Это локальная приёмка блока; полная production assembly/public-ready/fleet этим не подтверждены.
+
+
+MP5.1e: [dynamic readiness contract](project-settings-readiness.md) подключает фактический per-target source при включённом project HTTP; его tests/status отдельны. Старое описание закрытых capabilities относится к HTTP-disabled/историческому bridge, а не к готовому source.

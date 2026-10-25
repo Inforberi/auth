@@ -7,6 +7,16 @@ type PolicyRuntime struct {
 	Tokens                 TokenIssuance
 	RequireStoredProviders bool
 	EmailDeliveryReady     bool
+	VerificationReady      bool
+	Dependencies           *DependencyVersions
+}
+
+type DependencyVersions struct{ SMTP, Google, Telegram int64 }
+
+type FeatureReadiness struct {
+	Feature string `json:"feature"`
+	Ready   bool   `json:"ready"`
+	Reason  string `json:"reason,omitempty"`
 }
 
 func (p Policy) RequiresEmailDelivery() bool {

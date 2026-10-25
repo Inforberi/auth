@@ -3,13 +3,11 @@ package auth
 import (
 	"slices"
 	"time"
+
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
-type ProjectFeatureState struct {
-	Feature string `json:"feature"`
-	Ready   bool   `json:"ready"`
-	Reason  string `json:"reason,omitempty"`
-}
+type ProjectFeatureState = settingsdomain.FeatureReadiness
 
 type ProjectReadiness struct {
 	Origin        string                `json:"origin"`

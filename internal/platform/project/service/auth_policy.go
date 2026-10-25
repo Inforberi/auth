@@ -14,9 +14,31 @@ type AuthPolicyRepository interface {
 	ReadAuthPolicyOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.AuthPolicyOutcome, error)
 }
 
-type AuthPolicy struct{ repo AuthPolicyRepository }
+type AuthPolicyReadinessRepository interface {
+	AuthPolicyRepository
+	ReadAuthPolicyView(context.Context, operatordomain.Principal, domain.DirectoryTarget) (domain.AuthPolicyView, error)
+}
+
+type AuthPolicy struct {
+	repo      AuthPolicyRepository
+	readiness AuthPolicyReadinessRepository
+}
 
 func NewAuthPolicy(repo AuthPolicyRepository) *AuthPolicy { return &AuthPolicy{repo: repo} }
+
+func NewAuthPolicyWithReadiness(repo AuthPolicyReadinessRepository) *AuthPolicy {
+	return &AuthPolicy{repo: repo, readiness: repo}
+}
+
+func (s *AuthPolicy) ReadAuthPolicyView(ctx context.Context, actor operatordomain.Principal, target domain.DirectoryTarget) (domain.AuthPolicyView, error) {
+	if err := target.Validate(); err != nil {
+		return domain.AuthPolicyView{}, err
+	}
+	if s.readiness == nil {
+		return domain.AuthPolicyView{}, domain.ErrUnavailable
+	}
+	return s.readiness.ReadAuthPolicyView(ctx, actor, target)
+}
 
 func (s *AuthPolicy) ReadAuthPolicy(ctx context.Context, actor operatordomain.Principal, target domain.DirectoryTarget) (settingsdomain.Snapshot, error) {
 	if err := target.Validate(); err != nil {

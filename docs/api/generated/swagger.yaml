@@ -392,6 +392,8 @@ definitions:
         $ref: '#/definitions/auth_settings_http.MethodsResponse'
       policy:
         $ref: '#/definitions/auth_settings_http.PolicyResponse'
+      readiness:
+        $ref: '#/definitions/http.ReadinessResponse'
       tokenProfiles:
         $ref: '#/definitions/auth_settings_http.TokenProfilesResponse'
       version:
@@ -498,6 +500,15 @@ definitions:
         example: ok
         type: string
     type: object
+  domain.FeatureReadiness:
+    properties:
+      feature:
+        type: string
+      ready:
+        type: boolean
+      reason:
+        type: string
+    type: object
   emailotp_http.ConfirmCodeRequest:
     properties:
       code:
@@ -544,6 +555,17 @@ definitions:
         type: string
       userId:
         type: string
+    type: object
+  http.ReadinessResponse:
+    properties:
+      features:
+        items:
+          $ref: '#/definitions/domain.FeatureReadiness'
+        type: array
+      observedAt:
+        type: string
+      policyVersion:
+        type: integer
     type: object
   http.SessionResponse:
     properties:
@@ -6045,11 +6067,12 @@ paths:
   /api/v1/platform/projects/{id}/auth/settings:
     get:
       description: Requires current platform.project_settings.manage and fresh password/MFA
-        before read and before disclosure. Exact ready/enabled target version/generation;
-        readonly snapshot. No secret values or project actor impersonation. availableMethods
-        reflects actual trusted assembly, not stored enable switches. Current project
-        Auth assembly is incomplete, so production bridge reports all methods unavailable.
-        GET never initializes missing settings or renews sessions.
+        before read and disclosure. Exact ready/enabled target version/generation.
+        availableMethods/tokenProfiles/readiness are target-specific trusted assembly
+        observations, independent of stored enable switches; dependencies are rechecked
+        when saving policy. Password verification has a separate readiness prerequisite.
+        No secrets or external delivery guarantee; HTTP-disabled deployment reports
+        closed capabilities. GET never initializes settings or renews sessions.
       parameters:
       - description: Project UUID
         in: path

@@ -234,6 +234,9 @@ func authPolicyHTTPDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Reposit
 		}
 		require.Equal(t, 1, replayed)
 	})
+	t.Run("dynamic readiness authority and dependency revisions", func(t *testing.T) {
+		authPolicyReadinessDrill(t, admin, db, managed, actor, base, binding, registry)
+	})
 }
 
 // Commit reaches PostgreSQL; only its acknowledgement is lost to the caller.

@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/require"
@@ -24,6 +25,42 @@ type policyServiceStub struct {
 	result  domain.AuthPolicyResult
 	outcome domain.AuthPolicyOutcome
 	err     error
+}
+
+type policyReadinessStub struct {
+	*policyServiceStub
+	view domain.AuthPolicyView
+}
+
+func (s *policyReadinessStub) ReadAuthPolicyView(_ context.Context, actor operatordomain.Principal, target domain.DirectoryTarget) (domain.AuthPolicyView, error) {
+	s.calls++
+	s.actor, s.target = actor, target
+	return s.view, s.err
+}
+
+func TestProjectSettingsReadinessUsesSafeDeploymentProjection(t *testing.T) {
+	readiness := domain.AuthPolicyReadiness{PolicyVersion: 4, ObservedAt: time.Now().UTC(), Runtime: settingsdomain.PolicyRuntime{Configured: true, Methods: settingsdomain.PublicMethods{Password: true}, Dependencies: &settingsdomain.DependencyVersions{SMTP: 9}}, Features: []settingsdomain.FeatureReadiness{{Feature: "verification", Reason: "smtp_not_configured"}}, Tokens: settingsdomain.TokenDeployment{Enabled: true, Issuer: "https://alpha.example.test", AccessTTLSeconds: 120}}
+	service := &policyReadinessStub{policyServiceStub: &policyServiceStub{}, view: domain.AuthPolicyView{Snapshot: settingsdomain.Snapshot{Version: 4}, Readiness: readiness}}
+	h := NewAuthPolicyWithReadiness(service, nil)
+	response := h.settings(settingsdomain.Snapshot{Version: 4}, &readiness)
+	require.True(t, response.AvailableMethods.Password)
+	require.NotNil(t, response.Readiness)
+	require.Equal(t, "smtp_not_configured", response.Readiness.Features[0].Reason)
+	data, err := json.Marshal(response)
+	require.NoError(t, err)
+	require.NotContains(t, string(data), "Dependencies")
+	require.NotContains(t, string(data), "SMTP")
+	router := chi.NewRouter()
+	router.Get("/projects/{id}/auth/settings", h.Read)
+	request := httptest.NewRequest("GET", "/projects/c2000000-0000-4000-8000-000000000002/auth/settings?expectedVersion=1&expectedGeneration=1", nil)
+	request = request.WithContext(sessionhttp.SetAuthContext(request.Context(), sessionhttp.Auth{UserID: "actor", TokenHash: "proof"}))
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, request)
+	require.Equal(t, 200, w.Code, w.Body.String())
+	require.Equal(t, 1, service.calls)
+	require.Contains(t, w.Body.String(), "smtp_not_configured")
+	legacy := NewAuthPolicy(&policyServiceStub{}, settingsdomain.PublicMethods{}, nil)
+	require.Nil(t, legacy.settings(settingsdomain.Snapshot{}, nil).Readiness)
 }
 
 func (s *policyServiceStub) ReadAuthPolicy(_ context.Context, actor operatordomain.Principal, target domain.DirectoryTarget) (settingsdomain.Snapshot, error) {

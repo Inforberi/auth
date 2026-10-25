@@ -19,12 +19,9 @@ import (
 
 func TestProjectHTTPDisabledDoesNotCreateOwners(t *testing.T) {
 	owned := &resources{}
-	operator := http.NotFoundHandler()
-	h, drain, err := assembleProjectHTTP(t.Context(), &config.Config{}, nil, nil, realmDependencies{}, owned, operator)
+	h, drain, err := openProjectHTTP(t.Context(), &config.Config{}, nil, nil, realmDependencies{}, owned)
 	require.NoError(t, err)
-	response := httptest.NewRecorder()
-	h.ServeHTTP(response, httptest.NewRequest("GET", "/", nil))
-	require.Equal(t, http.StatusNotFound, response.Code)
+	require.Nil(t, h)
 	require.Nil(t, drain)
 	require.Empty(t, owned.closers)
 	require.Empty(t, realmDeliveryWorkers(nil, nil, nil, nil, (*ProjectDelivery)(nil)))
@@ -33,7 +30,7 @@ func TestProjectHTTPDisabledDoesNotCreateOwners(t *testing.T) {
 func TestProjectHostRoutingHasNoOperatorFallback(t *testing.T) {
 	operator := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(201) })
 	project := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(404) })
-	h := projectHostRouter("https://platform.example.test", operator, project)
+	h := projectHostRouter("https://platform.example.test", operator, &ProjectHTTP{Handler: project})
 	for host, want := range map[string]int{"platform.example.test": 201, "project.example.test": 404, "Platform.example.test": 404, "platform.example.test.attacker.test": 404} {
 		r := httptest.NewRequest("GET", "https://"+host+"/api/v1/projects", nil)
 		r.Header.Set("X-Forwarded-Host", "platform.example.test")
@@ -112,10 +109,10 @@ func projectHTTPDeploymentDrill(t *testing.T, runtimeConfig config.PlatformConfi
 	owned := &resources{}
 	t.Cleanup(owned.close)
 	operator := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(204) })
-	handler, drain, err := assembleProjectHTTP(t.Context(), cfg, runtime, nil, realmDependencies{redis: rdb, log: zap.NewNop()}, owned, operator)
+	profile, drain, err := openProjectHTTP(t.Context(), cfg, runtime, nil, realmDependencies{redis: rdb, log: zap.NewNop()}, owned)
 	require.NoError(t, err)
 	require.NotNil(t, drain)
-	server := httptest.NewTLSServer(handler)
+	server := httptest.NewTLSServer(projectHostRouter(cfg.Platform.Origin, operator, profile))
 	t.Cleanup(server.Close)
 	for host, want := range map[string]int{"console.auth.example": 204, "unknown.auth.example": 404} {
 		r, err := http.NewRequestWithContext(t.Context(), "GET", server.URL+"/api/v1/projects", nil)

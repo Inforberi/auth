@@ -30,6 +30,8 @@ type ProjectProfileSource func(context.Context, projectruntime.Key, string) (Pro
 type ProjectHTTP struct {
 	http.Handler
 	dispatcher *projecthttp.RuntimeDispatcher
+	source     ProjectProfileSource
+	deps       ProjectProfileDependencies
 }
 
 func NewProjectHTTP(cfg ProjectHTTPConfig, deps ProjectProfileDependencies, source ProjectProfileSource, log *zap.Logger) (*ProjectHTTP, error) {
@@ -61,7 +63,7 @@ func NewProjectHTTP(cfg ProjectHTTPConfig, deps ProjectProfileDependencies, sour
 	if err != nil {
 		return nil, err
 	}
-	return &ProjectHTTP{Handler: handler, dispatcher: dispatcher}, nil
+	return &ProjectHTTP{Handler: handler, dispatcher: dispatcher, source: source, deps: deps}, nil
 }
 
 func (h *ProjectHTTP) Close(ctx context.Context) error { return h.dispatcher.Close(ctx) }
