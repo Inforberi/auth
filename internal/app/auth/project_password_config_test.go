@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
@@ -19,6 +22,10 @@ func TestProjectPasswordConfiguration(t *testing.T) {
 	deps := ProjectPasswordDependencies{Registry: &projectruntime.Registry{}, Reader: &projectpostgres.RuntimeCredentialReader{}, Redis: &redis.Client{}, Hash: &hasher.Bounded{}}
 	require.NoError(t, cfg.validate(deps))
 	for _, change := range []func(*ProjectPasswordConfig){
+		func(c *ProjectPasswordConfig) { c.MFA.Enabled = true },
+		func(c *ProjectPasswordConfig) {
+			c.MFA = mfaservice.Config{Enabled: true, RecoveryEnabled: true, Issuer: "Fixture", ChallengeTTL: time.Minute, UserLimitPerMinute: 10, IPLimitPerMinute: 10, GlobalLimitPerMinute: 100}
+		},
 		func(c *ProjectPasswordConfig) { c.Timeout = 0 }, func(c *ProjectPasswordConfig) { c.Timeout = 31 * time.Second },
 		func(c *ProjectPasswordConfig) { c.Capacity.LoginGlobalLimit = 0 }, func(c *ProjectPasswordConfig) { c.Session.SessionTTL = 0 },
 	} {
@@ -36,4 +43,17 @@ func TestProjectPasswordConfiguration(t *testing.T) {
 		_, err := NewProjectPassword(t.Context(), projectruntime.Key{}, cfg, invalid)
 		require.Error(t, err)
 	}
+}
+
+func TestProjectMFADisabledFailsClosed(t *testing.T) {
+	runtime := &ProjectPassword{}
+	session, err := runtime.CompleteMFA(context.Background(), mfaservice.CompleteLoginInput{})
+	require.ErrorIs(t, err, mfadomain.ErrUnavailable)
+	require.Nil(t, session)
+	enrollment, err := runtime.StartMFAEnrollment(context.Background(), mfaservice.LoginEnrollmentInput{})
+	require.ErrorIs(t, err, mfadomain.ErrUnavailable)
+	require.Nil(t, enrollment)
+	codes, err := runtime.ConfirmMFAEnrollment(context.Background(), mfaservice.ConfirmLoginEnrollmentInput{})
+	require.ErrorIs(t, err, mfadomain.ErrUnavailable)
+	require.Nil(t, codes)
 }

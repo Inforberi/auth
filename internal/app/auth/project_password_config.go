@@ -8,12 +8,14 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type ProjectPasswordConfig struct {
+	MFA      mfaservice.Config
 	Session  sessionservice.Config
 	Capacity passwordservice.CapacityConfig
 	Timeout  time.Duration
@@ -36,5 +38,14 @@ func (c ProjectPasswordConfig) validate(deps ProjectPasswordDependencies) error 
 	if err := c.Capacity.Validate(); err != nil {
 		return err
 	}
-	return c.Session.Validate()
+	if err := c.Session.Validate(); err != nil {
+		return err
+	}
+	if err := c.MFA.Validate(); err != nil {
+		return err
+	}
+	if c.MFA.RecoveryEnabled {
+		return errors.New("project loss-all-factors recovery is not assembled")
+	}
+	return nil
 }

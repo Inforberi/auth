@@ -1730,3 +1730,33 @@ Luna: task check PASS (lint0); affected host race `./internal/platform/project/.
 Snapshot `/private/tmp/auth-project-password.xss82yb3`, base672162d; manifest9 `/private/tmp/auth-project-password-manifest.sha256`, metadata/deleted `/private/tmp/auth-project-password-snapshot.json`. Manifest совпал до/после и main перед коммитом, дополнительных source изменений нет. Логи `/private/tmp/auth-project-password*.log`. API/scanner/unrelated operator/localSettings checks формально не повторялись: routes/schema/grants/dependencies не менялись, изменённые security guarantees проверены unit/race/actual SQL+Redis.
 
 Локальный gate внутреннего password/session блока закрыт; full MFA challenge/прочие методы, public routes/readiness/MP4/fleet остаются далее. Пользователь запросил коммит. Для следующих задач уточнён процесс: разведка локальным субагентом Luna medium здесь, main Sol medium читает только нужные первоисточники и пишет код, отдельный чат Luna используется только для verification. Мелкие изменения не требуют отдельной разведки.
+
+## Реализация MP4.1c project MFA — 25 октября 2026
+
+Пользователь разрешил следующий MFA блок после186adf5. Локальный субагент Dewey (Luna medium) выполнил bounded read-only поиск по existing MFA/session/enrollment/fixture contracts; main читал только выбранные definitions/входы и implemented app wiring. Отдельная Luna не использовалась для исследования.
+
+[Контракт](../features/project-mfa-runtime.md): optional project-scoped MFA Login factory без SMTP/worker, existing session coordinator, CompleteMFA для TOTP/recovery codes и Start/Confirm required enrollment. Existing invalidateFactors отзывает старые sessions/challenges и повышает auth_version: после подтверждения нужен новый пароль/challenge. Current key/profile guards и logical pool lease сохраняются, partial result не раскрывается. Disabled MFA fail-closed; loss-all-factors RecoveryEnabled отвергается отдельно, recovery codes работают как прежде. No schema/dependencies/ENV/new pools/publicroutes/readiness.
+
+Добавлены config/disabled unit guards и real SQL+Redis case в existing prepared project/password fixture: no-session challenge/enrollment, recovery/TOTP completion, wrong binding/challenge replay/recovery reuse, preserved fixed5 factor-user admission, suspended epoch и exact scoped cleanup. TOTP generation — existing pquerna/otp v1.5.0, Context7/installed API сверены; криптография не переписывалась. Main formatter/diff; executable verification pending у отдельной Luna. Новый commit не выполнялся.
+
+Передан verification snapshot `/private/tmp/auth-project-mfa.x8vobygv`, base186adf5, manifest7 `/private/tmp/auth-project-mfa-manifest.sha256`, metadata `/private/tmp/auth-project-mfa-snapshot.json`: task check, affected race и полный actual command SQL+Redis. Результат pending; source Luna не правит. Локальный Dewey после исследования закрыт.
+
+### MP4.1c verification V1 и единый исследователь
+
+Отдельная Luna V1: task check PASS/lint0, affected race PASS. Full TestPrepareCommandSQL FAIL в enrolled_MFA_cannot_be_bypassed, nil receiver panic в mfa.Login.startLogin; также cleanup55006 (test DB in use). Manifest7 совпал, ownPG/Redis удалены, DB15 пуста. Новый MFA drill полностью не подтверждён.
+
+По просьбе пользователя создан единый локальный исследователь Helmholtz (gpt-6-luna, medium; ID в current-task). Он прочитал только traceback и wiring и подтвердил production typed-nil bug: *mfaservice.Login(nil), переданный в интерфейс sessionservice.NewLogin, ненулевой как interface и обходит проверку s.mfa==nil. Main изменил только wiring в project_password.go: сначала nil-interface bridge, затем замена на реальный service только при включённой MFA. Существующий SQL case disabled/enrolled проверяет ErrMFARequired/no panic/no session. Cleanup55006 рассматривается отдельно, без бездоказательного reset/mass kill БД. Повтор full SQL и targeted lint передаётся verification Luna; другие successful наборы не дублируются формально.
+
+Исследователь остаётся открыт для связанных уточнений; отдельный чат Luna — только проверки. Workflow уточнён, новых помощников по каждому вопросу не создавать. Bohr виден на пользовательском скриншоте, но его ID/модель/роль не установлены и действия с ним не выполнялись.
+
+MFA V2 snapshot `/private/tmp/auth-project-mfa-v2.__kgd_jl`, base186adf5, manifest7 `/private/tmp/auth-project-mfa-v2-manifest.sha256`, metadata `/private/tmp/auth-project-mfa-v2-snapshot.json` передан отдельной Luna на full actual command SQL и targeted lint. Остальные6source SHA неизменны относительноV1; tests main не выполняет, новый commit не сделан.
+
+## Результат MP4.1c project MFA — 25 октября 2026
+
+Luna V2: полный TestPrepareCommandSQL PASS (exit0), без SKIP, включая enrolled/role-required disabled MFA bypass regressions и enabled project MFA login drill. Targeted lint `./internal/app/auth ./cmd/project-prepare` PASS (0 issues,exit0); default cache-write warnings не изменили результат. V1 task check/affected race PASS сохраняются: V2 менял только typed-nil wiring project_password.go, повтор successful наборов формально не выполнялся.
+
+Snapshot `/private/tmp/auth-project-mfa-v2.__kgd_jl`, base186adf5; manifest7 `/private/tmp/auth-project-mfa-v2-manifest.sha256`, metadata `/private/tmp/auth-project-mfa-v2-snapshot.json`. Manifest совпал до/после и main с текущими source; новых source правок нет. Реальные fixture PG18.6 TLS/SCRAM и Redis8.2 DB15, после тестов DB15 пуста, project DB/schemas/roles отсутствовали, собственные контейнеры/TLS/binaries удалены. SQL55006 V1 не повторился. Логи `/private/tmp/auth-project-mfa-v2*.log`. Source/commit Luna не меняла.
+
+Internal MFA local gate закрыт. Public routes/readiness/полныйMP4/SMTP recovery/fleet не заявлены. По status-запросу пользователю сообщён результат; новый commit пока не запрашивался. Bohr отдельно закрыт/архивирован по просьбе пользователя, Helmholtz остаётся единственным назначенным локальным исследователем; отдельная Luna только verification.
+
+Пользователь запросил фиксацию MP4.1c. Перед коммитом main сверил manifest7 с рабочим деревом, дополнительных source изменений нет; diff whitespace PASS. Feature и уточнение AI workflow фиксируются раздельно.

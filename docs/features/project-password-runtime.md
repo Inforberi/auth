@@ -28,3 +28,7 @@ SMTP/OAuth/JWT/recovery/registration и полный MFA не реализова
 ## Результат проверок
 
 Luna: task check PASS/lint0, affected host race PASS, полный actual TestPrepareCommandSQL PASS без SKIP, включая восемь project_password_session cases и прежние loader/runtime/roles/onboarding/managed/parent replay checks. Manifest9 совпал до/после и перед коммитом. Owned PostgreSQL/Redis удалены, DB15 пуста. [Evidence](../planning/history.md#результат-mp41b-project-password-session--25-октября-2026). Это локальная приёмка внутреннего Login, не публикация HTTP/MFA challenge/full Auth readiness/fleet.
+
+## Расширение MP4.1c
+
+[Project MFA runtime](project-mfa-runtime.md) добавляет optional MFA Login/Complete и required enrollment поверх этого pool ownership. Код добавлен, checks pending; прежний Enabled=false профиль сохраняется. Завершённый MP4.1b PASS относится к предыдущему коммиту186adf5, новая MFA wiring требует отдельной проверки. Public routes/readiness всё ещё не включаются.

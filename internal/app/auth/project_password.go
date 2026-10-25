@@ -23,6 +23,7 @@ import (
 
 // ProjectPassword owns no pool, worker or process dependency; each Login holds its own lease.
 type ProjectPassword struct {
+	mfa      *projectMFALogin
 	key      projectruntime.Key
 	cfg      ProjectPasswordConfig
 	registry *projectruntime.Registry
@@ -51,7 +52,12 @@ func NewProjectPassword(ctx context.Context, key projectruntime.Key, cfg Project
 	if err != nil {
 		return nil, err
 	}
+	mfa, err := newProjectMFALogin(scope, configuration.EncryptionKey(), cfg, deps)
+	if err != nil {
+		return nil, err
+	}
 	return &ProjectPassword{
+		mfa: mfa,
 		key: key, cfg: cfg, registry: deps.Registry, reader: deps.Reader, hash: deps.Hash,
 		limits: passwordservice.NewLoginLimit(limits, cipher, cfg.Capacity),
 	}, nil
@@ -67,7 +73,15 @@ func (p *ProjectPassword) Login(ctx context.Context, input passwordservice.Login
 		}
 		policy := settingsservice.New(settingspostgres.New(pool))
 		sessions := sessionservice.New(clock.UTCClock{}, sessionpostgres.New(pool), tokengenerate.New(), p.cfg.Session)
-		passwords := passwordservice.New(passwordpostgres.New(pool), sessions, p.hash, p.limits).WithPublicPolicy(func(ctx context.Context, registration bool) error {
+		login := sessionservice.NewLogin(sessions, nil)
+		if p.mfa != nil {
+			loginMFA, err := p.mfa.newLogin(pool)
+			if err != nil {
+				return err
+			}
+			login = sessionservice.NewLogin(sessions, loginMFA)
+		}
+		passwords := passwordservice.New(passwordpostgres.New(pool), login, p.hash, p.limits).WithPublicPolicy(func(ctx context.Context, registration bool) error {
 			return policy.CheckPublic(ctx, "password", registration)
 		})
 		var err error

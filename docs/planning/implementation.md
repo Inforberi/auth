@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP4.1c-project-mfa,25 октября — локальные проверки Luna V1/V2 PASS.** [Решение и матрица](../features/project-mfa-runtime.md): подключить существующий MFA challenge/TOTP/recovery/session flow к проектной password assembly с current policy/auth_version/role/epoch guards и project scopes, без дублирования SQL/crypto или public-ready. Обязательные mail/outbox prerequisites проверить до публикации, не заменять fake delivery. Локальный Luna medium исследует код, отдельная Luna выполняет verification.
+
 - [x] **MP4.1b-project-password-session,25 октября — локальные проверки Luna PASS.** [Первая практическая сборка](../features/project-password-runtime.md): ProjectPassword.Login через существующие password/session/settings services, project encryption/Redis scope, borrowed process hasher, pool-entry lease без physical connection во время hash, current key guards и прежние locked SQL policy/email/MFA checks. Нет нового pool/init/worker/publicroute/readiness; полноценный MFA challenge и другие методы далее.
 
 - [x] **MP4.1a-project-auth-loader,25 октября — локальные проверки Luna V1/V2 PASS.** [Read-only production loader](../features/project-auth-loader.md): узкий project encryption key без password/setup/signing, shared exact catalog snapshot/profile guard с DB loader, stored policy через readonly registry lease и финальная сверка current key. Нет ENV fallback/Initialize/новых pools/routes/capabilities. Это первый блок входных данных assembly; actual feature runtime/SMTP/provider/token/ready publication остаются далее.
