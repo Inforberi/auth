@@ -1760,3 +1760,15 @@ Snapshot `/private/tmp/auth-project-mfa-v2.__kgd_jl`, base186adf5; manifest7 `/p
 Internal MFA local gate закрыт. Public routes/readiness/полныйMP4/SMTP recovery/fleet не заявлены. По status-запросу пользователю сообщён результат; новый commit пока не запрашивался. Bohr отдельно закрыт/архивирован по просьбе пользователя, Helmholtz остаётся единственным назначенным локальным исследователем; отдельная Luna только verification.
 
 Пользователь запросил фиксацию MP4.1c. Перед коммитом main сверил manifest7 с рабочим деревом, дополнительных source изменений нет; diff whitespace PASS. Feature и уточнение AI workflow фиксируются раздельно.
+
+## Реализация MP4.1d project SMTP —25 октября2026
+
+Добавлен NewProjectMailer на existing project Auth loader/settings/mail transport: только сохранённый scoped SMTP, allowlist copy/strict TLS, current guards и reread через UsePool. Lease освобождается до сетевого I/O. Нет defaults/newdeps/schema/workers/publicready. `projectSMTPDrill` включён в existing command SQL suite.
+
+Main formatter `go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 fmt internal/app/auth/project_smtp.go cmd/project-prepare/project_smtp_integration_test.go cmd/project-prepare/runtime_registry_integration_test.go` exit0 (existing gofumpt deprecated setting warning); `git diff --check` exit0. Первый formatter без доступа к cached tool получил DNS error, повтор с разрешённым доступом завершился успешно.
+
+Verification передан отдельной Luna на snapshot `/private/tmp/auth-project-smtp-v1.wqg_6uf0`, base07c448b74ae5ab1555f2ab5cf2c7435f6b268bc3, manifest3 `/private/tmp/auth-project-smtp-v1-manifest.sha256`, metadata `/private/tmp/auth-project-smtp-v1-snapshot.json`. Запрошены один task check, affected race app/auth+cmd и actual full TestPrepareCommandSQL на owned PostgreSQL18.6 TLS/SCRAM+Redis8.2DB15 с cleanup. Результаты PENDING; main tests не запускал. Positive external TLS delivery/public-ready/fleet/GC/RPS не подтверждены.
+
+Luna V1: affected race app/auth+cmd exit0; actual full TestPrepareCommandSQL exit0 без SKIP на PostgreSQL18.6 TLS/SCRAM+Redis8.2 DB15, включая project SMTP drill. Cleanup owned resources подтверждён, DB15 пуста; manifest3 до/после и main совпал. Первый task check exit201: sandbox запретил bind loopback ephemeral ports, не ошибка SMTP. Передан повтор только task check с нужным доступом; lint/full check gate остаётся открытым.
+
+Финал MP4.1d: повтор только `task check` на том же snapshot с разрешённым loopback завершился exit0, lint0. Manifest3 до/после и main совпал. Race/SQL не повторялись, source не менялся. Локальный verification gate закрыт; внешний TLS delivery и public-ready не подтверждены. Пользователь запросил коммит проверенного блока.
