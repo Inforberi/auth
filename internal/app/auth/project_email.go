@@ -24,7 +24,7 @@ type ProjectEmail struct {
 }
 
 func NewProjectEmail(ctx context.Context, key projectruntime.Key, cfg ProjectEmailConfig, allowed []string, deps ProjectEmailDependencies) (*ProjectEmail, error) {
-	if deps.Registry == nil || deps.Reader == nil || deps.Redis == nil || deps.Hash == nil {
+	if deps.Registry == nil || deps.Reader == nil || deps.Redis == nil || deps.Hash == nil && (cfg.RecoveryEnabled || cfg.Invitations.Enabled || cfg.Change.Enabled) {
 		return nil, errors.New("incomplete project email dependencies")
 	}
 	configuration, err := deps.Reader.LoadAuthConfiguration(ctx, key, deps.Registry)

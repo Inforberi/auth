@@ -1,0 +1,75 @@
+package main
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
+	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
+)
+
+func (f projectProfileFixture) verificationProfile(t *testing.T, ctx context.Context, origin string) {
+	t.Helper()
+	_, err := f.db.Exec(ctx, `UPDATE auth.auth_settings SET version=version+1,password_enabled=false,google_enabled=false,password_email_verification='optional'`)
+	require.NoError(t, err)
+	delivery, err := appauth.NewProjectDelivery(appauth.ProjectDeliveryConfig{Parallelism: 1, PageSize: projectruntime.StateBatchSize, Interval: time.Second, SMTPAllowedTargets: []string{f.listener.Addr().String()}}, f.deps)
+	require.NoError(t, err)
+	running, stop := context.WithCancel(ctx)
+	defer stop()
+	done := make(chan error, 1)
+	joined := false
+	go func() { done <- delivery.Run(running, func(error) {}) }()
+	t.Cleanup(func() {
+		stop()
+		if !joined {
+			select {
+			case <-done:
+			case <-time.After(5 * time.Second):
+				t.Error("profile delivery did not drain")
+			}
+		}
+	})
+	cfg := appauth.ProjectProfileConfig{Verification: &accountservice.Config{URL: origin + "/verify-email", TTL: 30 * time.Minute, ResendInterval: time.Minute, RegistrationIPLimit: 5, RegistrationGlobalLimit: 100}, Timeout: 10 * time.Second}
+	// No password or recovery flow is selected, so no hasher is supplied.
+	deps := appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb}, Delivery: delivery}
+	var profile *appauth.ProjectProfile
+	var buildErr error
+	require.Eventually(t, func() bool {
+		profile, buildErr = appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+		return buildErr == nil && profile.Readiness().Ready
+	}, 3*time.Second, 20*time.Millisecond)
+	require.NoError(t, buildErr)
+	require.True(t, profileFeature(t, profile, "verification").Ready)
+	require.Len(t, profile.RoutePlan(), 2)
+	reauthentication := appauth.ProjectProfileConfig{
+		BrowserEnabled: true,
+		EmailOTP: &appauth.ProjectEmailOTPConfig{
+			OTP:     otpservice.Config{ReauthenticationEnabled: true, TTL: 5 * time.Minute, ResendInterval: time.Minute, RequestGlobalLimit: 100, ConfirmGlobalLimit: 1000},
+			Session: projectPasswordFixtureConfig().Session, Timeout: 5 * time.Second,
+		},
+		Timeout: 10 * time.Second,
+	}
+	reauth, err := appauth.BuildProjectProfile(ctx, f.key, origin, reauthentication, deps)
+	require.NoError(t, err)
+	require.True(t, reauth.Readiness().Ready)
+	require.True(t, profileFeature(t, reauth, "reauthentication").Ready)
+	require.Len(t, reauth.RoutePlan(), 2)
+	stop()
+	select {
+	case err := <-done:
+		require.ErrorIs(t, err, context.Canceled)
+		joined = true
+	case <-time.After(5 * time.Second):
+		t.Fatal("profile delivery did not stop")
+	}
+	stopped, err := appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+	require.NoError(t, err)
+	require.False(t, stopped.Readiness().Ready)
+	require.Empty(t, stopped.RoutePlan())
+	require.Equal(t, "delivery_not_running", profileFeature(t, stopped, "verification").Reason)
+}

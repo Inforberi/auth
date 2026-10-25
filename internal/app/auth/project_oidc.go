@@ -126,13 +126,21 @@ func (p *ProjectOIDC) service(pool *pgxpool.Pool) (*oidcservice.Service, error) 
 	owner := p.deps.Clients.client(p.cfg.Provider)
 	service := oidcservice.New(cfg, p.flows, owner, accountservice.NewIdentityResolution(accounts), login, tokens, accountservice.NewIdentityManagement(accounts, p.cfg.Session.FreshAuthTTL))
 	return service.WithProviderSource(func(ctx context.Context) (oidcservice.Provider, int64, error) {
-		stored, secret, err := providers.Credentials(ctx, p.cfg.Provider)
+		stored, secret, err := projectProviderCredentials(ctx, providers, p.cfg.Provider)
 		if err != nil {
 			return nil, 0, err
 		}
-		if !stored.SecretSet || stored.ClientID == "" {
-			return nil, 0, settingsdomain.ErrMethodNotReady
-		}
 		return owner.WithCredentials(stored.ClientID, secret).WithRedirectURI(p.cfg.RedirectURI), stored.Version, nil
 	}), nil
+}
+
+func projectProviderCredentials(ctx context.Context, providers *settingsservice.Providers, name string) (settingsdomain.ProviderSnapshot, string, error) {
+	stored, secret, err := providers.Credentials(ctx, name)
+	if err != nil {
+		return settingsdomain.ProviderSnapshot{}, "", err
+	}
+	if !stored.SecretSet || stored.ClientID == "" {
+		return settingsdomain.ProviderSnapshot{}, "", settingsdomain.ErrMethodNotReady
+	}
+	return stored, secret, nil
 }

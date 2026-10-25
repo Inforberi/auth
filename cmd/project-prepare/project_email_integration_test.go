@@ -192,6 +192,9 @@ func projectEmailDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key
 	t.Run("project JWT exchange and native", func(t *testing.T) {
 		(projectTokenFixture{db: db, rdb: rdb, key: key, deps: deps, hash: hash, listener: listener, sourceUser: user, password: replacement}).run(t, ctx)
 	})
+	t.Run("selected feature readiness", func(t *testing.T) {
+		(projectProfileFixture{admin: admin, db: db, rdb: rdb, key: key, deps: deps, hash: hash, listener: listener}).run(t, ctx)
+	})
 	_, err = admin.Exec(ctx, `UPDATE platform.projects SET desired_state='suspended',version=version+1 WHERE id=$1`, key.Binding.ProjectID)
 	require.NoError(t, err)
 	t.Cleanup(func() {
