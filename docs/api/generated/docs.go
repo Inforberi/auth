@@ -2186,7 +2186,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/change-password": {
             "post": {
-                "description": "Requires a valid SQL-backed __Host-session, verified login email, allowed Origin and current password. Atomically updates password, revokes all sessions and records audit; sign in again. Response retains legacy uppercase Status. MFA is not implemented.",
+                "description": "Requires a valid SQL-backed __Host-session, verified login email, allowed Origin and current password. Atomically updates password, revokes all sessions and records audit; sign in again. Response retains legacy uppercase Status. Existing role/MFA session requirements remain enforced.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2242,6 +2242,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "code: not_found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "code: rate_limited",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }

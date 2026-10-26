@@ -39,11 +39,12 @@ type PublicPasswordHandler struct {
 
 type PasswordHandler struct {
 	*PublicPasswordHandler
+	*ChangePasswordHandler
 	service PasswordService
 }
 
 func New(service PasswordService, log *zap.Logger) *PasswordHandler {
-	return &PasswordHandler{PublicPasswordHandler: NewPublic(service, log), service: service}
+	return &PasswordHandler{PublicPasswordHandler: NewPublic(service, log), ChangePasswordHandler: NewChangePassword(service, nil, log), service: service}
 }
 
 func NewPublic(service PublicPasswordService, log *zap.Logger) *PublicPasswordHandler {

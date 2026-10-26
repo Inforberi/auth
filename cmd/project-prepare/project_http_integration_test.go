@@ -122,6 +122,7 @@ func (f projectProfileFixture) httpProfile(t *testing.T, ctx context.Context, or
 	require.Equal(t, 400, code, "valid SQL session reaches existing JSON handler")
 	require.EqualValues(t, 1, builds.Load(), "warm requests must not rebuild profile")
 	cookie = f.httpSessions(t, ctx, origin, server, cookie)
+	cookie = f.httpPasswordManagement(t, ctx, origin, cookie, request)
 	code, _ = request("/api/v1/internal/auth/token/introspect", "", "", `!`)
 	require.Equal(t, 401, code)
 	code, _ = request("/api/v1/internal/auth/token/introspect", origin, "", `!`)
@@ -163,6 +164,10 @@ func (f projectProfileFixture) httpProfile(t *testing.T, ctx context.Context, or
 	require.NoError(t, err)
 	require.Equal(t, 200, response.StatusCode, "disabled login must not prevent management of existing sessions")
 	require.NoError(t, response.Body.Close())
+	for _, path := range []string{"/api/v1/auth/change-password", "/api/v1/auth/reauthenticate/password"} {
+		code, _ = request(path, origin, cookie, `{}`)
+		require.Equal(t, 404, code, "disabled password does not expose credential operations")
+	}
 	code, _ = request("/api/v1/admin/auth/login/email", origin, "", `{}`)
 	require.Equal(t, 404, code)
 	_, err = f.admin.Exec(ctx, `UPDATE platform.projects SET desired_state='suspended',version=version+1 WHERE id=$1`, f.key.Binding.ProjectID)
@@ -190,7 +195,7 @@ func (f projectProfileFixture) httpLoginLimitCleanup(t *testing.T, ctx context.C
 	require.NoError(t, err)
 	prefix, err := scope.RedisPrefix("password-limit", "auth:password-recovery:limit:")
 	require.NoError(t, err)
-	keys := []string{prefix + cipher.Digest("login-ip:127.0.0.1"), prefix + cipher.Digest("login-email:runtime-email@example.test"), prefix + cipher.Digest("login-global")}
+	keys := []string{prefix + cipher.Digest("login-ip:127.0.0.1"), prefix + cipher.Digest("login-email:runtime-email@example.test"), prefix + cipher.Digest("login-global"), prefix + cipher.Digest("reauth-user:"+f.sourceUser)}
 	t.Cleanup(func() {
 		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
 		defer cancel()

@@ -181,6 +181,7 @@ SSO, регистрация нескольких приложений внутр
 
 - [x] MP5.1e prerequisite. [Settings actual readiness](../features/project-settings-readiness.md) реализована, локальные проверки Luna V1/V2 PASS: trusted per-target view и transactional dependency pins, без публикации candidate routes/phase-ready.
 - [x] MP5.1f prerequisite. [Session management HTTP](../features/project-session-management.md) реализовано поверх существующих SQL/services: семь browser routes, management после отключения login, bounded scoped operations. Локальные проверки Luna V1/V2 PASS; это не полная MP5 two-project matrix.
+- [x] MP5.1g prerequisite. [Password change/reauth HTTP](../features/project-password-management.md) реализовано, локальные проверки Luna V1/V2 PASS. Существующие SQL/password proof/session revoke, verified login email, scoped attempt budgets; остальные account/identity/MFA management остаются отдельно.
 
 - [ ] MP5.1. Проверить пользователей/contacts/credentials/external identities/roles/settings/audit и все pending flows. UUID не считается глобальным доказательством принадлежности: доступ разрешается только внутри подтверждённого проекта. Внешний backend также проверяет ожидаемые project/issuer/audience, а не принимает любой выданный Auth token.
 - [ ] MP5.2. Redis namespace включает неизменяемый project ID и назначение: session coordination, throttling, OIDC state, OTP/MFA, idempotency и cache. Keyspace scan/FLUSHDB не используется для избирательного отключения проекта. Health общей Redis-зависимости и проектные ошибки различаются.

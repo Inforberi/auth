@@ -18,6 +18,7 @@ func (p *ProjectProfile) RoutePlan() []ProjectRoute {
 		}
 	}
 	add("password", "browser", "POST", "/api/v1/auth/login/email")
+	add("password", "session_no_refresh", "POST", "/api/v1/auth/change-password", "/api/v1/auth/reauthenticate/password")
 	add("temporary_password", "browser", "POST", "/api/v1/auth/temporary-password/login", "/api/v1/auth/temporary-password/complete")
 	add("registration", "browser", "POST", "/api/v1/auth/register/email")
 	add("verification", "browser", "POST", "/api/v1/auth/email/resend", "/api/v1/auth/email/verify")

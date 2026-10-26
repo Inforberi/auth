@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,41 @@ import (
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 )
+
+type changeAttemptLimit struct{ mock.Mock }
+
+func (l *changeAttemptLimit) AllowUser(ctx context.Context, user accountdomain.UserID, ip string) error {
+	return l.Called(ctx, user, ip).Error(0)
+}
+
+func TestChangePasswordAttemptLimitPrecedesPasswordWork(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		err    error
+		status int
+	}{
+		{"limited", passworddomain.ErrLoginLimited, 429},
+		{"unavailable", passworddomain.ErrLoginUnavailable, 503},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			service, limits := &mockPasswordService{}, &changeAttemptLimit{}
+			handler := NewChangePassword(service, limits, zap.NewNop())
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/change-password", strings.NewReader(`{"oldPassword":"oldPassword1","newPassword":"newPassword1","confirmPassword":"newPassword1"}`))
+			req.Header.Set("Content-Type", "application/json")
+			req = req.WithContext(sessionhttp.SetAuthContext(req.Context(), sessionhttp.Auth{UserID: userID, TokenHash: tokenHash}))
+			limits.On("AllowUser", req.Context(), userID, mock.AnythingOfType("string")).Return(test.err).Once()
+			rw := httptest.NewRecorder()
+			handler.ChangePassword(rw, req)
+			assert.Equal(t, test.status, rw.Code)
+			if test.status == 429 {
+				assert.Equal(t, "60", rw.Header().Get("Retry-After"))
+			}
+			assert.Empty(t, rw.Result().Cookies())
+			limits.AssertExpectations(t)
+			service.AssertNotCalled(t, "ChangePassword", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+		})
+	}
+}
 
 func TestChangePassword_NoAuth(t *testing.T) {
 	service := &mockPasswordService{}

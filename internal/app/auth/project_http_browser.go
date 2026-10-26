@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
@@ -23,6 +24,8 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 	if p.password != nil {
 		h := passwordhttp.NewPublic(p.password, log)
 		handlers["/api/v1/auth/login/email"], handlers["/api/v1/auth/register/email"] = h.LoginByEmail, h.Register
+		handlers["/api/v1/auth/change-password"] = passwordhttp.NewChangePassword(p.password, p.password.limits, log).ChangePassword
+		handlers["/api/v1/auth/reauthenticate/password"] = passwordhttp.NewReauthentication(projectPasswordReauthenticationHTTP{p.password}, log).Confirm
 		if p.featureReady("verification") && p.policy.Policy.PasswordEmailVerification != settingsdomain.VerificationDisabled {
 			handlers["/api/v1/auth/register/email"] = p.requireHTTPDelivery(h.Register)
 		}
@@ -71,6 +74,12 @@ func (p *ProjectProfile) requireHTTPDelivery(next http.HandlerFunc) http.Handler
 }
 
 type projectVerificationHTTP struct{ *ProjectEmail }
+
+type projectPasswordReauthenticationHTTP struct{ *ProjectPassword }
+
+func (s projectPasswordReauthenticationHTTP) Confirm(ctx context.Context, user accountdomain.UserID, hash, password, ip string) (*passwordservice.ReauthenticationResult, error) {
+	return s.ConfirmReauthentication(ctx, user, hash, password, ip)
+}
 
 func (s projectVerificationHTTP) Resend(ctx context.Context, email, ip string) error {
 	return s.ResendVerification(ctx, email, ip)

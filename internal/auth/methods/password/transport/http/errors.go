@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 
+	"go.uber.org/zap"
+
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
@@ -78,6 +80,7 @@ var loginClientErrors = []httpx.ErrorRule{
 }
 
 var changePasswordErrors = []httpx.ErrorRule{
+	httpx.MatchError(accountdomain.ErrEmailUnverified, 403, "email_not_verified", "email not verified"),
 	{Match: passwordPolicyError, Response: passwordPolicyFailure},
 	httpx.MatchError(passworddomain.ErrInvalidEmailOrPassword, http.StatusBadRequest, errInvalidEmailOrPassword.code, errInvalidEmailOrPassword.message),
 	httpx.MatchError(passworddomain.ErrSamePassword, http.StatusBadRequest, errSamePassword.code, errSamePassword.message),
@@ -89,14 +92,18 @@ var changePasswordErrors = []httpx.ErrorRule{
 }
 
 func (h *PublicPasswordHandler) respondError(w http.ResponseWriter, r *http.Request, err error, operation string, rules []httpx.ErrorRule) {
-	if settingshttp.RespondPolicyError(w, r, h.log, err) {
+	respondPasswordError(w, r, h.log, err, operation, rules)
+}
+
+func respondPasswordError(w http.ResponseWriter, r *http.Request, log *zap.Logger, err error, operation string, rules []httpx.ErrorRule) {
+	if settingshttp.RespondPolicyError(w, r, log, err) {
 		return
 	}
 	if failure := httpx.MapError(err, capacityErrors, httpx.Failure{}); failure.Status != 0 {
-		httpx.RespondError(w, r, h.log, operation, err, nil, failure)
+		httpx.RespondError(w, r, log, operation, err, nil, failure)
 		return
 	}
-	httpx.RespondError(w, r, h.log, operation, err, rules, internalFailure)
+	httpx.RespondError(w, r, log, operation, err, rules, internalFailure)
 }
 
 var capacityErrors = []httpx.ErrorRule{

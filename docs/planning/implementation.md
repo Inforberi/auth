@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP5.1g-project-password-management, 26 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/project-password-management.md): project password change/reauth HTTP через existing services/SQL, verified login contact и scoped user/IP/project limits, token rotation без продления/MFA refresh, atomic change/version/revoke/audit. Узкий handler без копирования DTO/mapper; legacy constructor сохранён. Новых SQL/deps/ENV/workers нет. Account/identity/MFA management и full MP5 отдельно.
+
 - [x] **MP5.1f-project-session-management, 25 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/project-session-management.md): семь browser session routes на existing handlers/services/SQL, scoped leases/current key guards, Auth/NoRefreshAuth/LogoutAuth и exact Origin. Отключение login не мешает завершить существующую сессию. Новых SQL/deps/ENV/workers нет; HTTPS/SQL и route cases добавлены. Account/MFA management и full MP5 остаются отдельно.
 
 - [x] **MP5.1e-project-settings-readiness, 25 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/project-settings-readiness.md): actual per-target capabilities при disabled current policy, safe GET/POST observation, preflight до3s admission, final policy/SMTP/provider revision guards. Same source/owners, no nested leases; отключение/replay не требуют исправного метода. Swagger и SQL acceptance дополнены, full MP5/UI отдельно.

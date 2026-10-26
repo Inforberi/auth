@@ -56,7 +56,7 @@ func (f projectProfileFixture) run(t *testing.T, ctx context.Context) {
 	login, err := appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.True(t, login.Readiness().Ready)
-	require.Len(t, login.RoutePlan(), 9)
+	require.Len(t, login.RoutePlan(), 11)
 	_, err = f.db.Exec(ctx, `UPDATE auth.auth_settings SET version=version+1,password_email_verification='required'`)
 	require.NoError(t, err)
 	require.ErrorIs(t, login.CheckCurrent(ctx), settingsdomain.ErrPolicyConflict)

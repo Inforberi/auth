@@ -3187,7 +3187,7 @@ paths:
       description: Requires a valid SQL-backed __Host-session, verified login email,
         allowed Origin and current password. Atomically updates password, revokes
         all sessions and records audit; sign in again. Response retains legacy uppercase
-        Status. MFA is not implemented.
+        Status. Existing role/MFA session requirements remain enforced.
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -3222,6 +3222,10 @@ paths:
             $ref: '#/definitions/httpx.ErrorResponse'
         "404":
           description: 'code: not_found'
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: 'code: rate_limited'
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "500":
