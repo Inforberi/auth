@@ -13,11 +13,12 @@ import (
 )
 
 type projectMFA struct {
-	factory  *projectMFALogin
-	key      projectruntime.Key
-	registry *projectruntime.Registry
-	reader   *projectpostgres.RuntimeCredentialReader
-	timeout  time.Duration
+	factory    *projectMFALogin
+	key        projectruntime.Key
+	registry   *projectruntime.Registry
+	reader     *projectpostgres.RuntimeCredentialReader
+	timeout    time.Duration
+	emailProof bool
 }
 
 func (p *projectMFA) CompleteMFA(ctx context.Context, input mfaservice.CompleteLoginInput) (*mfaservice.LoginSession, error) {
@@ -60,6 +61,16 @@ func (p *projectMFA) ConfirmMFAEnrollment(ctx context.Context, input mfaservice.
 }
 
 func (p *projectMFA) withMFA(ctx context.Context, use func(context.Context, *mfaservice.Login) error) error {
+	return p.use(ctx, func(ctx context.Context, pool *pgxpool.Pool) error {
+		login, err := p.factory.newLogin(pool)
+		if err != nil {
+			return err
+		}
+		return use(ctx, login)
+	})
+}
+
+func (p *projectMFA) use(ctx context.Context, use func(context.Context, *pgxpool.Pool) error) error {
 	if p == nil || p.factory == nil {
 		return mfadomain.ErrUnavailable
 	}
@@ -69,11 +80,7 @@ func (p *projectMFA) withMFA(ctx context.Context, use func(context.Context, *mfa
 		if err := requireProjectCurrent(ctx, p.reader, p.key); err != nil {
 			return err
 		}
-		login, err := p.factory.newLogin(pool)
-		if err != nil {
-			return err
-		}
-		if err := use(ctx, login); err != nil {
+		if err := use(ctx, pool); err != nil {
 			return err
 		}
 		return requireProjectCurrent(ctx, p.reader, p.key)

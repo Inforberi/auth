@@ -49,6 +49,7 @@ type ProjectProfile struct {
 	changeProtection       *ProjectEmail
 	tokens                 *ProjectTokens
 	mfa                    *projectMFA
+	mfaManagement          *projectMFA
 }
 
 func BuildProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies) (*ProjectProfile, error) {
@@ -82,6 +83,7 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	p.buildProfileMethods(ctx, cfg, redisReady)
 	p.buildProfileTokens(ctx, cfg, redisReady)
 	p.bindProfileMFA(configuration.EncryptionKey())
+	p.buildProfileMFAManagement(cfg, configuration.EncryptionKey(), redisReady)
 	p.buildProfileEmailManagement(ctx, cfg, redisReady)
 	p.finishProfileRegistration(cfg)
 	if err := p.checkSnapshotCurrent(ctx, observed); err != nil {
@@ -136,6 +138,13 @@ func profileRedisReady(ctx context.Context, client *redis.Client) bool {
 }
 
 func profileNeedsRedis(cfg ProjectProfileConfig, policy settingsdomain.Policy) bool {
+	if cfg.BrowserEnabled {
+		for _, view := range configuredBrowserPolicies(cfg) {
+			if view.mfa.Enabled {
+				return true
+			}
+		}
+	}
 	if cfg.BrowserEnabled && cfg.EmailManagement != nil && (cfg.EmailManagement.Binding.Enabled || cfg.EmailManagement.Change.Enabled) {
 		return true
 	}

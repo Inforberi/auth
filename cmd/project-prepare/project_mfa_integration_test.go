@@ -85,11 +85,7 @@ func projectMFADrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key p
 		return svc.CompleteMFA(ctx, mfaservice.CompleteLoginInput{Token: challenge.Token, Binding: challenge.Binding, Code: code, Recovery: recovery, UserAgent: input.UserAgent, IP: input.IP})
 	}
 	codeAt := func(secret string, offset time.Duration) string {
-		var now time.Time
-		require.NoError(t, db.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&now))
-		code, err := totp.GenerateCode(secret, now.Add(offset))
-		require.NoError(t, err)
-		return code
+		return projectMFACode(t, ctx, db, secret, offset)
 	}
 	restricted := start()
 	require.True(t, restricted.EnrollmentRequired)
@@ -158,4 +154,13 @@ func projectMFADrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key p
 	result, err = complete(challenge, codes.Codes[1], true)
 	require.ErrorIs(t, err, projectdomain.ErrConflict)
 	require.Nil(t, result)
+}
+
+func projectMFACode(t *testing.T, ctx context.Context, db *pgx.Conn, secret string, offset time.Duration) string {
+	t.Helper()
+	var now time.Time
+	require.NoError(t, db.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&now))
+	code, err := totp.GenerateCode(secret, now.Add(offset))
+	require.NoError(t, err)
+	return code
 }

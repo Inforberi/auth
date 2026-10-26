@@ -205,6 +205,7 @@ func projectPasswordDrill(t *testing.T, admin *pgx.Conn, reader *catalog.Runtime
 	require.Nil(t, result)
 	require.Equal(t, before, sessions())
 	t.Run("project registration", func(t *testing.T) { projectRegistrationDrill(t, admin, db, rdb, key, pcfg, deps) })
+	t.Run("project MFA management HTTP", func(t *testing.T) { projectMFAManagementHTTPDrill(t, admin, db, rdb, key, pcfg, deps, input) })
 	t.Run("project MFA login", func(t *testing.T) { projectMFADrill(t, admin, db, rdb, key, pcfg, deps, input) })
 	count, err = rdb.DBSize(ctx).Result()
 	require.NoError(t, err)

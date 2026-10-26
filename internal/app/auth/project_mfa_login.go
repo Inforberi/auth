@@ -18,9 +18,10 @@ import (
 )
 
 type projectMFALogin struct {
-	cipher *secretbox.Cipher
-	limits *mfaredis.Limiter
-	config mfaservice.LoginConfig
+	cipher           *secretbox.Cipher
+	limits           *mfaredis.Limiter
+	config           mfaservice.LoginConfig
+	managementConfig mfaservice.Config
 }
 
 func newProjectMFALogin(scope realmscope.Scope, root string, cfg mfaservice.Config, session sessionservice.Config, rdb *redis.Client, primary string) (*projectMFALogin, error) {
@@ -38,7 +39,7 @@ func newProjectMFALogin(scope realmscope.Scope, root string, cfg mfaservice.Conf
 	if err != nil {
 		return nil, err
 	}
-	return &projectMFALogin{cipher: cipher, limits: limits, config: mfaservice.LoginConfig{
+	return &projectMFALogin{cipher: cipher, limits: limits, managementConfig: cfg, config: mfaservice.LoginConfig{
 		Issuer: cfg.Issuer, AllowPrimary: func(method, issuer string) bool { return settingsdomain.PrimaryMethod(method, issuer) == primary },
 		ChallengeTTL: cfg.ChallengeTTL, SessionTTL: session.SessionTTL, AbsoluteSessionTTL: session.AbsoluteSessionTTL,
 		AdminIdleTimeout: session.AdminIdleTimeout, AdminAbsoluteTTL: session.AdminAbsoluteTTL, AdminActivityInterval: session.AdminActivityInterval,

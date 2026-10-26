@@ -32,6 +32,9 @@ func (p *ProjectProfile) RoutePlan() []ProjectRoute {
 		add(name, "session_no_refresh", "DELETE", "/api/v1/auth/"+name+"/link")
 	}
 	add("mfa", "browser", "POST", "/api/v1/auth/mfa/login/complete", "/api/v1/auth/mfa/login/enrollment", "/api/v1/auth/mfa/login/enrollment/confirm")
+	add("mfa_management", "session_no_refresh", "GET", "/api/v1/auth/mfa/status")
+	add("mfa_management", "session_no_refresh", "POST", "/api/v1/auth/mfa/totp/enrollment", "/api/v1/auth/mfa/totp/enrollment/confirm", "/api/v1/auth/mfa/step-up", "/api/v1/auth/mfa/recovery-codes/regenerate", "/api/v1/auth/mfa/totp/replacement", "/api/v1/auth/mfa/totp/replacement/confirm")
+	add("mfa_management", "session_no_refresh", "DELETE", "/api/v1/auth/mfa/totp")
 	add("tokens", "public_keys", "GET", "/.well-known/jwks.json")
 	add("tokens", "public_keys", "HEAD", "/.well-known/jwks.json")
 	add("exchange", "session_no_refresh", "POST", "/api/v1/auth/token/exchange")
