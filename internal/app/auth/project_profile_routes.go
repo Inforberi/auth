@@ -37,6 +37,10 @@ func (p *ProjectProfile) RoutePlan() []ProjectRoute {
 	add("sessions", "session_logout", "POST", "/api/v1/auth/logout")
 	add("sessions", "session_no_refresh", "POST", "/api/v1/auth/logout-all", "/api/v1/auth/session/activity", "/api/v1/auth/session/rotate")
 	add("sessions", "session_no_refresh", "DELETE", "/api/v1/auth/sessions/{id}")
+	add("email_binding", "session_no_refresh", "POST", "/api/v1/admin/users/{id}/email-binding")
+	add("email_binding_confirmation", "session_no_refresh", "POST", "/api/v1/auth/email/binding/confirm")
+	add("email_change", "session_no_refresh", "POST", "/api/v1/auth/email/change")
+	add("email_change_protection", "browser", "POST", "/api/v1/auth/email/change/confirm", "/api/v1/auth/email/change/report", "/api/v1/auth/email/change/recover")
 	for _, method := range []string{"POST", "OPTIONS"} {
 		add("native_password", "native", method, "/api/v1/auth/native/password/login")
 		add("native_email", "native", method, "/api/v1/auth/native/email/request", "/api/v1/auth/native/email/confirm")

@@ -28,6 +28,7 @@ import (
 )
 
 type projectAccountFixture struct {
+	admin      *pgx.Conn
 	sourceUser string
 	password   string
 	db         *pgx.Conn
@@ -54,7 +55,13 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 
 	users := []string{actorID, bindID, changeID}
 	tokens := tokengenerate.New()
-	actorHash, bindingHash, changeHash := tokens.Hash(actorID), tokens.Hash(bindID), tokens.Hash(changeID)
+	actorToken, err := tokens.GenerateToken()
+	require.NoError(t, err)
+	bindingToken, err := tokens.GenerateToken()
+	require.NoError(t, err)
+	changeToken, err := tokens.GenerateToken()
+	require.NoError(t, err)
+	actorHash, bindingHash, changeHash := tokens.Hash(actorToken), tokens.Hash(bindingToken), tokens.Hash(changeToken)
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	f.listener = listener
@@ -122,11 +129,15 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 		{"email-verification-limit", "auth:email-verification:limit:", []string{
 			"invitation-reissue-actor:" + actorID, "invitation-reissue-actor:" + bindID, "invitation-reissue-project",
 			"email-binding:request:actor:" + actorID, "email-binding:request:ip:" + ip, "email-binding:request:project", "email-binding:request:user:" + bindID,
+			"email-binding:request:actor:" + changeID,
 			"email-binding:confirm:ip:" + ip, "email-binding:confirm:user:" + bindID, "email-binding:confirm:project",
 			"email-change-user:" + changeID, "email-change-request-ip:" + ip, "email-change-confirm:" + ip, "email-change-report:" + ip,
+			"email-binding:request:ip:127.0.0.1", "email-binding:confirm:ip:127.0.0.1",
+			"email-change-request-ip:127.0.0.1", "email-change-confirm:127.0.0.1", "email-change-report:127.0.0.1",
 		}},
 		{"password-limit", "auth:password-recovery:limit:", []string{
 			"activation-ip:" + ip, "activation-global", "protected-recovery-ip:" + ip,
+			"protected-recovery-ip:127.0.0.1",
 			"temporary-password-issue-actor:" + actorID, "temporary-password-issue-project", "temporary-password-setup-ip:" + ip, "temporary-password-setup-project",
 			"login-ip:" + ip, "login-email:" + tempEmail, "login-global",
 		}},
@@ -174,8 +185,18 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	denied, err := service.ProvisionUser(ctx, bad)
 	require.Error(t, err)
 	require.Nil(t, denied)
-	_, err = service.RequestEmailBinding(ctx, accountservice.EmailBindingInput{Actor: actor, UserID: bindID, Email: bindEmail, IP: ip})
-	require.NoError(t, err)
+	web, origin, stopDelivery := f.httpAccountManagement(t, ctx, cfg)
+	path := "/api/v1/admin/users/" + bindID + "/email-binding"
+	status, _ := web(path, "", actorToken, `!`)
+	require.Equal(t, 403, status)
+	status, _ = web(path, origin, "", `!`)
+	require.Equal(t, 401, status)
+	status, _ = web(path, origin, bindingToken, `{"email":"`+bindEmail+`"}`)
+	require.Equal(t, 409, status, "target session cannot approve its own email")
+	status, _ = web(path, origin, changeToken, `{"email":"`+bindEmail+`"}`)
+	require.Equal(t, 403, status, "another ordinary user cannot approve email binding")
+	status, _ = web(path, origin, actorToken, `{"email":"`+bindEmail+`"}`)
+	require.Equal(t, 202, status)
 	require.NoError(t, f.db.QueryRow(ctx, `SELECT payload FROM auth.email_bindings WHERE user_id=$1`, bindID).Scan(&payload))
 	plain, err := f.ciphers[0].Open(payload)
 	require.NoError(t, err)
@@ -184,7 +205,8 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	clear(plain)
 	code := regexp.MustCompile(`<strong>([0-9]{8})</strong>`).FindStringSubmatch(binding.Body)
 	require.Len(t, code, 2)
-	require.NoError(t, service.RequestEmailChange(ctx, changeID, changeHash, newEmail, f.password, ip))
+	status, _ = web("/api/v1/auth/email/change", origin, changeToken, `{"email":"`+newEmail+`","password":"`+f.password+`"}`)
+	require.Equal(t, 202, status)
 	require.NoError(t, f.db.QueryRow(ctx, `SELECT o.payload FROM auth.email_change_outbox o JOIN auth.email_changes c ON c.id=o.change_id WHERE c.user_id=$1 AND kind='confirm'`, changeID).Scan(&payload))
 	confirmToken := accountMessageToken(t, f.ciphers[0], payload)
 	require.NoError(t, f.db.QueryRow(ctx, `SELECT o.payload FROM auth.email_change_outbox o JOIN auth.email_changes c ON c.id=o.change_id WHERE c.user_id=$1 AND kind='notice'`, changeID).Scan(&payload))
@@ -193,19 +215,38 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	require.NoError(t, service.ActivateInvitation(ctx, inviteToken, f.password, f.password, ip))
 	require.Error(t, service.ActivateInvitation(ctx, inviteToken, f.password, f.password, ip))
 	proof := mfaservice.Proof{UserID: bindID, TokenHash: bindingHash, AuthVersion: 1}
-	require.NoError(t, service.ConfirmEmailBinding(ctx, proof, code[1], ip))
+	status, cookies := web("/api/v1/auth/email/binding/confirm", origin, bindingToken, `{"code":"`+code[1]+`"}`)
+	require.Equal(t, 200, status)
+	require.NotEmpty(t, cookies)
+	for _, cookie := range cookies {
+		require.Empty(t, cookie.Value, "binding revokes sessions instead of issuing one")
+	}
 	require.Error(t, service.ConfirmEmailBinding(ctx, proof, code[1], ip))
-	require.NoError(t, service.ConfirmEmailChange(ctx, confirmToken, ip))
-	require.NoError(t, service.ReportEmailChange(ctx, reportToken, ip))
+	status, cookies = web("/api/v1/auth/email/change/confirm", origin, "", `{"token":"`+confirmToken+`"}`)
+	require.Equal(t, 200, status)
+	require.NotEmpty(t, cookies)
+	status, _ = web("/api/v1/auth/email/change/confirm", origin, "", `{"token":"`+confirmToken+`"}`)
+	require.Equal(t, 400, status)
+	stopDelivery()
+	_, err = f.db.Exec(ctx, `DELETE FROM auth.smtp_settings; UPDATE auth.auth_settings SET version=version+1`)
+	require.NoError(t, err)
+	status, _ = web("/api/v1/auth/email/change/report", origin, "", `{"token":"`+reportToken+`"}`)
+	require.Equal(t, 404, status, "stale profile is rejected before token consumption")
+	status, _ = web("/api/v1/auth/email/change/report", origin, "", `{"token":"`+reportToken+`"}`)
+	require.Equal(t, 200, status, "protective reporting survives worker and SMTP unavailability")
 	require.NoError(t, f.db.QueryRow(ctx, `SELECT o.payload FROM auth.email_change_outbox o JOIN auth.email_changes c ON c.id=o.change_id WHERE c.user_id=$1 AND kind='recovery'`, changeID).Scan(&payload))
 	recoveryToken := accountMessageToken(t, f.ciphers[0], payload)
 	const recoveredPassword = "Synthetic-account-recovered-password-83!"
-	require.NoError(t, service.RecoverEmailChange(ctx, recoveryToken, recoveredPassword, recoveredPassword, ip))
+	status, cookies = web("/api/v1/auth/email/change/recover", origin, "", `{"token":"`+recoveryToken+`","newPassword":"`+recoveredPassword+`","confirmPassword":"`+recoveredPassword+`"}`)
+	require.Equal(t, 200, status)
+	for _, cookie := range cookies {
+		require.Empty(t, cookie.Value, "protected recovery must not issue a session")
+	}
 	require.Error(t, service.RecoverEmailChange(ctx, recoveryToken, recoveredPassword, recoveredPassword, ip))
-	var restored, restoredHash, status string
-	require.NoError(t, f.db.QueryRow(ctx, `SELECT e.email,p.password_hash,u.status FROM auth.password_credentials p JOIN auth.user_emails e ON e.id=p.email_id JOIN auth.users u ON u.id=p.user_id WHERE p.user_id=$1`, changeID).Scan(&restored, &restoredHash, &status))
+	var restored, restoredHash, accountStatus string
+	require.NoError(t, f.db.QueryRow(ctx, `SELECT e.email,p.password_hash,u.status FROM auth.password_credentials p JOIN auth.user_emails e ON e.id=p.email_id JOIN auth.users u ON u.id=p.user_id WHERE p.user_id=$1`, changeID).Scan(&restored, &restoredHash, &accountStatus))
 	require.Equal(t, oldEmail, restored)
-	require.Equal(t, "active", status)
+	require.Equal(t, "active", accountStatus)
 	require.NoError(t, f.hash.Compare(ctx, recoveredPassword, restoredHash))
 	temporaryCfg := projectPasswordFixtureConfig()
 	temporaryCfg.TemporaryPassword = passwordservice.TemporaryPasswordConfig{Enabled: true, TTL: time.Hour, SetupTTL: 5 * time.Minute, ReissueCooldown: time.Second, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}

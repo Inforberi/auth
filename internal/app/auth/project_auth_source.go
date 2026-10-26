@@ -83,6 +83,11 @@ func (d *ProjectAuthDeployment) Profile(ctx context.Context, key projectruntime.
 	profile := ProjectProfileConfig{BrowserEnabled: entry.methods.Browser, Timeout: base.Timeout}
 	if entry.methods.Browser {
 		profile.Password, profile.Verification, profile.Recovery = base.Password, base.Verification, base.Recovery
+		if base.EmailManagement != nil && (entry.methods.EmailBinding || entry.methods.EmailChange) {
+			email := *base.EmailManagement
+			email.Binding.Enabled, email.Change.Enabled = entry.methods.EmailBinding, entry.methods.EmailChange
+			profile.EmailManagement = &email
+		}
 	}
 	if entry.methods.Browser && (entry.methods.EmailOTP || entry.methods.Reauthentication) {
 		otp := d.otp

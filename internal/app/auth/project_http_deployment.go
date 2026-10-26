@@ -79,10 +79,16 @@ func projectBrowserDeployment(cfg *config.Config) ProjectProfileSource {
 	session, mfa, capacity := cfg.Session, cfg.MFA, cfg.Capacity
 	mfa.RecoveryEnabled = false
 	verification, recovery := cfg.Account, cfg.Password
+	binding, change := cfg.EmailBinding, cfg.EmailChange
 	verification.EncryptionKey = ""
 	withMail, timeout := cfg.Platform.Delivery.Enabled, cfg.Platform.HTTP.BuildTimeout
 	return func(_ context.Context, _ projectruntime.Key, origin string) (ProjectProfileConfig, error) {
 		profile := ProjectProfileConfig{BrowserEnabled: true, Timeout: timeout, Password: &ProjectPasswordConfig{Session: session, MFA: mfa, Capacity: capacity, Timeout: timeout}}
+		projectChange := change
+		projectChange.ConfirmURL, projectChange.ReportURL, projectChange.RecoveryURL = origin+"/change-email", origin+"/protect-account", origin+"/recover-account"
+		projectRecovery := recovery
+		projectRecovery.ResetURL = origin + "/reset-password"
+		profile.EmailManagement = &ProjectEmailConfig{Origin: origin, Binding: binding, Change: projectChange, Verification: verification, Password: projectRecovery, FreshAuthTTL: session.FreshAuthTTL}
 		if withMail {
 			verify, reset := verification, recovery
 			verify.URL, reset.ResetURL = origin+"/verify-email", origin+"/reset-password"

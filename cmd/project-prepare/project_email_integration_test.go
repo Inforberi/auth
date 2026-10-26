@@ -181,7 +181,7 @@ func projectEmailDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key
 	require.True(t, verified)
 	require.NoError(t, hash.Compare(ctx, replacement, actualHash))
 	t.Run("remaining project account scenarios", func(t *testing.T) {
-		(projectAccountFixture{sourceUser: user, password: replacement, db: db, rdb: rdb, key: key, deps: deps, hash: hash, cfg: cfg, ciphers: ciphers}).run(t, ctx)
+		(projectAccountFixture{admin: admin, sourceUser: user, password: replacement, db: db, rdb: rdb, key: key, deps: deps, hash: hash, cfg: cfg, ciphers: ciphers}).run(t, ctx)
 	})
 	t.Run("project email OTP scenarios", func(t *testing.T) {
 		projectEmailOTPDrill(t, ctx, db, rdb, key, deps, user)

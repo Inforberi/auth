@@ -6,6 +6,8 @@
       "browser": true,
       "emailOTP": true,
       "reauthentication": true,
+      "emailBinding": true,
+      "emailChange": true,
       "google": true,
       "telegram": true,
       "jwt": {

@@ -60,6 +60,7 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 		handlers["/api/v1/auth/mfa/login/complete"] = h.CompleteLogin
 		handlers["/api/v1/auth/mfa/login/enrollment"], handlers["/api/v1/auth/mfa/login/enrollment/confirm"] = h.StartLoginEnrollment, h.ConfirmLoginEnrollment
 	}
+	p.emailManagementHandlers(handlers, log)
 	return handlers
 }
 

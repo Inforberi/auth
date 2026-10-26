@@ -24,6 +24,10 @@ type ProjectEmail struct {
 }
 
 func NewProjectEmail(ctx context.Context, key projectruntime.Key, cfg ProjectEmailConfig, allowed []string, deps ProjectEmailDependencies) (*ProjectEmail, error) {
+	return newProjectEmail(ctx, key, cfg, allowed, deps, true)
+}
+
+func newProjectEmail(ctx context.Context, key projectruntime.Key, cfg ProjectEmailConfig, allowed []string, deps ProjectEmailDependencies, requireSMTP bool) (*ProjectEmail, error) {
 	if deps.Registry == nil || deps.Reader == nil || deps.Redis == nil || deps.Hash == nil && (cfg.RecoveryEnabled || cfg.Invitations.Enabled || cfg.Change.Enabled) {
 		return nil, errors.New("incomplete project email dependencies")
 	}
@@ -40,8 +44,10 @@ func NewProjectEmail(ctx context.Context, key projectruntime.Key, cfg ProjectEma
 	if err != nil {
 		return nil, err
 	}
-	if _, err := runtime.smtp.credentials(ctx); err != nil {
-		return nil, err
+	if requireSMTP {
+		if _, err := runtime.smtp.credentials(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return &ProjectEmail{runtime: runtime, cfg: cfg, hash: deps.Hash}, nil
 }

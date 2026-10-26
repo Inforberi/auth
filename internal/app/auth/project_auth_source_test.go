@@ -68,6 +68,7 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 		{ID: alpha, Browser: true, EmailOTP: true, Reauthentication: true, Google: true, Telegram: true, JWT: &projectJWTDeployment{Native: true, Password: true, Permissions: []accesssettings.Permission{{Key: "reports.read", Name: "Read reports"}}, Resources: []tokenservice.Resource{{Audience: "reports", Permissions: []accessdomain.PermissionKey{"reports.read"}}}, Clients: []tokenservice.IntrospectionClientConfig{{ID: "consumer", SecretHashes: []string{strings.Repeat("a", 64)}, Audiences: []string{"reports"}}}}},
 		{ID: beta, Browser: false},
 	}}
+	manifest.Projects[0].EmailBinding, manifest.Projects[0].EmailChange = true, true
 	data, err := json.Marshal(manifest)
 	require.NoError(t, err)
 	cfg.Platform.HTTP.ManifestFile = writeProjectManifest(t, data)
@@ -82,6 +83,12 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 	require.Equal(t, "https://alpha.example.test/api/v1/auth/telegram/callback", a.Telegram.RedirectURI)
 	require.Equal(t, "https://alpha.example.test", a.Tokens.Issuer)
 	require.Empty(t, a.Verification.EncryptionKey)
+	require.True(t, a.EmailManagement.Binding.Enabled && a.EmailManagement.Change.Enabled)
+	require.Equal(t, "https://alpha.example.test/change-email", a.EmailManagement.Change.ConfirmURL)
+	require.Equal(t, "https://alpha.example.test/protect-account", a.EmailManagement.Change.ReportURL)
+	require.Equal(t, "https://alpha.example.test/recover-account", a.EmailManagement.Change.RecoveryURL)
+	require.Empty(t, a.EmailManagement.Verification.EncryptionKey)
+	a.EmailManagement.Change.ConfirmURL = "https://foreign.example.test/change-email"
 	require.True(t, a.Tokens.Native.PasswordEnabled)
 	a.Tokens.Tokens.Resources[0].Permissions[0] = "foreign.read"
 	a.Tokens.Introspection.Clients[0].SecretHashes[0] = "invalid"
@@ -90,6 +97,7 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, "reports.read", a.Tokens.Tokens.Resources[0].Permissions[0])
 	require.Equal(t, strings.Repeat("a", 64), a.Tokens.Introspection.Clients[0].SecretHashes[0])
+	require.Equal(t, "https://alpha.example.test/change-email", a.EmailManagement.Change.ConfirmURL)
 	for _, id := range []projectdomain.ID{beta, "c2000000-0000-4000-8000-000000000005"} {
 		b, err := d.Profile(ctx, projectDeploymentKey(id), "https://other.example.test")
 		require.NoError(t, err)
@@ -97,6 +105,7 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 		require.Nil(t, b.Google)
 		require.Nil(t, b.Tokens)
 		require.Nil(t, b.Recovery)
+		require.Nil(t, b.EmailManagement)
 	}
 	foreign := projectDeploymentKey(alpha)
 	foreign.Binding.RealmID = "c2000000-0000-4000-8000-000000000006"
@@ -114,6 +123,8 @@ func TestProjectManifestRejectsAmbiguityAndUnknownSecrets(t *testing.T) {
 	for _, input := range []string{
 		`{"version":1,"projects":null}`, `{"version":1,"Version":1,"projects":[]}`, `{"version":1,"projects":[]} {}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","google":true}]}`,
+		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","emailChange":true}]}`,
+		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","browser":true,"emailBinding":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","issuer":"https://foreign.test"}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","jwt":{"privateKey":"secret"}}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002"},{"id":"c2000000-0000-4000-8000-000000000002"}]}`,

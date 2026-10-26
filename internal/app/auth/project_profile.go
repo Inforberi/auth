@@ -22,6 +22,7 @@ type ProjectProfileConfig struct {
 	Google, Telegram *ProjectOIDCConfig
 	Verification     *accountservice.Config
 	Recovery         *passwordservice.Config
+	EmailManagement  *ProjectEmailConfig
 	Tokens           *ProjectTokenConfig
 	Timeout          time.Duration
 }
@@ -43,6 +44,9 @@ type ProjectProfile struct {
 	emailOTP               *ProjectEmailOTP
 	google, telegram       *ProjectOIDC
 	verification, recovery *ProjectEmail
+	binding, change        *ProjectEmail
+	bindingConfirmation    *ProjectEmail
+	changeProtection       *ProjectEmail
 	tokens                 *ProjectTokens
 	mfa                    *projectMFA
 }
@@ -78,6 +82,7 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	p.buildProfileMethods(ctx, cfg, redisReady)
 	p.buildProfileTokens(ctx, cfg, redisReady)
 	p.bindProfileMFA(configuration.EncryptionKey())
+	p.buildProfileEmailManagement(ctx, cfg, redisReady)
 	p.finishProfileRegistration(cfg)
 	if err := p.checkSnapshotCurrent(ctx, observed); err != nil {
 		return nil, err
@@ -131,6 +136,9 @@ func profileRedisReady(ctx context.Context, client *redis.Client) bool {
 }
 
 func profileNeedsRedis(cfg ProjectProfileConfig, policy settingsdomain.Policy) bool {
+	if cfg.BrowserEnabled && cfg.EmailManagement != nil && (cfg.EmailManagement.Binding.Enabled || cfg.EmailManagement.Change.Enabled) {
+		return true
+	}
 	methods := policy.Methods
 	if cfg.BrowserEnabled && (methods.Password || methods.EmailOTP || methods.Google || methods.Telegram) {
 		return true

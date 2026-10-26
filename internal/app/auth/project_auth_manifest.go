@@ -23,6 +23,8 @@ type projectMethodDeployment struct {
 	Browser          bool                  `json:"browser"`
 	EmailOTP         bool                  `json:"emailOTP"`
 	Reauthentication bool                  `json:"reauthentication"`
+	EmailBinding     bool                  `json:"emailBinding"`
+	EmailChange      bool                  `json:"emailChange"`
 	Google           bool                  `json:"google"`
 	Telegram         bool                  `json:"telegram"`
 	JWT              *projectJWTDeployment `json:"jwt,omitempty"`
@@ -79,7 +81,10 @@ func validateProjectAuthManifest(manifest projectAuthManifest) error {
 }
 
 func validProjectMethodDeployment(entry projectMethodDeployment) bool {
-	if !entry.Browser && (entry.Reauthentication || entry.Google || entry.Telegram) {
+	if !entry.Browser && (entry.Reauthentication || entry.Google || entry.Telegram || entry.EmailBinding || entry.EmailChange) {
+		return false
+	}
+	if entry.EmailBinding && !entry.Reauthentication {
 		return false
 	}
 	native := entry.JWT != nil && entry.JWT.Native
