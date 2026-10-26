@@ -28,6 +28,8 @@ func (p *ProjectProfile) RoutePlan() []ProjectRoute {
 	for _, name := range []string{"google", "telegram"} {
 		add(name, "browser", "POST", "/api/v1/auth/"+name+"/start")
 		add(name, "callback", "GET", "/api/v1/auth/"+name+"/callback")
+		add(name, "session_no_refresh", "POST", "/api/v1/auth/"+name+"/link")
+		add(name, "session_no_refresh", "DELETE", "/api/v1/auth/"+name+"/link")
 	}
 	add("mfa", "browser", "POST", "/api/v1/auth/mfa/login/complete", "/api/v1/auth/mfa/login/enrollment", "/api/v1/auth/mfa/login/enrollment/confirm")
 	add("tokens", "public_keys", "GET", "/.well-known/jwks.json")

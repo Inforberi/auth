@@ -180,6 +180,41 @@ func checkIdentityManagement(t *testing.T, db *pgxpool.Pool, ctx context.Context
 			t.Fatal("unlink not serialized", successes.Load())
 		}
 	})
+	t.Run("disabled-password-is-not-a-fallback", func(t *testing.T) {
+		f, management := identityManagementFixture(t, db, ctx, "disabled-password")
+		key := accountdomain.IdentityKey{Issuer: telegramdomain.Issuer, Subject: "disabled-password"}
+		if err := management.Link(ctx, f.user, f.params.TokenHash, key); err != nil {
+			t.Fatal(err)
+		}
+		var enabled bool
+		if err := db.QueryRow(ctx, `SELECT password_enabled FROM auth.auth_settings WHERE singleton`).Scan(&enabled); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
+			defer cancel()
+			if _, err := db.Exec(cleanup, `UPDATE auth.auth_settings SET password_enabled=$1,version=version+1 WHERE singleton`, enabled); err != nil {
+				t.Error(err)
+			}
+		})
+		if _, err := db.Exec(ctx, `UPDATE auth.auth_settings SET password_enabled=false,version=version+1 WHERE singleton`); err != nil {
+			t.Fatal(err)
+		}
+		if err := management.Unlink(ctx, f.user, f.params.TokenHash, key.Issuer); !errors.Is(err, accountdomain.ErrLastLoginMethod) {
+			t.Fatal("disabled password allowed unlink", err)
+		}
+		var linked bool
+		var version int64
+		if err := db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.linked_identities WHERE user_id=$1 AND issuer=$2),auth_version FROM auth.users WHERE id=$1`, f.user, key.Issuer).Scan(&linked, &version); err != nil {
+			t.Fatal(err)
+		}
+		if !linked || version != 1 {
+			t.Fatal("rejected unlink mutated identity or version", linked, version)
+		}
+		if _, err := f.sessions.FindSession(ctx, f.params.TokenHash); err != nil {
+			t.Fatal("rejected unlink revoked session", err)
+		}
+	})
 	t.Run("audit-rollback", func(t *testing.T) {
 		f, management := identityManagementFixture(t, db, ctx, "rollback")
 		key := accountdomain.IdentityKey{Issuer: telegramdomain.Issuer, Subject: "audit-rollback"}

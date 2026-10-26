@@ -15,13 +15,14 @@ import (
 	oidcdomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 	oidcredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/repository/redis"
 	oidcservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
-func projectOIDCDrill(t *testing.T, ctx context.Context, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, deps appauth.ProjectSMTPDependencies) {
+func projectOIDCDrill(t *testing.T, ctx context.Context, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, deps appauth.ProjectSMTPDependencies, sourceUser string, hash *hasher.Bounded) {
 	t.Helper()
 	configuration, err := deps.Reader.LoadAuthConfiguration(ctx, key, deps.Registry)
 	require.NoError(t, err)
@@ -147,6 +148,9 @@ func projectOIDCDrill(t *testing.T, ctx context.Context, db *pgx.Conn, rdb *redi
 		require.ErrorIs(t, err, settingsdomain.ErrMethodDisabled)
 		require.Nil(t, started)
 	}
+	t.Run("project identity HTTP", func(t *testing.T) {
+		(projectIdentityHTTPFixture{admin: admin, db: db, rdb: rdb, key: key, deps: deps, clients: owners, ciphers: ciphers, prefixes: prefixes, keys: &keys, sourceUser: sourceUser, hash: hash}).run(t, ctx)
+	})
 	var after int
 	require.NoError(t, db.QueryRow(ctx, `SELECT count(*) FROM auth.sessions`).Scan(&after))
 	require.Equal(t, before, after)

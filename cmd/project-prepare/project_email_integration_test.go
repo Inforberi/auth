@@ -187,7 +187,7 @@ func projectEmailDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key
 		projectEmailOTPDrill(t, ctx, db, rdb, key, deps, user)
 	})
 	t.Run("project external login isolation", func(t *testing.T) {
-		projectOIDCDrill(t, ctx, db, rdb, key, deps)
+		projectOIDCDrill(t, ctx, admin, db, rdb, key, deps, user, hash)
 	})
 	t.Run("project JWT exchange and native", func(t *testing.T) {
 		(projectTokenFixture{db: db, rdb: rdb, key: key, deps: deps, hash: hash, listener: listener, sourceUser: user, password: replacement}).run(t, ctx)

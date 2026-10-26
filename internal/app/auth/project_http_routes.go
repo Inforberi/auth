@@ -36,7 +36,10 @@ func (p *ProjectProfile) httpRoutes(fallback *sessionservice.Config, log *zap.Lo
 	plan := p.RoutePlan()
 	routes := make([]router.ProjectRoute, 0, len(plan))
 	for _, route := range plan {
-		handler := handlers[route.Path]
+		handler := handlers[route.Method+" "+route.Path]
+		if handler == nil {
+			handler = handlers[route.Path]
+		}
 		if handler == nil {
 			return nil, errors.New("missing project HTTP scenario")
 		}

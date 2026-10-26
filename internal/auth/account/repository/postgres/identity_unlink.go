@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 )
 
 func (r *Repository) UnlinkIdentity(ctx context.Context, user domain.UserID, token, issuer string, freshFor time.Duration) error {
@@ -26,8 +27,12 @@ func (r *Repository) UnlinkIdentity(ctx context.Context, user domain.UserID, tok
 		if err != nil {
 			return err
 		}
-		// Current linking/step-up requires a verified permanent password; another identity row is not proof of a usable method.
-		if !password {
+		policy, err := settingspostgres.LockPublicPolicy(ctx, tx)
+		if err != nil {
+			return err
+		}
+		// Keep the fallback enabled through commit; merely retaining its credential is not enough.
+		if !password || !policy.Methods.Password {
 			return domain.ErrLastLoginMethod
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.linked_identities WHERE user_id=$1 AND issuer=$2`, user, issuer); err != nil {

@@ -50,10 +50,12 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 	if p.google != nil {
 		h := googlehttp.New(p.google, log)
 		handlers["/api/v1/auth/google/start"], handlers["/api/v1/auth/google/callback"] = h.Start, h.Callback
+		handlers["POST /api/v1/auth/google/link"], handlers["DELETE /api/v1/auth/google/link"] = h.StartLink, p.requirePasswordFallback(h.Unlink)
 	}
 	if p.telegram != nil {
 		h := telegramhttp.New(p.telegram, log)
 		handlers["/api/v1/auth/telegram/start"], handlers["/api/v1/auth/telegram/callback"] = h.Start, h.Callback
+		handlers["POST /api/v1/auth/telegram/link"], handlers["DELETE /api/v1/auth/telegram/link"] = h.StartLink, p.requirePasswordFallback(h.Unlink)
 	}
 	if p.mfa != nil {
 		h := mfahttp.New(nil, projectBrowserMFAHTTP{p.mfa}, log)
@@ -68,6 +70,16 @@ func (p *ProjectProfile) requireHTTPDelivery(next http.HandlerFunc) http.Handler
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !p.deliveryReady() {
 			httpx.Error(w, 503, "temporarily_unavailable", "temporarily unavailable")
+			return
+		}
+		next(w, r)
+	}
+}
+
+func (p *ProjectProfile) requirePasswordFallback(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !p.featureReady("password") {
+			httpx.Error(w, 409, "last_login_method", "cannot remove last login method")
 			return
 		}
 		next(w, r)

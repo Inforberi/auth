@@ -22,6 +22,8 @@ A3.2 подключает resolver к optional Telegram login с trusted OIDC ve
 
 ## Проверки
 
+В MP5.1i усилен общий SQL unlink: verified permanent password должен также оставаться включённым в актуальной Auth policy. Policy row удерживается FOR SHARE до commit; выключенный пароль даёт `last_login_method` без удаления identity/отзыва session. Проектный HTTP дополнительно требует готовый password profile. [Проектные link/unlink routes и текущие ограничения](project-identity-management.md); локальные проверки нового блока Luna V1/V2 PASS.
+
 Unit tests: bounds 512/255 байт, пустые/некорректные ключи, сохранение opaque key, policy/deadline, inactive account и dependency failure. Disposable SQL: 16 concurrent resolutions дают один UUID без orphan users, disabled registration допускает только existing identity, issuer/subject case isolation, отсутствие email/password, rollback по SQL constraint, block/unblock/current version и deletion без повторного создания.
 
 Для A3.3 локально проверены fresh/session/status/version guards, owner conflict, ограничение одного provider, последний парольный метод, concurrent link/unlink и rollback audit. Внешний provider/browser acceptance отложен перед UI; provider/MFA step-up для external-only accounts, роли и UI остаются следующими задачами.

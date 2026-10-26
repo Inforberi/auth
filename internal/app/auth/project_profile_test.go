@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -10,6 +12,25 @@ import (
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
+func TestProfileUnlinkRequiresReadyPasswordFallback(t *testing.T) {
+	profile := &ProjectProfile{states: map[string]ProjectFeatureState{}}
+	called := 0
+	handler := profile.requirePasswordFallback(func(w http.ResponseWriter, _ *http.Request) {
+		called++
+		w.WriteHeader(http.StatusNoContent)
+	})
+	profile.state("password", "verification_unavailable")
+	w := httptest.NewRecorder()
+	handler(w, httptest.NewRequest("DELETE", "/api/v1/auth/google/link", nil))
+	require.Equal(t, 409, w.Code)
+	require.Zero(t, called)
+	profile.state("password", "")
+	w = httptest.NewRecorder()
+	handler(w, httptest.NewRequest("DELETE", "/api/v1/auth/google/link", nil))
+	require.Equal(t, 204, w.Code)
+	require.Equal(t, 1, called)
+}
+
 func TestProfileRoutesExcludeUnavailableAndDefendReturnedSnapshots(t *testing.T) {
 	profile := &ProjectProfile{states: map[string]ProjectFeatureState{}}
 	profile.state("password", "missing_configuration")
@@ -18,9 +39,15 @@ func TestProfileRoutesExcludeUnavailableAndDefendReturnedSnapshots(t *testing.T)
 	report := profile.Readiness()
 	require.False(t, report.Ready)
 	routes := profile.RoutePlan()
-	require.Len(t, routes, 2)
+	require.Len(t, routes, 4)
 	require.Equal(t, ProjectRoute{Feature: "google", Method: "POST", Path: "/api/v1/auth/google/start", Protection: "browser"}, routes[0])
 	require.Equal(t, "callback", routes[1].Protection)
+	require.Equal(t, "POST", routes[2].Method)
+	require.Equal(t, "DELETE", routes[3].Method)
+	require.Equal(t, "/api/v1/auth/google/link", routes[2].Path)
+	require.Equal(t, routes[2].Path, routes[3].Path)
+	require.Equal(t, "session_no_refresh", routes[2].Protection)
+	require.Equal(t, routes[2].Protection, routes[3].Protection)
 	routes[0].Path = "/untrusted"
 	report.Features[0].Ready = true
 	require.NotEqual(t, "/untrusted", profile.RoutePlan()[0].Path)

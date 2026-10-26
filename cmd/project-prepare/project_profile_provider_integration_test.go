@@ -45,14 +45,14 @@ func (f projectProfileFixture) providerProfile(t *testing.T, ctx context.Context
 	ready, err := appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.True(t, ready.Readiness().Ready)
-	require.Len(t, ready.RoutePlan(), 9)
+	require.Len(t, ready.RoutePlan(), 11)
 	// A missing password config must not remove an independently assembled Google flow.
 	_, err = f.db.Exec(ctx, `UPDATE auth.auth_settings SET version=version+1,password_enabled=true,password_email_verification='disabled'`)
 	require.NoError(t, err)
 	partial, err := appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.False(t, partial.Readiness().Ready)
-	require.Len(t, partial.RoutePlan(), 9)
+	require.Len(t, partial.RoutePlan(), 11)
 	require.True(t, profileFeature(t, partial, "google").Ready)
 	require.Equal(t, "missing_configuration", profileFeature(t, partial, "password").Reason)
 	foreign := google
