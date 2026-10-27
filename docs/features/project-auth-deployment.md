@@ -62,3 +62,5 @@ Main formatter/diff/read-only review. Luna task check, affected race/security, a
 Для административного создания пользователей добавлены независимые `invitations` и `temporaryPassword` (default false, требуют browser). Существующие operational budgets копируются отдельно для проекта, invitation URL — его origin + `/activate`; MFA/SQL-права проверяются отдельно. [Контракт](project-user-provisioning.md).
 
 `userLifecycle` (default false, browser only) подключает проектные status/delete endpoints с отдельными SQL permissions и свежими password/MFA proofs. [Контракт и ограничения](project-user-lifecycle.md).
+
+Опциональный `access: {"permissions": [...]}` включает проектные API ролей/разрешений (browser only); отсутствие объекта default-off, пустой объект — built-in catalog. Чтение отдельно от MFA-dependent mutations; дополнительные permissions выбираются по UUID и не наследуются из platform catalog. [Контракт](project-access-management.md).

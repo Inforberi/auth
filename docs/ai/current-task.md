@@ -2,21 +2,23 @@
 
 Обновлено 27 октября 2026. [Карта](index.md) · [план](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui). Git/staging проверять по факту.
 
-## Завершённый блок — MP5.1m project user lifecycle
+## Завершённый блок — MP5.1n project Access management
 
-[Контракт](../features/project-user-lifecycle.md). Project-local POST admin/users/{id}/status и DELETE admin/users/{id} через existing handlers/DTO/service/SQL. Default-off manifest userLifecycle/browser prerequisite и UserLifecycleEnabled в программной сборке. Ready MFA management config, sessionNoRefresh/exactOrigin; отдельные SQL UsersStatusManage/UsersDelete и freshpasswordMFA. One-lease5s/currentbinding pre/post, error не выдаёт успешнуюверсию, но не доказываетrollback SQL commit.
+[Контракт](../features/project-access-management.md). 11 project-local roles/catalog/assignment/my-access/system-admin routes на existing Access handler/service/SQL. Typed projectAccess adapters queries/mutations берут одинlease5s/currentbinding pre/post, не возвращаютрезультатнаошибке. Existing SQL authority/delegation/version/sessionrevision/systemrole/lastadmin guards не менялись. Read/write readiness отдельно: read без MFA config, mutation только readyMFAmanagement. NoRefresh/exactOrigin. No new schema/deps/ENV/workers/cache.
 
-Version/conflict/revoke/no-revival/pending/tombstone/audit/last-usable-system-super-admin guards не менялись. No new schema/deps/ENV/workers/cache. Actual HTTP account fixture дополнен отдельным lifecycle case с own active/pending/superadmin users/role/session, revoke/version/retry/audit/last-admin code assertions. Request helper принимает HTTP method; прежние issuance assertions сохранены. Main formatter/source review. Luna task check/task check:api/affected race PASS; полный Linux ARM64 TestPrepareCommandSQL PASS, project_user_lifecycle_HTTP и прежние directory/MFA/identity cases без skip. TLS/Redis/wrong-password preflights PASS. Manifest12+JSON совпали после прогона и с main; свои стенды очищены.
+Manifest optional access:{permissions:[]} requiresbrowser; отсутствие default-off, пустойobject=builtins. Source perUUID compiles immutable settings.Catalog, platformcatalog не наследуется. Programmatic ProjectProfileConfig.Access=*settings.Catalog. Cold CheckCatalog с3s deadline, тольконаbuild; неизвестныеstoredpermissions закрываютAccesscapability. JWTкаталог прежний отдельно, deployment definitions согласовываются вручную, runtime-reload не добавлен.
 
-Snapshot `/private/tmp/auth-project-user-lifecycle-v1.8e5y3oh9`, manifest/metadata sameprefix, logs `/private/tmp/auth-project-user-lifecycle-v1-*.log`. Пользователь разрешил коммит после PASS; факт проверять Git.
+Main formatter/source review. Source/catalog/prerequisite/route tests и actual HTTPS project_access_HTTP покрывают custom role create/read/update/grant/revoke, актуальные permissions, конфликты версий, delegation/self-grant/system-flow denial и session invalidation. Luna V1 Go tests/API/race/full Linux ARM64 TestPrepareCommandSQL (новый project_access_HTTP без skip) и standalone TestAdministratorAssignmentsSchema PASS. После lint замечания выделен browserProfile в source file без изменения семантики. V2 app tests и targeted lint0 PASS; прежние SQL/API/race PASS сохраняются.
+
+Snapshot `/private/tmp/auth-project-access-v2.ymzb1tm1`, manifest14/metadata sameprefix, JSON example artifact. Hashes совпали до/после прогонов и с main. Task-owned стенды очищены, evidence в history, logs `/private/tmp/auth-project-access-v1-*.log` и `v2-*.log`. Пользователь разрешил коммит после PASS; факт проверять Git.
 
 ## Следующий шаг
 
-Project-local roles/settings consumers и MFA policy settings. FullMP5 two-project matrix/phase-ready, operations/MP6R/MP7/MP8 отдельно. UI только после предупреждения и отдельного согласования; GC/RPS/external matrix не считать закрытыми.
+Project-local settings consumers и MFA policy settings. FullMP5 two-project matrix/phase-ready, operations/MP6R/MP7/MP8 отдельно. UI только после предупреждения и отдельного согласования. GC/RPS/external matrix не считать закрытыми.
 
 ## Процесс и ограничения
 
-- Researcher01a1797b-d48d-7d71-9e48-2d92dc22d9f2 gpt-6-luna medium read-only/reuse. Исполняемые проверки только отдельный чат Luna01a16eab-c777-78a0-a815-47b45ff0860d hostlocal/exactsnapshot; default6377/auth stale. Main не дублирует/не ждёт полный прогон. [Процесс](development-workflow.md).
-- SQL command: own LinuxARM64 postgres18.6 readonly/src; admin sockettrust, TCP127 SCRAMwrongpassworddeny/TLS SAN127, Redis8.2 sharednetworkDB15. SCRAM_HOST/TLS_CA/ROOT/src/Redis127 mandatory. Cleanup только ownfixtures.
-- Предыдущий MP5.1l issuance V1–V3 PASS, commit8029e7c. Последний Luna cursor19bf04ec-f4f6-4693-9c20-73f414b172e4:13. Security ранее0reachable/1requiredmodule advisory внеcallgraph, уточнитьMP6R без несогласованного обновленияdeps.
-- Real ENV/secrets/БД/staging сохранять. Commit только по запросу. Full MP5/MP7/MP8/UI gates открыты.
+- Researcher01a1797b-d48d-7d71-9e48-2d92dc22d9f2 gpt-6-luna medium read-only/reuse. Исполняемыепроверки толькоотдельныйчат Luna01a16eab-c777-78a0-a815-47b45ff0860d hostlocal/exactsnapshot; default6377/authstale. Mainне дублирует/не ждётполныйпрогон. [Процесс](development-workflow.md).
+- SQL: ownLinuxARM64 postgres18.6 readonly/src, adminsockettrust/TCP127SCRAMwrongpwdeny/TLSSAN127, Redis8.2 sharednetworkDB15. SCRAM_HOST/TLS_CA/ROOT/src/Redis127 mandatory. Standalone schema onlyownDB/roleauth_schema_test, AUTH_SCHEMA_TEST_DATABASE_URL strict127/auth_schema_test. Cleanuponlyownfixtures.
+- PreviousMP5.1m lifecyclePASS, commit145f490. Последний Luna cursor19bf04ec-f4f6-4693-9c20-73f414b172e4:15. Securityранее0reachable/1requiredmoduleadvisory внеcallgraph, MP6Rотдельно безнесогласованногообновленияdeps.
+- RealENV/secrets/БД/stagingсохранять. Commitтолькопозапросу. FullMP5/MP7/MP8/UIgatesоткрыты.

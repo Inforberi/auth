@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
@@ -19,6 +20,7 @@ type ProjectProfileConfig struct {
 	BrowserEnabled       bool
 	UserDirectoryEnabled bool
 	UserLifecycleEnabled bool
+	Access               *accesssettings.Catalog
 	Password             *ProjectPasswordConfig
 	EmailOTP             *ProjectEmailOTPConfig
 	Google, Telegram     *ProjectOIDCConfig
@@ -55,6 +57,7 @@ type ProjectProfile struct {
 	mfaManagement            *projectMFA
 	userDirectory            *projectUserDirectory
 	userLifecycle            *projectUserLifecycle
+	access                   *projectAccess
 }
 
 func BuildProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies) (*ProjectProfile, error) {
@@ -94,6 +97,7 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	p.buildProfileProvisioning(ctx, cfg, redisReady)
 	p.buildProfileUserDirectory(cfg)
 	p.buildProfileUserLifecycle(cfg)
+	p.buildProfileAccess(ctx, cfg)
 	if err := p.checkSnapshotCurrent(ctx, observed); err != nil {
 		return nil, err
 	}

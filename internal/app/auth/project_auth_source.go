@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 
+	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
@@ -12,6 +13,7 @@ import (
 type compiledProjectDeployment struct {
 	methods projectMethodDeployment
 	tokens  *ProjectTokenConfig
+	access  *accesssettings.Catalog
 }
 
 type ProjectAuthDeployment struct {
@@ -43,6 +45,10 @@ func LoadProjectAuthDeployment(cfg *config.Config) (*ProjectAuthDeployment, erro
 	consumerHashes := make(map[string]projectdomain.ID)
 	for _, entry := range manifest.Projects {
 		compiled := compiledProjectDeployment{methods: entry}
+		compiled.access, err = compileProjectAccess(entry.Access)
+		if err != nil {
+			return nil, err
+		}
 		if entry.JWT != nil {
 			compiled.tokens, err = compileProjectJWT(cfg, entry)
 			if err != nil {
@@ -58,7 +64,7 @@ func LoadProjectAuthDeployment(cfg *config.Config) (*ProjectAuthDeployment, erro
 			}
 			d.jwt = true
 		}
-		compiled.methods.JWT = nil
+		compiled.methods.JWT, compiled.methods.Access = nil, nil
 		d.entries[entry.ID] = compiled
 		d.oidc = d.oidc || entry.Google || entry.Telegram
 	}
@@ -80,22 +86,10 @@ func (d *ProjectAuthDeployment) Profile(ctx context.Context, key projectruntime.
 	if !ok {
 		return ProjectProfileConfig{Timeout: base.Timeout}, nil
 	}
-	profile := ProjectProfileConfig{BrowserEnabled: entry.methods.Browser, UserDirectoryEnabled: entry.methods.UserDirectory, UserLifecycleEnabled: entry.methods.UserLifecycle, Timeout: base.Timeout}
-	if entry.methods.Browser {
-		password := *base.Password
-		password.TemporaryPassword.Enabled = entry.methods.TemporaryPassword
-		profile.Password, profile.Verification, profile.Recovery = &password, base.Verification, base.Recovery
-		if base.EmailManagement != nil && (entry.methods.EmailBinding || entry.methods.EmailChange || entry.methods.Invitations) {
-			email := *base.EmailManagement
-			email.Binding.Enabled, email.Change.Enabled = entry.methods.EmailBinding, entry.methods.EmailChange
-			email.Invitations.Enabled = entry.methods.Invitations
-			profile.EmailManagement = &email
-		}
-	}
-	if entry.methods.Browser && (entry.methods.EmailOTP || entry.methods.Reauthentication) {
-		otp := d.otp
-		otp.Enabled, otp.ReauthenticationEnabled = entry.methods.EmailOTP, entry.methods.Reauthentication
-		profile.EmailOTP = &ProjectEmailOTPConfig{OTP: otp, MFA: base.Password.MFA, Session: base.Password.Session, Timeout: base.Timeout}
+	profile := d.browserProfile(base, entry.methods)
+	if entry.access != nil {
+		catalog := *entry.access
+		profile.Access = &catalog
 	}
 	if entry.methods.Google {
 		google := d.google
@@ -116,4 +110,36 @@ func (d *ProjectAuthDeployment) Profile(ctx context.Context, key projectruntime.
 		}
 	}
 	return profile, nil
+}
+
+func (d *ProjectAuthDeployment) browserProfile(base ProjectProfileConfig, methods projectMethodDeployment) ProjectProfileConfig {
+	profile := ProjectProfileConfig{BrowserEnabled: methods.Browser, UserDirectoryEnabled: methods.UserDirectory, UserLifecycleEnabled: methods.UserLifecycle, Timeout: base.Timeout}
+	if methods.Browser {
+		password := *base.Password
+		password.TemporaryPassword.Enabled = methods.TemporaryPassword
+		profile.Password, profile.Verification, profile.Recovery = &password, base.Verification, base.Recovery
+		if base.EmailManagement != nil && (methods.EmailBinding || methods.EmailChange || methods.Invitations) {
+			email := *base.EmailManagement
+			email.Binding.Enabled, email.Change.Enabled = methods.EmailBinding, methods.EmailChange
+			email.Invitations.Enabled = methods.Invitations
+			profile.EmailManagement = &email
+		}
+	}
+	if methods.Browser && (methods.EmailOTP || methods.Reauthentication) {
+		otp := d.otp
+		otp.Enabled, otp.ReauthenticationEnabled = methods.EmailOTP, methods.Reauthentication
+		profile.EmailOTP = &ProjectEmailOTPConfig{OTP: otp, MFA: base.Password.MFA, Session: base.Password.Session, Timeout: base.Timeout}
+	}
+	return profile
+}
+
+func compileProjectAccess(deployment *projectAccessDeployment) (*accesssettings.Catalog, error) {
+	if deployment == nil {
+		return nil, nil
+	}
+	catalog, err := accesssettings.NewCatalog(deployment.Permissions)
+	if err != nil {
+		return nil, errProjectAuthManifest
+	}
+	return &catalog, nil
 }

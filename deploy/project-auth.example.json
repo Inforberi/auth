@@ -6,6 +6,7 @@
       "browser": true,
       "emailOTP": true,
       "reauthentication": true,
+      "access": {"permissions": [{"key": "reports.read", "name": "Read reports"}]},
       "userDirectory": true,
       "userLifecycle": true,
       "invitations": true,

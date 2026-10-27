@@ -70,6 +70,7 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 		lifecycle := accounthttp.NewUserLifecycle(p.userLifecycle, log)
 		handlers["POST /api/v1/admin/users/{id}/status"], handlers["DELETE /api/v1/admin/users/{id}"] = lifecycle.ChangeStatus, lifecycle.Delete
 	}
+	p.accessHandlers(handlers, log)
 	p.provisioningHandlers(handlers, log)
 	p.emailManagementHandlers(handlers, log)
 	p.mfaManagementHandlers(handlers, log)
