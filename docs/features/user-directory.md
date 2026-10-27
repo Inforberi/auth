@@ -50,3 +50,16 @@ GET /api/v1/admin/users?before=<nextCursor>&limit=50
 Локально проверяются HTTP/SQL/Swagger/race, permission/session/version guards, UUID tie-break и relation overflow. EXPLAIN реальных запросов с 100000 синтетических пользователей/контактов проверяет default/status/cursor/exact-email access paths; это не HTTP throughput/RPS или full production capacity. Внешняя backend-приёмка обязательна **перед UI**, затем повторная сквозная приёмка с UI в A8. Блокировка/разблокировка/удаление через admin API — следующий отдельный подэтап 10.6b, здесь их нет.
 
 После появления GET на /admin/users выключенная POST mutation на том же пути отвечает 405 (метод не зарегистрирован), а не прежним 404 отсутствующего пути. GET /admin/users/temporary-password сопоставляется с UUID-card route и отклоняется service как invalid_query; он не выполняет issuance. Routes с дополнительным /invitation или /temporary-password не становятся GET mutations.
+
+
+## Независимые проекты — MP5.1k
+
+Проектный HTTP dispatcher подключает эти же две ручки и JSON DTO при `userDirectory=true` в UUID deployment manifest (`browser=true` обязателен). По умолчанию capability выключена, в том числе в ограниченном deployment без manifest. В программной сборке это `ProjectProfileConfig.UserDirectoryEnabled`. Пример — [project-auth.example.json](../../deploy/project-auth.example.json).
+
+`user_directory` в readiness означает готовность подключённого backend, а не право конкретного пользователя. Существующая SQL-политика методов входа не скрывает управление уже выданной сессией: directory может работать при выключенных primary methods, без hasher, SMTP и Redis в самом reader-профиле. При получении/проверке сессии сохраняются действующие общие гарантии.
+
+`projectUserDirectory` берёт один runtime pool выбранного проекта, ограничивает всю операцию тремя секундами и проверяет актуальность binding до и после чтения. При ошибке последней проверки данные не возвращаются. Между проверками используется существующий `accountservice.UserDirectory` и repository с локальным `directoryActor`: project session/актуальный `accounts.users.read` проверяются вместе с SQL projection. Platform principal и trusted transaction readers здесь не используются.
+
+Защита маршрутов — `session_no_refresh` и browser Origin policy; новая публикация не создаёт ни сессий, ни SQL-полномочий. Новых таблиц, миграций, зависимостей, ENV, фоновых задач и кеша нет. Platform operator directory остаётся [отдельным контрактом](platform-user-directory.md).
+
+Проверки нового подключения: source/manifest isolation и default-off, route protections; actual HTTPS/SQL directory-only профиль без Redis/hasher, 401/403/404/405, query bounds, отсутствие секретов/Set-Cookie и изменений SQL session, отказ после снятия permission. Локальные проверки Luna V1/V2 PASS: task check/API/race и полный Linux ARM64 TestPrepareCommandSQL, включая новый HTTPS directory case без skip. Полная two-project matrix и UI этим блоком не закрываются.

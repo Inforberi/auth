@@ -1,25 +1,22 @@
 # Текущий шаг
 
-Обновлено 26 октября 2026. [Карта](index.md) · [план](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui). Git/staging проверять по факту.
+Обновлено 27 октября 2026. [Карта](index.md) · [план](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui). Git/staging проверять по факту.
 
-## Завершённый блок — MP5.1j project MFA management
+## Текущий блок — MP5.1k project user directory
 
-[Контракт](../features/project-mfa-management.md). Восемь owner MFA routes: status/enrollment+confirm/step-up/disable/recovery rotation/replacement+confirm. Existing handlers/services/SQL, NoRefresh/exactOrigin/currentkey, shared project cipher/limits. Factory хранит immutable managementConfig, projectMFA.use общий bounded one-lease guard; ни nested UsePool, ни partial secrets при post-guard error.
+[Контракт](../features/user-directory.md#независимые-проекты--mp51k). Реализованы project-local GET `/api/v1/admin/users` и `/{id}` через existing handlers/services/SQL. Default-off `userDirectory` в UUID manifest требует browser; программный флаг UserDirectoryEnabled. Actor из project session, `accounts.users.read` проверяется существующим directoryActor; platform principal не используется. NoRefresh/exact Origin, bounded3s one-lease current binding guards до/после чтения, данные при post-guard error не возвращаются.
 
-Management отдельно от enabled SQL primary methods, на согласованной operational MFA/session config всех configured browser methods. MFA-disabled/browser-disabled/Redis failure/config mismatch fail-closed. Email proof только при готовой выбранной reauth, SQL external-only guards прежние. Role/admin обязательность не ослаблена; новых project-wide required/optional settings нет, lost-all-factors закрыт. No new deps/ENV/schema/pools/workers/UI.
+Нет новых schema/deps/ENV/workers/cache. Directory-only profile без Redis/hasher/SMTP и независимо от enabled primary methods. Добавлены source/default-off/route tests и actual HTTPS/SQL fixture с отдельными users/role/sessions и cleanup: permission denial/removal, query bounds, no secrets/cookies/session mutation. Main выполнил formatter/source review. V1 task check/API/race PASS. В fixture исправлено ожидание после прямого удаления SQL permission:403, затем explicit session_revision bump→401, fresh session→403. Production guards не менялись. V2 targeted lint0/full Linux ARM64 TestPrepareCommandSQL PASS, project_user_directory_HTTP без skip; TLS/Redis/wrong-password denial PASS. Manifest10+JSON совпали после прогона и с main, свои стенды очищены.
 
-Main formatter/source/read-only review. V1 Luna taskcheck/API/security/race PASS; fixture дополнен необходимым POST password reauthentication после ordinary MFA login. Production guards не менялись. V2 targeted lint0/full Linux ARM64 TestPrepareCommandSQL PASS: новый project_MFA_management_HTTP и прежний project_MFA_login без skips. TLS verify-full/Redis/wrong-password denial PASS. Все13source hashes совпали после прогона и с main; свои containers/network/build files очищены.
-
-Snapshot `/private/tmp/auth-project-mfa-management-v2.5413spgz`, manifest sameprefix-manifest.sha256, metadata sameprefix-snapshot.json; evidencehistory, logs `/private/tmp/auth-project-mfa-management-v2-*.log`. Luna cursor19bf04ec-f4f6-4693-9c20-73f414b172e4:7. Пользователь разрешил коммит; факт проверять Git.
+Snapshot `/private/tmp/auth-project-user-directory-v2.otguhsmj`, manifest/metadata sameprefix, logs `/private/tmp/auth-project-user-directory-v2-*.log`, evidence в history. Пользователь разрешил коммит; факт проверять Git.
 
 ## Следующий шаг
 
-После приёмки — оставшиеся account administrative consumers и policy settings по MP5, полная two-project matrix/phase-ready. Rotation/retention/fleet/MP6R/MP7/MP8 отдельно. External provider/SMTP/DNS/TLS/email-proof matrix/GC/RPS не считать закрытыми. UI только после предупреждения и отдельного согласования.
+Project-local admin issuance/lifecycle/roles/settings consumers и MFA policy settings по MP5. Полная two-project matrix/phase-ready, rotation/retention/fleet/MP6R/MP7/MP8 отдельно. External provider/SMTP/DNS/TLS/email-proof matrix/GC/RPS не считать закрытыми. UI только после предупреждения и отдельного согласования.
 
-## Процесс
+## Процесс и ограничения
 
-- Read-only researcher01a1797b-d48d-7d71-9e48-2d92dc22d9f2, gpt-6-luna medium/reuse.
-- Все executable checks только Luna01a16eab-c777-78a0-a815-47b45ff0860d hostlocal/exactsnapshot; default6377/auth stale. Main не дублирует/не ждёт полный прогон. [Процесс](development-workflow.md).
-- SQL command: own LinuxARM64 postgres18.6 readonly/src; admin sockettrust, TCP127 SCRAMwrongpassworddeny/TLS SAN127, Redis8.2 sharednetworkDB15. SCRAM_HOST/TLS_CA/ROOT/src/Redis127 mandatory; не macHost/randomport/trustTCP. Толькоownfixturecleanup.
-- Govulncheck ранее0reachable,1required-module advisory внеimport/callgraph; уточнить приMP6R, не обновлятьdepsбезразрешения.
+- Read-only researcher01a1797b-d48d-7d71-9e48-2d92dc22d9f2, gpt-6-luna medium/reuse. Исполняемые проверки только отдельный чат Luna01a16eab-c777-78a0-a815-47b45ff0860d hostlocal/exactsnapshot; default6377/auth stale. Main не дублирует и не ждёт полный прогон. [Процесс](development-workflow.md).
+- SQL command: own LinuxARM64 postgres18.6 readonly/src; admin sockettrust, TCP127 SCRAMwrongpassworddeny/TLS SAN127, Redis8.2 sharednetworkDB15. SCRAM_HOST/TLS_CA/ROOT/src/Redis127 mandatory. Только own fixture cleanup.
+- Предыдущий MP5.1j MFA management принят Luna V1/V2 PASS, commit8b55521. Последний Luna cursor19bf04ec-f4f6-4693-9c20-73f414b172e4:9. Govulncheck ранее0reachable,1required-module advisory внеimport/callgraph; уточнить приMP6R, не обновлятьdeps без разрешения.
 - Real ENV/secrets/БД/staging сохранять. Commit только по запросу. Full MP5/MP7/MP8/UI gates открыты.

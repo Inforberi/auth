@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP5.1k-project-user-directory, 27 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/user-directory.md#независимые-проекты--mp51k): два project-local GET list/card, отдельный default-off manifest opt-in, текущая project session/SQL permission, NoRefresh и bounded one-lease guards. Existing DTO/services/projections; новых schema/deps/ENV/workers нет. Unit/source/actual HTTPS fixture добавлены. Остальные admin consumers/policy/full MP5/UI отдельно.
+
 - [x] **MP5.1j-project-mfa-management, 26 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/project-mfa-management.md): восемь project owner MFA routes на existing services/SQL, shared cipher/limits и one-lease guards. Management не пропадает при disabled primary methods; согласованная operational config и NoRefresh proofs обязательны. SQL role/admin disable policy/one-use codes/replacement/revoke не ослаблены, loss-all-factors закрыт. Новых schema/deps/ENV/workers нет; unit и actual HTTPS cycle добавлены. Отдельные policy settings/admin consumers/full MP5/UI остаются.
 
 - [x] **MP5.1i-project-identity-management, 26 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/project-identity-management.md): четыре project Google/Telegram link/unlink routes, NoRefresh/exact Origin/current scoped services. Сохранён verified permanent password/fresh-proof контракт; runtime fallback readiness и SQL policy FOR SHARE закрывают unlink при выключенном/неготовом password. Token-bound callback/issuer+subject/no merge и transactional revoke/audit прежние. Новых schema/deps/ENV/workers нет; actual HTTPS/SQL и shared repository regression добавлены. MFA management/full MP5/UI отдельно.

@@ -80,7 +80,7 @@ func (d *ProjectAuthDeployment) Profile(ctx context.Context, key projectruntime.
 	if !ok {
 		return ProjectProfileConfig{Timeout: base.Timeout}, nil
 	}
-	profile := ProjectProfileConfig{BrowserEnabled: entry.methods.Browser, Timeout: base.Timeout}
+	profile := ProjectProfileConfig{BrowserEnabled: entry.methods.Browser, UserDirectoryEnabled: entry.methods.UserDirectory, Timeout: base.Timeout}
 	if entry.methods.Browser {
 		profile.Password, profile.Verification, profile.Recovery = base.Password, base.Verification, base.Recovery
 		if base.EmailManagement != nil && (entry.methods.EmailBinding || entry.methods.EmailChange) {

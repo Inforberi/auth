@@ -52,6 +52,7 @@ func TestProjectDeploymentWithoutManifestKeepsLimitedProfile(t *testing.T) {
 	profile, err := source.Profile(t.Context(), projectDeploymentKey("c2000000-0000-4000-8000-000000000002"), "https://alpha.example.test")
 	require.NoError(t, err)
 	require.True(t, profile.BrowserEnabled)
+	require.False(t, profile.UserDirectoryEnabled)
 	require.NotNil(t, profile.Password)
 	require.Nil(t, profile.Google)
 	require.Nil(t, profile.Tokens)
@@ -68,6 +69,7 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 		{ID: alpha, Browser: true, EmailOTP: true, Reauthentication: true, Google: true, Telegram: true, JWT: &projectJWTDeployment{Native: true, Password: true, Permissions: []accesssettings.Permission{{Key: "reports.read", Name: "Read reports"}}, Resources: []tokenservice.Resource{{Audience: "reports", Permissions: []accessdomain.PermissionKey{"reports.read"}}}, Clients: []tokenservice.IntrospectionClientConfig{{ID: "consumer", SecretHashes: []string{strings.Repeat("a", 64)}, Audiences: []string{"reports"}}}}},
 		{ID: beta, Browser: false},
 	}}
+	manifest.Projects[0].UserDirectory = true
 	manifest.Projects[0].EmailBinding, manifest.Projects[0].EmailChange = true, true
 	data, err := json.Marshal(manifest)
 	require.NoError(t, err)
@@ -83,6 +85,7 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 	require.Equal(t, "https://alpha.example.test/api/v1/auth/telegram/callback", a.Telegram.RedirectURI)
 	require.Equal(t, "https://alpha.example.test", a.Tokens.Issuer)
 	require.Empty(t, a.Verification.EncryptionKey)
+	require.True(t, a.UserDirectoryEnabled)
 	require.True(t, a.EmailManagement.Binding.Enabled && a.EmailManagement.Change.Enabled)
 	require.Equal(t, "https://alpha.example.test/change-email", a.EmailManagement.Change.ConfirmURL)
 	require.Equal(t, "https://alpha.example.test/protect-account", a.EmailManagement.Change.ReportURL)
@@ -102,6 +105,7 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 		b, err := d.Profile(ctx, projectDeploymentKey(id), "https://other.example.test")
 		require.NoError(t, err)
 		require.False(t, b.BrowserEnabled)
+		require.False(t, b.UserDirectoryEnabled)
 		require.Nil(t, b.Google)
 		require.Nil(t, b.Tokens)
 		require.Nil(t, b.Recovery)
@@ -124,6 +128,7 @@ func TestProjectManifestRejectsAmbiguityAndUnknownSecrets(t *testing.T) {
 		`{"version":1,"projects":null}`, `{"version":1,"Version":1,"projects":[]}`, `{"version":1,"projects":[]} {}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","google":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","emailChange":true}]}`,
+		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","userDirectory":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","browser":true,"emailBinding":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","issuer":"https://foreign.test"}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","jwt":{"privateKey":"secret"}}]}`,

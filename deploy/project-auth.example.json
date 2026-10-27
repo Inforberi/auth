@@ -6,6 +6,7 @@
       "browser": true,
       "emailOTP": true,
       "reauthentication": true,
+      "userDirectory": true,
       "emailBinding": true,
       "emailChange": true,
       "google": true,

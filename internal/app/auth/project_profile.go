@@ -16,15 +16,16 @@ import (
 )
 
 type ProjectProfileConfig struct {
-	BrowserEnabled   bool
-	Password         *ProjectPasswordConfig
-	EmailOTP         *ProjectEmailOTPConfig
-	Google, Telegram *ProjectOIDCConfig
-	Verification     *accountservice.Config
-	Recovery         *passwordservice.Config
-	EmailManagement  *ProjectEmailConfig
-	Tokens           *ProjectTokenConfig
-	Timeout          time.Duration
+	BrowserEnabled       bool
+	UserDirectoryEnabled bool
+	Password             *ProjectPasswordConfig
+	EmailOTP             *ProjectEmailOTPConfig
+	Google, Telegram     *ProjectOIDCConfig
+	Verification         *accountservice.Config
+	Recovery             *passwordservice.Config
+	EmailManagement      *ProjectEmailConfig
+	Tokens               *ProjectTokenConfig
+	Timeout              time.Duration
 }
 
 type ProjectProfileDependencies struct {
@@ -50,6 +51,7 @@ type ProjectProfile struct {
 	tokens                 *ProjectTokens
 	mfa                    *projectMFA
 	mfaManagement          *projectMFA
+	userDirectory          *projectUserDirectory
 }
 
 func BuildProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies) (*ProjectProfile, error) {
@@ -85,6 +87,7 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	p.bindProfileMFA(configuration.EncryptionKey())
 	p.buildProfileMFAManagement(cfg, configuration.EncryptionKey(), redisReady)
 	p.buildProfileEmailManagement(ctx, cfg, redisReady)
+	p.buildProfileUserDirectory(cfg)
 	p.finishProfileRegistration(cfg)
 	if err := p.checkSnapshotCurrent(ctx, observed); err != nil {
 		return nil, err

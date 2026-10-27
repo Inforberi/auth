@@ -62,6 +62,10 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 		handlers["/api/v1/auth/mfa/login/complete"] = h.CompleteLogin
 		handlers["/api/v1/auth/mfa/login/enrollment"], handlers["/api/v1/auth/mfa/login/enrollment/confirm"] = h.StartLoginEnrollment, h.ConfirmLoginEnrollment
 	}
+	if p.userDirectory != nil {
+		directory := accounthttp.NewUserDirectory(p.userDirectory, log)
+		handlers["GET /api/v1/admin/users"], handlers["GET /api/v1/admin/users/{id}"] = directory.List, directory.Read
+	}
 	p.emailManagementHandlers(handlers, log)
 	p.mfaManagementHandlers(handlers, log)
 	return handlers

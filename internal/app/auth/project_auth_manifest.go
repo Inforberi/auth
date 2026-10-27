@@ -21,6 +21,7 @@ type projectAuthManifest struct {
 type projectMethodDeployment struct {
 	ID               projectdomain.ID      `json:"id"`
 	Browser          bool                  `json:"browser"`
+	UserDirectory    bool                  `json:"userDirectory"`
 	EmailOTP         bool                  `json:"emailOTP"`
 	Reauthentication bool                  `json:"reauthentication"`
 	EmailBinding     bool                  `json:"emailBinding"`
@@ -81,7 +82,7 @@ func validateProjectAuthManifest(manifest projectAuthManifest) error {
 }
 
 func validProjectMethodDeployment(entry projectMethodDeployment) bool {
-	if !entry.Browser && (entry.Reauthentication || entry.Google || entry.Telegram || entry.EmailBinding || entry.EmailChange) {
+	if !entry.Browser && (entry.Reauthentication || entry.Google || entry.Telegram || entry.EmailBinding || entry.EmailChange || entry.UserDirectory) {
 		return false
 	}
 	if entry.EmailBinding && !entry.Reauthentication {

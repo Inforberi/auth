@@ -40,6 +40,7 @@ func (f projectProfileFixture) run(t *testing.T, ctx context.Context) {
 	})
 	var origin string
 	require.NoError(t, f.admin.QueryRow(ctx, `SELECT origin FROM platform.projects WHERE id=$1`, f.key.Binding.ProjectID).Scan(&origin))
+	t.Run("project user directory HTTP", func(t *testing.T) { f.httpUserDirectory(t, ctx, origin) })
 	cfg := appauth.ProjectProfileConfig{Timeout: 10 * time.Second}
 	deps := appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader}}
 	closed, err := appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
