@@ -23,6 +23,7 @@ type projectMethodDeployment struct {
 	Browser           bool                  `json:"browser"`
 	Invitations       bool                  `json:"invitations"`
 	TemporaryPassword bool                  `json:"temporaryPassword"`
+	UserLifecycle     bool                  `json:"userLifecycle"`
 	UserDirectory     bool                  `json:"userDirectory"`
 	EmailOTP          bool                  `json:"emailOTP"`
 	Reauthentication  bool                  `json:"reauthentication"`
@@ -84,7 +85,7 @@ func validateProjectAuthManifest(manifest projectAuthManifest) error {
 }
 
 func validProjectMethodDeployment(entry projectMethodDeployment) bool {
-	if !entry.Browser && (entry.Reauthentication || entry.Google || entry.Telegram || entry.EmailBinding || entry.EmailChange || entry.UserDirectory || entry.Invitations || entry.TemporaryPassword) {
+	if !entry.Browser && (entry.Reauthentication || entry.Google || entry.Telegram || entry.EmailBinding || entry.EmailChange || entry.UserDirectory || entry.UserLifecycle || entry.Invitations || entry.TemporaryPassword) {
 		return false
 	}
 	if entry.EmailBinding && !entry.Reauthentication {

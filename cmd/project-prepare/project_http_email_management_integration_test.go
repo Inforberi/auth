@@ -57,7 +57,7 @@ func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.C
 	}, appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, Delivery: delivery}, func(_ context.Context, key projectruntime.Key, selected string) (appauth.ProjectProfileConfig, error) {
 		require.Equal(t, f.key, key)
 		require.Equal(t, origin, selected)
-		return appauth.ProjectProfileConfig{BrowserEnabled: true, Password: &password, EmailOTP: &otp, EmailManagement: &management, Timeout: 10 * time.Second}, nil
+		return appauth.ProjectProfileConfig{BrowserEnabled: true, UserLifecycleEnabled: true, Password: &password, EmailOTP: &otp, EmailManagement: &management, Timeout: 10 * time.Second}, nil
 	}, nil)
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {
@@ -67,11 +67,11 @@ func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.C
 		}
 		ready := 0
 		for _, feature := range assessment.Features {
-			if feature.Ready && (feature.Feature == "email_binding" || feature.Feature == "email_change" || feature.Feature == "provisioning" || feature.Feature == "invitation_activation" || feature.Feature == "temporary_password_admin") {
+			if feature.Ready && (feature.Feature == "email_binding" || feature.Feature == "email_change" || feature.Feature == "provisioning" || feature.Feature == "invitation_activation" || feature.Feature == "temporary_password_admin" || feature.Feature == "user_lifecycle") {
 				ready++
 			}
 		}
-		return ready == 5
+		return ready == 6
 	}, 5*time.Second, 20*time.Millisecond)
 	server := httptest.NewTLSServer(handler)
 	t.Cleanup(func() {
@@ -91,9 +91,9 @@ func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.C
 		require.Equal(t, 405, response.StatusCode, "opening an email link must not activate or confirm")
 		require.NoError(t, response.Body.Close())
 	}
-	return func(path, requestOrigin, raw, body string) (int, []*http.Cookie, []byte) {
+	return func(method, path, requestOrigin, raw, body string) (int, []*http.Cookie, []byte) {
 		t.Helper()
-		r, err := http.NewRequestWithContext(ctx, "POST", server.URL+path, strings.NewReader(body))
+		r, err := http.NewRequestWithContext(ctx, method, server.URL+path, strings.NewReader(body))
 		require.NoError(t, err)
 		r.Host = host.Host
 		r.Header.Set("Content-Type", "application/json")

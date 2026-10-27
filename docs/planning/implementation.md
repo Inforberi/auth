@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP5.1m-project-user-lifecycle, 27 октября — локальные проверки Luna PASS.** [Контракт](../features/project-user-lifecycle.md): project-local status/delete поверх existing handlers/services/SQL, default-off userLifecycle, NoRefresh/exactOrigin/current actor/fresh pwd+MFA. Сохранены version/revoke/last-system-admin/tombstone/audit guards, one-lease5s/pre-post binding. Новых schema/deps/ENV/workers нет. Остальные roles/settings/policy/fullMP5/UI отдельно.
+
 - [x] **MP5.1l-project-user-provisioning, 27 октября — локальные проверки Luna V1–V3 PASS.** [Контракт](../features/project-user-provisioning.md): пять project-local issuance/activation routes поверх existing handlers/services/SQL; default-off invitations/temporaryPassword, fresh password+MFA и NoRefresh. Stored invitation activation не зависит от SMTP/worker, temporary issuance не требует SMTP, replay не раскрывает secret. Новых schema/deps/ENV/workers нет; существующий HTTPS fixture переведён на API. Остальные lifecycle/roles/settings/policy/fullMP5/UI отдельно.
 
 - [x] **MP5.1k-project-user-directory, 27 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/user-directory.md#независимые-проекты--mp51k): два project-local GET list/card, отдельный default-off manifest opt-in, текущая project session/SQL permission, NoRefresh и bounded one-lease guards. Existing DTO/services/projections; новых schema/deps/ENV/workers нет. Unit/source/actual HTTPS fixture добавлены. Остальные admin consumers/policy/full MP5/UI отдельно.

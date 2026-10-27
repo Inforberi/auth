@@ -66,6 +66,10 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 		directory := accounthttp.NewUserDirectory(p.userDirectory, log)
 		handlers["GET /api/v1/admin/users"], handlers["GET /api/v1/admin/users/{id}"] = directory.List, directory.Read
 	}
+	if p.userLifecycle != nil {
+		lifecycle := accounthttp.NewUserLifecycle(p.userLifecycle, log)
+		handlers["POST /api/v1/admin/users/{id}/status"], handlers["DELETE /api/v1/admin/users/{id}"] = lifecycle.ChangeStatus, lifecycle.Delete
+	}
 	p.provisioningHandlers(handlers, log)
 	p.emailManagementHandlers(handlers, log)
 	p.mfaManagementHandlers(handlers, log)

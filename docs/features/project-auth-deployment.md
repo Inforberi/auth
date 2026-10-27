@@ -60,3 +60,5 @@ Main formatter/diff/read-only review. Luna task check, affected race/security, a
 Для проектного списка и карточки пользователей предусмотрен `userDirectory` (default false, требует `browser=true`). Это только публикация двух GET endpoints: право `accounts.users.read` и текущая проектная SQL-сессия обязательны отдельно. [Контракт](user-directory.md#независимые-проекты--mp51k).
 
 Для административного создания пользователей добавлены независимые `invitations` и `temporaryPassword` (default false, требуют browser). Существующие operational budgets копируются отдельно для проекта, invitation URL — его origin + `/activate`; MFA/SQL-права проверяются отдельно. [Контракт](project-user-provisioning.md).
+
+`userLifecycle` (default false, browser only) подключает проектные status/delete endpoints с отдельными SQL permissions и свежими password/MFA proofs. [Контракт и ограничения](project-user-lifecycle.md).

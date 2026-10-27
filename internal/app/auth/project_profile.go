@@ -18,6 +18,7 @@ import (
 type ProjectProfileConfig struct {
 	BrowserEnabled       bool
 	UserDirectoryEnabled bool
+	UserLifecycleEnabled bool
 	Password             *ProjectPasswordConfig
 	EmailOTP             *ProjectEmailOTPConfig
 	Google, Telegram     *ProjectOIDCConfig
@@ -53,6 +54,7 @@ type ProjectProfile struct {
 	mfa                      *projectMFA
 	mfaManagement            *projectMFA
 	userDirectory            *projectUserDirectory
+	userLifecycle            *projectUserLifecycle
 }
 
 func BuildProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies) (*ProjectProfile, error) {
@@ -91,6 +93,7 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	p.finishProfileRegistration(cfg)
 	p.buildProfileProvisioning(ctx, cfg, redisReady)
 	p.buildProfileUserDirectory(cfg)
+	p.buildProfileUserLifecycle(cfg)
 	if err := p.checkSnapshotCurrent(ctx, observed); err != nil {
 		return nil, err
 	}

@@ -89,13 +89,15 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
  INSERT INTO auth.roles(key,name) VALUES('project_account_fixture_manager','Fixture manager');
  INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,$5 FROM auth.roles WHERE key='project_account_fixture_manager';
  INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,$6 FROM auth.roles WHERE key='project_account_fixture_manager';
+ INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,$14 FROM auth.roles WHERE key='project_account_fixture_manager';
+ INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,$15 FROM auth.roles WHERE key='project_account_fixture_manager';
  INSERT INTO auth.user_roles(user_id,role_id) SELECT $1,id FROM auth.roles WHERE key='project_account_fixture_manager';
  INSERT INTO auth.mfa_totp(user_id,secret,last_step) VALUES($1,$7,0);
  INSERT INTO auth.linked_identities(user_id,issuer,subject) VALUES($2,'https://accounts.google.com','project-account-binding');
  INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,password_verified_at,primary_method,primary_verified_at,mfa_verified_at,user_agent,ip_address)
  VALUES($8,$1,1,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours',clock_timestamp(),'password',clock_timestamp(),clock_timestamp(),'project-account-fixture',$13),
  ($9,$2,1,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours',NULL,'oidc',clock_timestamp(),NULL,'project-account-fixture',$13),
- ($10,$3,1,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours',clock_timestamp(),'password',clock_timestamp(),NULL,'project-account-fixture',$13)`, actorID, bindID, changeID, oldEmail, string(accesssettings.UsersManage), string(accesssettings.EmailBindingManage), make([]byte, 48), actorHash, bindingHash, changeHash, port, f.sourceUser, ip)
+ ($10,$3,1,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours',clock_timestamp(),'password',clock_timestamp(),NULL,'project-account-fixture',$13)`, actorID, bindID, changeID, oldEmail, string(accesssettings.UsersManage), string(accesssettings.EmailBindingManage), make([]byte, 48), actorHash, bindingHash, changeHash, port, f.sourceUser, ip, string(accesssettings.UsersStatusManage), string(accesssettings.UsersDelete))
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
@@ -184,15 +186,15 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	inviteToken := accountMessageToken(t, f.ciphers[0], payload)
 	web.command(t, "/api/v1/admin/users", origin, bindingToken, accounthttp.ProvisionRequest{IdempotencyKey: "f8300000-0000-4000-8000-000000000013", Email: "forbidden-project-account@example.test", Invite: true}, 403, nil)
 	path := "/api/v1/admin/users/" + bindID + "/email-binding"
-	status, _, _ := web(path, "", actorToken, `!`)
+	status, _, _ := web("POST", path, "", actorToken, `!`)
 	require.Equal(t, 403, status)
-	status, _, _ = web(path, origin, "", `!`)
+	status, _, _ = web("POST", path, origin, "", `!`)
 	require.Equal(t, 401, status)
-	status, _, _ = web(path, origin, bindingToken, `{"email":"`+bindEmail+`"}`)
+	status, _, _ = web("POST", path, origin, bindingToken, `{"email":"`+bindEmail+`"}`)
 	require.Equal(t, 409, status, "target session cannot approve its own email")
-	status, _, _ = web(path, origin, changeToken, `{"email":"`+bindEmail+`"}`)
+	status, _, _ = web("POST", path, origin, changeToken, `{"email":"`+bindEmail+`"}`)
 	require.Equal(t, 403, status, "another ordinary user cannot approve email binding")
-	status, _, _ = web(path, origin, actorToken, `{"email":"`+bindEmail+`"}`)
+	status, _, _ = web("POST", path, origin, actorToken, `{"email":"`+bindEmail+`"}`)
 	require.Equal(t, 202, status)
 	require.NoError(t, f.db.QueryRow(ctx, `SELECT payload FROM auth.email_bindings WHERE user_id=$1`, bindID).Scan(&payload))
 	plain, err := f.ciphers[0].Open(payload)
@@ -202,7 +204,7 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	clear(plain)
 	code := regexp.MustCompile(`<strong>([0-9]{8})</strong>`).FindStringSubmatch(binding.Body)
 	require.Len(t, code, 2)
-	status, _, _ = web("/api/v1/auth/email/change", origin, changeToken, `{"email":"`+newEmail+`","password":"`+f.password+`"}`)
+	status, _, _ = web("POST", "/api/v1/auth/email/change", origin, changeToken, `{"email":"`+newEmail+`","password":"`+f.password+`"}`)
 	require.Equal(t, 202, status)
 	require.NoError(t, f.db.QueryRow(ctx, `SELECT o.payload FROM auth.email_change_outbox o JOIN auth.email_changes c ON c.id=o.change_id WHERE c.user_id=$1 AND kind='confirm'`, changeID).Scan(&payload))
 	confirmToken := accountMessageToken(t, f.ciphers[0], payload)
@@ -210,24 +212,24 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	reportToken := accountMessageToken(t, f.ciphers[0], payload)
 	f.delivery(t, ctx, invited.UserID, bindID, changeID)
 	proof := mfaservice.Proof{UserID: bindID, TokenHash: bindingHash, AuthVersion: 1}
-	status, cookies, _ := web("/api/v1/auth/email/binding/confirm", origin, bindingToken, `{"code":"`+code[1]+`"}`)
+	status, cookies, _ := web("POST", "/api/v1/auth/email/binding/confirm", origin, bindingToken, `{"code":"`+code[1]+`"}`)
 	require.Equal(t, 200, status)
 	require.NotEmpty(t, cookies)
 	for _, cookie := range cookies {
 		require.Empty(t, cookie.Value, "binding revokes sessions instead of issuing one")
 	}
 	require.Error(t, service.ConfirmEmailBinding(ctx, proof, code[1], ip))
-	status, cookies, _ = web("/api/v1/auth/email/change/confirm", origin, "", `{"token":"`+confirmToken+`"}`)
+	status, cookies, _ = web("POST", "/api/v1/auth/email/change/confirm", origin, "", `{"token":"`+confirmToken+`"}`)
 	require.Equal(t, 200, status)
 	require.NotEmpty(t, cookies)
-	status, _, _ = web("/api/v1/auth/email/change/confirm", origin, "", `{"token":"`+confirmToken+`"}`)
+	status, _, _ = web("POST", "/api/v1/auth/email/change/confirm", origin, "", `{"token":"`+confirmToken+`"}`)
 	require.Equal(t, 400, status)
 	stopDelivery()
 	_, err = f.db.Exec(ctx, `DELETE FROM auth.smtp_settings; UPDATE auth.auth_settings SET version=version+1`)
 	require.NoError(t, err)
-	status, _, _ = web("/api/v1/auth/email/change/report", origin, "", `{"token":"`+reportToken+`"}`)
+	status, _, _ = web("POST", "/api/v1/auth/email/change/report", origin, "", `{"token":"`+reportToken+`"}`)
 	require.Equal(t, 404, status, "stale profile is rejected before token consumption")
-	status, _, _ = web("/api/v1/auth/email/change/report", origin, "", `{"token":"`+reportToken+`"}`)
+	status, _, _ = web("POST", "/api/v1/auth/email/change/report", origin, "", `{"token":"`+reportToken+`"}`)
 	require.Equal(t, 200, status, "protective reporting survives worker and SMTP unavailability")
 	web.command(t, "/api/v1/auth/invitations/activate", origin, "", passwordhttp.ActivationRequest{Token: inviteToken, Password: f.password, ConfirmPassword: f.password}, 200, nil)
 	web.command(t, "/api/v1/auth/invitations/activate", origin, "", passwordhttp.ActivationRequest{Token: inviteToken, Password: f.password, ConfirmPassword: f.password}, 400, nil)
@@ -235,7 +237,7 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	require.NoError(t, f.db.QueryRow(ctx, `SELECT o.payload FROM auth.email_change_outbox o JOIN auth.email_changes c ON c.id=o.change_id WHERE c.user_id=$1 AND kind='recovery'`, changeID).Scan(&payload))
 	recoveryToken := accountMessageToken(t, f.ciphers[0], payload)
 	const recoveredPassword = "Synthetic-account-recovered-password-83!"
-	status, cookies, _ = web("/api/v1/auth/email/change/recover", origin, "", `{"token":"`+recoveryToken+`","newPassword":"`+recoveredPassword+`","confirmPassword":"`+recoveredPassword+`"}`)
+	status, cookies, _ = web("POST", "/api/v1/auth/email/change/recover", origin, "", `{"token":"`+recoveryToken+`","newPassword":"`+recoveredPassword+`","confirmPassword":"`+recoveredPassword+`"}`)
 	require.Equal(t, 200, status)
 	for _, cookie := range cookies {
 		require.Empty(t, cookie.Value, "protected recovery must not issue a session")
@@ -280,6 +282,7 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	session, err := passwords.Login(ctx, passwordservice.LoginInput{Email: tempEmail, Password: f.password, IP: ip, UserAgent: "account fixture"})
 	require.NoError(t, err)
 	require.NotEmpty(t, session.Token)
+	t.Run("project user lifecycle HTTP", func(t *testing.T) { f.httpUserLifecycle(t, ctx, web, origin, actorToken) })
 }
 
 func accountMessageToken(t *testing.T, cipher *secretbox.Cipher, payload []byte) string {

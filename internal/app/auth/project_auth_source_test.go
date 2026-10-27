@@ -56,6 +56,7 @@ func TestProjectDeploymentWithoutManifestKeepsLimitedProfile(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, profile.BrowserEnabled)
 	require.False(t, profile.UserDirectoryEnabled)
+	require.False(t, profile.UserLifecycleEnabled)
 	require.False(t, profile.Password.TemporaryPassword.Enabled)
 	require.NotNil(t, profile.Password)
 	require.Nil(t, profile.Google)
@@ -76,7 +77,7 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 	manifest.Projects[0].Invitations, manifest.Projects[0].TemporaryPassword = true, true
 	cfg.Invitation = accountservice.InvitationConfig{TTL: time.Hour, ActivationGlobalLimit: 100, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100}
 	cfg.TemporaryPassword = passwordservice.TemporaryPasswordConfig{TTL: time.Hour, SetupTTL: time.Minute, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}
-	manifest.Projects[0].UserDirectory = true
+	manifest.Projects[0].UserDirectory, manifest.Projects[0].UserLifecycle = true, true
 	manifest.Projects[0].EmailBinding, manifest.Projects[0].EmailChange = true, true
 	data, err := json.Marshal(manifest)
 	require.NoError(t, err)
@@ -93,6 +94,7 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 	require.Equal(t, "https://alpha.example.test", a.Tokens.Issuer)
 	require.Empty(t, a.Verification.EncryptionKey)
 	require.True(t, a.UserDirectoryEnabled)
+	require.True(t, a.UserLifecycleEnabled)
 	require.True(t, a.EmailManagement.Invitations.Enabled)
 	require.Equal(t, "https://alpha.example.test/activate", a.EmailManagement.Invitations.URL)
 	require.True(t, a.Password.TemporaryPassword.Enabled)
@@ -120,6 +122,7 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, b.BrowserEnabled)
 		require.False(t, b.UserDirectoryEnabled)
+		require.False(t, b.UserLifecycleEnabled)
 		require.Nil(t, b.Google)
 		require.Nil(t, b.Tokens)
 		require.Nil(t, b.Recovery)
@@ -143,6 +146,7 @@ func TestProjectManifestRejectsAmbiguityAndUnknownSecrets(t *testing.T) {
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","google":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","emailChange":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","userDirectory":true}]}`,
+		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","userLifecycle":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","invitations":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","temporaryPassword":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","browser":true,"emailBinding":true}]}`,
