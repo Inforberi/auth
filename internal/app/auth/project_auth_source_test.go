@@ -13,6 +13,8 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
+	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	tokensettings "github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
 	"github.com/Inforberi/financial-intelligence/internal/config"
@@ -45,6 +47,7 @@ func deploymentTokenDefaults(cfg *config.Config) {
 
 func TestProjectDeploymentWithoutManifestKeepsLimitedProfile(t *testing.T) {
 	cfg := operatorConfig("c2000000-0000-4000-8000-000000000001")
+	cfg.Invitation.Enabled, cfg.TemporaryPassword.Enabled = true, true
 	cfg.Platform.HTTP.BuildTimeout = 5 * time.Second
 	source, err := LoadProjectAuthDeployment(cfg)
 	require.NoError(t, err)
@@ -53,6 +56,7 @@ func TestProjectDeploymentWithoutManifestKeepsLimitedProfile(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, profile.BrowserEnabled)
 	require.False(t, profile.UserDirectoryEnabled)
+	require.False(t, profile.Password.TemporaryPassword.Enabled)
 	require.NotNil(t, profile.Password)
 	require.Nil(t, profile.Google)
 	require.Nil(t, profile.Tokens)
@@ -69,6 +73,9 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 		{ID: alpha, Browser: true, EmailOTP: true, Reauthentication: true, Google: true, Telegram: true, JWT: &projectJWTDeployment{Native: true, Password: true, Permissions: []accesssettings.Permission{{Key: "reports.read", Name: "Read reports"}}, Resources: []tokenservice.Resource{{Audience: "reports", Permissions: []accessdomain.PermissionKey{"reports.read"}}}, Clients: []tokenservice.IntrospectionClientConfig{{ID: "consumer", SecretHashes: []string{strings.Repeat("a", 64)}, Audiences: []string{"reports"}}}}},
 		{ID: beta, Browser: false},
 	}}
+	manifest.Projects[0].Invitations, manifest.Projects[0].TemporaryPassword = true, true
+	cfg.Invitation = accountservice.InvitationConfig{TTL: time.Hour, ActivationGlobalLimit: 100, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100}
+	cfg.TemporaryPassword = passwordservice.TemporaryPasswordConfig{TTL: time.Hour, SetupTTL: time.Minute, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}
 	manifest.Projects[0].UserDirectory = true
 	manifest.Projects[0].EmailBinding, manifest.Projects[0].EmailChange = true, true
 	data, err := json.Marshal(manifest)
@@ -86,11 +93,16 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 	require.Equal(t, "https://alpha.example.test", a.Tokens.Issuer)
 	require.Empty(t, a.Verification.EncryptionKey)
 	require.True(t, a.UserDirectoryEnabled)
+	require.True(t, a.EmailManagement.Invitations.Enabled)
+	require.Equal(t, "https://alpha.example.test/activate", a.EmailManagement.Invitations.URL)
+	require.True(t, a.Password.TemporaryPassword.Enabled)
 	require.True(t, a.EmailManagement.Binding.Enabled && a.EmailManagement.Change.Enabled)
 	require.Equal(t, "https://alpha.example.test/change-email", a.EmailManagement.Change.ConfirmURL)
 	require.Equal(t, "https://alpha.example.test/protect-account", a.EmailManagement.Change.ReportURL)
 	require.Equal(t, "https://alpha.example.test/recover-account", a.EmailManagement.Change.RecoveryURL)
 	require.Empty(t, a.EmailManagement.Verification.EncryptionKey)
+	a.Password.TemporaryPassword.Enabled = false
+	a.EmailManagement.Invitations.URL = "https://foreign.example.test/activate"
 	a.EmailManagement.Change.ConfirmURL = "https://foreign.example.test/change-email"
 	require.True(t, a.Tokens.Native.PasswordEnabled)
 	a.Tokens.Tokens.Resources[0].Permissions[0] = "foreign.read"
@@ -98,6 +110,8 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 	a.Google.RedirectURI = "https://foreign.example.test/callback"
 	a, err = d.Profile(ctx, projectDeploymentKey(alpha), "https://alpha.example.test")
 	require.NoError(t, err)
+	require.True(t, a.Password.TemporaryPassword.Enabled)
+	require.Equal(t, "https://alpha.example.test/activate", a.EmailManagement.Invitations.URL)
 	require.EqualValues(t, "reports.read", a.Tokens.Tokens.Resources[0].Permissions[0])
 	require.Equal(t, strings.Repeat("a", 64), a.Tokens.Introspection.Clients[0].SecretHashes[0])
 	require.Equal(t, "https://alpha.example.test/change-email", a.EmailManagement.Change.ConfirmURL)
@@ -129,6 +143,8 @@ func TestProjectManifestRejectsAmbiguityAndUnknownSecrets(t *testing.T) {
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","google":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","emailChange":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","userDirectory":true}]}`,
+		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","invitations":true}]}`,
+		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","temporaryPassword":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","browser":true,"emailBinding":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","issuer":"https://foreign.test"}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","jwt":{"privateKey":"secret"}}]}`,

@@ -80,15 +80,19 @@ func projectBrowserDeployment(cfg *config.Config) ProjectProfileSource {
 	mfa.RecoveryEnabled = false
 	verification, recovery := cfg.Account, cfg.Password
 	binding, change := cfg.EmailBinding, cfg.EmailChange
+	invitations, temporary := cfg.Invitation, cfg.TemporaryPassword
+	invitations.Enabled, temporary.Enabled = false, false
 	verification.EncryptionKey = ""
 	withMail, timeout := cfg.Platform.Delivery.Enabled, cfg.Platform.HTTP.BuildTimeout
 	return func(_ context.Context, _ projectruntime.Key, origin string) (ProjectProfileConfig, error) {
-		profile := ProjectProfileConfig{BrowserEnabled: true, Timeout: timeout, Password: &ProjectPasswordConfig{Session: session, MFA: mfa, Capacity: capacity, Timeout: timeout}}
+		profile := ProjectProfileConfig{BrowserEnabled: true, Timeout: timeout, Password: &ProjectPasswordConfig{Session: session, MFA: mfa, TemporaryPassword: temporary, Capacity: capacity, Timeout: timeout}}
 		projectChange := change
 		projectChange.ConfirmURL, projectChange.ReportURL, projectChange.RecoveryURL = origin+"/change-email", origin+"/protect-account", origin+"/recover-account"
 		projectRecovery := recovery
 		projectRecovery.ResetURL = origin + "/reset-password"
-		profile.EmailManagement = &ProjectEmailConfig{Origin: origin, Binding: binding, Change: projectChange, Verification: verification, Password: projectRecovery, FreshAuthTTL: session.FreshAuthTTL}
+		projectInvitations := invitations
+		projectInvitations.URL = origin + "/activate"
+		profile.EmailManagement = &ProjectEmailConfig{Invitations: projectInvitations, Origin: origin, Binding: binding, Change: projectChange, Verification: verification, Password: projectRecovery, FreshAuthTTL: session.FreshAuthTTL}
 		if withMail {
 			verify, reset := verification, recovery
 			verify.URL, reset.ResetURL = origin+"/verify-email", origin+"/reset-password"

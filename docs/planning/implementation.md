@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP5.1l-project-user-provisioning, 27 октября — локальные проверки Luna V1–V3 PASS.** [Контракт](../features/project-user-provisioning.md): пять project-local issuance/activation routes поверх existing handlers/services/SQL; default-off invitations/temporaryPassword, fresh password+MFA и NoRefresh. Stored invitation activation не зависит от SMTP/worker, temporary issuance не требует SMTP, replay не раскрывает secret. Новых schema/deps/ENV/workers нет; существующий HTTPS fixture переведён на API. Остальные lifecycle/roles/settings/policy/fullMP5/UI отдельно.
+
 - [x] **MP5.1k-project-user-directory, 27 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/user-directory.md#независимые-проекты--mp51k): два project-local GET list/card, отдельный default-off manifest opt-in, текущая project session/SQL permission, NoRefresh и bounded one-lease guards. Existing DTO/services/projections; новых schema/deps/ENV/workers нет. Unit/source/actual HTTPS fixture добавлены. Остальные admin consumers/policy/full MP5/UI отдельно.
 
 - [x] **MP5.1j-project-mfa-management, 26 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/project-mfa-management.md): восемь project owner MFA routes на existing services/SQL, shared cipher/limits и one-lease guards. Management не пропадает при disabled primary methods; согласованная operational config и NoRefresh proofs обязательны. SQL role/admin disable policy/one-use codes/replacement/revoke не ослаблены, loss-all-factors закрыт. Новых schema/deps/ENV/workers нет; unit и actual HTTPS cycle добавлены. Отдельные policy settings/admin consumers/full MP5/UI остаются.

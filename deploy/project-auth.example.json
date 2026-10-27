@@ -7,6 +7,8 @@
       "emailOTP": true,
       "reauthentication": true,
       "userDirectory": true,
+      "invitations": true,
+      "temporaryPassword": true,
       "emailBinding": true,
       "emailChange": true,
       "google": true,

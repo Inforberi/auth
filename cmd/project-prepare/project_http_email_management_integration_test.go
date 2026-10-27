@@ -14,19 +14,22 @@ import (
 
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
-func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.Context, management appauth.ProjectEmailConfig) (func(string, string, string, string) (int, []*http.Cookie), string, func()) {
+func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.Context, management appauth.ProjectEmailConfig, temporary passwordservice.TemporaryPasswordConfig) (projectAccountRequest, string, func()) {
 	t.Helper()
 	var origin string
 	require.NoError(t, f.admin.QueryRow(ctx, `SELECT origin FROM platform.projects WHERE id=$1`, f.key.Binding.ProjectID).Scan(&origin))
 	management.Origin = origin
+	management.Invitations.URL = origin + "/activate"
 	management.Change.ConfirmURL, management.Change.ReportURL, management.Change.RecoveryURL = origin+"/change-email", origin+"/protect-account", origin+"/recover-account"
 	password := projectPasswordFixtureConfig()
+	password.TemporaryPassword = temporary
 	password.MFA = mfaservice.Config{Enabled: true, Issuer: "Project", ChallengeTTL: time.Minute, UserLimitPerMinute: 30, IPLimitPerMinute: 50, GlobalLimitPerMinute: 100}
 	otp := appauth.ProjectEmailOTPConfig{OTP: otpservice.Config{ReauthenticationEnabled: true, TTL: 5 * time.Minute, ResendInterval: time.Minute, RequestGlobalLimit: 100, ConfirmGlobalLimit: 1000}, MFA: password.MFA, Session: password.Session, Timeout: 5 * time.Second}
 	delivery, err := appauth.NewProjectDelivery(appauth.ProjectDeliveryConfig{Parallelism: 1, PageSize: projectruntime.StateBatchSize, Interval: time.Minute, SMTPAllowedTargets: []string{f.listener.Addr().String()}}, f.deps)
@@ -64,11 +67,11 @@ func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.C
 		}
 		ready := 0
 		for _, feature := range assessment.Features {
-			if feature.Ready && (feature.Feature == "email_binding" || feature.Feature == "email_change") {
+			if feature.Ready && (feature.Feature == "email_binding" || feature.Feature == "email_change" || feature.Feature == "provisioning" || feature.Feature == "invitation_activation" || feature.Feature == "temporary_password_admin") {
 				ready++
 			}
 		}
-		return ready == 2
+		return ready == 5
 	}, 5*time.Second, 20*time.Millisecond)
 	server := httptest.NewTLSServer(handler)
 	t.Cleanup(func() {
@@ -79,14 +82,16 @@ func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.C
 	})
 	host, err := url.Parse(origin)
 	require.NoError(t, err)
-	r, err := http.NewRequestWithContext(ctx, "GET", server.URL+"/api/v1/auth/email/change/confirm?token=not-consumed", nil)
-	require.NoError(t, err)
-	r.Host = host.Host
-	response, err := server.Client().Do(r)
-	require.NoError(t, err)
-	require.Equal(t, 405, response.StatusCode, "opening an email link must not confirm")
-	require.NoError(t, response.Body.Close())
-	return func(path, requestOrigin, raw, body string) (int, []*http.Cookie) {
+	for _, path := range []string{"/api/v1/auth/email/change/confirm", "/api/v1/auth/invitations/activate"} {
+		r, err := http.NewRequestWithContext(ctx, "GET", server.URL+path+"?token=not-consumed", nil)
+		require.NoError(t, err)
+		r.Host = host.Host
+		response, err := server.Client().Do(r)
+		require.NoError(t, err)
+		require.Equal(t, 405, response.StatusCode, "opening an email link must not activate or confirm")
+		require.NoError(t, response.Body.Close())
+	}
+	return func(path, requestOrigin, raw, body string) (int, []*http.Cookie, []byte) {
 		t.Helper()
 		r, err := http.NewRequestWithContext(ctx, "POST", server.URL+path, strings.NewReader(body))
 		require.NoError(t, err)
@@ -100,10 +105,10 @@ func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.C
 		}
 		response, err := server.Client().Do(r)
 		require.NoError(t, err)
-		_, err = io.Copy(io.Discard, response.Body)
+		payload, err := io.ReadAll(io.LimitReader(response.Body, 64<<10))
 		require.NoError(t, err)
 		require.NoError(t, response.Body.Close())
 		require.Empty(t, response.Header.Get("Access-Control-Allow-Origin"))
-		return response.StatusCode, response.Cookies()
+		return response.StatusCode, response.Cookies(), payload
 	}, origin, stopDelivery
 }

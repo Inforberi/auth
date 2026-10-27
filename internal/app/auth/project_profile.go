@@ -35,23 +35,24 @@ type ProjectProfileDependencies struct {
 }
 
 type ProjectProfile struct {
-	key                    projectruntime.Key
-	origin                 string
-	policy                 settingsdomain.Snapshot
-	deps                   ProjectProfileDependencies
-	states                 map[string]ProjectFeatureState
-	observedAt             time.Time
-	password               *ProjectPassword
-	emailOTP               *ProjectEmailOTP
-	google, telegram       *ProjectOIDC
-	verification, recovery *ProjectEmail
-	binding, change        *ProjectEmail
-	bindingConfirmation    *ProjectEmail
-	changeProtection       *ProjectEmail
-	tokens                 *ProjectTokens
-	mfa                    *projectMFA
-	mfaManagement          *projectMFA
-	userDirectory          *projectUserDirectory
+	key                      projectruntime.Key
+	origin                   string
+	policy                   settingsdomain.Snapshot
+	deps                     ProjectProfileDependencies
+	states                   map[string]ProjectFeatureState
+	observedAt               time.Time
+	password                 *ProjectPassword
+	emailOTP                 *ProjectEmailOTP
+	google, telegram         *ProjectOIDC
+	verification, recovery   *ProjectEmail
+	binding, change          *ProjectEmail
+	provisioning, activation *ProjectEmail
+	bindingConfirmation      *ProjectEmail
+	changeProtection         *ProjectEmail
+	tokens                   *ProjectTokens
+	mfa                      *projectMFA
+	mfaManagement            *projectMFA
+	userDirectory            *projectUserDirectory
 }
 
 func BuildProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies) (*ProjectProfile, error) {
@@ -87,8 +88,9 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	p.bindProfileMFA(configuration.EncryptionKey())
 	p.buildProfileMFAManagement(cfg, configuration.EncryptionKey(), redisReady)
 	p.buildProfileEmailManagement(ctx, cfg, redisReady)
-	p.buildProfileUserDirectory(cfg)
 	p.finishProfileRegistration(cfg)
+	p.buildProfileProvisioning(ctx, cfg, redisReady)
+	p.buildProfileUserDirectory(cfg)
 	if err := p.checkSnapshotCurrent(ctx, observed); err != nil {
 		return nil, err
 	}
@@ -147,16 +149,16 @@ func profileNeedsRedis(cfg ProjectProfileConfig, policy settingsdomain.Policy) b
 				return true
 			}
 		}
-	}
-	if cfg.BrowserEnabled && cfg.EmailManagement != nil && (cfg.EmailManagement.Binding.Enabled || cfg.EmailManagement.Change.Enabled) {
-		return true
-	}
-	methods := policy.Methods
-	if cfg.BrowserEnabled && (methods.Password || methods.EmailOTP || methods.Google || methods.Telegram) {
-		return true
-	}
-	if cfg.BrowserEnabled && cfg.EmailOTP != nil && cfg.EmailOTP.OTP.ReauthenticationEnabled {
-		return true
+		if cfg.EmailManagement != nil && (cfg.EmailManagement.Binding.Enabled || cfg.EmailManagement.Change.Enabled || cfg.EmailManagement.Invitations.Enabled) {
+			return true
+		}
+		methods := policy.Methods
+		if methods.Password || methods.EmailOTP || methods.Google || methods.Telegram {
+			return true
+		}
+		if cfg.EmailOTP != nil && cfg.EmailOTP.OTP.ReauthenticationEnabled {
+			return true
+		}
 	}
 	return cfg.Verification != nil || cfg.Recovery != nil || cfg.Tokens != nil && cfg.Tokens.Enabled && cfg.Tokens.Tokens.Native != nil
 }

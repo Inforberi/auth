@@ -58,3 +58,5 @@ Main formatter/diff/read-only review. Luna task check, affected race/security, a
 Итог Luna: task check, targeted race, security и все три actual SQL regressions PASS. TLS verification, неверный SCRAM password deny и RedisDB15 preflight подтверждены. Manifest13 совпал после прогона и с main, перенесённый старый checker не восстановлен; ENV/JSON examples совпали. Собственные containers/network/fixture/binaries удалены. Внешний OAuth/SMTP и полная two-project/MP5/MP7/MP8 приёмка этим результатом не закрыты.
 
 Для проектного списка и карточки пользователей предусмотрен `userDirectory` (default false, требует `browser=true`). Это только публикация двух GET endpoints: право `accounts.users.read` и текущая проектная SQL-сессия обязательны отдельно. [Контракт](user-directory.md#независимые-проекты--mp51k).
+
+Для административного создания пользователей добавлены независимые `invitations` и `temporaryPassword` (default false, требуют browser). Существующие operational budgets копируются отдельно для проекта, invitation URL — его origin + `/activate`; MFA/SQL-права проверяются отдельно. [Контракт](project-user-provisioning.md).

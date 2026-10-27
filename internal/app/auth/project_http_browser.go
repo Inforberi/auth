@@ -66,6 +66,7 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 		directory := accounthttp.NewUserDirectory(p.userDirectory, log)
 		handlers["GET /api/v1/admin/users"], handlers["GET /api/v1/admin/users/{id}"] = directory.List, directory.Read
 	}
+	p.provisioningHandlers(handlers, log)
 	p.emailManagementHandlers(handlers, log)
 	p.mfaManagementHandlers(handlers, log)
 	return handlers
