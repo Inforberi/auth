@@ -19,7 +19,11 @@ type Repository struct {
 func New(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
 
 func NewWithRuntime(db *pgxpool.Pool, available domain.PublicMethods, tokens domain.TokenIssuance) *Repository {
-	return &Repository{db: db, runtime: domain.PolicyRuntime{Configured: true, Methods: available, Tokens: tokens}}
+	return NewWithPolicyRuntime(db, domain.PolicyRuntime{Configured: true, Methods: available, Tokens: tokens})
+}
+
+func NewWithPolicyRuntime(db *pgxpool.Pool, runtime domain.PolicyRuntime) *Repository {
+	return &Repository{db: db, runtime: runtime}
 }
 
 const policyColumns = `version,password_enabled,email_otp_enabled,google_enabled,telegram_enabled,

@@ -36,17 +36,21 @@ func (h *ProjectHTTP) Assess(ctx context.Context, key projectruntime.Key, origin
 	if err != nil {
 		return projectdomain.AuthPolicyReadiness{}, err
 	}
+	return assessProjectProfile(ctx, key, origin, cfg, h.deps)
+}
+
+func assessProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies) (projectdomain.AuthPolicyReadiness, error) {
 	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
 	defer cancel()
-	before, err := h.dependencyVersions(ctx, key)
+	before, err := profileDependencyVersions(ctx, key, deps)
 	if err != nil {
 		return projectdomain.AuthPolicyReadiness{}, err
 	}
-	profile, err := buildProjectProfile(ctx, key, origin, cfg, h.deps, true)
+	profile, err := buildProjectProfile(ctx, key, origin, cfg, deps, true)
 	if err != nil {
 		return projectdomain.AuthPolicyReadiness{}, err
 	}
-	after, err := h.dependencyVersions(ctx, key)
+	after, err := profileDependencyVersions(ctx, key, deps)
 	if err != nil {
 		return projectdomain.AuthPolicyReadiness{}, err
 	}
@@ -69,9 +73,9 @@ func (h *ProjectHTTP) Assess(ctx context.Context, key projectruntime.Key, origin
 	return result, nil
 }
 
-func (h *ProjectHTTP) dependencyVersions(ctx context.Context, key projectruntime.Key) (settingsdomain.DependencyVersions, error) {
+func profileDependencyVersions(ctx context.Context, key projectruntime.Key, deps ProjectProfileDependencies) (settingsdomain.DependencyVersions, error) {
 	var versions settingsdomain.DependencyVersions
-	err := h.deps.Registry.UsePool(ctx, key, func(ctx context.Context, pool *pgxpool.Pool) error {
+	err := deps.Registry.UsePool(ctx, key, func(ctx context.Context, pool *pgxpool.Pool) error {
 		return pool.QueryRow(ctx, `SELECT COALESCE((SELECT version FROM auth.smtp_settings WHERE singleton),0),
 		 COALESCE((SELECT version FROM auth.provider_settings WHERE provider='google'),0),
 		 COALESCE((SELECT version FROM auth.provider_settings WHERE provider='telegram'),0)`).Scan(&versions.SMTP, &versions.Google, &versions.Telegram)

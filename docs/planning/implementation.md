@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP5.1o-project-auth-policy-settings, 27 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/project-auth-policy-settings.md): local Auth policy GET/POST, default-off authSettings, read/write readiness, existing DTO/SQL guards и dependency pins; assessment между lease, actual response с observed policy version. No new schema/deps/ENV/workers. Остальные settings consumers/MFA policy/fullMP5/UI отдельно.
+
 - [x] **MP5.1n-project-access-management, 27 октября — локальные проверки Luna V1/V2 PASS.** [Контракт](../features/project-access-management.md): 11 project-local access routes, existing typed handlers/service/SQL, UUID opt-in immutable catalog, отдельные read/write readiness, NoRefresh/exactOrigin/current SQL actor/versions/delegation/last-admin. One-lease5s/pre-post binding, cold CheckCatalog. Новых schema/deps/ENV/workers нет. Settings/MFA policy/fullMP5/UI отдельно.
 
 - [x] **MP5.1m-project-user-lifecycle, 27 октября — локальные проверки Luna PASS.** [Контракт](../features/project-user-lifecycle.md): project-local status/delete поверх existing handlers/services/SQL, default-off userLifecycle, NoRefresh/exactOrigin/current actor/fresh pwd+MFA. Сохранены version/revoke/last-system-admin/tombstone/audit guards, one-lease5s/pre-post binding. Новых schema/deps/ENV/workers нет. Остальные roles/settings/policy/fullMP5/UI отдельно.

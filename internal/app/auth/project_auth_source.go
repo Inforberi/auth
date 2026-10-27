@@ -113,7 +113,7 @@ func (d *ProjectAuthDeployment) Profile(ctx context.Context, key projectruntime.
 }
 
 func (d *ProjectAuthDeployment) browserProfile(base ProjectProfileConfig, methods projectMethodDeployment) ProjectProfileConfig {
-	profile := ProjectProfileConfig{BrowserEnabled: methods.Browser, UserDirectoryEnabled: methods.UserDirectory, UserLifecycleEnabled: methods.UserLifecycle, Timeout: base.Timeout}
+	profile := ProjectProfileConfig{BrowserEnabled: methods.Browser, UserDirectoryEnabled: methods.UserDirectory, UserLifecycleEnabled: methods.UserLifecycle, AuthSettingsEnabled: methods.AuthSettings, Timeout: base.Timeout}
 	if methods.Browser {
 		password := *base.Password
 		password.TemporaryPassword.Enabled = methods.TemporaryPassword

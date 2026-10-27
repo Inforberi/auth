@@ -24,6 +24,7 @@ type projectMethodDeployment struct {
 	Invitations       bool                     `json:"invitations"`
 	TemporaryPassword bool                     `json:"temporaryPassword"`
 	Access            *projectAccessDeployment `json:"access,omitempty"`
+	AuthSettings      bool                     `json:"authSettings"`
 	UserLifecycle     bool                     `json:"userLifecycle"`
 	UserDirectory     bool                     `json:"userDirectory"`
 	EmailOTP          bool                     `json:"emailOTP"`
@@ -86,7 +87,7 @@ func validateProjectAuthManifest(manifest projectAuthManifest) error {
 }
 
 func validProjectMethodDeployment(entry projectMethodDeployment) bool {
-	if !entry.Browser && (entry.Reauthentication || entry.Google || entry.Telegram || entry.EmailBinding || entry.EmailChange || entry.Access != nil || entry.UserDirectory || entry.UserLifecycle || entry.Invitations || entry.TemporaryPassword) {
+	if !entry.Browser && entry.requiresBrowser() {
 		return false
 	}
 	if entry.EmailBinding && !entry.Reauthentication {
@@ -101,4 +102,11 @@ func validProjectMethodDeployment(entry projectMethodDeployment) bool {
 
 type projectAccessDeployment struct {
 	Permissions []accesssettings.Permission `json:"permissions"`
+}
+
+func (entry projectMethodDeployment) requiresBrowser() bool {
+	return entry.Reauthentication || entry.Google || entry.Telegram ||
+		entry.EmailBinding || entry.EmailChange || entry.AuthSettings ||
+		entry.Access != nil || entry.UserDirectory || entry.UserLifecycle ||
+		entry.Invitations || entry.TemporaryPassword
 }

@@ -64,3 +64,5 @@ Main formatter/diff/read-only review. Luna task check, affected race/security, a
 `userLifecycle` (default false, browser only) подключает проектные status/delete endpoints с отдельными SQL permissions и свежими password/MFA proofs. [Контракт и ограничения](project-user-lifecycle.md).
 
 Опциональный `access: {"permissions": [...]}` включает проектные API ролей/разрешений (browser only); отсутствие объекта default-off, пустой объект — built-in catalog. Чтение отдельно от MFA-dependent mutations; дополнительные permissions выбираются по UUID и не наследуются из platform catalog. [Контракт](project-access-management.md).
+
+`authSettings` (default false, требует browser) подключает local Auth policy GET/POST; actual readiness, version/permission/fresh-proof и SQL dependency pins описаны в [контракте настроек](project-auth-policy-settings.md). SMTP/provider/retention endpoints этим флагом не включаются.

@@ -94,13 +94,14 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
  INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,$16 FROM auth.roles WHERE key='project_account_fixture_manager';
  INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,$17 FROM auth.roles WHERE key='project_account_fixture_manager';
  INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,$18 FROM auth.roles WHERE key='project_account_fixture_manager';
+ INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,$19 FROM auth.roles WHERE key='project_account_fixture_manager';
  INSERT INTO auth.user_roles(user_id,role_id) SELECT $1,id FROM auth.roles WHERE key='project_account_fixture_manager';
  INSERT INTO auth.mfa_totp(user_id,secret,last_step) VALUES($1,$7,0);
  INSERT INTO auth.linked_identities(user_id,issuer,subject) VALUES($2,'https://accounts.google.com','project-account-binding');
  INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,password_verified_at,primary_method,primary_verified_at,mfa_verified_at,user_agent,ip_address)
  VALUES($8,$1,1,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours',clock_timestamp(),'password',clock_timestamp(),clock_timestamp(),'project-account-fixture',$13),
  ($9,$2,1,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours',NULL,'oidc',clock_timestamp(),NULL,'project-account-fixture',$13),
- ($10,$3,1,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours',clock_timestamp(),'password',clock_timestamp(),NULL,'project-account-fixture',$13)`, actorID, bindID, changeID, oldEmail, string(accesssettings.UsersManage), string(accesssettings.EmailBindingManage), make([]byte, 48), actorHash, bindingHash, changeHash, port, f.sourceUser, ip, string(accesssettings.UsersStatusManage), string(accesssettings.UsersDelete), string(accesssettings.RolesManage), string(accesssettings.AssignmentsManage), string(accesssettings.UsersRead))
+ ($10,$3,1,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours',clock_timestamp(),'password',clock_timestamp(),NULL,'project-account-fixture',$13)`, actorID, bindID, changeID, oldEmail, string(accesssettings.UsersManage), string(accesssettings.EmailBindingManage), make([]byte, 48), actorHash, bindingHash, changeHash, port, f.sourceUser, ip, string(accesssettings.UsersStatusManage), string(accesssettings.UsersDelete), string(accesssettings.RolesManage), string(accesssettings.AssignmentsManage), string(accesssettings.UsersRead), string(accesssettings.AuthSettingsManage))
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
@@ -287,6 +288,7 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	require.NotEmpty(t, session.Token)
 	t.Run("project user lifecycle HTTP", func(t *testing.T) { f.httpUserLifecycle(t, ctx, web, origin, actorToken) })
 	t.Run("project access HTTP", func(t *testing.T) { f.httpAccess(t, ctx, web, origin, actorToken) })
+	t.Run("project auth settings HTTP", func(t *testing.T) { f.httpAuthSettings(t, ctx, web, origin, actorToken) })
 }
 
 func accountMessageToken(t *testing.T, cipher *secretbox.Cipher, payload []byte) string {

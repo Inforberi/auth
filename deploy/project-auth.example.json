@@ -9,6 +9,7 @@
       "access": {"permissions": [{"key": "reports.read", "name": "Read reports"}]},
       "userDirectory": true,
       "userLifecycle": true,
+      "authSettings": true,
       "invitations": true,
       "temporaryPassword": true,
       "emailBinding": true,

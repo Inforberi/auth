@@ -20,6 +20,7 @@ type ProjectProfileConfig struct {
 	BrowserEnabled       bool
 	UserDirectoryEnabled bool
 	UserLifecycleEnabled bool
+	AuthSettingsEnabled  bool
 	Access               *accesssettings.Catalog
 	Password             *ProjectPasswordConfig
 	EmailOTP             *ProjectEmailOTPConfig
@@ -58,6 +59,7 @@ type ProjectProfile struct {
 	userDirectory            *projectUserDirectory
 	userLifecycle            *projectUserLifecycle
 	access                   *projectAccess
+	authSettings             *projectAuthSettings
 }
 
 func BuildProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies) (*ProjectProfile, error) {
@@ -98,6 +100,7 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	p.buildProfileUserDirectory(cfg)
 	p.buildProfileUserLifecycle(cfg)
 	p.buildProfileAccess(ctx, cfg)
+	p.buildProfileAuthSettings(cfg)
 	if err := p.checkSnapshotCurrent(ctx, observed); err != nil {
 		return nil, err
 	}

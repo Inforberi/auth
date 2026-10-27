@@ -16,6 +16,7 @@ import (
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -69,6 +70,10 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 	if p.userLifecycle != nil {
 		lifecycle := accounthttp.NewUserLifecycle(p.userLifecycle, log)
 		handlers["POST /api/v1/admin/users/{id}/status"], handlers["DELETE /api/v1/admin/users/{id}"] = lifecycle.ChangeStatus, lifecycle.Delete
+	}
+	if p.authSettings != nil {
+		settings := settingshttp.New(p.authSettings, settingsdomain.PublicMethods{}, log)
+		handlers["GET /api/v1/admin/auth/settings"], handlers["POST /api/v1/admin/auth/settings"] = settings.Read, settings.Update
 	}
 	p.accessHandlers(handlers, log)
 	p.provisioningHandlers(handlers, log)

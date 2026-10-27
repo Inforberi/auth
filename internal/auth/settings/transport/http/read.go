@@ -17,6 +17,15 @@ func (h *Handler) Read(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if observed, ok := h.service.(settingsReadinessService); ok {
+		response, err := observed.ReadWithReadiness(r.Context(), actor)
+		if err != nil {
+			h.respondError(w, r, err)
+			return
+		}
+		h.respondView(w, response)
+		return
+	}
 	snapshot, err := h.service.Read(r.Context(), actor)
 	if err != nil {
 		h.respondError(w, r, err)

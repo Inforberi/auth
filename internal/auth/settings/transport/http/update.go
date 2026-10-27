@@ -85,7 +85,17 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 400, "invalid_json", "complete policy required")
 		return
 	}
-	snapshot, err := h.service.Update(r.Context(), service.UpdateInput{Actor: actor, ExpectedVersion: input.ExpectedVersion, Policy: policy})
+	command := service.UpdateInput{Actor: actor, ExpectedVersion: input.ExpectedVersion, Policy: policy}
+	if observed, ok := h.service.(settingsReadinessService); ok {
+		response, err := observed.UpdateWithReadiness(r.Context(), command)
+		if err != nil {
+			h.respondError(w, r, err)
+			return
+		}
+		h.respondView(w, response)
+		return
+	}
+	snapshot, err := h.service.Update(r.Context(), command)
 	if err != nil {
 		h.respondError(w, r, err)
 		return

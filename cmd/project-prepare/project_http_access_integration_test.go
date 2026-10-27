@@ -62,7 +62,7 @@ func (f projectAccountFixture) httpAccess(t *testing.T, ctx context.Context, web
 	invalid := create
 	invalid.Permissions = []accessdomain.PermissionKey{"undeclared.read"}
 	web.command(t, roles, origin, actorToken, invalid, 400, nil)
-	invalid.Permissions = []accessdomain.PermissionKey{accesssettings.AuthSettingsManage}
+	invalid.Permissions = []accessdomain.PermissionKey{"reports.read"}
 	web.command(t, roles, origin, actorToken, invalid, 403, nil)
 	web.command(t, "/api/v1/admin/users/f8300000-0000-4000-8000-000000000001/roles/"+string(role.ID), origin, actorToken, accesshttp.AssignmentRequest{ExpectedRoleVersion: 1, ExpectedAccessVersion: 1}, 403, nil)
 	assignmentPath := "/api/v1/admin/users/" + target + "/roles/" + string(role.ID)

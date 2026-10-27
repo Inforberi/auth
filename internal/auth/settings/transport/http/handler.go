@@ -19,6 +19,11 @@ type settingsService interface {
 	Update(context.Context, service.UpdateInput) (domain.Snapshot, error)
 }
 
+type settingsReadinessService interface {
+	ReadWithReadiness(context.Context, accessservice.Principal) (SettingsResponse, error)
+	UpdateWithReadiness(context.Context, service.UpdateInput) (SettingsResponse, error)
+}
+
 type Handler struct {
 	service   settingsService
 	available domain.PublicMethods
@@ -93,9 +98,13 @@ func methodsResponse(methods domain.PublicMethods) MethodsResponse {
 }
 
 func (h *Handler) respond(w http.ResponseWriter, snapshot domain.Snapshot) {
-	w.Header().Set("Cache-Control", "no-store")
 	response := SettingsResponseFrom(snapshot, h.available)
 	response.TokenProfiles = h.tokens
+	h.respondView(w, response)
+}
+
+func (h *Handler) respondView(w http.ResponseWriter, response SettingsResponse) {
+	w.Header().Set("Cache-Control", "no-store")
 	httpx.JSON(w, 200, response)
 }
 
