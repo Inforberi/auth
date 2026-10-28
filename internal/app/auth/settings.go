@@ -14,6 +14,9 @@ import (
 )
 
 func (s realmSecurity) assembleAccessPolicy(ctx context.Context, pool *pgxpool.Pool, cfg *config.Config) (*accessapp.App, *settingsservice.Service, *settingsservice.Providers, error) {
+	if _, err := settingsservice.NewMFA(settingspostgres.New(pool), cfg.MFA.Enabled).Current(ctx); err != nil {
+		return nil, nil, nil, err
+	}
 	access, err := accessapp.New(ctx, pool, cfg.Access, cfg.MFA.Enabled)
 	if err != nil {
 		return nil, nil, nil, err

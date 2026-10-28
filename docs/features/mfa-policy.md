@@ -24,9 +24,35 @@
 
 Платформенные `operator.AuthorizeRead/AuthorizeMutation` пока сохраняют обязательные password/TOTP guards. Последний usable administrator по-прежнему должен иметь прежние credential prerequisites. Bootstrap, role session revisions, enrollment, native flows и project bridges не ослаблены. Schema изменена в исходной миграции по принятому для текущей разработки правилу; рабочие БД автоматически не меняются.
 
+## Сохранение политики — A6.3m.2a
+
+Подготовлено внутреннее хранение; HTTP-ручек для смены режима пока нет. Значение не применяется к login/authority до следующего этапа полного enforcement. Текущее поведение MFA не ослаблено.
+
+В каждой Auth schema существует собственная строка `auth.mfa_settings`: `version` и `mode`. Платформа и отдельные project БД не разделяют её. Начальная миграция создаёт `version=1, mode=administrators`; runtime не выполняет Initialize, не восстанавливает строку и не использует ENV fallback. Standalone/platform startup и подготовка project onboarding проверяют наличие и допустимость настройки. Рабочие БД этим изменением не сбрасываются и автоматически не мигрируются.
+
+| Сохраняемый mode | Назначение для следующего этапа enforcement |
+| --- | --- |
+| `optional` | Добровольное личное подключение; требования ролей и уже подключённые факторы сохраняются |
+| `administrators` | Обязательность для администраторов, добровольность для остальных; на платформе охватывает операторов |
+| `required` | Обязательность для всех пользователей realm |
+
+Отдельный `roles` mode не нужен: выбор обязательных ролей уже хранится в их `mfaRequired` и объединяется по OR с realm policy. Новых role tables/permissions не добавляется. Конкретные ранее различавшиеся administrative login/disable правила сохраняются до согласованного переключения enforcement, а не заменяются одним флагом в этом подэтапе.
+
+Внутренние entrypoints:
+
+- `settings/service.MFA.Current/Read/Update` — конфигурация и защищённое локальное управление для standalone/project. Чтение требует живую локальную сессию и `auth.settings.manage`; запись также проверяет свежие пароль/MFA и блокирует authority через существующий Access guard.
+- `operator.Repository.ReadMFAPolicy/UpdateMFAPolicy` — политика платформы. Используются собственные platform realm/session/permission guards с `platform.project_settings.manage`. Локальная Auth-роль не подменяет полномочия оператора.
+- `ApplyMFAPolicyChange` — общая транзакционная запись после caller-owned authority locks; это не публичный административный API.
+
+Запись проверяет положительную ожидаемую версию и допустимый mode, блокирует singleton, сверяет версию, затем атомарно меняет policy и добавляет `auth.mfa_settings_audit`. No-op сохраняет версию и не создаёт audit; устаревшая версия даёт conflict; ошибка audit откатывает изменение. Выбор нового обязательного режима требует trusted MFA readiness из backend assembly, не значения из запроса. У уже сохранённого no-op такое требование повторно не возникает. Readiness платформы не используется вместо project readiness.
+
+Операции ограничены deadline 3 секунды; используются существующие пулы и locks. Нет массового UPDATE пользователей/сессий, новых workers, кеша или polling. Audit включён в существующую очистку security audit с прежними размером партии, индексом `(created_at,id)` и сроком хранения. Фактор и recovery codes при сохранении режима не удаляются.
+
+Domain-тесты и SQL fixture добавлены для mode validation, прав, no-op, capability denial, конфликтов и конкурентных записей, отката при отказе audit, сохранения роли/фактора и missing-row без seed. Platform fixture проверяет отдельную authority и wrong-realm отказ. Luna V1/V2: Go tests, targeted race, полный Linux ARM64 command SQL, четыре schema-теста, platform operators/MFA settings, operator HTTPS и lint закреплённой v2.14.0 — PASS. Все 17 source hashes совпали со снимком; временные fixtures удалены. HTTP optional profile, first-run выбор режима, работа старых сессий/native/JWT и полная двухпроектная матрица остаются открытыми.
+
 ## Дальнейшая реализация
 
-Сначала сохранить версионируемую realm policy и определить владельца изменения: существующие установки не должны автоматически ослабляться. Затем подключить effective policy к bootstrap/readiness и всем перечисленным consumers. Ужесточение должно закрывать обход через старые factorless sessions и pending login, без полного прохода пользователей в горячем пути. Required нельзя включить без готовой capability. Platform MFA readiness не заменяет project MFA readiness.
+После приёмки внутреннего хранения подключить effective policy ко всем runtime consumers и first-run выбору; существующие установки не должны автоматически ослабляться. Защищённые HTTP-ручки публиковать вместе с согласованным enforcement. Ужесточение должно закрывать обход через старые factorless sessions и pending login, без полного прохода пользователей в горячем пути. Required нельзя включить без готовой capability. Platform MFA readiness не заменяет project MFA readiness.
 
 Проверить оба first-run профиля, изоляцию платформы/проектов, личный фактор в optional-режиме, объединение ролей, freshness, last-admin, конкурентные изменения, native/JWT и recovery. Только после этого публиковать optional API и переходить к UI выбора.
 

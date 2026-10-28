@@ -1,5 +1,19 @@
 # История реализации Auth
 
+## A6.3m.2a MFA policy storage — 28 октября 2026
+
+Финал — PASS. V1 Go tests/SQL/race сохранены, V2 operator race/platform/HTTPS PASS; завершающий targeted lint pinned golangci-lint2.14.0 под Go1.27.3 exit0/0 issues. Evidence `/private/tmp/auth-mfa-policy-storage-v2-lint-offline.{log,exit}` и прежние V1/V2 логи. Все 17 source hashes совпали после прогона и с main; собственные fixtures очищены. Gate хранения закрыт, публикация optional/enforcement/HTTP/UI остаётся открытой. Пользователь разрешил коммит после PASS.
+
+V2: targeted race, platform operators/MFA settings и operator HTTPS PASS, собственные fixtures очищены, manifest17 совпал. Lint не выполнен: установленный 2.12.2 собран с Go1.26.2, proxy для pinned2.14.0 недоступен. Main нашёл exact2.14.0 в host module cache и передал Luna offline pinned go run с GOMODCACHE/GOCACHE; требуется только этот lint, остальные PASS не повторять. Коммит пока не выполнен.
+
+Luna V1: Go tests, targeted race, полный Linux ARM64 command SQL, четыре schema-теста, platform operators/MFA settings и operator HTTPS PASS. task check exit201 из-за единственного lint cyclop21 (max20) в assembleOperator. Main перенёс проверку policy в existing CheckRuntime SQL predicate: отдельный policy read и дополнительное ветвление сборки убраны. Другие source/migrations не менялись. V2 `/private/tmp/auth-mfa-policy-storage-v2.7g0pjru_`, manifest17/metadata рядом; запрошены targeted lint и проверки operator runtime/platform/HTTPS. Прежние PASS сохраняются; gate/коммит пока открыты.
+
+Подготовлены domain/service и внутренние PostgreSQL entrypoints для сохранения режима MFA отдельно в каждой Auth БД. Initial migration создаёт singleton/version1/administrators и audit с retention index; worker использует прежний bounded security audit cleanup. Новых ENV/deps/HTTP/workers/cache/polling нет. Stored mode ещё не применяется к login/authority: optional runtime и HTTP остаются закрытыми до полной цепочки A6.3m.
+
+Локальная запись использует auth.settings.manage/current session/fresh password+MFA, платформенная — собственные operator realm/SettingsManage guards. Общий transaction helper проверяет expectedVersion/no-op/trusted capability и atomic audit. Ошибка audit откатывает policy. Current runtime не инициализирует потерянную строку и не подставляет ENV; standalone/platform startup и project onboarding валидируют migration seed. Сохранение optional не удаляет TOTP/recovery или role requirements. Domain/local SQL и nested platform authority tests добавлены; основной агент выполнил formatter/source review, исполняемые проверки не запускал.
+
+Luna передан snapshot `/private/tmp/auth-mfa-policy-storage-v1.julcjtmu`, base `1632857d42ac6ba1a17cd03951b928dbd5406401`, manifest16 `/private/tmp/auth-mfa-policy-storage-v1.julcjtmu-manifest.sha256`, metadata рядом. Запрошены task check, targeted race settings/operator/app/project-storage, полный Linux ARM64 TestPrepareCommandSQL; schema TestMFAPolicySettingsSchema/MFARequirementPredicates/RoleMFAPolicy/RetentionSettings; platform TestPlatformOperatorsPostgres с nested MFA settings; app TestOperatorProfileSQLHTTPS. Только собственные PG/Redis fixtures; mandatory env/default pgx protocol соблюсти. Логи `/private/tmp/auth-mfa-policy-storage-v1-*.log`. Результат ожидается, gate открыт. Full A6.3m enforcement/HTTP/UI и общие security/resource gates не закрыты.
+
 ## A6.3m.1a MFA requirements — 28 октября 2026
 
 Финал Luna V2 — PASS: targeted lint0 и точный schema-набор из шести тестов в штатном query mode. V1 PASS task check/race/full command SQL сохранён; повторять его из-за исправления одного fixture не потребовалось. Manifest6 совпал до/после прогона и с main. Временные стенды/бинарники удалены. Evidence: `/private/tmp/auth-mfa-requirements-v2-{targeted-lint,schema-suite,manifest-after}.log`. Gate этого подэтапа закрыт; A6.3m и optional-профиль остаются открытыми.

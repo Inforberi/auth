@@ -8,16 +8,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
 )
 
-// AuthorizeRead is a current SQL snapshot, not a mutation/bridge guard.
-// Mutations must hold authority locks through their commit; a preceding read is insufficient.
-func (r *Repository) AuthorizeRead(ctx context.Context, actor domain.Principal, permission domain.Permission) error {
-	if !permission.Valid() || !actor.Valid() {
-		return domain.ErrForbidden
-	}
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-	var allowed bool
-	err := r.db.QueryRow(ctx, `SELECT EXISTS(
+const operatorReadGuard = `EXISTS(
 		SELECT 1 FROM platform.operator_realm realm
 		JOIN platform.operator_permissions p ON p.user_id=$2 AND p.permission_key=$4
 		JOIN auth.users u ON u.id=p.user_id
@@ -29,7 +20,18 @@ func (r *Repository) AuthorizeRead(ctx context.Context, actor domain.Principal, 
 		AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()
 		AND EXISTS(SELECT 1 FROM auth.password_credentials WHERE user_id=u.id)
 		AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=u.id)
-	)`, r.realm, actor.UserID, actor.TokenHash, permission).Scan(&allowed)
+	)`
+
+// AuthorizeRead is a current SQL snapshot, not a mutation/bridge guard.
+// Mutations must hold authority locks through their commit; a preceding read is insufficient.
+func (r *Repository) AuthorizeRead(ctx context.Context, actor domain.Principal, permission domain.Permission) error {
+	if !permission.Valid() || !actor.Valid() {
+		return domain.ErrForbidden
+	}
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	var allowed bool
+	err := r.db.QueryRow(ctx, `SELECT `+operatorReadGuard, r.realm, actor.UserID, actor.TokenHash, permission).Scan(&allowed)
 	if err != nil {
 		return errors.Join(domain.ErrUnavailable, ctx.Err())
 	}

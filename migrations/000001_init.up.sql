@@ -99,6 +99,23 @@ CREATE FUNCTION auth.administrative_mfa_required(owner_id UUID) RETURNS BOOLEAN 
         'accounts.users.status.manage','accounts.users.delete','auth.settings.manage'))));
 $$;
 
+CREATE TABLE auth.mfa_settings (
+  singleton BOOLEAN PRIMARY KEY CHECK(singleton),
+  version BIGINT NOT NULL DEFAULT 1 CHECK(version>0),
+  mode TEXT NOT NULL CHECK(mode IN ('optional','administrators','required'))
+);
+INSERT INTO auth.mfa_settings(singleton,mode) VALUES(true,'administrators');
+
+CREATE TABLE auth.mfa_settings_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id UUID NOT NULL REFERENCES auth.users(id),
+  version BIGINT NOT NULL UNIQUE CHECK(version>1),
+  previous_configuration JSONB NOT NULL CHECK(jsonb_typeof(previous_configuration)='object' AND octet_length(previous_configuration::text)<=4096),
+  next_configuration JSONB NOT NULL CHECK(jsonb_typeof(next_configuration)='object' AND octet_length(next_configuration::text)<=4096),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+CREATE INDEX mfa_settings_audit_retention ON auth.mfa_settings_audit(created_at,id);
+
 CREATE TABLE auth.auth_settings (
   singleton BOOLEAN PRIMARY KEY CHECK (singleton),
   version BIGINT NOT NULL DEFAULT 1 CHECK (version > 0),

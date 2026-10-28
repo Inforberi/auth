@@ -91,6 +91,9 @@ func (t *Target) initializeOnboarding(ctx context.Context, project *pgx.Conn, pr
 	if err != nil {
 		return err
 	}
+	if _, err := settingspostgres.ReadMFAPolicyInTransaction(ctx, tx); err != nil {
+		return unavailable(ctx)
+	}
 	snapshot, err := settingspostgres.InitializeInTransaction(ctx, tx, initial)
 	if err != nil {
 		return unavailable(ctx)

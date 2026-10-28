@@ -77,6 +77,7 @@ func (r *Repository) PurgeRetention(ctx context.Context, cfg service.RetentionCo
 			"identity_audit",
 			"access_audit",
 			"auth_settings_audit",
+			"mfa_settings_audit",
 			"smtp_settings_audit",
 			"provider_settings_audit",
 			"retention_settings_audit",

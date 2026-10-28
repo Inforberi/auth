@@ -15,6 +15,8 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 	var ready bool
 	err := r.db.QueryRow(ctx, `SELECT
 		EXISTS(SELECT 1 FROM platform.operator_realm WHERE id=$1 AND (initialized_at IS NOT NULL OR $2))
+		AND EXISTS(SELECT 1 FROM auth.mfa_settings WHERE singleton AND version>0
+			AND mode IN ('optional','administrators','required'))
 		AND current_user=session_user
 		AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_roles g WHERE g.rolname IN ('auth_recovery_operator','auth_mfa_recovery_operator')
 			AND pg_has_role(session_user,g.oid,'MEMBER'))

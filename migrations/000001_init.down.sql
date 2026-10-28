@@ -8,6 +8,8 @@ DROP TABLE IF EXISTS auth.provider_settings_audit;
 DROP TABLE IF EXISTS auth.provider_settings;
 DROP TABLE IF EXISTS auth.smtp_settings_audit;
 DROP TABLE IF EXISTS auth.smtp_settings;
+DROP TABLE IF EXISTS auth.mfa_settings_audit;
+DROP TABLE IF EXISTS auth.mfa_settings;
 DROP TABLE IF EXISTS auth.auth_settings_audit;
 DROP TABLE IF EXISTS auth.auth_settings;
 DROP TABLE IF EXISTS auth.email_login_audit;
