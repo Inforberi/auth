@@ -169,6 +169,7 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	temporaryCfg := projectPasswordFixtureConfig()
 	temporaryCfg.TemporaryPassword = passwordservice.TemporaryPasswordConfig{Enabled: true, TTL: time.Hour, SetupTTL: 5 * time.Minute, ReissueCooldown: time.Second, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}
 	web, origin, stopDelivery := f.httpAccountManagement(t, ctx, cfg, temporaryCfg.TemporaryPassword)
+	t.Run("project SMTP settings HTTP", func(t *testing.T) { f.httpSMTPSettings(t, ctx, web, origin, actorToken, bindingToken) })
 	var invited accountservice.ProvisionResult
 	provision := accounthttp.ProvisionRequest{IdempotencyKey: "f8300000-0000-4000-8000-000000000011", Email: inviteEmail, Invite: true}
 	web.command(t, "/api/v1/admin/users", origin, "", provision, 401, nil)

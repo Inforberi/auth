@@ -24,6 +24,7 @@ type projectMethodDeployment struct {
 	Invitations       bool                     `json:"invitations"`
 	TemporaryPassword bool                     `json:"temporaryPassword"`
 	Access            *projectAccessDeployment `json:"access,omitempty"`
+	SMTPSettings      bool                     `json:"smtpSettings"`
 	AuthSettings      bool                     `json:"authSettings"`
 	UserLifecycle     bool                     `json:"userLifecycle"`
 	UserDirectory     bool                     `json:"userDirectory"`
@@ -106,7 +107,7 @@ type projectAccessDeployment struct {
 
 func (entry projectMethodDeployment) requiresBrowser() bool {
 	return entry.Reauthentication || entry.Google || entry.Telegram ||
-		entry.EmailBinding || entry.EmailChange || entry.AuthSettings ||
+		entry.EmailBinding || entry.EmailChange || entry.AuthSettings || entry.SMTPSettings ||
 		entry.Access != nil || entry.UserDirectory || entry.UserLifecycle ||
 		entry.Invitations || entry.TemporaryPassword
 }

@@ -66,3 +66,5 @@ Main formatter/diff/read-only review. Luna task check, affected race/security, a
 Опциональный `access: {"permissions": [...]}` включает проектные API ролей/разрешений (browser only); отсутствие объекта default-off, пустой объект — built-in catalog. Чтение отдельно от MFA-dependent mutations; дополнительные permissions выбираются по UUID и не наследуются из platform catalog. [Контракт](project-access-management.md).
 
 `authSettings` (default false, требует browser) подключает local Auth policy GET/POST; actual readiness, version/permission/fresh-proof и SQL dependency pins описаны в [контракте настроек](project-auth-policy-settings.md). SMTP/provider/retention endpoints этим флагом не включаются.
+
+`smtpSettings` (default false, browser only) публикует project SMTP GET/POST/test. Existing project delivery allowlist остаётся deployment-only, секреты scoped по проекту, probe не удерживает SQL lease. [Контракт](project-smtp-settings.md).

@@ -12,6 +12,7 @@ import (
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
+	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
@@ -21,6 +22,7 @@ type ProjectProfileConfig struct {
 	UserDirectoryEnabled bool
 	UserLifecycleEnabled bool
 	AuthSettingsEnabled  bool
+	SMTPSettings         *ProjectSMTPSettingsConfig
 	Access               *accesssettings.Catalog
 	Password             *ProjectPasswordConfig
 	EmailOTP             *ProjectEmailOTPConfig
@@ -36,6 +38,7 @@ type ProjectProfileDependencies struct {
 	ProjectTokenDependencies
 	OIDCClients *ProjectOIDCClients
 	Delivery    *ProjectDelivery
+	SMTPTests   *settingsservice.SMTPTestGate
 }
 
 type ProjectProfile struct {
@@ -60,6 +63,7 @@ type ProjectProfile struct {
 	userLifecycle            *projectUserLifecycle
 	access                   *projectAccess
 	authSettings             *projectAuthSettings
+	smtpSettings             *projectSMTPSettings
 }
 
 func BuildProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies) (*ProjectProfile, error) {
@@ -101,6 +105,7 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	p.buildProfileUserLifecycle(cfg)
 	p.buildProfileAccess(ctx, cfg)
 	p.buildProfileAuthSettings(cfg)
+	p.buildProfileSMTPSettings(cfg, configuration.EncryptionKey(), redisReady)
 	if err := p.checkSnapshotCurrent(ctx, observed); err != nil {
 		return nil, err
 	}
@@ -154,6 +159,9 @@ func profileRedisReady(ctx context.Context, client *redis.Client) bool {
 
 func profileNeedsRedis(cfg ProjectProfileConfig, policy settingsdomain.Policy) bool {
 	if cfg.BrowserEnabled {
+		if cfg.SMTPSettings != nil {
+			return true
+		}
 		for _, view := range configuredBrowserPolicies(cfg) {
 			if view.mfa.Enabled {
 				return true

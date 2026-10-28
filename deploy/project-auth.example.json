@@ -10,6 +10,7 @@
       "userDirectory": true,
       "userLifecycle": true,
       "authSettings": true,
+      "smtpSettings": true,
       "invitations": true,
       "temporaryPassword": true,
       "emailBinding": true,

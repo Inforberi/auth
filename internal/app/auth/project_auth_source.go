@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"slices"
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
@@ -18,6 +19,7 @@ type compiledProjectDeployment struct {
 
 type ProjectAuthDeployment struct {
 	legacy           ProjectProfileSource
+	smtpTargets      []string
 	realm            projectdomain.ID
 	entries          map[projectdomain.ID]compiledProjectDeployment
 	google, telegram ProjectOIDCConfig
@@ -29,7 +31,7 @@ func LoadProjectAuthDeployment(cfg *config.Config) (*ProjectAuthDeployment, erro
 	if cfg == nil || !projectdomain.ValidID(projectdomain.ID(cfg.Platform.RealmID)) {
 		return nil, errProjectAuthManifest
 	}
-	d := &ProjectAuthDeployment{legacy: projectBrowserDeployment(cfg), realm: projectdomain.ID(cfg.Platform.RealmID), otp: cfg.EmailOTP}
+	d := &ProjectAuthDeployment{legacy: projectBrowserDeployment(cfg), smtpTargets: slices.Clone(cfg.Platform.Delivery.Targets()), realm: projectdomain.ID(cfg.Platform.RealmID), otp: cfg.EmailOTP}
 	d.otp.CheckPolicy = nil
 	if cfg.Platform.HTTP.ManifestFile == "" {
 		return d, nil
@@ -114,6 +116,9 @@ func (d *ProjectAuthDeployment) Profile(ctx context.Context, key projectruntime.
 
 func (d *ProjectAuthDeployment) browserProfile(base ProjectProfileConfig, methods projectMethodDeployment) ProjectProfileConfig {
 	profile := ProjectProfileConfig{BrowserEnabled: methods.Browser, UserDirectoryEnabled: methods.UserDirectory, UserLifecycleEnabled: methods.UserLifecycle, AuthSettingsEnabled: methods.AuthSettings, Timeout: base.Timeout}
+	if methods.SMTPSettings {
+		profile.SMTPSettings = &ProjectSMTPSettingsConfig{AllowedTargets: slices.Clone(d.smtpTargets)}
+	}
 	if methods.Browser {
 		password := *base.Password
 		password.TemporaryPassword.Enabled = methods.TemporaryPassword

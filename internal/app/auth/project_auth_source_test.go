@@ -58,6 +58,7 @@ func TestProjectDeploymentWithoutManifestKeepsLimitedProfile(t *testing.T) {
 	require.False(t, profile.UserDirectoryEnabled)
 	require.False(t, profile.UserLifecycleEnabled)
 	require.False(t, profile.AuthSettingsEnabled)
+	require.Nil(t, profile.SMTPSettings)
 	require.Nil(t, profile.Access)
 	require.False(t, profile.Password.TemporaryPassword.Enabled)
 	require.NotNil(t, profile.Password)
@@ -80,6 +81,8 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 	manifest.Projects[0].Invitations, manifest.Projects[0].TemporaryPassword = true, true
 	cfg.Invitation = accountservice.InvitationConfig{TTL: time.Hour, ActivationGlobalLimit: 100, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100}
 	cfg.TemporaryPassword = passwordservice.TemporaryPasswordConfig{TTL: time.Hour, SetupTTL: time.Minute, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}
+	manifest.Projects[0].SMTPSettings = true
+	cfg.Platform.Delivery.SMTPAllowedTargets = "smtp.example.test:587"
 	manifest.Projects[0].AuthSettings = true
 	manifest.Projects[0].UserDirectory, manifest.Projects[0].UserLifecycle = true, true
 	manifest.Projects[0].EmailBinding, manifest.Projects[0].EmailChange = true, true
@@ -100,6 +103,7 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 	require.True(t, a.UserDirectoryEnabled)
 	require.True(t, a.UserLifecycleEnabled)
 	require.True(t, a.AuthSettingsEnabled)
+	require.Equal(t, []string{"smtp.example.test:587"}, a.SMTPSettings.AllowedTargets)
 	require.NotNil(t, a.Access)
 	require.True(t, a.Access.Contains("reports.read"))
 	require.True(t, a.Access.Contains(accesssettings.RolesManage))
@@ -111,6 +115,7 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 	require.Equal(t, "https://alpha.example.test/protect-account", a.EmailManagement.Change.ReportURL)
 	require.Equal(t, "https://alpha.example.test/recover-account", a.EmailManagement.Change.RecoveryURL)
 	require.Empty(t, a.EmailManagement.Verification.EncryptionKey)
+	a.SMTPSettings.AllowedTargets[0] = "forbidden.example.test:587"
 	a.Password.TemporaryPassword.Enabled = false
 	a.EmailManagement.Invitations.URL = "https://foreign.example.test/activate"
 	a.EmailManagement.Change.ConfirmURL = "https://foreign.example.test/change-email"
@@ -121,6 +126,7 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 	a, err = d.Profile(ctx, projectDeploymentKey(alpha), "https://alpha.example.test")
 	require.NoError(t, err)
 	require.True(t, a.Password.TemporaryPassword.Enabled)
+	require.Equal(t, []string{"smtp.example.test:587"}, a.SMTPSettings.AllowedTargets)
 	require.Equal(t, "https://alpha.example.test/activate", a.EmailManagement.Invitations.URL)
 	require.EqualValues(t, "reports.read", a.Tokens.Tokens.Resources[0].Permissions[0])
 	require.Equal(t, strings.Repeat("a", 64), a.Tokens.Introspection.Clients[0].SecretHashes[0])
@@ -132,6 +138,7 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 		require.False(t, b.UserDirectoryEnabled)
 		require.False(t, b.UserLifecycleEnabled)
 		require.False(t, b.AuthSettingsEnabled)
+		require.Nil(t, b.SMTPSettings)
 		require.Nil(t, b.Access)
 		require.Nil(t, b.Google)
 		require.Nil(t, b.Tokens)
@@ -158,6 +165,7 @@ func TestProjectManifestRejectsAmbiguityAndUnknownSecrets(t *testing.T) {
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","userDirectory":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","userLifecycle":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","authSettings":true}]}`,
+		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","smtpSettings":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","access":{}}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","invitations":true}]}`,
 		`{"version":1,"projects":[{"id":"c2000000-0000-4000-8000-000000000002","temporaryPassword":true}]}`,

@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
+	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
@@ -37,6 +38,9 @@ type ProjectHTTP struct {
 func NewProjectHTTP(cfg ProjectHTTPConfig, deps ProjectProfileDependencies, source ProjectProfileSource, log *zap.Logger) (*ProjectHTTP, error) {
 	if source == nil || deps.Reader == nil || deps.Registry == nil {
 		return nil, projectdomain.ErrUnavailable
+	}
+	if deps.SMTPTests == nil {
+		deps.SMTPTests = settingsservice.NewSMTPTestGate()
 	}
 	if log == nil {
 		log = zap.NewNop()

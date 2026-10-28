@@ -75,6 +75,11 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 		settings := settingshttp.New(p.authSettings, settingsdomain.PublicMethods{}, log)
 		handlers["GET /api/v1/admin/auth/settings"], handlers["POST /api/v1/admin/auth/settings"] = settings.Read, settings.Update
 	}
+	if p.smtpSettings != nil {
+		smtp := settingshttp.NewSMTP(p.smtpSettings, log)
+		handlers["GET /api/v1/admin/auth/settings/smtp"], handlers["POST /api/v1/admin/auth/settings/smtp"] = smtp.Read, smtp.Update
+		handlers["POST /api/v1/admin/auth/settings/smtp/test"] = smtp.TestConnection
+	}
 	p.accessHandlers(handlers, log)
 	p.provisioningHandlers(handlers, log)
 	p.emailManagementHandlers(handlers, log)

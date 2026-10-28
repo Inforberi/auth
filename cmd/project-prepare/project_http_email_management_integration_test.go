@@ -60,7 +60,7 @@ func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.C
 	}, appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, Delivery: delivery}, func(_ context.Context, key projectruntime.Key, selected string) (appauth.ProjectProfileConfig, error) {
 		require.Equal(t, f.key, key)
 		require.Equal(t, origin, selected)
-		return appauth.ProjectProfileConfig{BrowserEnabled: true, UserLifecycleEnabled: true, AuthSettingsEnabled: true, Access: &catalog, Password: &password, EmailOTP: &otp, EmailManagement: &management, Timeout: 10 * time.Second}, nil
+		return appauth.ProjectProfileConfig{BrowserEnabled: true, UserLifecycleEnabled: true, AuthSettingsEnabled: true, SMTPSettings: &appauth.ProjectSMTPSettingsConfig{AllowedTargets: []string{f.listener.Addr().String()}}, Access: &catalog, Password: &password, EmailOTP: &otp, EmailManagement: &management, Timeout: 10 * time.Second}, nil
 	}, nil)
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {
@@ -70,11 +70,11 @@ func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.C
 		}
 		ready := 0
 		for _, feature := range assessment.Features {
-			if feature.Ready && (feature.Feature == "email_binding" || feature.Feature == "email_change" || feature.Feature == "provisioning" || feature.Feature == "invitation_activation" || feature.Feature == "temporary_password_admin" || feature.Feature == "user_lifecycle" || feature.Feature == "access_read" || feature.Feature == "access_write" || feature.Feature == "auth_settings_read" || feature.Feature == "auth_settings_write") {
+			if feature.Ready && (feature.Feature == "email_binding" || feature.Feature == "email_change" || feature.Feature == "provisioning" || feature.Feature == "invitation_activation" || feature.Feature == "temporary_password_admin" || feature.Feature == "user_lifecycle" || feature.Feature == "access_read" || feature.Feature == "access_write" || feature.Feature == "auth_settings_read" || feature.Feature == "auth_settings_write" || feature.Feature == "smtp_settings_read" || feature.Feature == "smtp_settings_write") {
 				ready++
 			}
 		}
-		return ready == 10
+		return ready == 12
 	}, 5*time.Second, 20*time.Millisecond)
 	server := httptest.NewTLSServer(handler)
 	t.Cleanup(func() {

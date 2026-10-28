@@ -41,6 +41,10 @@ type SMTPLimiter interface {
 	Allow(context.Context, string, int, time.Duration) (bool, error)
 }
 
+type SMTPTestGate struct{ slots chan struct{} }
+
+func NewSMTPTestGate() *SMTPTestGate { return &SMTPTestGate{slots: make(chan struct{}, 2)} }
+
 type SMTP struct {
 	repo   SMTPRepository
 	cipher SMTPCipher
@@ -51,14 +55,18 @@ type SMTP struct {
 }
 
 func NewSMTP(repo SMTPRepository, cipher SMTPCipher, probe SMTPProbe, limits SMTPLimiter, allowed []string, requireTLS bool) (*SMTP, error) {
-	if repo == nil || cipher == nil || probe == nil || limits == nil {
+	return NewSMTPWithTestGate(repo, cipher, probe, limits, allowed, requireTLS, NewSMTPTestGate())
+}
+
+func NewSMTPWithTestGate(repo SMTPRepository, cipher SMTPCipher, probe SMTPProbe, limits SMTPLimiter, allowed []string, requireTLS bool, gate *SMTPTestGate) (*SMTP, error) {
+	if repo == nil || cipher == nil || probe == nil || limits == nil || gate == nil || gate.slots == nil {
 		return nil, domain.ErrInvalidSMTP
 	}
 	policy, err := newSMTPPolicy(allowed, requireTLS)
 	if err != nil {
 		return nil, err
 	}
-	return &SMTP{repo: repo, cipher: cipher, probe: probe, limits: limits, policy: policy, tests: make(chan struct{}, 2)}, nil
+	return &SMTP{repo: repo, cipher: cipher, probe: probe, limits: limits, policy: policy, tests: gate.slots}, nil
 }
 
 func (s *SMTP) Read(ctx context.Context, actor accessservice.Principal) (domain.SMTPSnapshot, error) {
