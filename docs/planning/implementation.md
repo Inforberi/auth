@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **A6.3m.1a-mfa-requirements, 28 октября — проверки Luna V1/V2 PASS.** [Границы и последовательность](../features/mfa-policy.md): аудит текущих guards и общие SQL-предикаты административного доступа/MFA с сохранением различий для read-only permission. Новых настроек/API/optional-профиля нет; platform authority, fresh proofs и last-admin остаются прежними. Это первый подэтап A6.3m, не завершение настраиваемой обязательности.
+
 - [x] **MP5.1r-project-retention-settings, 28 октября — локальные проверки Luna PASS.** [Контракт](../features/project-retention-settings.md): проектные GET/POST, default-off manifest, раздельная readiness, прежние права/fresh-auth/версии/audit и подтверждение сокращения. Один lease, без нового SQL/deps/ENV/workers. Worker продолжает читать политику на каждую партию; очистка в HTTPS fixture не запускается. Настраиваемая MFA policy и полная MP5 остаются отдельно.
 
 - [x] **MP5.1q-project-provider-settings, 28 октября — локальные проверки Luna PASS.** [Контракт](../features/project-provider-settings.md): Google/Telegram GET/POST, default-off providerSettings, read/write readiness, existing service/DTO/SQL/cipher purposes/version/proof guards, one-lease5s. No new schema/deps/ENV/workers. Retention/MFApolicy/fullMP5/UI отдельно.
@@ -264,6 +266,8 @@ J7.2-local: [atomic auth-state invalidation и disposable pg_dump/pg_restore dri
 | Личный профиль | При добровольном режиме человек сам подключает/отключает свой фактор через защищённый flow; включённый фактор требуется при входе, пока явно не отключён |
 
 Режим обязательности, техническая доступность MFA и наличие личного фактора — разные состояния. `MFA_ENABLED` не превращать в переключатель «можно пропустить уже настроенный фактор». При режиме по ролям требования всех ролей объединяются по OR. Пользователь не может отменить обязательную для него политику. Смена required → optional сама не удаляет TOTP/recovery codes и не отключает MFA уже подключившим её людям. В сохранённых установках ничего автоматически не ослаблять; владелец меняет политику явно.
+
+Подэтап A6.3m.1a: [разделение текущих требований](../features/mfa-policy.md), общие SQL-предикаты и регрессия прежнего поведения; проверки Luna V1/V2 PASS. Сам A6.3m остаётся открытым до хранения политики и полной enforcement-приёмки.
 
 - [ ] A6.3m.1. Сверить существующие stored role policy, Auth settings, platform config/permissions, SQL `role_requires_mfa`, bootstrap, administrative login/session authority, fresh proofs и MFA management. Определить единый effective policy для конкретного realm/actor, без rules engine и параллельных booleans. Отделить «имеет административные права» от «всегда обязан иметь MFA»; существующие проверки не удалять до готовности заменяющей политики.
 - [ ] A6.3m.2. Реализовать сохранение и версионирование realm policy, защищённый read/update API с явными полномочиями и аудитом. Platform owner выбирает required/optional независимо от проектов. При создании новой платформы first-run UI позволяет выбрать режим через существующий доверенный bootstrap proof, а не публичный неавторизованный endpoint. При required enrollment завершается до полноценного доступа; при optional отказ от enrollment допускает корректный primary-only вход. Включение обязательности запрещено, если нужная MFA capability недоступна.

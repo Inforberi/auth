@@ -40,6 +40,8 @@ DROP VIEW IF EXISTS auth.role_bound_sessions;
 DROP TABLE IF EXISTS auth.sessions;
 DROP FUNCTION IF EXISTS auth.bind_session_roles();
 DROP FUNCTION IF EXISTS auth.role_requires_mfa(UUID);
+DROP FUNCTION IF EXISTS auth.has_administrative_access(UUID);
+DROP FUNCTION IF EXISTS auth.administrative_mfa_required(UUID);
 DROP FUNCTION IF EXISTS auth.decide_mfa_recovery(UUID,UUID,BIGINT,BOOLEAN,TEXT,TEXT);
 DROP TABLE IF EXISTS auth.mfa_audit;
 DROP TABLE IF EXISTS auth.mfa_recovery_outbox;

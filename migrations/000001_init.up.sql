@@ -82,6 +82,23 @@ CREATE FUNCTION auth.role_requires_mfa(owner_id UUID) RETURNS BOOLEAN LANGUAGE S
     WHERE ur.user_id=owner_id AND r.mfa_required);
 $$;
 
+-- Administrative session limits and MFA obligations are deliberately different rules.
+CREATE FUNCTION auth.has_administrative_access(owner_id UUID) RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
+  SELECT EXISTS(SELECT 1 FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id
+    WHERE ur.user_id=owner_id AND ((r.system AND r.key='super_admin') OR EXISTS(
+      SELECT 1 FROM auth.role_permissions rp WHERE rp.role_id=r.id AND rp.permission_key IN (
+        'access.roles.manage','access.assignments.manage','accounts.email.bind','accounts.users.manage',
+        'accounts.users.read','accounts.users.status.manage','accounts.users.delete','auth.settings.manage'))));
+$$;
+
+CREATE FUNCTION auth.administrative_mfa_required(owner_id UUID) RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
+  SELECT EXISTS(SELECT 1 FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id
+    WHERE ur.user_id=owner_id AND ((r.system AND r.key='super_admin') OR EXISTS(
+      SELECT 1 FROM auth.role_permissions rp WHERE rp.role_id=r.id AND rp.permission_key IN (
+        'access.roles.manage','access.assignments.manage','accounts.email.bind','accounts.users.manage',
+        'accounts.users.status.manage','accounts.users.delete','auth.settings.manage'))));
+$$;
+
 CREATE TABLE auth.auth_settings (
   singleton BOOLEAN PRIMARY KEY CHECK (singleton),
   version BIGINT NOT NULL DEFAULT 1 CHECK (version > 0),
@@ -592,11 +609,7 @@ BEGIN
       RAISE EXCEPTION 'role requires MFA before session issuance';
     END IF;
     -- Administrative permissions, not the login URL, choose the stricter profile.
-    IF EXISTS (SELECT 1 FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id
-      LEFT JOIN auth.role_permissions rp ON rp.role_id=ur.role_id
-      WHERE ur.user_id=NEW.user_id AND ((r.system AND r.key='super_admin') OR rp.permission_key IN (
-        'access.roles.manage','access.assignments.manage','accounts.email.bind','accounts.users.manage',
-        'accounts.users.read','accounts.users.status.manage','accounts.users.delete','auth.settings.manage'))) THEN
+    IF auth.has_administrative_access(NEW.user_id) THEN
       IF NEW.idle_timeout_seconds<60 OR NEW.activity_interval_seconds<1
         OR NEW.activity_interval_seconds>NEW.idle_timeout_seconds/10
         OR NEW.admin_absolute_seconds<NEW.idle_timeout_seconds THEN

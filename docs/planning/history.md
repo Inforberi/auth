@@ -1,5 +1,17 @@
 # История реализации Auth
 
+## A6.3m.1a MFA requirements — 28 октября 2026
+
+Финал Luna V2 — PASS: targeted lint0 и точный schema-набор из шести тестов в штатном query mode. V1 PASS task check/race/full command SQL сохранён; повторять его из-за исправления одного fixture не потребовалось. Manifest6 совпал до/после прогона и с main. Временные стенды/бинарники удалены. Evidence: `/private/tmp/auth-mfa-requirements-v2-{targeted-lint,schema-suite,manifest-after}.log`. Gate этого подэтапа закрыт; A6.3m и optional-профиль остаются открытыми.
+
+Luna V1: task check, targeted race, Linux ARM64 TestPrepareCommandSQL и пять прежних schema-тестов PASS. Новый TestMFARequirementPredicatesSchema в штатном pgx protocol упал с SQLSTATE42601: несколько SQL statements с параметрами переданы через один prepared Exec. Simple protocol не принят как исправление; main разделил параметризованные statements в самом fixture. Production code/migrations не менялись. V2 `/private/tmp/auth-mfa-requirements-v2.0h1ohxb0`, manifest6/metadata рядом, отличается только этим Go-тестом. Запрошены targeted lint и повтор schema-набора в штатном protocol; остальные подтверждённые проверки не повторять. Коммит пока не выполнен, gate открыт.
+
+Начат первый подэтап настраиваемой обязательности MFA. Исследованы текущие Auth/access и platform/operator authority, bootstrap, role policy и project bridge readiness. Политика optional пока не опубликована: для её безопасного включения требуется хранение realm policy и согласованный enforcement, а не изменение единственного login guard.
+
+Повторяющиеся административные предикаты вынесены в `auth.has_administrative_access(UUID)` и `auth.administrative_mfa_required(UUID)` в initial migration; down удаляет обе функции. Первое правило включает users.read для administrative login/session lifetime, второе сохраняет прежние семь permissions для status/disable. SQL functions STABLE/invoker не подменяют авторизацию и не меняют locks/proofs/role OR/last-admin/platform TOTP. Новых routes/settings/deps/ENV/workers нет. Добавлен SQL-тест permission/role/ACL matrix. Main выполнил formatter и source/diff review, исполняемые проверки не запускал.
+
+Отдельной Luna передан snapshot `/private/tmp/auth-mfa-requirements-v1.743jmszx`, base `25ef2e7808dbbf150c76c9e24c7a6c4079d619f2`, manifest6 `/private/tmp/auth-mfa-requirements-v1.743jmszx-manifest.sha256`, metadata рядом. Запрошены task check, targeted race access/MFA/session, полный Linux ARM64 TestPrepareCommandSQL и standalone schema tests: новый TestMFARequirementPredicatesSchema, обе RoleMFA, administrative login и обе administrative lifetime. Логи `/private/tmp/auth-mfa-requirements-v1-*.log`; результаты ожидаются. UI/optional MFA/full A6.3m и общие performance/security gates открыты.
+
 ## MP5.1r project retention settings — 28 октября 2026
 
 Подготовлены проектные GET/POST сроков хранения на существующих service/DTO/SQL. Сохранены права, свежие password/MFA proofs для записи, версии, audit, явное подтверждение сокращения и чтение политики worker на каждую партию. Default-off manifest `retentionSettings`, раздельная readiness, NoRefresh и один runtime lease 5s. Новых миграций/deps/ENV/workers нет.

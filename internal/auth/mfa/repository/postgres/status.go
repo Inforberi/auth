@@ -21,15 +21,11 @@ const freshManagementPrimary = `(s.password_verified_at<=clock_timestamp()
 		AND EXISTS(SELECT 1 FROM auth.user_emails e WHERE e.user_id=$1
 			AND e.id=s.email_reauthenticated_id AND e.verified_at IS NOT NULL))`
 
-const administrativeMFARequired = `EXISTS(SELECT 1 FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id
-	WHERE ur.user_id=$1 AND (r.system AND r.key='super_admin' OR EXISTS(SELECT 1 FROM auth.role_permissions rp
-	WHERE rp.role_id=r.id AND rp.permission_key IN ('access.roles.manage','access.assignments.manage','accounts.email.bind','accounts.users.manage','accounts.users.status.manage','accounts.users.delete','auth.settings.manage'))))`
-
 func (r *Repository) Status(ctx context.Context, proof service.Proof) (*service.SecurityStatus, error) {
 	var result service.SecurityStatus
 	err := r.db.QueryRow(ctx, `SELECT
 		EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1),auth.role_requires_mfa($1),
-		`+administrativeMFARequired+`,
+		auth.administrative_mfa_required($1),
 		(SELECT count(*) FROM auth.mfa_recovery_codes WHERE user_id=$1),
 		EXISTS(SELECT 1 FROM auth.user_emails WHERE user_id=$1 AND verified_at IS NOT NULL),
 		EXISTS(SELECT 1 FROM auth.password_credentials WHERE user_id=$1),
