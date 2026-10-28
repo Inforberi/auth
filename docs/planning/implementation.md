@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **MP5.1r-project-retention-settings, 28 октября — локальные проверки Luna PASS.** [Контракт](../features/project-retention-settings.md): проектные GET/POST, default-off manifest, раздельная readiness, прежние права/fresh-auth/версии/audit и подтверждение сокращения. Один lease, без нового SQL/deps/ENV/workers. Worker продолжает читать политику на каждую партию; очистка в HTTPS fixture не запускается. Настраиваемая MFA policy и полная MP5 остаются отдельно.
+
 - [x] **MP5.1q-project-provider-settings, 28 октября — локальные проверки Luna PASS.** [Контракт](../features/project-provider-settings.md): Google/Telegram GET/POST, default-off providerSettings, read/write readiness, existing service/DTO/SQL/cipher purposes/version/proof guards, one-lease5s. No new schema/deps/ENV/workers. Retention/MFApolicy/fullMP5/UI отдельно.
 
 - [x] **MP5.1p-project-smtp-settings, 28 октября — локальные проверки Luna PASS.** [Контракт](../features/project-smtp-settings.md): 3 SMTP routes/default-off smtpSettings, existing handler/service/SQL, read/write readiness, scoped secrets/limits/allowlist, network без SQL lease, общий gate2 на ProjectHTTP owner. No new schema/deps/ENV/workers. Provider/retention/MFApolicy/fullMP5/UI отдельно.

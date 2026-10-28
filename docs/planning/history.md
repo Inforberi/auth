@@ -1,5 +1,13 @@
 # История реализации Auth
 
+## MP5.1r project retention settings — 28 октября 2026
+
+Подготовлены проектные GET/POST сроков хранения на существующих service/DTO/SQL. Сохранены права, свежие password/MFA proofs для записи, версии, audit, явное подтверждение сокращения и чтение политики worker на каждую партию. Default-off manifest `retentionSettings`, раздельная readiness, NoRefresh и один runtime lease 5s. Новых миграций/deps/ENV/workers нет.
+
+Основной агент выполнил форматирование изменённых Go-файлов и просмотр связанного кода/diff. Исследователь подтвердил отсутствие retention row в account fixture; новый HTTPS subtest явно готовит synthetic row и восстанавливает исходное состояние, не запускает purge. Добавлены default-off/isolation/browser prerequisite/routes и HTTPS-проверки прав/Origin/границ/no-op/версий/подтверждения/audit/NoRefresh/missing-row без инициализации.
+
+Отдельной Luna передан снимок `/private/tmp/auth-project-retention-settings-v1.1xmom4xg`, base `791c8fedbef34d79d1a89c040b6ba39db426d035`, manifest11 `/private/tmp/auth-project-retention-settings-v1.1xmom4xg-manifest.sha256`, metadata рядом. JSON artifact hash: `bcb953407f503058e36e1ef6144836ccdf379f0e2615f32342a6f48dd5a55f20`. Запрошены task check, API check, targeted race app/auth+settings, полный Linux ARM64 TestPrepareCommandSQL без SKIP нового HTTPS subtest и targeted TestRetentionSettingsSchema на собственном стенде. Luna вернула PASS всех запрошенных проверок, новый HTTPS subtest без SKIP. Manifest11 и JSON hash совпали до/после прогона; основной агент подтвердил совпадение с рабочими файлами. Временные стенды удалены. Gate этого блока закрыт. Логи `/private/tmp/auth-project-retention-settings-v1-*.log`; основной агент исполняемые проверки не запускал. Общие MP5/security/GC/RPS/UI этим блоком не закрыты.
+
 ## Результат MP3.7a managed configuration — 25 октября 2026
 
 Финальный отчёт Luna: PASS snapshot `auth-managed-readiness.ow59nzkt`. Task check (tests+lint), `go test -race ./internal/platform/project/... ./cmd/project-prepare -count=1`, security и actual PostgreSQL18.6 TestPrepareCommandSQL прошли. Обязательные managed configuration и legacy SQL cases без SKIP/NOT RUN. Manifest10 совпал после проверок, disposable databases/roles/schemas/container/fixture очищены. Основной агент перед коммитом подтвердил совпадение всех10 изменённых source с проверенным manifest; последующие изменения только в документации. Принят закрытый профиль, не весь MP3.7/MP4/public-ready/UI.

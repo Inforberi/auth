@@ -84,6 +84,10 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 		providers := settingshttp.NewProviders(p.providerSettings, log)
 		handlers["GET /api/v1/admin/auth/settings/providers/{provider}"], handlers["POST /api/v1/admin/auth/settings/providers/{provider}"] = providers.Read, providers.Update
 	}
+	if p.retentionSettings != nil {
+		retention := settingshttp.NewRetention(p.retentionSettings, log)
+		handlers["GET /api/v1/admin/auth/settings/retention"], handlers["POST /api/v1/admin/auth/settings/retention"] = retention.Read, retention.Update
+	}
 	p.accessHandlers(handlers, log)
 	p.provisioningHandlers(handlers, log)
 	p.emailManagementHandlers(handlers, log)

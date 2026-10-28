@@ -45,6 +45,8 @@ func (p *ProjectProfile) RoutePlan() []ProjectRoute {
 	add("provisioning", "session_no_refresh", "POST", "/api/v1/admin/users", "/api/v1/admin/users/{id}/invitation")
 	add("invitation_activation", "browser", "POST", "/api/v1/auth/invitations/activate")
 	add("temporary_password_admin", "session_no_refresh", "POST", "/api/v1/admin/users/temporary-password", "/api/v1/admin/users/{id}/temporary-password")
+	add("retention_settings_read", "session_no_refresh", "GET", "/api/v1/admin/auth/settings/retention")
+	add("retention_settings_write", "session_no_refresh", "POST", "/api/v1/admin/auth/settings/retention")
 	add("provider_settings_read", "session_no_refresh", "GET", "/api/v1/admin/auth/settings/providers/{provider}")
 	add("provider_settings_write", "session_no_refresh", "POST", "/api/v1/admin/auth/settings/providers/{provider}")
 	add("smtp_settings_read", "session_no_refresh", "GET", "/api/v1/admin/auth/settings/smtp")

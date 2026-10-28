@@ -12,6 +12,7 @@
       "authSettings": true,
       "smtpSettings": true,
       "providerSettings": true,
+      "retentionSettings": true,
       "invitations": true,
       "temporaryPassword": true,
       "emailBinding": true,
