@@ -37,7 +37,7 @@ func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.Prima
 			if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
 				return err
 			}
-		} else if target != nil {
+		} else {
 			if err := accesspostgres.LockAccessSnapshot(ctx, tx); err != nil {
 				return err
 			}
@@ -58,10 +58,10 @@ func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.Prima
 			return err
 		}
 		var enabled, required bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1),auth.role_requires_mfa($1)`, proof.UserID).Scan(&enabled, &required); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1),auth.mfa_required($1,$2)`, proof.UserID, proof.Administrative).Scan(&enabled, &required); err != nil {
 			return err
 		}
-		if !enabled && (!required || proof.Administrative) {
+		if !enabled && !required {
 			return domain.ErrConflict
 		}
 		result.EnrollmentRequired = !enabled
@@ -70,12 +70,12 @@ func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.Prima
 			return err
 		}
 		err = tx.QueryRow(ctx, `INSERT INTO auth.mfa_login_challenges
-			(user_id,digest,binding_hash,auth_version,primary_method,primary_reference,primary_issuer,primary_verified_at,expires_at,administrative,enrollment_required,provider_version,credential_profile,native_audience,native_scope)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,LEAST($8::timestamptz,statement_timestamp()),statement_timestamp()+$9::double precision*interval '1 second',$10,$11,$12,$13,$14,$15)
+			(user_id,digest,binding_hash,auth_version,primary_method,primary_reference,primary_issuer,primary_verified_at,expires_at,administrative,enrollment_required,provider_version,credential_profile,native_audience,native_scope,mfa_policy_revision)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,LEAST($8::timestamptz,statement_timestamp()),statement_timestamp()+$9::double precision*interval '1 second',$10,$11,$12,$13,$14,$15,(SELECT session_revision FROM auth.mfa_settings WHERE singleton))
 			ON CONFLICT(user_id) DO UPDATE SET digest=EXCLUDED.digest,binding_hash=EXCLUDED.binding_hash,
 			auth_version=EXCLUDED.auth_version,primary_method=EXCLUDED.primary_method,primary_reference=EXCLUDED.primary_reference,
 			primary_issuer=EXCLUDED.primary_issuer,primary_verified_at=EXCLUDED.primary_verified_at,administrative=EXCLUDED.administrative,enrollment_required=EXCLUDED.enrollment_required,provider_version=EXCLUDED.provider_version,attempts=0,
-			credential_profile=EXCLUDED.credential_profile,native_audience=EXCLUDED.native_audience,native_scope=EXCLUDED.native_scope,
+			credential_profile=EXCLUDED.credential_profile,native_audience=EXCLUDED.native_audience,native_scope=EXCLUDED.native_scope,mfa_policy_revision=EXCLUDED.mfa_policy_revision,
 			created_at=statement_timestamp(),expires_at=EXCLUDED.expires_at RETURNING expires_at`,
 			proof.UserID, digest, binding, proof.AuthVersion, proof.Method, proof.Reference, proof.Issuer, proof.VerifiedAt, ttl.Seconds(), proof.Administrative, result.EnrollmentRequired, proof.ProviderVersion, profile, audience, bound.Scope).Scan(&result.ExpiresAt)
 		if err != nil {
@@ -160,6 +160,7 @@ func (r *Repository) findLoginOwner(ctx context.Context, digest, binding, profil
 	var user accountdomain.UserID
 	err := r.db.QueryRow(ctx, `SELECT c.user_id FROM auth.mfa_login_challenges c JOIN auth.users u ON u.id=c.user_id
 		WHERE c.digest=$1 AND c.binding_hash=$2 AND c.auth_version=u.auth_version AND c.attempts<5
+		AND c.mfa_policy_revision=(SELECT session_revision FROM auth.mfa_settings WHERE singleton)
 		AND c.credential_profile=$3 AND c.expires_at>clock_timestamp() AND u.status='active' AND u.deleted_at IS NULL`, digest, binding, profile).Scan(&user)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", domain.ErrInvalidCode

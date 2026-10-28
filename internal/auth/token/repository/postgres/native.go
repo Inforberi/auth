@@ -104,7 +104,7 @@ func authorizeNativePrimary(ctx context.Context, tx pgx.Tx, proof mfaservice.Pri
 		return err
 	}
 	var required bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1) OR auth.role_requires_mfa($1)`, proof.UserID).Scan(&required); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT auth.mfa_login_required($1)`, proof.UserID).Scan(&required); err != nil {
 		return err
 	}
 	if required {

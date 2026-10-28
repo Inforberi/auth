@@ -9,6 +9,7 @@ import (
 
 type SecurityStatus struct {
 	TOTPEnabled                  bool
+	RequiredByPolicy             bool
 	RequiredByRole               bool
 	RequiredByAdministration     bool
 	RecoveryCodesRemaining       int

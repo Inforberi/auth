@@ -16,10 +16,11 @@ const operatorReadGuard = `EXISTS(
 		WHERE realm.id=$1 AND realm.initialized_at IS NOT NULL
 		AND u.status='active' AND u.deleted_at IS NULL AND s.auth_version=u.auth_version
 		AND s.credential_profile='browser' AND s.primary_method='password'
-		AND s.password_verified_at<=clock_timestamp() AND s.mfa_verified_at<=clock_timestamp()
+		AND s.password_verified_at<=clock_timestamp()
+		AND (NOT auth.mfa_login_required(u.id,true) OR (s.mfa_verified_at<=clock_timestamp()
+			AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=u.id)))
 		AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()
 		AND EXISTS(SELECT 1 FROM auth.password_credentials WHERE user_id=u.id)
-		AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=u.id)
 	)`
 
 // AuthorizeRead is a current SQL snapshot, not a mutation/bridge guard.

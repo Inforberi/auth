@@ -152,9 +152,9 @@ func checkJWTExchange(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		{"expired", `UPDATE auth.sessions SET expires_at=created_at+interval '1 microsecond' WHERE user_id=$1`, sessiondomain.ErrSessionNotFound},
 		{"permission removed", `DELETE FROM auth.role_permissions WHERE role_id IN (SELECT role_id FROM auth.user_roles WHERE user_id=$1) AND permission_key='orders.read'`, tokendomain.ErrForbidden},
 		{"role revision", `UPDATE auth.roles SET session_revision=session_revision+1 WHERE id IN (SELECT role_id FROM auth.user_roles WHERE user_id=$1)`, sessiondomain.ErrSessionNotFound},
-		{"MFA missing", `UPDATE auth.sessions SET mfa_verified_at=NULL WHERE user_id=$1`, sessiondomain.ErrMFARequired},
+		{"MFA missing", `UPDATE auth.sessions SET mfa_verified_at=NULL WHERE user_id=$1`, sessiondomain.ErrSessionNotFound},
 		{"primary proof missing", `UPDATE auth.sessions SET primary_method=NULL,primary_verified_at=NULL,mfa_verified_at=NULL WHERE user_id=$1`, sessiondomain.ErrSessionNotFound},
-		{"factor removed", `DELETE FROM auth.mfa_totp WHERE user_id=$1`, sessiondomain.ErrMFARequired},
+		{"factor removed", `DELETE FROM auth.mfa_totp WHERE user_id=$1`, sessiondomain.ErrSessionNotFound},
 		{"activation pending", `INSERT INTO auth.account_provisions(actor_id,request_key,fingerprint,user_id) VALUES ($1,gen_random_uuid(),repeat('a',64),$1)`, sessiondomain.ErrSessionNotFound},
 		{"password change pending", `INSERT INTO auth.account_provisions(actor_id,request_key,fingerprint,user_id,activated_at,password_change_required) VALUES ($1,gen_random_uuid(),repeat('a',64),$1,clock_timestamp(),true)`, sessiondomain.ErrSessionNotFound},
 	} {

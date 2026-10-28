@@ -4,6 +4,8 @@
 
 ## Текущий выпуск: Auth, роли и UI
 
+- [x] **A6.3m.3a-mfa-runtime-policy, 28 октября — проверки Luna V1/V2 PASS.** [Контракт](../features/mfa-policy.md#применение-в-runtime--a63m3a): SQL realm/role/enrolled requirement, browser/native issuance/enrollment, session/challenge revision без revival, conditional sensitive proofs/last-admin/delivery, MFA status и Swagger. First-run выбор, capability matrix и settings HTTP остаются отдельно; optional profile не объявлять полностью принятым.
+
 - [x] **A6.3m.2a-mfa-policy-storage, 28 октября — проверки Luna V1/V2 PASS.** [Контракт](../features/mfa-policy.md#сохранение-политики--a63m2a): отдельная singleton на БД realm, режимы optional/administrators/required, начальный seed из миграции, version/audit/конкуренция и trusted MFA readiness. Локальная и platform authority разделены. Внутренние entrypoints и startup/onboarding validation готовы; HTTP и optional enforcement ещё закрыты. Audit использует существующий retention worker.
 
 - [x] **A6.3m.1a-mfa-requirements, 28 октября — проверки Luna V1/V2 PASS.** [Границы и последовательность](../features/mfa-policy.md): аудит текущих guards и общие SQL-предикаты административного доступа/MFA с сохранением различий для read-only permission. Новых настроек/API/optional-профиля нет; platform authority, fresh proofs и last-admin остаются прежними. Это первый подэтап A6.3m, не завершение настраиваемой обязательности.

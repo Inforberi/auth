@@ -75,13 +75,27 @@ func TestAdministrativeLoginSchema(t *testing.T) {
 			`UPDATE auth.password_credentials SET password_hash='changed' WHERE user_id=$1`,
 			`UPDATE auth.users SET status='blocked' WHERE id=$1`,
 			`UPDATE auth.users SET auth_version=auth_version+1 WHERE id=$1`,
-			`DELETE FROM auth.mfa_totp WHERE user_id=$1`,
 		} {
 			f := prepare(t, "eligibility-"+string(rune('a'+i)))
 			accessExec(t, db, ctx, query, f.user)
 			if challenge, err := f.login.Start(ctx, f.proof, ""); challenge != nil || (!errors.Is(err, mfadomain.ErrProofRequired) && !errors.Is(err, mfadomain.ErrConflict)) {
 				t.Fatal("ineligible admin accepted", i, err)
 			}
+		}
+	})
+	t.Run("required-administrator-enrollment", func(t *testing.T) {
+		f := prepare(t, "required-admin-enrollment")
+		accessExec(t, db, ctx, `DELETE FROM auth.mfa_totp WHERE user_id=$1`, f.user)
+		var before, after int
+		if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.sessions WHERE user_id=$1`, f.user).Scan(&before); err != nil {
+			t.Fatal(err)
+		}
+		challenge, err := f.login.Start(ctx, f.proof, "")
+		if err != nil || challenge == nil || !challenge.EnrollmentRequired {
+			t.Fatal("required administrator did not receive limited enrollment", challenge, err)
+		}
+		if err := db.QueryRow(ctx, `SELECT count(*) FROM auth.sessions WHERE user_id=$1`, f.user).Scan(&after); err != nil || after != before {
+			t.Fatal("enrollment issued a session", before, after, err)
 		}
 	})
 	t.Run("atomic-completion-and-context", func(t *testing.T) {

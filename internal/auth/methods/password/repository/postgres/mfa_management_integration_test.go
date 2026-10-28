@@ -109,6 +109,10 @@ func checkMFAManagement(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	t.Run("freshness-and-admin-policy", func(t *testing.T) {
 		f := newMFALoginFixture(t, db, ctx, "management-guards")
 		proof := managementProof(t, ctx, f)
+		var verified time.Time
+		if err := db.QueryRow(ctx, `SELECT mfa_verified_at FROM auth.sessions WHERE token_hash=$1`, proof.TokenHash).Scan(&verified); err != nil {
+			t.Fatal(err)
+		}
 		accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL WHERE token_hash=$1`, proof.TokenHash)
 		if err := svc.Disable(ctx, proof); !errors.Is(err, mfadomain.ErrProofRequired) {
 			t.Fatal("password bypassed MFA", err)
@@ -116,6 +120,10 @@ func checkMFAManagement(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		if _, err := svc.StartReplacement(ctx, proof); !errors.Is(err, mfadomain.ErrProofRequired) {
 			t.Fatal("replace without factor proof", err)
 		}
+		if _, err := svc.StepUp(ctx, mfaservice.StepUpInput{Proof: proof, Recovery: true, Code: f.codes[1]}); !errors.Is(err, mfadomain.ErrProofRequired) {
+			t.Fatal("invalidated MFA session allowed step-up", err)
+		}
+		accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=$2 WHERE token_hash=$1`, proof.TokenHash, verified)
 		step, err := svc.StepUp(ctx, mfaservice.StepUpInput{Proof: proof, Recovery: true, Code: f.codes[1]})
 		if err != nil {
 			t.Fatal(err)

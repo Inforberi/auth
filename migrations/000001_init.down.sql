@@ -1,3 +1,7 @@
+DROP VIEW IF EXISTS auth.role_bound_sessions;
+DROP FUNCTION IF EXISTS auth.mfa_login_required(UUID,BOOLEAN);
+DROP FUNCTION IF EXISTS auth.mfa_required(UUID,BOOLEAN);
+DROP FUNCTION IF EXISTS auth.realm_requires_mfa(UUID,BOOLEAN);
 DROP VIEW IF EXISTS auth.project_identity;
 DROP TABLE IF EXISTS auth.initial_setup;
 DROP TABLE IF EXISTS auth.restore_audit;
@@ -38,7 +42,6 @@ DROP TABLE IF EXISTS auth.refresh_audit;
 DROP TABLE IF EXISTS auth.refresh_tokens;
 DROP TABLE IF EXISTS auth.refresh_families;
 DROP FUNCTION IF EXISTS auth.protect_refresh_binding();
-DROP VIEW IF EXISTS auth.role_bound_sessions;
 DROP TABLE IF EXISTS auth.sessions;
 DROP FUNCTION IF EXISTS auth.bind_session_roles();
 DROP FUNCTION IF EXISTS auth.role_requires_mfa(UUID);

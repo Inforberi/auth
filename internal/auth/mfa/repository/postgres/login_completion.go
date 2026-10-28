@@ -102,7 +102,7 @@ func lockLoginChallengeProfile(ctx context.Context, tx pgx.Tx, digest, binding s
 		if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
 			return nil, err
 		}
-	} else if profile == "api" && !accessLocked {
+	} else if !accessLocked {
 		if err := accesspostgres.LockAccessSnapshot(ctx, tx); err != nil {
 			return nil, err
 		}
@@ -119,6 +119,7 @@ func lockLoginChallengeProfile(ctx context.Context, tx pgx.Tx, digest, binding s
 	proof := lockedLoginChallenge{PrimaryProof: service.PrimaryProof{UserID: user, AuthVersion: version, Administrative: administrative}}
 	err = tx.QueryRow(ctx, `SELECT primary_method,primary_reference,primary_issuer,primary_verified_at,enrollment_required,expires_at,provider_version,COALESCE(native_audience,''),native_scope
 		FROM auth.mfa_login_challenges WHERE user_id=$1 AND digest=$2 AND binding_hash=$3 AND auth_version=$4
+		AND mfa_policy_revision=(SELECT session_revision FROM auth.mfa_settings WHERE singleton)
 		AND administrative=$5 AND credential_profile=$6 AND expires_at>clock_timestamp() AND attempts<5 FOR UPDATE`, user, digest, binding, version, administrative, profile).
 		Scan(&proof.Method, &proof.Reference, &proof.Issuer, &proof.VerifiedAt, &proof.EnrollmentRequired, &proof.ExpiresAt, &proof.ProviderVersion, &proof.Target.Audience, &proof.Target.Scope)
 	if errors.Is(err, pgx.ErrNoRows) {

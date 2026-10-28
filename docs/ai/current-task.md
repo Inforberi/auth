@@ -2,22 +2,25 @@
 
 Обновлено 28 октября 2026. [Карта](index.md) · [план](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui). Git/staging проверять по факту.
 
-## Завершённый блок — A6.3m.2a MFA policy storage
+## Завершённый блок — A6.3m.3a runtime MFA policy
 
-[Контракт](../features/mfa-policy.md#сохранение-политики--a63m2a). В каждой Auth БД собственная mfa_settings(version/mode), seed1/administrators из initial migration. Mode optional/administrators/required; existing role mfaRequired остаётся отдельным OR. Внутренние settings.MFA Current/Read/Update и platform operator Read/Update: local auth.settings.manage не подменяет platform.project_settings.manage. Current session/fresh password+MFA/Access locks сохранены; общая транзакция version/no-op/trusted capability/atomic audit. Audit включён в прежний bounded retention.
+[Контракт](../features/mfa-policy.md#применение-в-runtime--a63m3a). SQL realm_requires_mfa + role OR + enrolled protection. Browser/native issuance, MFA challenge/enrollment, session view/token exchange/refresh/introspection, local/platform sensitive guards и last-admin используют saved mode. Optional не снимает личный фактор. Administrative password-only session разрешается только после permanent password/verified email/current authority checks; primary proof передаётся в SQL.
 
-Standalone startup и project onboarding валидируют policy; platform validation встроена в существующий CheckRuntime SQL без отдельного запроса. Runtime не seed и не ENV fallback. Нет новых HTTP/deps/ENV/workers/cache/polling. Сохранённый mode ещё НЕ меняет login/authority; optional профиль закрыт до полного enforcement. Факторы/role requirements не удаляются.
+Усиление mode атомарно повышает mfa_settings.session_revision; sessions/challenges привязаны к ней, смягчение не воскрешает старые tokens. All old sessions требуют нового входа при усилении, без массового UPDATE. Public issuance/challenge completion берут общий Access lock до user locks. View fail-closed при потерянной row. Offline JWT revocation только в существующих TTL границах. Technical MFA disabled конфликтует с required policy. MFA status requiredByPolicy и Swagger обновлены. Новых deps/ENV/workers/settings routes нет.
 
-Luna V1/V2: Go tests, targeted race, full Linux ARM64 command SQL, четыре schema-теста, platform operators/MFA settings, operator HTTPS PASS. Cyclop отказ исправлен переносом policy validation в CheckRuntime; финальный lint pinned2.14.0/Go1.27.3 exit0/0 issues. Проверенный snapshot `/private/tmp/auth-mfa-policy-storage-v2.7g0pjru_`, manifest17/metadata рядом; все source совпали с main. Временные fixtures очищены, evidence в history. Пользователь разрешил коммит после PASS; факт проверять Git.
+Luna V1/V2: task check/API, targeted lint0/race, full Linux ARM64 command SQL, enforcement/disabled-capability/storage/role/administrative/schema native/JWT/refresh, platform optional operator и operator HTTPS PASS. V2 восстановил factor FOR SHARE в platform mutation, согласовал schema limited admin enrollment и negative fixtures/error semantics. No issuance/audit/refresh consume assertions сохранены; NULL-MFA session не допускает step-up. Fixtures удалены.
+
+Проверенный snapshot `/private/tmp/auth-mfa-policy-runtime-v2.u48j2rdu`, manifest35/metadata/Swagger hashes рядом; все source/artifacts сверены с main. Evidence в history. Пользователь разрешил коммит после PASS; факт коммита проверять Git.
 
 ## Следующий шаг
 
-Полное применение effective MFA policy: platform/project login, sensitive actions, factor management, sessions/native/JWT, first-run. Затем защищённые HTTP settings. Optional не публиковать частично. MP5/MP6R/MP7/MP8 отдельно. UI — после предупреждения и отдельного согласования; внешние OAuth/SMTP, GC/RPS не закрыты.
+После приёмки закрыть first-run optional choice, capability/readiness matrix и protected settings HTTP. Bootstrap пока сохраняет прежний TOTP setup; MP5/MP6R/MP7/MP8 отдельно. UI — после предупреждения и отдельного согласования. Внешние OAuth/SMTP, GC/RPS не закрыты.
 
 ## Процесс
 
-Read-only researcher Luna medium `01a183e1-ca25-7972-a67a-eadef20a0b41`, переиспользовать. Все исполняемые проверки — чат «Проверки Auth — Luna», `01a16eab-c777-78a0-a815-47b45ff0860d`, host local, exact snapshot; checkout 6377/auth устарел. Последний cursor `19bf04ec-f4f6-4693-9c20-73f414b172e4:25`. Main не дублирует и не ждёт полный прогон. [Процесс](development-workflow.md).
+Read-only researcher Luna medium `01a183e1-ca25-7972-a67a-eadef20a0b41`, переиспользовать; необходимые первоисточники проверяет main. Executable checks только чат «Проверки Auth — Luna», `01a16eab-c777-78a0-a815-47b45ff0860d`, host local/exact snapshot; checkout 6377/auth устарел. Последний cursor `19bf04ec-f4f6-4693-9c20-73f414b172e4:27`. Main не дублирует и не ждёт полный прогон.
 
-SQL: свой Linux ARM64 PG18.6/readonly /src, socket trust/TCP127 SCRAM wrong-password denial/TLS SAN127, Redis8.2 в общем network/DB15. SCRAM_HOST/TLS_CA/ROOT=/src/Redis127 обязательны. Schema — auth_schema_test DB/role, env AUTH_SCHEMA_TEST_DATABASE_URL/cwd package. Platform — auth_platform_test DB/user auth/AUTH_PLATFORM_TEST_DATABASE_URL/cwd migrations/platform. App fixture — AUTH_OPERATOR_TEST_DATABASE_URL/REDIS_ADDR/ROOT. При недоступном Go proxy pinned2.14.0 доступен в host module cache `/Users/inforberi/go/pkg/mod`; Go build cache `/Users/inforberi/Library/Caches/go-build`. Не подменять устаревшим binary. Только свои fixtures; реальные ENV/secrets/DB/staging сохранять.
+Own LinuxARM64 PG18.6/readonly /src, socket trust/TCP127 SCRAM wrongpwdeny/TLS SAN127; Redis8.2 PGnetwork127/DB15. Mandatory SCRAM_HOST/TLS_CA/ROOT=/src/Redis127. Schema auth_schema_test DB/role/env AUTH_SCHEMA_TEST_DATABASE_URL/cwd package; platform auth_platform_test/user auth/env AUTH_PLATFORM_TEST_DATABASE_URL/cwd migrations/platform; app AUTH_OPERATOR_TEST_DATABASE_URL/REDIS_ADDR/ROOT. Pinned lint2.14.0/Go1.27.3 host module cache /Users/inforberi/go/pkg/mod и build cache /Users/inforberi/Library/Caches/go-build; offline при недоступном proxy. Только свои fixtures; main/realENV/secrets/DB/staging не трогать.
 
-Предыдущий A6.3m.1a PASS, commit `1632857`; общие security/resource gates открыты. Зависимости без согласования не обновлять.
+Предыдущий storage A6.3m.2a PASS, commit `7772cb2`; evidence в history. Security/resource gates открыты; новые зависимости требуют согласования.
+

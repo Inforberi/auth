@@ -61,7 +61,7 @@ const docTemplate = `{
         },
         "/api/v1/admin/auth/login/email": {
             "post": {
-                "description": "Requires a permanent password, verified email, enrolled MFA and current administrative authority. Always returns an MFA challenge, never a session. Complete with /api/v1/auth/mfa/login/complete. Independent of public login method settings; does not create an account or assign roles. Uses the public password login rate budget.",
+                "description": "Requires a permanent password, verified email and current administrative authority. Saved realm/role policy and enrolled protection decide whether MFA is required. Returns a session for an optional administrator without a factor, otherwise a bound MFA challenge (including limited enrollment when required). Independent of public login methods; does not create an account or assign roles. Uses the public password login rate budget.",
                 "consumes": [
                     "application/json"
                 ],
@@ -71,7 +71,7 @@ const docTemplate = `{
                 "tags": [
                     "Administration"
                 ],
-                "summary": "Start administrative password and MFA login",
+                "summary": "Start administrative password login",
                 "parameters": [
                     {
                         "type": "string",
@@ -91,6 +91,12 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/password_http.LoginByEmailResponse"
+                        }
+                    },
                     "202": {
                         "description": "Accepted",
                         "schema": {
@@ -9142,6 +9148,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "requiredByAdministration": {
+                    "type": "boolean"
+                },
+                "requiredByPolicy": {
                     "type": "boolean"
                 },
                 "requiredByRole": {

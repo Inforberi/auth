@@ -29,3 +29,14 @@ func (p MFAPolicy) Validate() error {
 		return ErrInvalidMFAPolicy
 	}
 }
+
+func (p MFAPolicy) Strengthens(previous MFAPolicy) bool {
+	switch p.Mode {
+	case MFARequired:
+		return previous.Mode != MFARequired
+	case MFAAdministrators:
+		return previous.Mode == MFAOptional
+	default:
+		return false
+	}
+}

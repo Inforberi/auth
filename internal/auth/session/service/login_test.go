@@ -28,38 +28,46 @@ func (m *mfaStarterStub) Start(_ context.Context, p mfaservice.PrimaryProof, _ s
 }
 
 func TestPrimaryLoginDispatch(t *testing.T) {
-	for _, failure := range []error{nil, domain.ErrMFARequired, domain.ErrSessionNotFound} {
-		repo, tokens, clock := &mockRepo{}, &mockTokenHash{}, &mockClock{}
-		tokens.On("GenerateToken").Return("raw", nil)
-		tokens.On("Hash", "raw").Return("hash")
-		clock.On("NowUTC").Return(now)
-		repo.On("CreateSession", mock.Anything, mock.Anything).Return(now.Add(cfg.SessionTTL), failure)
-		mfa := &mfaStarterStub{}
-		proof := mfaservice.PrimaryProof{UserID: "user", AuthVersion: 7, Method: "password", Reference: "compared-hash", VerifiedAt: time.Now()}
-		result, err := NewLogin(New(clock, repo, tokens, cfg), mfa).BeginLogin(context.Background(), proof, "agent", "ip")
-		if errors.Is(failure, domain.ErrMFARequired) {
-			if err != nil || result.Challenge == nil || result.RawToken != "" || mfa.proof != proof || mfa.calls != 1 {
-				t.Fatal("MFA dispatch", result, err)
+	for _, administrative := range []bool{false, true} {
+		for _, failure := range []error{nil, domain.ErrMFARequired, domain.ErrSessionNotFound} {
+			repo, tokens, clock := &mockRepo{}, &mockTokenHash{}, &mockClock{}
+			tokens.On("GenerateToken").Return("raw", nil)
+			tokens.On("Hash", "raw").Return("hash")
+			clock.On("NowUTC").Return(now)
+			repo.On("CreateSession", mock.Anything, mock.MatchedBy(func(p CreateSessionParams) bool {
+				return p.PrimaryProof != nil && p.PrimaryProof.Administrative == administrative
+			})).Return(now.Add(cfg.SessionTTL), failure)
+			mfa := &mfaStarterStub{}
+			proof := mfaservice.PrimaryProof{UserID: "user", AuthVersion: 7, Method: "password", Reference: "compared-hash", VerifiedAt: time.Now(), Administrative: administrative}
+			result, err := NewLogin(New(clock, repo, tokens, cfg), mfa).BeginLogin(context.Background(), proof, "agent", "ip")
+			if errors.Is(failure, domain.ErrMFARequired) {
+				if err != nil || result.Challenge == nil || result.RawToken != "" || mfa.proof != proof || mfa.calls != 1 {
+					t.Fatal("MFA dispatch", result, err)
+				}
+			} else if mfa.calls != 0 || !errors.Is(err, failure) {
+				t.Fatal("unexpected MFA dispatch", err)
 			}
-		} else if mfa.calls != 0 || !errors.Is(err, failure) {
-			t.Fatal("unexpected MFA dispatch", err)
 		}
 	}
 }
 
-func TestAdministrativeLoginAlwaysRequiresMFA(t *testing.T) {
-	proof := mfaservice.PrimaryProof{Administrative: true, Method: "password"}
-	// Nil technical dependencies make any attempt to issue a password-only session fail the test.
-	sessions := &SessionService{}
-	if result, err := sessions.BeginLogin(context.Background(), proof, "", ""); result != nil || !errors.Is(err, domain.ErrMFARequired) {
-		t.Fatal("plain session service allowed administrative login", result, err)
-	}
-	if result, err := NewLogin(sessions, nil).BeginLogin(context.Background(), proof, "", ""); result != nil || !errors.Is(err, domain.ErrMFARequired) {
-		t.Fatal("missing MFA allowed administrative login", result, err)
-	}
-	mfa := &mfaStarterStub{}
-	result, err := NewLogin(sessions, mfa).BeginLogin(context.Background(), proof, "agent", "ip")
-	if err != nil || result.Challenge == nil || result.RawToken != "" || mfa.proof != proof || mfa.calls != 1 {
-		t.Fatal("administrative login did not require factor", result, err)
+func TestAdministrativeLoginCannotBypassRepositoryMFARequirement(t *testing.T) {
+	for _, plain := range []bool{false, true} {
+		repo, tokens, clock := &mockRepo{}, &mockTokenHash{}, &mockClock{}
+		tokens.On("GenerateToken").Return("raw", nil)
+		tokens.On("Hash", "raw").Return("hash")
+		clock.On("NowUTC").Return(now)
+		repo.On("CreateSession", mock.Anything, mock.Anything).Return(time.Time{}, domain.ErrMFARequired)
+		sessions := New(clock, repo, tokens, cfg)
+		var err error
+		proof := mfaservice.PrimaryProof{Administrative: true, Method: "password"}
+		if plain {
+			_, err = sessions.BeginLogin(context.Background(), proof, "", "")
+		} else {
+			_, err = NewLogin(sessions, nil).BeginLogin(context.Background(), proof, "", "")
+		}
+		if !errors.Is(err, domain.ErrMFARequired) {
+			t.Fatal("missing MFA adapter bypassed repository requirement", err)
+		}
 	}
 }

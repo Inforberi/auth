@@ -20,7 +20,7 @@ func requireLoginEnrollment(ctx context.Context, tx pgx.Tx, input service.LoginE
 	if err != nil {
 		return nil, err
 	}
-	if !proof.EnrollmentRequired || proof.Administrative || (input.AllowPrimary != nil && !input.AllowPrimary(proof.Method, proof.Issuer)) {
+	if !proof.EnrollmentRequired || (!proof.Administrative && input.AllowPrimary != nil && !input.AllowPrimary(proof.Method, proof.Issuer)) {
 		return nil, domain.ErrInvalidCode
 	}
 	if err := RequireLoginPrimary(ctx, tx, proof.PrimaryProof); err != nil {
@@ -30,7 +30,7 @@ func requireLoginEnrollment(ctx context.Context, tx pgx.Tx, input service.LoginE
 		return nil, err
 	}
 	var allowed bool
-	if err := tx.QueryRow(ctx, `SELECT auth.role_requires_mfa($1) AND NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1)`, proof.UserID).Scan(&allowed); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1,$2) AND NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1)`, proof.UserID, proof.Administrative).Scan(&allowed); err != nil {
 		return nil, err
 	}
 	if !allowed {

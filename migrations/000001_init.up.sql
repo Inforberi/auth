@@ -102,6 +102,7 @@ $$;
 CREATE TABLE auth.mfa_settings (
   singleton BOOLEAN PRIMARY KEY CHECK(singleton),
   version BIGINT NOT NULL DEFAULT 1 CHECK(version>0),
+  session_revision BIGINT NOT NULL DEFAULT 1 CHECK(session_revision>0),
   mode TEXT NOT NULL CHECK(mode IN ('optional','administrators','required'))
 );
 INSERT INTO auth.mfa_settings(singleton,mode) VALUES(true,'administrators');
@@ -411,6 +412,7 @@ CREATE TABLE auth.mfa_enrollments (
 CREATE INDEX mfa_enrollments_expiry ON auth.mfa_enrollments(expires_at,user_id);
 
 CREATE TABLE auth.mfa_login_challenges (
+  mfa_policy_revision BIGINT NOT NULL DEFAULT 1 CHECK(mfa_policy_revision>0),
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   credential_profile TEXT NOT NULL DEFAULT 'browser' CHECK (credential_profile IN ('browser','api')),
   native_audience TEXT COLLATE "C",
@@ -420,7 +422,7 @@ CREATE TABLE auth.mfa_login_challenges (
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
   primary_method TEXT NOT NULL CHECK (primary_method IN ('password','oidc','emailotp')),
   administrative BOOLEAN NOT NULL DEFAULT false CHECK (NOT administrative OR primary_method='password'),
-  enrollment_required BOOLEAN NOT NULL DEFAULT false CHECK (NOT enrollment_required OR NOT administrative),
+  enrollment_required BOOLEAN NOT NULL DEFAULT false,
   primary_reference TEXT NOT NULL CHECK (octet_length(primary_reference) BETWEEN 1 AND 1024),
   primary_issuer TEXT NOT NULL CHECK (octet_length(primary_issuer)<=512),
   provider_version BIGINT NOT NULL DEFAULT 0 CHECK(provider_version>=0 AND (primary_method='oidc' OR provider_version=0)),
@@ -440,14 +442,14 @@ CREATE INDEX mfa_login_challenges_expiry ON auth.mfa_login_challenges(expires_at
 
 CREATE FUNCTION auth.protect_login_target() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.digest=OLD.digest AND ROW(NEW.credential_profile,NEW.native_audience,NEW.native_scope,NEW.binding_hash)
-    IS DISTINCT FROM ROW(OLD.credential_profile,OLD.native_audience,OLD.native_scope,OLD.binding_hash) THEN
+  IF NEW.digest=OLD.digest AND ROW(NEW.credential_profile,NEW.native_audience,NEW.native_scope,NEW.binding_hash,NEW.mfa_policy_revision)
+    IS DISTINCT FROM ROW(OLD.credential_profile,OLD.native_audience,OLD.native_scope,OLD.binding_hash,OLD.mfa_policy_revision) THEN
     RAISE EXCEPTION 'login challenge target is immutable';
   END IF;
   RETURN NEW;
 END;
 $$;
-CREATE TRIGGER mfa_login_target BEFORE UPDATE OF credential_profile,native_audience,native_scope,binding_hash
+CREATE TRIGGER mfa_login_target BEFORE UPDATE OF credential_profile,native_audience,native_scope,binding_hash,mfa_policy_revision
   ON auth.mfa_login_challenges FOR EACH ROW EXECUTE FUNCTION auth.protect_login_target();
 
 CREATE TABLE auth.mfa_recovery_requests (
@@ -545,6 +547,7 @@ BEGIN
     WHERE id=target AND status='active' AND deleted_at IS NULL FOR UPDATE;
   IF current_version IS DISTINCT FROM version THEN RETURN false; END IF;
   SELECT digest INTO challenge FROM auth.mfa_login_challenges WHERE user_id=target
+    AND mfa_policy_revision=(SELECT session_revision FROM auth.mfa_settings WHERE singleton)
     AND credential_profile='browser' AND auth_version=version AND attempts<5 AND expires_at>clock_timestamp() FOR UPDATE;
   IF challenge IS NULL THEN RETURN false; END IF;
   SELECT * INTO pending FROM auth.mfa_recovery_requests WHERE user_id=target
@@ -572,6 +575,7 @@ CREATE TABLE auth.sessions (
   token_hash TEXT PRIMARY KEY CHECK (token_hash ~ '^[a-f0-9]{64}$'),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
+  mfa_policy_revision BIGINT NOT NULL DEFAULT 1 CHECK(mfa_policy_revision>0),
   role_revisions JSONB NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(role_revisions)='object' AND octet_length(role_revisions::text)<=4096),
   idle_timeout_seconds BIGINT NOT NULL DEFAULT 1800 CHECK (idle_timeout_seconds>=0),
   activity_interval_seconds BIGINT NOT NULL DEFAULT 60 CHECK (activity_interval_seconds>=0),
@@ -600,6 +604,26 @@ CREATE TABLE auth.sessions (
 CREATE INDEX sessions_owner ON auth.sessions(user_id,created_at DESC,id DESC);
 CREATE INDEX sessions_retention_due ON auth.sessions(LEAST(revoked_at,expires_at,absolute_expires_at),id);
 
+CREATE FUNCTION auth.realm_requires_mfa(owner_id UUID, administrative BOOLEAN DEFAULT false)
+RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
+  SELECT COALESCE((SELECT CASE mode
+    WHEN 'optional' THEN false
+    WHEN 'required' THEN true
+    WHEN 'administrators' THEN administrative OR auth.administrative_mfa_required(owner_id)
+    ELSE true END FROM auth.mfa_settings WHERE singleton),true);
+$$;
+
+CREATE FUNCTION auth.mfa_required(owner_id UUID, administrative BOOLEAN DEFAULT false)
+RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
+  SELECT auth.realm_requires_mfa(owner_id,administrative) OR auth.role_requires_mfa(owner_id);
+$$;
+
+CREATE FUNCTION auth.mfa_login_required(owner_id UUID, administrative BOOLEAN DEFAULT false)
+RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
+  SELECT auth.mfa_required(owner_id,administrative)
+    OR EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=owner_id);
+$$;
+
 CREATE FUNCTION auth.bind_session_roles() RETURNS TRIGGER
 LANGUAGE plpgsql AS $$
 DECLARE required_mfa BOOLEAN;
@@ -607,6 +631,9 @@ BEGIN
   IF TG_OP = 'UPDATE' THEN
     IF NEW.credential_profile IS DISTINCT FROM OLD.credential_profile THEN
       RAISE EXCEPTION 'session credential profile is immutable';
+    END IF;
+    IF NEW.mfa_policy_revision IS DISTINCT FROM OLD.mfa_policy_revision THEN
+      RAISE EXCEPTION 'session MFA policy binding is immutable';
     END IF;
     IF NEW.role_revisions IS DISTINCT FROM OLD.role_revisions THEN
       RAISE EXCEPTION 'session role revisions are immutable';
@@ -617,13 +644,15 @@ BEGIN
     END IF;
   ELSE
     -- Policy and its revision bindings must come from the same statement snapshot.
-    SELECT COALESCE(jsonb_object_agg(r.id::text,r.session_revision),'{}'::jsonb),COALESCE(bool_or(r.mfa_required),false)
-      INTO NEW.role_revisions,required_mfa
+    SELECT COALESCE(jsonb_object_agg(r.id::text,r.session_revision),'{}'::jsonb)
+      INTO NEW.role_revisions
       FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id
       WHERE ur.user_id=NEW.user_id;
+    SELECT session_revision INTO STRICT NEW.mfa_policy_revision FROM auth.mfa_settings WHERE singleton;
+    required_mfa := auth.mfa_login_required(NEW.user_id);
     IF required_mfa AND (NEW.mfa_verified_at IS NULL
       OR NEW.mfa_verified_at>clock_timestamp() OR NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=NEW.user_id)) THEN
-      RAISE EXCEPTION 'role requires MFA before session issuance';
+      RAISE EXCEPTION 'MFA required before session issuance';
     END IF;
     -- Administrative permissions, not the login URL, choose the stricter profile.
     IF auth.has_administrative_access(NEW.user_id) THEN
@@ -646,13 +675,16 @@ BEGIN
 END;
 $$;
 
-CREATE TRIGGER sessions_role_binding BEFORE INSERT OR UPDATE OF credential_profile,role_revisions,idle_timeout_seconds,activity_interval_seconds,admin_absolute_seconds ON auth.sessions
+CREATE TRIGGER sessions_role_binding BEFORE INSERT OR UPDATE OF credential_profile,role_revisions,mfa_policy_revision,idle_timeout_seconds,activity_interval_seconds,admin_absolute_seconds ON auth.sessions
   FOR EACH ROW EXECUTE FUNCTION auth.bind_session_roles();
 
--- Keep the issuance bindings even after an assignment is revoked: old tokens must not revive.
+-- Role and MFA revision bindings prevent old credentials from reviving.
 CREATE VIEW auth.role_bound_sessions WITH (security_invoker=true) AS
   SELECT s.* FROM auth.sessions s
-  WHERE NOT EXISTS (
+  WHERE EXISTS(SELECT 1 FROM auth.mfa_settings WHERE singleton AND session_revision=s.mfa_policy_revision)
+  AND ((s.mfa_verified_at IS NULL AND NOT auth.mfa_login_required(s.user_id)) OR
+    (s.mfa_verified_at<=statement_timestamp() AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=s.user_id)))
+  AND NOT EXISTS (
     SELECT 1 FROM jsonb_each_text(s.role_revisions) binding(role_id,revision)
     LEFT JOIN auth.roles r ON r.id=binding.role_id::uuid
     WHERE r.id IS NULL OR r.session_revision<>binding.revision::bigint

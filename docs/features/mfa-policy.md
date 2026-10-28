@@ -1,5 +1,7 @@
 # Политика обязательности MFA
 
+Текущий подэтап A6.3m.3a подключает сохранённую политику к основным runtime-проверкам; проверки Luna V1/V2 PASS. API смены режима и выбор при первом setup ещё не опубликованы.
+
 ## Целевое поведение
 
 Владелец платформы выбирает обязательность MFA отдельно от проектов. В каждом проекте можно потребовать второй фактор для всех, для выбранных ролей либо оставить добровольное подключение. Уже подключённый личный фактор продолжает требоваться при входе после снятия обязательности. Требования назначенных ролей объединяются по OR; пользователь не может самостоятельно обойти обязательное для него правило.
@@ -22,11 +24,11 @@
 
 Не объединяем административные ограничения сессии и запрет отключения MFA в один boolean: это изменило бы поведение read-only администратора. Также наличие личного TOTP, обязательность роли и свежесть proof — самостоятельные гарантии.
 
-Платформенные `operator.AuthorizeRead/AuthorizeMutation` пока сохраняют обязательные password/TOTP guards. Последний usable administrator по-прежнему должен иметь прежние credential prerequisites. Bootstrap, role session revisions, enrollment, native flows и project bridges не ослаблены. Schema изменена в исходной миграции по принятому для текущей разработки правилу; рабочие БД автоматически не меняются.
+На этапе 1a platform password/TOTP guards и usable-administrator prerequisites не менялись. Подэтап 3a ниже заменяет безусловность MFA текущей политикой, сохраняя пароль и authority. Bootstrap и project bridge capability guards не ослаблены. Schema изменена в исходной миграции по принятому для текущей разработки правилу; рабочие БД автоматически не меняются.
 
 ## Сохранение политики — A6.3m.2a
 
-Подготовлено внутреннее хранение; HTTP-ручек для смены режима пока нет. Значение не применяется к login/authority до следующего этапа полного enforcement. Текущее поведение MFA не ослаблено.
+На этапе 2a подготовлено внутреннее хранение. Теперь mode читается runtime-проверками подэтапа 3a; HTTP-ручек для его смены пока нет.
 
 В каждой Auth schema существует собственная строка `auth.mfa_settings`: `version` и `mode`. Платформа и отдельные project БД не разделяют её. Начальная миграция создаёт `version=1, mode=administrators`; runtime не выполняет Initialize, не восстанавливает строку и не использует ENV fallback. Standalone/platform startup и подготовка project onboarding проверяют наличие и допустимость настройки. Рабочие БД этим изменением не сбрасываются и автоматически не мигрируются.
 
@@ -50,9 +52,25 @@
 
 Domain-тесты и SQL fixture добавлены для mode validation, прав, no-op, capability denial, конфликтов и конкурентных записей, отката при отказе audit, сохранения роли/фактора и missing-row без seed. Platform fixture проверяет отдельную authority и wrong-realm отказ. Luna V1/V2: Go tests, targeted race, полный Linux ARM64 command SQL, четыре schema-теста, platform operators/MFA settings, operator HTTPS и lint закреплённой v2.14.0 — PASS. Все 17 source hashes совпали со снимком; временные fixtures удалены. HTTP optional profile, first-run выбор режима, работа старых сессий/native/JWT и полная двухпроектная матрица остаются открытыми.
 
+## Применение в runtime — A6.3m.3a
+
+SQL рассчитывает три отдельных условия: `realm_requires_mfa` для realm policy, `mfa_required` для объединения её с назначенными ролями и `mfa_login_required` для добавления уже подключённого личного фактора. Default `administrators` сохраняет различие между управляющими permissions и одним read-only administrative session profile; явный административный login intent также требует MFA. Optional не отменяет выбранные role requirements или личный фактор.
+
+Browser и native password/email/OIDC paths используют общий SQL-расчёт и существующие MFA coordinators. При обязательности без фактора допускается только ограниченный challenge/enrollment, не полноценная сессия; это относится и к корректному administrative password intent. В optional-режиме администратор без фактора получает обычную password session со свежим серверным password proof. Проверка permanent password, verified email и текущих административных полномочий сохраняется.
+
+`auth.role_bound_sessions` дополнительно проверяет ревизию MFA policy и фактический MFA proof, когда он нужен. Эту view уже используют session middleware, mutations, native refresh, exchange и SQL introspection. При усилении mode увеличивается `mfa_settings.session_revision`: все сессии предыдущей ревизии требуют нового входа, pending MFA login также привязан к ревизии. Смягчение её не уменьшает, поэтому старые токены/challenges не оживают. Это одна строка настроек, без массового UPDATE users/sessions. Issuance и завершение challenge используют существующий общий Access lock до user locks; финальный SQL recheck обязателен.
+
+Проверка JWT без обращения к Auth не получает мгновенный отзыв: ранее выданный access JWT остаётся ограничен своим TTL и существующим online/offline контрактом. Новый SQL/view guard действует для выдачи, refresh и online introspection; универсального обещания немедленного отзыва offline JWT нет.
+
+Локальные и platform mutations всегда требуют свежий password proof; свежий MFA proof добавляется, если обязателен режимом/ролью либо фактор подключён. Realm/session/permission/version locks и deadlines сохранены. Last-admin credential check учитывает optional без скрытого обязательного enrollment. Отключение личного фактора по-прежнему требует свежий primary и проверку действующего фактора/recovery; оно не заменяется mode toggle. Delivery initial email binding учитывает ту же conditional MFA authority; final confirmation независимо перепроверяет права.
+
+Статус MFA дополнен `requiredByPolicy`; `disableAllowedByPolicy` учитывает его вместе с ролью и административной обязанностью. Swagger обновлён: administrative login может вернуть 200 session либо 202 challenge. Настройки MFA через новый HTTP endpoint не публиковались. Отключение технической MFA capability на standalone отклоняется при enrolled factors, required roles либо требующем её realm profile.
+
+Добавлены SQL-сценарии optional administrator, обязательного enrollment, гонки issuance/усиления, stale sessions/challenges и отсутствия revival после смягчения. Platform fixture проверяет optional operator с fresh password без TOTP, stale password refusal и сохранение защиты уже подключённого фактора. Legacy storage tests получают новую login session после усиления вместо обхода immutable revision. Luna V1/V2: task check/API, targeted race, полный Linux ARM64 command SQL, schema enforcement/role/administrative/native/JWT/refresh, platform optional authority и operator HTTPS — PASS. V2 восстановил conditional FOR SHARE фактора и согласовал ограниченный administrative enrollment со schema. Все 35 source hashes и Swagger artifacts совпали со снимком; fixtures удалены. First-run, capability matrix и settings HTTP остаются открытыми.
+
 ## Дальнейшая реализация
 
-После приёмки внутреннего хранения подключить effective policy ко всем runtime consumers и first-run выбору; существующие установки не должны автоматически ослабляться. Защищённые HTTP-ручки публиковать вместе с согласованным enforcement. Ужесточение должно закрывать обход через старые factorless sessions и pending login, без полного прохода пользователей в горячем пути. Required нельзя включить без готовой capability. Platform MFA readiness не заменяет project MFA readiness.
+После приёмки runtime-проверок завершить first-run выбор, platform/project capability/readiness matrix и публикацию защищённых HTTP настроек. Bootstrap пока сохраняет прежний TOTP setup; это отдельный открытый gate, не новый обязательный runtime режим. Ужесточение должно закрывать обход через старые factorless sessions и pending login, без полного прохода пользователей в горячем пути. Required нельзя включить без готовой capability. Platform MFA readiness не заменяет project MFA readiness.
 
 Проверить оба first-run профиля, изоляцию платформы/проектов, личный фактор в optional-режиме, объединение ролей, freshness, last-admin, конкурентные изменения, native/JWT и recovery. Только после этого публиковать optional API и переходить к UI выбора.
 

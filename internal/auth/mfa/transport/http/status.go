@@ -8,6 +8,7 @@ import (
 
 type SecurityStatusResponse struct {
 	TOTPEnabled                  bool `json:"totpEnabled"`
+	RequiredByPolicy             bool `json:"requiredByPolicy"`
 	RequiredByRole               bool `json:"requiredByRole"`
 	RequiredByAdministration     bool `json:"requiredByAdministration"`
 	DisableAllowedByPolicy       bool `json:"disableAllowedByPolicy"`
@@ -41,9 +42,9 @@ func (h *Handler) ReadStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	httpx.JSON(w, 200, SecurityStatusResponse{
-		TOTPEnabled: status.TOTPEnabled, RequiredByRole: status.RequiredByRole,
+		TOTPEnabled: status.TOTPEnabled, RequiredByPolicy: status.RequiredByPolicy, RequiredByRole: status.RequiredByRole,
 		RequiredByAdministration: status.RequiredByAdministration,
-		DisableAllowedByPolicy:   status.TOTPEnabled && !status.RequiredByRole && !status.RequiredByAdministration,
+		DisableAllowedByPolicy:   status.TOTPEnabled && !status.RequiredByPolicy && !status.RequiredByRole && !status.RequiredByAdministration,
 		RecoveryCodesRemaining:   status.RecoveryCodesRemaining, VerifiedEmail: status.VerifiedEmail,
 		PasswordConfigured: status.PasswordConfigured, EmailReauthenticationEnabled: status.EmailReauthenticationEnabled,
 		FreshPrimaryProof: status.FreshPrimaryProof, FreshMFAProof: status.FreshMFAProof,

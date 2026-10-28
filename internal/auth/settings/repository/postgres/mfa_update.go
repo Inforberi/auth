@@ -47,8 +47,9 @@ func ApplyMFAPolicyChange(ctx context.Context, tx pgx.Tx, actor accountdomain.Us
 	if input.Policy.Mode != domain.MFAOptional && !ready {
 		return domain.MFASnapshot{}, domain.ErrMethodNotReady
 	}
-	result, err := scanMFA(tx.QueryRow(ctx, `UPDATE auth.mfa_settings SET mode=$1,version=version+1
-		WHERE singleton RETURNING `+mfaColumns, input.Policy.Mode))
+	result, err := scanMFA(tx.QueryRow(ctx, `UPDATE auth.mfa_settings SET mode=$1,version=version+1,
+		session_revision=session_revision+CASE WHEN $2 THEN 1 ELSE 0 END
+		WHERE singleton RETURNING `+mfaColumns, input.Policy.Mode, input.Policy.Strengthens(before.Policy)))
 	if err != nil {
 		return domain.MFASnapshot{}, err
 	}

@@ -51,6 +51,8 @@ func TestMFAPolicySettingsSchema(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(2), got.Version)
 	require.Equal(t, settingsdomain.MFARequired, got.Policy.Mode)
+	actor = renewAccessPrincipal(t, db, ctx, actor.UserID)
+	input.Actor = actor
 	_, err = svc.Update(ctx, input)
 	require.ErrorIs(t, err, settingsdomain.ErrPolicyConflict)
 	input.ExpectedVersion, input.Policy.Mode = got.Version, settingsdomain.MFAOptional

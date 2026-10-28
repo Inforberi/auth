@@ -17,3 +17,14 @@ func TestMFAPolicyModes(t *testing.T) {
 		}
 	}
 }
+
+func TestMFAPolicyStrengthening(t *testing.T) {
+	modes := []MFAMode{MFAOptional, MFAAdministrators, MFARequired}
+	for from, previous := range modes {
+		for to, next := range modes {
+			if got := (MFAPolicy{Mode: next}).Strengthens(MFAPolicy{Mode: previous}); got != (to > from) {
+				t.Fatal(previous, next, got)
+			}
+		}
+	}
+}

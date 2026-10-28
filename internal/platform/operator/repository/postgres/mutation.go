@@ -12,7 +12,7 @@ import (
 )
 
 // AuthorizeMutation joins a caller-owned Read Committed transaction, before project locks.
-// Current platform policy requires password + TOTP; optional MFA remains closed until A6.3m.
+// Password remains mandatory; enrolled or required MFA also needs a current proof.
 func (r *Repository) AuthorizeMutation(ctx context.Context, tx pgx.Tx, actor domain.Principal, permission domain.Permission, freshFor time.Duration) (time.Time, error) {
 	if !actor.Valid() || !permission.Valid() {
 		return time.Time{}, domain.ErrForbidden
@@ -31,6 +31,8 @@ func (r *Repository) AuthorizeMutation(ctx context.Context, tx pgx.Tx, actor dom
 		{`SELECT 1 FROM platform.operator_realm WHERE id=$1 AND initialized_at IS NOT NULL FOR SHARE`, []any{r.realm}},
 		{`SELECT 1 FROM auth.users WHERE id=$1 AND status='active' AND deleted_at IS NULL FOR SHARE`, []any{actor.UserID}},
 		{`SELECT 1 FROM platform.operator_permissions WHERE user_id=$1 AND permission_key=$2 FOR SHARE`, []any{actor.UserID, permission}},
+		{`SELECT 1 WHERE NOT auth.mfa_login_required($1,true)
+			OR EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1 FOR SHARE)`, []any{actor.UserID}},
 	} {
 		var found int
 		if err := tx.QueryRow(ctx, lock.sql, lock.args...).Scan(&found); err != nil {
@@ -39,14 +41,16 @@ func (r *Repository) AuthorizeMutation(ctx context.Context, tx pgx.Tx, actor dom
 	}
 	var deadline time.Time
 	err := tx.QueryRow(ctx, `SELECT LEAST(s.expires_at,s.absolute_expires_at,
-		s.password_verified_at+$3::double precision*interval '1 second',s.mfa_verified_at+interval '5 minutes')
+		s.password_verified_at+$3::double precision*interval '1 second',
+		CASE WHEN auth.mfa_login_required(s.user_id,true) THEN s.mfa_verified_at+interval '5 minutes' END)
 		FROM auth.role_bound_sessions s JOIN auth.users u ON u.id=s.user_id AND u.auth_version=s.auth_version
 		JOIN auth.password_credentials p ON p.user_id=s.user_id
-		JOIN auth.mfa_totp m ON m.user_id=s.user_id
 		WHERE s.user_id=$1 AND s.token_hash=$2 AND s.credential_profile='browser' AND s.primary_method='password'
-		AND s.password_verified_at<=clock_timestamp() AND s.mfa_verified_at<=clock_timestamp()
+		AND s.password_verified_at<=clock_timestamp()
+		AND (NOT auth.mfa_login_required(s.user_id,true) OR (s.mfa_verified_at<=clock_timestamp()
+			AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=s.user_id)))
 		AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()
-		FOR SHARE OF s,p,m`, actor.UserID, actor.TokenHash, freshFor.Seconds()).Scan(&deadline)
+		FOR SHARE OF s,p`, actor.UserID, actor.TokenHash, freshFor.Seconds()).Scan(&deadline)
 	if err != nil {
 		return time.Time{}, mutationError(ctx, err)
 	}

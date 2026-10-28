@@ -22,8 +22,9 @@ func (r *Repository) claimBindingDelivery(ctx context.Context) (*domain.Verifica
 		AND a.status='active' AND a.deleted_at IS NULL AND s.revoked_at IS NULL
 		AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()
 		AND s.password_verified_at<=clock_timestamp() AND s.password_verified_at>clock_timestamp()-interval '5 minutes'
-		AND s.mfa_verified_at<=clock_timestamp() AND s.mfa_verified_at>clock_timestamp()-interval '5 minutes'
-		AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=a.id)
+		AND (NOT auth.mfa_login_required(a.id) OR (s.mfa_verified_at<=clock_timestamp()
+			AND s.mfa_verified_at>clock_timestamp()-interval '5 minutes'
+			AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=a.id)))
 		AND EXISTS(SELECT 1 FROM auth.user_roles ur JOIN auth.role_permissions p ON p.role_id=ur.role_id
 			WHERE ur.user_id=a.id AND p.permission_key=$1)
 		ORDER BY b.available_at,b.id FOR UPDATE OF b SKIP LOCKED LIMIT 1

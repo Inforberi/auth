@@ -57,16 +57,17 @@ func lockActor(ctx context.Context, tx pgx.Tx, actor service.Principal, target s
 	}
 	var deadline time.Time
 	err = tx.QueryRow(ctx, `SELECT LEAST(s.expires_at,s.absolute_expires_at,
-		s.password_verified_at+interval '5 minutes',s.mfa_verified_at+interval '5 minutes') FROM auth.role_bound_sessions s
+		s.password_verified_at+interval '5 minutes',
+		CASE WHEN auth.mfa_login_required(s.user_id) THEN s.mfa_verified_at+interval '5 minutes' END) FROM auth.role_bound_sessions s
 		JOIN auth.users u ON u.id=s.user_id AND u.auth_version=s.auth_version
 		WHERE s.user_id=$1 AND s.token_hash=$2 AND s.revoked_at IS NULL
 		AND u.status='active' AND u.deleted_at IS NULL
 		AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()
 		AND s.password_verified_at<=clock_timestamp()
 		AND s.password_verified_at>clock_timestamp()-interval '5 minutes'
-		AND s.mfa_verified_at<=clock_timestamp()
+		AND (NOT auth.mfa_login_required(s.user_id) OR (s.mfa_verified_at<=clock_timestamp()
 		AND s.mfa_verified_at>clock_timestamp()-interval '5 minutes'
-		AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=s.user_id)
+		AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=s.user_id)))
 		FOR UPDATE OF s`, actor.UserID, actor.TokenHash).Scan(&deadline)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return time.Time{}, domain.ErrFreshAuthRequired
