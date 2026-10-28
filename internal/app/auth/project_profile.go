@@ -18,20 +18,21 @@ import (
 )
 
 type ProjectProfileConfig struct {
-	BrowserEnabled       bool
-	UserDirectoryEnabled bool
-	UserLifecycleEnabled bool
-	AuthSettingsEnabled  bool
-	SMTPSettings         *ProjectSMTPSettingsConfig
-	Access               *accesssettings.Catalog
-	Password             *ProjectPasswordConfig
-	EmailOTP             *ProjectEmailOTPConfig
-	Google, Telegram     *ProjectOIDCConfig
-	Verification         *accountservice.Config
-	Recovery             *passwordservice.Config
-	EmailManagement      *ProjectEmailConfig
-	Tokens               *ProjectTokenConfig
-	Timeout              time.Duration
+	BrowserEnabled          bool
+	UserDirectoryEnabled    bool
+	UserLifecycleEnabled    bool
+	AuthSettingsEnabled     bool
+	ProviderSettingsEnabled bool
+	SMTPSettings            *ProjectSMTPSettingsConfig
+	Access                  *accesssettings.Catalog
+	Password                *ProjectPasswordConfig
+	EmailOTP                *ProjectEmailOTPConfig
+	Google, Telegram        *ProjectOIDCConfig
+	Verification            *accountservice.Config
+	Recovery                *passwordservice.Config
+	EmailManagement         *ProjectEmailConfig
+	Tokens                  *ProjectTokenConfig
+	Timeout                 time.Duration
 }
 
 type ProjectProfileDependencies struct {
@@ -64,6 +65,7 @@ type ProjectProfile struct {
 	access                   *projectAccess
 	authSettings             *projectAuthSettings
 	smtpSettings             *projectSMTPSettings
+	providerSettings         *projectProviderSettings
 }
 
 func BuildProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies) (*ProjectProfile, error) {
@@ -106,6 +108,7 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	p.buildProfileAccess(ctx, cfg)
 	p.buildProfileAuthSettings(cfg)
 	p.buildProfileSMTPSettings(cfg, configuration.EncryptionKey(), redisReady)
+	p.buildProfileProviderSettings(cfg, configuration.EncryptionKey())
 	if err := p.checkSnapshotCurrent(ctx, observed); err != nil {
 		return nil, err
 	}

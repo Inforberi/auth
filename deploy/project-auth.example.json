@@ -11,6 +11,7 @@
       "userLifecycle": true,
       "authSettings": true,
       "smtpSettings": true,
+      "providerSettings": true,
       "invitations": true,
       "temporaryPassword": true,
       "emailBinding": true,

@@ -80,6 +80,10 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 		handlers["GET /api/v1/admin/auth/settings/smtp"], handlers["POST /api/v1/admin/auth/settings/smtp"] = smtp.Read, smtp.Update
 		handlers["POST /api/v1/admin/auth/settings/smtp/test"] = smtp.TestConnection
 	}
+	if p.providerSettings != nil {
+		providers := settingshttp.NewProviders(p.providerSettings, log)
+		handlers["GET /api/v1/admin/auth/settings/providers/{provider}"], handlers["POST /api/v1/admin/auth/settings/providers/{provider}"] = providers.Read, providers.Update
+	}
 	p.accessHandlers(handlers, log)
 	p.provisioningHandlers(handlers, log)
 	p.emailManagementHandlers(handlers, log)

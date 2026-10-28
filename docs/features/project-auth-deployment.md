@@ -68,3 +68,5 @@ Main formatter/diff/read-only review. Luna task check, affected race/security, a
 `authSettings` (default false, требует browser) подключает local Auth policy GET/POST; actual readiness, version/permission/fresh-proof и SQL dependency pins описаны в [контракте настроек](project-auth-policy-settings.md). SMTP/provider/retention endpoints этим флагом не включаются.
 
 `smtpSettings` (default false, browser only) публикует project SMTP GET/POST/test. Existing project delivery allowlist остаётся deployment-only, секреты scoped по проекту, probe не удерживает SQL lease. [Контракт](project-smtp-settings.md).
+
+`providerSettings` (default false, browser only) подключает local Google/Telegram credentials GET/POST независимо от enabled login methods. Scoped crypto/SQL revision guards и ограничения смены clientId — в [контракте](project-provider-settings.md).
