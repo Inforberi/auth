@@ -8,6 +8,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -25,6 +26,7 @@ func NewSetup(service initialSetup, log *zap.Logger) *SetupHandler {
 }
 
 var setupErrors = []httpx.ErrorRule{
+	httpx.MatchError(settingsdomain.ErrInvalidMFAPolicy, 400, "invalid_mfa_policy", "invalid MFA policy"),
 	httpx.MatchError(domain.ErrSetupClosed, 404, "setup_closed", "initial setup unavailable"),
 	httpx.MatchError(domain.ErrSetupUnauthorized, 403, "setup_unauthorized", "operator proof required"),
 	httpx.MatchError(domain.ErrSetupInvalid, 400, "invalid_setup", "invalid setup confirmation"),

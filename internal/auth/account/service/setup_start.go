@@ -11,6 +11,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
 type (
@@ -19,6 +20,7 @@ type (
 		Email          string
 		Password       string
 		IP             string
+		MFAMode        settingsdomain.MFAMode
 	}
 	SetupStarted struct {
 		Token     string `json:"-"`
@@ -32,6 +34,13 @@ func (s *SetupService) Start(ctx context.Context, input SetupStartInput) (*Setup
 	ctx, cancel := context.WithTimeout(ctx, 9*time.Second)
 	defer cancel()
 	if err := s.admit(ctx, input.OperatorSecret, input.IP, "start"); err != nil {
+		return nil, err
+	}
+	// Omitted mode preserves the existing administrator-enrollment contract.
+	if input.MFAMode == "" {
+		input.MFAMode = settingsdomain.MFAAdministrators
+	}
+	if err := (settingsdomain.MFAPolicy{Mode: input.MFAMode}).Validate(); err != nil {
 		return nil, err
 	}
 	email, err := domain.NewEmail(input.Email)
@@ -51,9 +60,12 @@ func (s *SetupService) Start(ctx context.Context, input SetupStartInput) (*Setup
 	}
 	id[6], id[8] = (id[6]&15)|64, (id[8]&63)|128
 	user := domain.UserID(fmt.Sprintf("%x-%x-%x-%x-%x", id[:4], id[4:6], id[6:8], id[8:10], id[10:]))
-	secret, uri, err := s.code.Generate(s.issuer, string(user))
-	if err != nil {
-		return nil, domain.ErrDependencyUnavailable
+	var secret, uri string
+	if input.MFAMode != settingsdomain.MFAOptional {
+		secret, uri, err = s.code.Generate(s.issuer, string(user))
+		if err != nil {
+			return nil, domain.ErrDependencyUnavailable
+		}
 	}
 	var entropy [32]byte
 	if _, err := rand.Read(entropy[:]); err != nil {
@@ -70,6 +82,7 @@ func (s *SetupService) Start(ctx context.Context, input SetupStartInput) (*Setup
 		Email:        email.String(),
 		PasswordHash: hash,
 		Secret:       secret,
+		MFAMode:      input.MFAMode,
 		EmailDigest:  s.cipher.Digest("email:" + token + ":" + code),
 	}
 	plain, err := json.Marshal(pending) //nolint:gosec // G117: encrypted setup envelope, never an HTTP DTO or log payload.

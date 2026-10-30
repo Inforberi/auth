@@ -21,6 +21,7 @@ type setupFixture struct {
 	limitOK                                 bool
 	limitErr, mailErr, errorCheck           error
 	account                                 *domain.SetupAccount
+	generated, matched                      int
 }
 
 func (f *setupFixture) CheckSetupOpen(context.Context) error {
@@ -64,11 +65,13 @@ func (f *setupFixture) SendContext(_ context.Context, to, _, body string) error 
 	return f.mailErr
 }
 
-func (*setupFixture) Generate(string, string) (string, string, error) {
+func (f *setupFixture) Generate(string, string) (string, string, error) {
+	f.generated++
 	return "synthetic-totp-secret", "otpauth://synthetic", nil
 }
 
-func (*setupFixture) Match(_, code string, _ time.Time, _ int64) (int64, error) {
+func (f *setupFixture) Match(_, code string, _ time.Time, _ int64) (int64, error) {
+	f.matched++
 	if code != "123456" {
 		return 0, mfadomain.ErrInvalidCode
 	}

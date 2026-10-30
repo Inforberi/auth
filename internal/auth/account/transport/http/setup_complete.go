@@ -17,7 +17,7 @@ type SetupCompleteResponse struct {
 }
 
 // @Summary Complete first administrator setup exactly once
-// @Description Consumes installation proof and pending intent with email and TOTP codes. Atomically creates account, verified contact, factor, recovery codes, system grant and durable initialized marker. Returns recovery codes once; does not issue a session. Setup stays closed after restart or loss of administrator.
+// @Description Consumes installation proof and pending intent with email code and TOTP when required by the pinned mode. Atomically creates owner, policy, system grant and durable marker. Optional creates no factor and returns empty recoveryCodes; other modes return recovery codes once. Does not issue a session. Setup stays closed after restart or loss of administrator.
 // @Tags Setup
 // @Accept json
 // @Produce json

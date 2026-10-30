@@ -9,6 +9,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
 type SetupConfig struct {
@@ -89,4 +90,5 @@ func (s *SetupService) admit(ctx context.Context, secret, ip, action string) err
 type setupPayload struct {
 	UserID                                   domain.UserID
 	Email, PasswordHash, Secret, EmailDigest string
+	MFAMode                                  settingsdomain.MFAMode
 }

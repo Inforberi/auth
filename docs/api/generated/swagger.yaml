@@ -619,6 +619,12 @@ definitions:
     properties:
       email:
         type: string
+      mfaMode:
+        enum:
+        - optional
+        - administrators
+        - required
+        type: string
       password:
         type: string
     type: object
@@ -7177,10 +7183,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Consumes installation proof and pending intent with email and TOTP
-        codes. Atomically creates account, verified contact, factor, recovery codes,
-        system grant and durable initialized marker. Returns recovery codes once;
-        does not issue a session. Setup stays closed after restart or loss of administrator.
+      description: Consumes installation proof and pending intent with email code
+        and TOTP when required by the pinned mode. Atomically creates owner, policy,
+        system grant and durable marker. Optional creates no factor and returns empty
+        recoveryCodes; other modes return recovery codes once. Does not issue a session.
+        Setup stays closed after restart or loss of administrator.
       parameters:
       - description: Installation operator proof
         in: header
@@ -7232,9 +7239,9 @@ paths:
       consumes:
       - application/json
       description: Requires installation operator secret and allowed HTTPS Origin.
-        Sends email code. Returns bounded setup token and TOTP enrollment data, not
-        a login session. No user exists yet. A retry after one minute replaces previous
-        intent.
+        Pins mfaMode in encrypted intent; omitted mode defaults to administrators.
+        Optional returns no TOTP enrollment data. Sends email code, creates no user
+        or session. A retry after one minute replaces previous intent.
       parameters:
       - description: 32-byte installation proof (base64url)
         in: header

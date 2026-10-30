@@ -1,6 +1,6 @@
 # Политика обязательности MFA
 
-Текущий подэтап A6.3m.3a подключает сохранённую политику к основным runtime-проверкам; проверки Luna V1/V2 PASS. API смены режима и выбор при первом setup ещё не опубликованы.
+Подэтап A6.3m.3a подключает сохранённую политику к основным runtime-проверкам; проверки Luna V1/V2 PASS. A6.3m.2b добавляет выбор при первом setup; проверки Luna V1/V2 PASS. Защищённый API смены режима после setup ещё не опубликован.
 
 ## Целевое поведение
 
@@ -70,7 +70,11 @@ Browser и native password/email/OIDC paths используют общий SQL-
 
 ## Дальнейшая реализация
 
-После приёмки runtime-проверок завершить first-run выбор, platform/project capability/readiness matrix и публикацию защищённых HTTP настроек. Bootstrap пока сохраняет прежний TOTP setup; это отдельный открытый gate, не новый обязательный runtime режим. Ужесточение должно закрывать обход через старые factorless sessions и pending login, без полного прохода пользователей в горячем пути. Required нельзя включить без готовой capability. Platform MFA readiness не заменяет project MFA readiness.
+Следующие блоки — platform/project capability/readiness matrix и публикация защищённых HTTP настроек. Ужесточение должно закрывать обход через старые factorless sessions и pending login, без полного прохода пользователей в горячем пути. Required нельзя включить без готовой capability. Platform MFA readiness не заменяет project MFA readiness.
+
+### Первый запуск — A6.3m.2b
+
+[Контракт setup](initial-setup.md): оператор с существующим installation proof выбирает `mfaMode` при start. Optional подтверждает email без enrollment; administrators/required завершают email+TOTP до создания владельца. Отсутствующее поле и прежние pending intents сохраняют administrators. Completion не принимает режим и не выдаёт сессию. Режим сохраняется существующим version/audit writer атомарно с Auth owner и platform authority; rollback не оставляет новую policy. Setup marker, operator pin, TTL, cooldown и attempts сохранены. Optional не генерирует factor/recovery data. Technical MFA capability для setup пока остаётся обязательной; disabled/readiness matrix — отдельный незавершённый этап. Проверки Luna V1/V2 PASS: Go tests/API/race, setup SQL трёх режимов, platform rollback/owner authority и operator HTTPS. Manifest20 совпал с main, fixtures очищены. Полный optional platform profile ещё не принят.
 
 Проверить оба first-run профиля, изоляцию платформы/проектов, личный фактор в optional-режиме, объединение ролей, freshness, last-admin, конкурентные изменения, native/JWT и recovery. Только после этого публиковать optional API и переходить к UI выбора.
 

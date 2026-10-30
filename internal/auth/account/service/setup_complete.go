@@ -12,6 +12,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
 type (
@@ -28,49 +29,72 @@ func (s *SetupService) Complete(ctx context.Context, input SetupCompleteInput) (
 		return nil, err
 	}
 	raw, err := base64.RawURLEncoding.DecodeString(input.Token)
-	if err != nil || len(raw) != 32 || base64.RawURLEncoding.EncodeToString(raw) != input.Token || !domain.ValidEmailBindingCode(input.EmailCode) || !mfadomain.ValidCode(input.TOTP) {
+	if err != nil || len(raw) != 32 || base64.RawURLEncoding.EncodeToString(raw) != input.Token || !domain.ValidEmailBindingCode(input.EmailCode) || (input.TOTP != "" && !mfadomain.ValidCode(input.TOTP)) {
 		return nil, domain.ErrSetupInvalid
 	}
-	codes := make([]string, mfadomain.RecoveryCodeCount)
-	for i := range codes {
-		var entropy [16]byte
-		if _, err := rand.Read(entropy[:]); err != nil {
-			return nil, domain.ErrDependencyUnavailable
-		}
-		codes[i] = hex.EncodeToString(entropy[:])
-	}
+	codes := []string{}
 	err = s.repo.CompleteSetup(ctx, tokenDigest(input.OperatorSecret), s.cipher.Digest("request:"+input.Token), func(encrypted []byte, now time.Time) (*domain.SetupAccount, error) {
-		plain, err := s.cipher.Open(encrypted)
-		if err != nil {
-			return nil, domain.ErrDependencyUnavailable
-		}
-		defer clear(plain)
-		var pending setupPayload
-		if err := json.Unmarshal(plain, &pending); err != nil {
-			return nil, domain.ErrDependencyUnavailable
-		}
-		if subtle.ConstantTimeCompare([]byte(pending.EmailDigest), []byte(s.cipher.Digest("email:"+input.Token+":"+input.EmailCode))) != 1 {
-			return nil, domain.ErrSetupInvalid
-		}
-		step, err := s.code.Match(pending.Secret, input.TOTP, now, -1)
-		if errors.Is(err, mfadomain.ErrInvalidCode) {
-			return nil, domain.ErrSetupInvalid
-		}
-		if err != nil {
-			return nil, domain.ErrDependencyUnavailable
-		}
-		factor, err := s.factorCipher.Seal([]byte(string(pending.UserID) + "\x00" + pending.Secret))
-		if err != nil {
-			return nil, domain.ErrDependencyUnavailable
-		}
-		digests := make([]string, len(codes))
-		for i, code := range codes {
-			digests[i] = s.factorCipher.Digest("recovery:" + string(pending.UserID) + ":" + code)
-		}
-		return &domain.SetupAccount{UserID: pending.UserID, Email: pending.Email, PasswordHash: pending.PasswordHash, Factor: factor, LastStep: step, RecoveryDigests: digests}, nil
+		account, recovery, err := s.confirmSetup(input, encrypted, now)
+		codes = recovery
+		return account, err
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &SetupCompleted{RecoveryCodes: codes}, nil
+}
+
+func (s *SetupService) confirmSetup(input SetupCompleteInput, encrypted []byte, now time.Time) (*domain.SetupAccount, []string, error) {
+	plain, err := s.cipher.Open(encrypted)
+	if err != nil {
+		return nil, nil, domain.ErrDependencyUnavailable
+	}
+	defer clear(plain)
+	var pending setupPayload
+	if err := json.Unmarshal(plain, &pending); err != nil {
+		return nil, nil, domain.ErrDependencyUnavailable
+	}
+	if subtle.ConstantTimeCompare([]byte(pending.EmailDigest), []byte(s.cipher.Digest("email:"+input.Token+":"+input.EmailCode))) != 1 {
+		return nil, nil, domain.ErrSetupInvalid
+	}
+	// Intents created before mode selection retain their required enrollment.
+	if pending.MFAMode == "" {
+		pending.MFAMode = settingsdomain.MFAAdministrators
+	}
+	if (settingsdomain.MFAPolicy{Mode: pending.MFAMode}).Validate() != nil {
+		return nil, nil, domain.ErrDependencyUnavailable
+	}
+	account := &domain.SetupAccount{UserID: pending.UserID, Email: pending.Email, PasswordHash: pending.PasswordHash, MFAMode: pending.MFAMode}
+	if pending.MFAMode == settingsdomain.MFAOptional {
+		if pending.Secret != "" || input.TOTP != "" {
+			return nil, nil, domain.ErrSetupInvalid
+		}
+		return account, []string{}, nil
+	}
+	if !mfadomain.ValidCode(input.TOTP) {
+		return nil, nil, domain.ErrSetupInvalid
+	}
+	step, err := s.code.Match(pending.Secret, input.TOTP, now, -1)
+	if errors.Is(err, mfadomain.ErrInvalidCode) {
+		return nil, nil, domain.ErrSetupInvalid
+	}
+	if err != nil {
+		return nil, nil, domain.ErrDependencyUnavailable
+	}
+	factor, err := s.factorCipher.Seal([]byte(string(pending.UserID) + "\x00" + pending.Secret))
+	if err != nil {
+		return nil, nil, domain.ErrDependencyUnavailable
+	}
+	codes := make([]string, mfadomain.RecoveryCodeCount)
+	digests := make([]string, len(codes))
+	for i := range codes {
+		var entropy [16]byte
+		if _, err := rand.Read(entropy[:]); err != nil {
+			return nil, nil, domain.ErrDependencyUnavailable
+		}
+		codes[i] = hex.EncodeToString(entropy[:])
+		digests[i] = s.factorCipher.Digest("recovery:" + string(pending.UserID) + ":" + codes[i])
+	}
+	account.Factor, account.LastStep, account.RecoveryDigests = factor, step, digests
+	return account, codes, nil
 }

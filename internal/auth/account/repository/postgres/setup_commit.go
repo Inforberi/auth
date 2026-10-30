@@ -9,14 +9,21 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
+	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 )
 
 func commitInitialAdministrator(ctx context.Context, tx pgx.Tx, account *domain.SetupAccount) error {
+	policy, err := account.MFAPolicy()
+	if err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `INSERT INTO auth.users(id) VALUES($1)`, account.UserID); err != nil {
 		return err
 	}
 	var emailID string
-	err := tx.QueryRow(ctx, `INSERT INTO auth.user_emails(user_id,email,verified_at) VALUES($1,$2,clock_timestamp()) RETURNING id`, account.UserID, account.Email).Scan(&emailID)
+	err = tx.QueryRow(ctx, `INSERT INTO auth.user_emails(user_id,email,verified_at) VALUES($1,$2,clock_timestamp()) RETURNING id`, account.UserID, account.Email).Scan(&emailID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -30,10 +37,7 @@ func commitInitialAdministrator(ctx context.Context, tx pgx.Tx, account *domain.
 	if _, err := tx.Exec(ctx, `INSERT INTO auth.password_credentials(user_id,email_id,password_hash) VALUES($1,$2,$3)`, account.UserID, emailID, account.PasswordHash); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO auth.mfa_totp(user_id,secret,last_step) VALUES($1,$2,$3)`, account.UserID, account.Factor, account.LastStep); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, `INSERT INTO auth.mfa_recovery_codes(user_id,digest) SELECT $1,unnest($2::text[])`, account.UserID, account.RecoveryDigests); err != nil {
+	if err := commitSetupFactor(ctx, tx, account, policy.Mode); err != nil {
 		return err
 	}
 	var role string
@@ -52,10 +56,31 @@ func commitInitialAdministrator(ctx context.Context, tx pgx.Tx, account *domain.
 		FROM auth.roles WHERE id=$2`, account.UserID, role, permissions); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO auth.mfa_audit(user_id,event) VALUES($1,'totp_enabled')`, account.UserID); err != nil {
+	before, err := settingspostgres.ReadMFAPolicyInTransaction(ctx, tx)
+	if err != nil {
+		return err
+	}
+	// AccessChanges and setup locks protect this newly created owner's authority.
+	if _, err := settingspostgres.ApplyMFAPolicyChange(ctx, tx, account.UserID, settingsservice.MFAChange{
+		ExpectedVersion: before.Version, Policy: policy,
+	}, true); err != nil {
 		return err
 	}
 	_, err = tx.Exec(ctx, `UPDATE auth.initial_setup SET initialized_at=clock_timestamp(),administrator_id=$1,
 		operator_hash=NULL,request_hash=NULL,payload=NULL,created_at=NULL,expires_at=NULL,attempts=0 WHERE singleton`, account.UserID)
+	return err
+}
+
+func commitSetupFactor(ctx context.Context, tx pgx.Tx, account *domain.SetupAccount, mode settingsdomain.MFAMode) error {
+	if mode == settingsdomain.MFAOptional {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO auth.mfa_totp(user_id,secret,last_step) VALUES($1,$2,$3)`, account.UserID, account.Factor, account.LastStep); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO auth.mfa_recovery_codes(user_id,digest) SELECT $1,unnest($2::text[])`, account.UserID, account.RecoveryDigests); err != nil {
+		return err
+	}
+	_, err := tx.Exec(ctx, `INSERT INTO auth.mfa_audit(user_id,event) VALUES($1,'totp_enabled')`, account.UserID)
 	return err
 }
