@@ -104,6 +104,6 @@ func recordAudit(ctx context.Context, tx pgx.Tx, actor service.Principal, role d
 		return err
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO auth.access_audit(actor_id,target_id,role_id,event,role_version,access_version,role_snapshot)
-		VALUES ($1,NULLIF($2,'')::uuid,$3,$4,$5,$6,$7)`, actor.UserID, target, role.ID, event, role.Version, version, snapshot)
+		VALUES ($1,NULLIF($2,'')::uuid,$3,$4,$5,$6,$7)`, actor.UserID, target, role.ID, event, role.Version, version, string(snapshot))
 	return err
 }
