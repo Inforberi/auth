@@ -8,7 +8,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
@@ -108,4 +110,62 @@ func TestMFAPolicyDisabledCapabilitySchema(t *testing.T) {
 	require.NoError(t, repo.CheckDisabled(ctx), "optional administrator must not force a technical MFA dependency")
 	accessExec(t, db, ctx, `UPDATE auth.mfa_settings SET mode='administrators'`)
 	require.Error(t, repo.CheckDisabled(ctx), "required administrator cannot run without MFA capability")
+}
+
+func TestMFACapabilitySchema(t *testing.T) {
+	db, ctx := schemaFixture(t)
+	migrateFixture(t, db, ctx, "up")
+	t.Cleanup(func() { migrateFixture(t, db, ctx, "down") })
+	repo := mfapostgres.New(db)
+	for _, mode := range []settingsdomain.MFAMode{settingsdomain.MFAOptional, settingsdomain.MFAAdministrators, settingsdomain.MFARequired} {
+		t.Run(string(mode), func(t *testing.T) {
+			accessExec(t, db, ctx, `UPDATE auth.mfa_settings SET mode=$1`, mode)
+			require.NoError(t, repo.CheckCapability(ctx, true))
+			err := repo.CheckCapability(ctx, false)
+			if mode == settingsdomain.MFARequired {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err, "empty realm has nobody requiring administrator MFA")
+			}
+		})
+	}
+	accessExec(t, db, ctx, `UPDATE auth.mfa_settings SET mode='optional';
+ INSERT INTO auth.roles(key,name,mfa_required) VALUES('future_mfa_role','Future required role',true)`)
+	require.Error(t, repo.CheckCapability(ctx, false), "unassigned required role must keep MFA capability")
+	require.NoError(t, repo.CheckCapability(ctx, true))
+	accessExec(t, db, ctx, `DELETE FROM auth.roles WHERE key='future_mfa_role'`)
+	f := newStatusFixture(t, db, ctx, "capability-personal")
+	accessExec(t, db, ctx, `INSERT INTO auth.mfa_totp(user_id,secret,last_step) VALUES($1,$2,0)`, f.user, make([]byte, 48))
+	require.Error(t, repo.CheckCapability(ctx, false), "optional cannot hide an enrolled personal factor")
+	require.NoError(t, repo.CheckCapability(ctx, true))
+	accessExec(t, db, ctx, `DELETE FROM auth.mfa_totp WHERE user_id=$1`, f.user)
+	require.NoError(t, repo.CheckCapability(ctx, false))
+	accessExec(t, db, ctx, `DELETE FROM auth.mfa_settings`)
+	require.ErrorIs(t, repo.CheckCapability(ctx, false), settingsdomain.ErrNotInitialized)
+	require.ErrorIs(t, repo.CheckCapability(ctx, true), settingsdomain.ErrNotInitialized)
+}
+
+func TestOptionalMFALastAdministratorSchema(t *testing.T) {
+	db, ctx := schemaFixture(t)
+	migrateFixture(t, db, ctx, "up")
+	t.Cleanup(func() { migrateFixture(t, db, ctx, "down") })
+	a := newStatusFixture(t, db, ctx, "optional-admin-a")
+	b := newStatusFixture(t, db, ctx, "optional-admin-b")
+	accessExec(t, db, ctx, `UPDATE auth.mfa_settings SET mode='optional';
+	UPDATE auth.user_emails SET verified_at=clock_timestamp() WHERE user_id=ANY($1::uuid[]);
+ WITH r AS(INSERT INTO auth.roles(key,name,system) VALUES('super_admin','Administrator',true) RETURNING id),
+ p AS(INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,'access.assignments.manage' FROM r)
+ INSERT INTO auth.user_roles(user_id,role_id) SELECT u.id,r.id FROM auth.users u CROSS JOIN r WHERE u.id=ANY($1::uuid[])`, []string{string(a.user), string(b.user)})
+	tx, err := db.Begin(ctx)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, tx.Rollback(ctx)) }()
+	require.NoError(t, accesspostgres.LockAccessChanges(ctx, tx))
+	require.NoError(t, accesspostgres.RequireUsableAdministrator(ctx, tx), "optional factorless administrator is usable")
+	require.NoError(t, accesspostgres.RequireAdministratorRemains(ctx, tx, a.user), "second optional administrator can remain")
+	_, err = tx.Exec(ctx, `UPDATE auth.users SET status='blocked' WHERE id=$1`, b.user)
+	require.NoError(t, err)
+	require.ErrorIs(t, accesspostgres.RequireAdministratorRemains(ctx, tx, a.user), accountdomain.ErrLastAdministrator)
+	_, err = tx.Exec(ctx, `UPDATE auth.user_emails SET verified_at=NULL WHERE user_id=$1`, a.user)
+	require.NoError(t, err)
+	require.ErrorIs(t, accesspostgres.RequireUsableAdministrator(ctx, tx), accountdomain.ErrLastAdministrator, "optional must retain verified permanent credential requirements")
 }

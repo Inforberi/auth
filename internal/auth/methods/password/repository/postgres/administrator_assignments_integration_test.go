@@ -101,7 +101,12 @@ func TestAdministratorAssignmentsSchema(t *testing.T) {
 	prepareUsableAdministrator(t, db, ctx, target.UserID)
 	for _, column := range []string{"password_verified_at", "mfa_verified_at"} {
 		accessExec(t, db, ctx, `UPDATE auth.sessions SET `+column+`=NULL WHERE user_id=$1`, actor.UserID)
-		check(send("POST", target.UserID, "1"), 403)
+		status := http.StatusForbidden
+		if column == "mfa_verified_at" {
+			// Missing required MFA invalidates the session before permission checks.
+			status = http.StatusUnauthorized
+		}
+		check(send("POST", target.UserID, "1"), status)
 		accessExec(t, db, ctx, `UPDATE auth.sessions SET `+column+`=clock_timestamp() WHERE user_id=$1`, actor.UserID)
 	}
 	check(send("POST", target.UserID, "1"), 200)

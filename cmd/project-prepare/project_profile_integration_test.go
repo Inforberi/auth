@@ -43,6 +43,7 @@ func (f projectProfileFixture) run(t *testing.T, ctx context.Context) {
 	t.Run("project user directory HTTP", func(t *testing.T) { f.httpUserDirectory(t, ctx, origin) })
 	cfg := appauth.ProjectProfileConfig{Timeout: 10 * time.Second}
 	deps := appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader}}
+	t.Run("MFA capability compatibility", func(t *testing.T) { f.mfaCapabilityProfile(t, ctx, origin, deps) })
 	closed, err := appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.True(t, closed.Readiness().Ready)

@@ -1,8 +1,12 @@
 package auth
 
 import (
+	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
@@ -13,6 +17,21 @@ type profileBrowserPolicy struct {
 	feature string
 	session sessionservice.Config
 	mfa     mfaservice.Config
+}
+
+func (p *ProjectProfile) checkMFACapability(ctx context.Context, cfg ProjectProfileConfig) error {
+	enabled := true
+	if cfg.BrowserEnabled {
+		for _, view := range configuredBrowserPolicies(cfg) {
+			enabled = enabled && view.mfa.Enabled
+		}
+	}
+	if cfg.Tokens != nil && cfg.Tokens.Enabled && cfg.Tokens.Tokens.Native != nil {
+		enabled = enabled && cfg.Tokens.Native.MFA.Enabled
+	}
+	return p.deps.Registry.UsePool(ctx, p.key, func(ctx context.Context, pool *pgxpool.Pool) error {
+		return mfapostgres.New(pool).CheckCapability(ctx, enabled)
+	})
 }
 
 func (p *ProjectProfile) bindProfileMFA(root string) {

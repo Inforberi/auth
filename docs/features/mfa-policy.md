@@ -78,6 +78,18 @@ Browser и native password/email/OIDC paths используют общий SQL-
 
 Проверить оба first-run профиля, изоляцию платформы/проектов, личный фактор в optional-режиме, объединение ролей, freshness, last-admin, конкурентные изменения, native/JWT и recovery. Только после этого публиковать optional API и переходить к UI выбора.
 
+## Совместимость capability — A6.3m.5a
+
+Проверки Luna V1/V2/V3 PASS. `optional` описывает обязанность пользователя, а не выключение engine. Платформа и первый setup по-прежнему требуют техническую `MFA_ENABLED=true`: optional-владелец не обязан подключать TOTP, но механизм доступен для последующего подключения и step-up. Нового ENV или автоматического изменения сохранённой политики нет.
+
+Общий SQL `CheckCapability` проверяет существующую валидную MFA policy. При выключенном engine дополнительно запрещает enrolled TOTP, любую MFA-required роль (включая пока не назначенную), режим required и administrators при наличии соответствующего административного назначения. Optional без факторов и обязательных ролей совместим с выключенным engine. Missing/invalid policy не принимается за optional и не восстанавливается из ENV. Старый CheckDisabled использует ту же проверку.
+
+`BuildProjectProfile` и assessment вызывают её один раз до сборки компонентов, на lease только выбранной проектной БД. Любой настроенный browser/native путь без MFA engine обязан пройти disabled-проверку; несогласованные browser-конфигурации дополнительно отклоняются прежними guards. Конфликт не публикует готовый route plan. Для закрытого профиля без primary-конфигурации проверяется policy, но отсутствие login capability само по себе не запрещает read/session-management API. Существующая native-конфигурация продолжает требовать доступный engine.
+
+Это проверка сборки, не новая кешированная authority: окончательные SQL/session/challenge guards сохраняются. В уже собранном профиле смена политики всё равно применяется через SQL; декларация readiness — наблюдение, а не разрешение обхода. В горячий путь входа новые запросы не добавлены, проверки факторов/ролей используют bounded EXISTS без обхода всех пользователей. Deployment rollback должен учитывать всех пользователей и MFA-required роли, а не только настройки оператора.
+
+Тестовая матрица включает optional/admin/required с engine on/off, missing policy, unassigned MFA role и личный фактор; optional factorless last-admin с verified permanent credential; реальные project profile/management readiness и независимость platform policy. Last-admin не отменяет fresh primary proof, права, verified email или recovery-процедуру. Полная двухпроектная приёмка, защищённый API переключения политики и UI остаются отдельными gates.
+
 ## Проверки подэтапа
 
 Новый `TestMFARequirementPredicatesSchema` проверяет все восемь permissions и обычное продуктовое permission, system administrator, объединение/отзыв ролей и invoker ACL. Существующие SQL-сценарии должны подтвердить сохранение административного login, MFA status/disable, длительностей сессий и platform/project readiness. Luna V1: task check, targeted race и полный Linux ARM64 TestPrepareCommandSQL — PASS. После исправления параметризованных multi-statement запросов в новом fixture Luna V2 подтвердила targeted lint (0 issues) и все шесть schema-тестов в штатном query mode. Все шесть source hashes совпали со снимком и рабочими файлами; временные стенды удалены.

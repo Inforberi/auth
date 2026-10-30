@@ -92,6 +92,9 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 		return nil, err
 	}
 	p := &ProjectProfile{key: key, origin: origin, policy: configuration.Policy(), deps: deps, states: make(map[string]ProjectFeatureState)}
+	if err := p.checkMFACapability(ctx, cfg); err != nil {
+		return nil, err
+	}
 	observed := p.policy
 	if assess {
 		p.selectAssessmentPolicy(cfg)
