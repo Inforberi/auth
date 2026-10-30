@@ -1,6 +1,6 @@
 # Политика обязательности MFA
 
-Подэтап A6.3m.3a подключает сохранённую политику к основным runtime-проверкам; проверки Luna V1/V2 PASS. A6.3m.2b добавляет выбор при первом setup; проверки Luna V1/V2 PASS. Защищённый API смены режима после setup ещё не опубликован.
+Подэтап A6.3m.3a подключает сохранённую политику к основным runtime-проверкам; проверки Luna V1/V2 PASS. A6.3m.2b добавляет выбор при первом setup; проверки Luna V1/V2 PASS. A6.3m.2c подключает защищённый HTTP API смены режима; проверки Luna V1/V2/V3 PASS.
 
 ## Целевое поведение
 
@@ -89,6 +89,40 @@ Browser и native password/email/OIDC paths используют общий SQL-
 Это проверка сборки, не новая кешированная authority: окончательные SQL/session/challenge guards сохраняются. В уже собранном профиле смена политики всё равно применяется через SQL; декларация readiness — наблюдение, а не разрешение обхода. В горячий путь входа новые запросы не добавлены, проверки факторов/ролей используют bounded EXISTS без обхода всех пользователей. Deployment rollback должен учитывать всех пользователей и MFA-required роли, а не только настройки оператора.
 
 Тестовая матрица включает optional/admin/required с engine on/off, missing policy, unassigned MFA role и личный фактор; optional factorless last-admin с verified permanent credential; реальные project profile/management readiness и независимость platform policy. Last-admin не отменяет fresh primary proof, права, verified email или recovery-процедуру. Полная двухпроектная приёмка, защищённый API переключения политики и UI остаются отдельными gates.
+
+## HTTP API политики — A6.3m.2c
+
+Проверки Luna V1/V2/V3 PASS. Это политика текущего realm, а не управление MFA соседних БД из platform session. Межпроектный bridge для этой настройки отдельно не добавляется.
+
+| Режим приложения | Ручки | Полномочия |
+| --- | --- | --- |
+| Standalone | GET/POST `/api/v1/admin/auth/settings/mfa` | `auth.settings.manage` текущей Auth-БД |
+| Внутри независимого проекта | Те же пути на origin проекта | Проектная session и `auth.settings.manage`; deployment manifest `mfaSettings:true`, по умолчанию выключено |
+| Платформа | GET/POST `/api/v1/platform/settings/mfa` | Platform session и `platform.project_settings.manage`; локальная Auth-роль её не заменяет |
+
+Для всех маршрутов обязательны разрешённый HTTPS Origin, cookie session и существующая browser protection. Используется NoRefreshAuth: GET/POST не продлевают срок сессии и не выдают новую cookie. Чтение требует текущие полномочия, изменение дополнительно fresh password и fresh MFA, если её требует realm/роль/личный фактор. Необходимые SQL locks, final authority, audit rollback и version-check выполняет прежний writer.
+
+GET возвращает, например:
+
+```json
+{"version":3,"policy":{"mode":"optional"}}
+```
+
+POST принимает полный mode и положительную текущую версию:
+
+```json
+{"expectedVersion":3,"policy":{"mode":"required"}}
+```
+
+Возможные значения `optional`, `administrators`, `required`. Не принимаются actor, realm/project ID, capability/ready, factor state или произвольные permissions. Неверная форма/неизвестные поля — `400 invalid_json`; невалидный mode/version — `400 invalid_mfa_policy`. Конфликт версии — `409 mfa_policy_conflict`; недостаточная серверная MFA capability — `409 mfa_not_ready`; нет сессии —401; нет текущего права —403; устаревшие proofs — `403 fresh_auth_required`; инфраструктурная ошибка —503 без внутренних данных.
+
+POST возвращает200 с сохранённой version/policy. No-op сохраняет version и не добавляет audit. Усиление повышает session_revision и немедленно лишает силы все прежние realm sessions/login challenges, включая сессию инициатора, но не отменяет уже совершённую транзакцию. Ответ200 передаёт committed state; следующий запрос со старой cookie получает401. Клиент заново входит и читает актуальную политику. Потерянный ответ нельзя трактовать как гарантированный rollback или повод повторять смену без чтения. Смягчение не удаляет личные факторы и не возвращает силу ранее отозванным сессиям. Offline JWT остаются ограничены своим TTL, online guards используют SQL.
+
+Project adapter берёт один scoped lease с пятисекундным пределом, проверяет каталог до и после операции; повторная проверка actor после собственного policy commit не выполняется. MFA readiness принадлежит сборке выбранного проекта, не платформе и не JSON body. При доступном browser transport POST допускается и без MFA engine: existing writer разрешает optional/no-op и запрещает включение обязательности без готового engine. Проверка совместимости профиля по A6.3m.5a сохраняется.
+
+Platform profile подключает existing login enrollment start/confirm и owner TOTP enrollment start/confirm: после включения обязательности оператор без фактора может завершить ограниченный flow до выдачи сессии. DELETE личного platform TOTP этим блоком не публикуется; согласование полного управления личным фактором всех типов операторов и оставшаяся optional matrix — отдельный gate. Платформенный engine по-прежнему обязателен технически. UI не начинался.
+
+HTTP unit/contracts и SQL HTTPS сценарии добавлены для session/Origin/permissions, client authority rejection, version/no-op/audit, weakening with personal factor, strengthening with own-session revocation и project/platform isolation. Luna: task check/API, targeted lint/race, schema policy/runtime/capability SQL, platform operators, полный ARM64 command SQL и operator HTTPS PASS. V2/V3 исправили только test fixtures; manifest33 совпал с main, fixtures очищены. Подробные evidence и первые FAIL в history.
 
 ## Проверки подэтапа
 

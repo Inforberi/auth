@@ -40,12 +40,15 @@ func NewOperator(h Handlers) (http.Handler, error) {
 	r.Route("/api/v1", func(r chi.Router) {
 		setupRoutes(r, h)
 		administrativeLoginRoutes(r, h)
+		operatorMFASettingsRoutes(r, h)
 		platformProjectRoutes(r, h)
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(browserProtection(h))
 			r.Post("/forgot-password", h.Recovery.Forgot)
 			r.Post("/reset-password", h.Recovery.Reset)
 			r.Post("/mfa/login/complete", h.MFA.CompleteLogin)
+			r.Post("/mfa/login/enrollment", h.MFA.StartLoginEnrollment)
+			r.Post("/mfa/login/enrollment/confirm", h.MFA.ConfirmLoginEnrollment)
 			if h.Config.MFA.RecoveryEnabled {
 				r.Post("/mfa/recovery/start", h.MFA.StartRecovery)
 				r.Post("/mfa/recovery/complete", h.MFA.CompleteRecovery)
@@ -54,6 +57,8 @@ func NewOperator(h Handlers) (http.Handler, error) {
 			owner := r.With(h.Middleware.NoRefreshAuth)
 			owner.Post("/change-password", h.PasswordHandler.ChangePassword)
 			owner.Get("/mfa/status", h.MFA.ReadStatus)
+			owner.Post("/mfa/totp/enrollment", h.MFA.StartEnrollment)
+			owner.Post("/mfa/totp/enrollment/confirm", h.MFA.ConfirmEnrollment)
 			owner.Post("/mfa/step-up", h.MFA.StepUp)
 			owner.Post("/mfa/recovery-codes/regenerate", h.MFA.RegenerateRecovery)
 			owner.Post("/mfa/totp/replacement", h.MFA.StartReplacement)

@@ -31,7 +31,7 @@ func TestOperatorHTTPAllowlist(t *testing.T) {
 	for _, path := range []string{
 		"/api/v1/auth/register/email", "/api/v1/auth/login/email", "/api/v1/auth/google/start", "/api/v1/auth/telegram/start",
 		"/api/v1/auth/email-otp/request", "/api/v1/auth/token", "/api/v1/admin/users", "/api/v1/admin/roles", "/swagger/index.html",
-		"/api/v1/auth/mfa/totp", "/api/v1/auth/mfa/totp/enrollment", "/api/v1/auth/mfa/recovery/start",
+		"/api/v1/auth/mfa/totp", "/api/v1/auth/mfa/recovery/start",
 	} {
 		r := httptest.NewRequest(http.MethodPost, cfg.Platform.Origin+path, nil)
 		r.Header.Set("Origin", cfg.Platform.Origin)
@@ -39,6 +39,16 @@ func TestOperatorHTTPAllowlist(t *testing.T) {
 		handler.ServeHTTP(w, r)
 		if w.Code != http.StatusNotFound {
 			t.Errorf("unexpected exposed path %s: %d", path, w.Code)
+		}
+	}
+	for _, path := range []string{"/api/v1/auth/mfa/totp/enrollment", "/api/v1/auth/mfa/totp/enrollment/confirm"} {
+		r := httptest.NewRequest(http.MethodPost, cfg.Platform.Origin+path, nil)
+		r.Header.Set("Origin", cfg.Platform.Origin)
+		r.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, r)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("enrollment requires session: %s %d", path, w.Code)
 		}
 	}
 	for _, test := range []struct {

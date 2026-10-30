@@ -24,6 +24,7 @@ type ProjectProfileConfig struct {
 	AuthSettingsEnabled      bool
 	ProviderSettingsEnabled  bool
 	RetentionSettingsEnabled bool
+	MFASettingsEnabled       bool
 	SMTPSettings             *ProjectSMTPSettingsConfig
 	Access                   *accesssettings.Catalog
 	Password                 *ProjectPasswordConfig
@@ -68,6 +69,7 @@ type ProjectProfile struct {
 	smtpSettings             *projectSMTPSettings
 	providerSettings         *projectProviderSettings
 	retentionSettings        *projectRetentionSettings
+	mfaSettings              *projectMFASettings
 }
 
 func BuildProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies) (*ProjectProfile, error) {
@@ -115,6 +117,7 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	p.buildProfileSMTPSettings(cfg, configuration.EncryptionKey(), redisReady)
 	p.buildProfileProviderSettings(cfg, configuration.EncryptionKey())
 	p.buildProfileRetentionSettings(cfg)
+	p.buildProfileMFASettings(cfg)
 	if err := p.checkSnapshotCurrent(ctx, observed); err != nil {
 		return nil, err
 	}

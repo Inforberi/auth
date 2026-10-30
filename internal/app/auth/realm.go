@@ -19,6 +19,8 @@ import (
 	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
+	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
@@ -143,6 +145,7 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 		SMTPSettings:      smtpSettings,
 		ProviderSettings:  settingshttp.NewProviders(providers, log),
 		RetentionSettings: settingshttp.NewRetention(retentionSettings, log),
+		MFASettings:       settingshttp.NewMFA(settingsservice.NewMFA(settingspostgres.New(pool), cfg.MFA.Enabled), log),
 		Setup:             setup,
 		EmailBinding:      emailBinding,
 		MFA:               mfa.handler,

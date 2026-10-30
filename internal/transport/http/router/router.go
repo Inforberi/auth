@@ -44,6 +44,7 @@ type Handlers struct {
 	SMTPSettings      *settingshttp.SMTPHandler
 	ProviderSettings  *settingshttp.ProviderHandler
 	RetentionSettings *settingshttp.RetentionHandler
+	MFASettings       *settingshttp.MFAHandler
 	Setup             *accounthttp.SetupHandler
 	MFA               *mfahttp.Handler
 	Session           *sessionhttp.Handler

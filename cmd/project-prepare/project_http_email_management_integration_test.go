@@ -60,7 +60,7 @@ func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.C
 	}, appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, Delivery: delivery}, func(_ context.Context, key projectruntime.Key, selected string) (appauth.ProjectProfileConfig, error) {
 		require.Equal(t, f.key, key)
 		require.Equal(t, origin, selected)
-		return appauth.ProjectProfileConfig{BrowserEnabled: true, UserLifecycleEnabled: true, AuthSettingsEnabled: true, ProviderSettingsEnabled: true, RetentionSettingsEnabled: true, SMTPSettings: &appauth.ProjectSMTPSettingsConfig{AllowedTargets: []string{f.listener.Addr().String()}}, Access: &catalog, Password: &password, EmailOTP: &otp, EmailManagement: &management, Timeout: 10 * time.Second}, nil
+		return appauth.ProjectProfileConfig{BrowserEnabled: true, UserLifecycleEnabled: true, AuthSettingsEnabled: true, ProviderSettingsEnabled: true, RetentionSettingsEnabled: true, MFASettingsEnabled: true, SMTPSettings: &appauth.ProjectSMTPSettingsConfig{AllowedTargets: []string{f.listener.Addr().String()}}, Access: &catalog, Password: &password, EmailOTP: &otp, EmailManagement: &management, Timeout: 10 * time.Second}, nil
 	}, nil)
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {

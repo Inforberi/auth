@@ -252,6 +252,106 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/admin/auth/settings/mfa": {
+            "get": {
+                "description": "Requires a live browser session and allowed HTTPS Origin. Local endpoint requires auth.settings.manage; platform endpoint uses independent platform.project_settings.manage authority. No fresh proof is required for reading. Policy applies only to this realm database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA settings"
+                ],
+                "summary": "Read realm MFA policy",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfa_settings_http.SettingsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Requires current realm permission, fresh password and fresh MFA when required by policy, role or personal enrollment. expectedVersion prevents lost updates. Required modes need server-owned MFA capability. Strengthening invalidates all previous realm sessions and pending login challenges, including this caller; response still returns the committed policy. A no-op creates no audit/version change. Weakening preserves personal factors and never revives old sessions. No client-supplied capability or actor is accepted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA settings"
+                ],
+                "summary": "Change realm MFA policy",
+                "parameters": [
+                    {
+                        "description": "Complete mode and current version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/mfa_settings_http.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfa_settings_http.SettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "mfa_policy_conflict, mfa_not_ready",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/auth/settings/providers/{provider}": {
             "get": {
                 "description": "Live session, HTTPS Origin and auth.settings.manage; no fresh proof for reading. Presence is not a live provider test. Redirect URI and fixed issuer/endpoints remain deployment configuration.",
@@ -7782,6 +7882,106 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/platform/settings/mfa": {
+            "get": {
+                "description": "Requires a live browser session and allowed HTTPS Origin. Local endpoint requires auth.settings.manage; platform endpoint uses independent platform.project_settings.manage authority. No fresh proof is required for reading. Policy applies only to this realm database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA settings"
+                ],
+                "summary": "Read realm MFA policy",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfa_settings_http.SettingsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Requires current realm permission, fresh password and fresh MFA when required by policy, role or personal enrollment. expectedVersion prevents lost updates. Required modes need server-owned MFA capability. Strengthening invalidates all previous realm sessions and pending login challenges, including this caller; response still returns the committed policy. A no-op creates no audit/version change. Weakening preserves personal factors and never revives old sessions. No client-supplied capability or actor is accepted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA settings"
+                ],
+                "summary": "Change realm MFA policy",
+                "parameters": [
+                    {
+                        "description": "Complete mode and current version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/mfa_settings_http.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfa_settings_http.SettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "mfa_policy_conflict, mfa_not_ready",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/setup/complete": {
             "post": {
                 "description": "Consumes installation proof and pending intent with email code and TOTP when required by the pinned mode. Atomically creates owner, policy, system grant and durable marker. Optional creates no factor and returns empty recoveryCodes; other modes return recovery codes once. Does not issue a session. Setup stays closed after restart or loss of administrator.",
@@ -9204,6 +9404,45 @@ const docTemplate = `{
             "properties": {
                 "verifiedAt": {
                     "type": "string"
+                }
+            }
+        },
+        "mfa_settings_http.Policy": {
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "type": "string",
+                    "enum": [
+                        "optional",
+                        "administrators",
+                        "required"
+                    ]
+                }
+            }
+        },
+        "mfa_settings_http.SettingsResponse": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/mfa_settings_http.Policy"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "mfa_settings_http.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "expectedVersion",
+                "policy"
+            ],
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/mfa_settings_http.Policy"
                 }
             }
         },

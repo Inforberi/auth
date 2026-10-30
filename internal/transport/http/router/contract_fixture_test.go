@@ -88,6 +88,7 @@ func contractHandlers(env string) Handlers {
 		SMTPSettings:      settingshttp.NewSMTP(&contractSMTP{}, log),
 		ProviderSettings:  settingshttp.NewProviders(&contractProviders{}, log),
 		RetentionSettings: settingshttp.NewRetention(&contractRetention{}, log),
+		MFASettings:       settingshttp.NewMFA(&contractMFASettings{}, log),
 		Setup:             accounthttp.NewSetup(&contractSetup{}, log),
 		EmailBinding:      accounthttp.NewEmailBinding(&contractEmailBinding{}, log),
 		MFA:               mfahttp.NewWithRecovery(&contractMFA{}, &contractMFA{}, &contractMFARecovery{}, log),

@@ -88,6 +88,11 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 		retention := settingshttp.NewRetention(p.retentionSettings, log)
 		handlers["GET /api/v1/admin/auth/settings/retention"], handlers["POST /api/v1/admin/auth/settings/retention"] = retention.Read, retention.Update
 	}
+	if p.mfaSettings != nil {
+		mfa := settingshttp.NewMFA(p.mfaSettings, log)
+		handlers["GET /api/v1/admin/auth/settings/mfa"] = mfa.Read
+		handlers["POST /api/v1/admin/auth/settings/mfa"] = mfa.Update
+	}
 	p.accessHandlers(handlers, log)
 	p.provisioningHandlers(handlers, log)
 	p.emailManagementHandlers(handlers, log)

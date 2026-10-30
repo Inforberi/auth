@@ -292,6 +292,7 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	t.Run("project user lifecycle HTTP", func(t *testing.T) { f.httpUserLifecycle(t, ctx, web, origin, actorToken) })
 	t.Run("project access HTTP", func(t *testing.T) { f.httpAccess(t, ctx, web, origin, actorToken) })
 	t.Run("project auth settings HTTP", func(t *testing.T) { f.httpAuthSettings(t, ctx, web, origin, actorToken) })
+	t.Run("project MFA policy HTTP", func(t *testing.T) { f.httpMFASettings(t, ctx, web, origin, actorToken) })
 }
 
 func accountMessageToken(t *testing.T, cipher *secretbox.Cipher, payload []byte) string {

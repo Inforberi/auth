@@ -116,6 +116,7 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 		ProjectUsers:      assembleProjectUsers(runtime, projects, deps.log),
 		ProjectAuthPolicy: assembleProjectAuthPolicy(runtime, projects, projectHTTP, deps.log),
 		ProjectCapacity:   projecthttp.Capacity(capacity),
+		MFASettings:       newOperatorMFASettings(operator, cfg.MFA.Enabled, deps.log),
 		PasswordHandler:   passwordhttp.New(password.service, deps.log),
 		Recovery:          passwordhttp.NewRecovery(password.recovery, deps.log),
 		Middleware:        sessionhttp.New(svc, deps.log),
