@@ -16,7 +16,7 @@ func requireFreshMFA(ctx context.Context, tx pgx.Tx, proof service.Proof) error 
 	var valid bool
 	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.role_bound_sessions s
 		WHERE s.user_id=$1 AND s.token_hash=$2 AND s.auth_version=$3
-		AND s.mfa_verified_at<=clock_timestamp() AND s.mfa_verified_at>clock_timestamp()-interval '5 minutes'
+		AND s.strong_mfa_verified_at<=clock_timestamp() AND s.strong_mfa_verified_at>clock_timestamp()-interval '5 minutes'
 		AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1))`, proof.UserID, proof.TokenHash, proof.AuthVersion).Scan(&valid)
 	if err != nil {
 		return err

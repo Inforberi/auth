@@ -32,7 +32,7 @@ func checkMFASelfStatus(t *testing.T, db, runtime *pgxpool.Pool, ctx context.Con
 	prepareUsableAdministrator(t, db, ctx, f.user)
 	accessExec(t, db, ctx, `INSERT INTO auth.mfa_recovery_codes(user_id,digest) VALUES($1,repeat('a',64)),($1,repeat('b',64))`, f.user)
 	accessExec(t, db, ctx, `UPDATE auth.sessions SET created_at=clock_timestamp()-interval '10 minutes',
-		primary_method='password',primary_verified_at=password_verified_at,mfa_verified_at=clock_timestamp() WHERE token_hash=$1`, proof.TokenHash)
+		primary_method='password',primary_verified_at=password_verified_at,mfa_verified_at=clock_timestamp(),mfa_method='totp' WHERE token_hash=$1`, proof.TokenHash)
 	accessExec(t, db, ctx, `WITH r AS(INSERT INTO auth.roles(key,name,mfa_required) VALUES('status_required','Status required',true) RETURNING id)
 		INSERT INTO auth.user_roles(user_id,role_id) SELECT $1,id FROM r`, f.user)
 	status, err = svc.Status(ctx, proof)

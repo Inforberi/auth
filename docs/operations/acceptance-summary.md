@@ -1,5 +1,7 @@
 # Краткий отчёт по проверкам
 
+Принят [A6.3m.6b — строгий proof](../features/mfa-policy.md#строгий-proof-для-критических-действий--a63m6b): critical SQL guards отличают записанный TOTP/recovery от historical unknown proof, ordinary session/optional policy сохранены; external JWT routes могут применять RequireStrongMFA(maxAge). Luna V1 task check/affected races/core schema/platform operators/two-project Access и V2 targeted lint/operator HTTPS race PASS, cleanup/manifest36 подтверждены. Новые email/Telegram flows закрыты, DB/view upgrade отдельно MP6.
+
 Принят [A6.3m.6a — метод MFA](../features/mfa-policy.md#метод-подтверждения--a63m6a): SQL proof различает новые TOTP/recovery, JWT/refresh сохраняют метод, introspection проверяет точное соответствие. Luna V1 task check/affected races/core schema/two-project HTTPS и V2 platform SQL race/targeted lint PASS, cleanup/manifest42 подтверждены. Legacy NULL остаётся coarse mfa; новые email/Telegram factors закрыты. Source baseline изменён, реальный DB upgrade/rolling отдельно.
 
 Сверка MP5 обновлена по принятым email HTTP/lifecycle-fault результатам без повторных прогонов. Недостающий [двухпроектный email OTP login/reauth HTTP](../planning/multi-project.md#email-otp-двух-проектов--mp5-email-otp-http) принят Luna V1: task check/actual SQL race/count1 PASS, штатный Redis/PostgreSQL cleanup и manifest8 подтверждены. Новые email/Telegram вторые факторы этим не реализованы; полный MP5 остаётся открытым.

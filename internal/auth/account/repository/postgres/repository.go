@@ -67,7 +67,7 @@ func lockSessionProof(ctx context.Context, tx pgx.Tx, user domain.UserID, token 
 		AND ($4::double precision=0 OR (password_verified_at<=clock_timestamp()
 		AND password_verified_at>clock_timestamp()-$4::double precision*interval '1 second'))
 		AND (NOT $5 OR NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1)
-			OR (mfa_verified_at<=clock_timestamp() AND mfa_verified_at>clock_timestamp()-interval '5 minutes'))
+			OR (strong_mfa_verified_at<=clock_timestamp() AND strong_mfa_verified_at>clock_timestamp()-interval '5 minutes'))
 		FOR UPDATE`, user, token, version, freshFor.Seconds(), requireExistingMFA).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.ErrFreshAuthRequired

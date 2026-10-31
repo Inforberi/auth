@@ -36,8 +36,8 @@ func operatorPersonalMFADrill(t *testing.T, admin *pgxpool.Pool, deps realmDepen
 	require.NoError(t, err)
 	digest := tokens.Hash(raw)
 	// The initial strong session is synthetic; all subsequent login/enrollment/step-up uses HTTP.
-	_, err = admin.Exec(ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,primary_method,primary_verified_at,password_verified_at,mfa_verified_at,user_agent,ip_address)
- SELECT $1,id,auth_version,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours','password',clock_timestamp(),clock_timestamp(),clock_timestamp(),'personal MFA fixture','192.0.2.91'
+	_, err = admin.Exec(ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,primary_method,primary_verified_at,password_verified_at,mfa_verified_at,mfa_method,user_agent,ip_address)
+ SELECT $1,id,auth_version,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours','password',clock_timestamp(),clock_timestamp(),clock_timestamp(),'totp','personal MFA fixture','192.0.2.91'
  FROM auth.users WHERE id=$2`, digest, user)
 	require.NoError(t, err)
 	cookies := []*http.Cookie{{Name: sessionhttp.SessionCookieName, Value: raw}}

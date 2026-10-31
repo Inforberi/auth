@@ -123,7 +123,7 @@ func prepareUsableAdministrator(t *testing.T, db *pgxpool.Pool, ctx context.Cont
 	accessExec(t, db, ctx, `INSERT INTO auth.mfa_totp(user_id,secret,last_step) VALUES($1,$2,0) ON CONFLICT(user_id) DO NOTHING`, user, make([]byte, 48))
 	// This fixture models a completed MFA login, not a pre-enrollment primary session.
 	accessExec(t, db, ctx, `UPDATE auth.sessions SET primary_method='password',
-	 primary_verified_at=COALESCE(primary_verified_at,created_at),mfa_verified_at=clock_timestamp()
+	 primary_verified_at=COALESCE(primary_verified_at,created_at),mfa_verified_at=clock_timestamp(),mfa_method='totp'
 	 WHERE user_id=$1 AND revoked_at IS NULL`, user)
 }
 

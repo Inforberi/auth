@@ -54,9 +54,9 @@ func operatorMFAPolicy(t *testing.T, db *pgxpool.Pool, ctx context.Context, repo
 	require.Equal(t, before.Version+1, got.Version)
 	actor.TokenHash = strings.Repeat("6", 64)
 	_, err = db.Exec(ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,
- primary_method,primary_verified_at,password_verified_at,mfa_verified_at,user_agent,ip_address)
+ primary_method,primary_verified_at,password_verified_at,mfa_verified_at,mfa_method,user_agent,ip_address)
  SELECT $1,id,auth_version,statement_timestamp(),statement_timestamp()+interval '1 hour',statement_timestamp()+interval '2 hours',
- 'password',statement_timestamp(),statement_timestamp(),statement_timestamp(),'MFA policy fixture','192.0.2.1' FROM auth.users WHERE id=$2`, actor.TokenHash, actor.UserID)
+ 'password',statement_timestamp(),statement_timestamp(),statement_timestamp(),'totp','MFA policy fixture','192.0.2.1' FROM auth.users WHERE id=$2`, actor.TokenHash, actor.UserID)
 	require.NoError(t, err)
 
 	_, err = repo.UpdateMFAPolicy(ctx, actor, input, true)

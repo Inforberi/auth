@@ -60,9 +60,9 @@ func roleAdmissionDrill(t *testing.T, physical *pgx.Conn, project *pgxpool.Pool,
 		('d2000000-0000-4000-8000-000000000001','platform.project_access.manage')`)
 	require.NoError(t, err)
 	_, err = admin.Exec(ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,
-		primary_method,primary_verified_at,password_verified_at,mfa_verified_at,user_agent,ip_address)
+		primary_method,primary_verified_at,password_verified_at,mfa_verified_at,mfa_method,user_agent,ip_address)
 		VALUES($1,$2,1,statement_timestamp(),statement_timestamp()+interval '1 hour',statement_timestamp()+interval '2 hours',
-		'password',statement_timestamp(),statement_timestamp(),statement_timestamp(),'bridge SQL fixture','192.0.2.1')`, actor.TokenHash, actor.UserID)
+		'password',statement_timestamp(),statement_timestamp(),statement_timestamp(),'totp','bridge SQL fixture','192.0.2.1')`, actor.TokenHash, actor.UserID)
 	require.NoError(t, err)
 	_, err = admin.Exec(ctx, `UPDATE platform.projects SET phase='ready',database_name=$1,credential_ref='project:bridge:db:v1',schema_version=1`, projectCfg.Database)
 	require.NoError(t, err)

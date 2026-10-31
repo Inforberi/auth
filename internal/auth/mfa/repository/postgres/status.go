@@ -30,7 +30,7 @@ func (r *Repository) Status(ctx context.Context, proof service.Proof) (*service.
 		EXISTS(SELECT 1 FROM auth.user_emails WHERE user_id=$1 AND verified_at IS NOT NULL),
 		EXISTS(SELECT 1 FROM auth.password_credentials WHERE user_id=$1),
 		COALESCE((`+freshManagementPrimary+`),false),
-		COALESCE(s.mfa_verified_at<=statement_timestamp() AND s.mfa_verified_at>statement_timestamp()-interval '5 minutes'
+		COALESCE(s.strong_mfa_verified_at<=statement_timestamp() AND s.strong_mfa_verified_at>statement_timestamp()-interval '5 minutes'
 			AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1),false)
 		FROM auth.role_bound_sessions s JOIN auth.users u ON u.id=s.user_id AND u.auth_version=s.auth_version
 		WHERE s.user_id=$1 AND s.token_hash=$2 AND s.auth_version=$3

@@ -277,7 +277,7 @@ func checkEmailBinding(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		f := newBindingFixture(t, db, ctx, "fresh-factor")
 		code := f.issue(t, db, ctx, f.email)
 		accessExec(t, db, ctx, `INSERT INTO auth.mfa_totp(user_id,secret,last_step) VALUES ($1,$2,0)`, f.user, make([]byte, 48))
-		accessExec(t, db, ctx, `UPDATE auth.sessions SET primary_method='oidc',primary_verified_at=clock_timestamp(),mfa_verified_at=clock_timestamp() WHERE token_hash=$1`, f.proof.TokenHash)
+		accessExec(t, db, ctx, `UPDATE auth.sessions SET primary_method='oidc',primary_verified_at=clock_timestamp(),mfa_verified_at=clock_timestamp(),mfa_method='totp' WHERE token_hash=$1`, f.proof.TokenHash)
 		if err := f.svc.Confirm(ctx, f.proof, code, ""); err != nil {
 			t.Fatal(err)
 		}

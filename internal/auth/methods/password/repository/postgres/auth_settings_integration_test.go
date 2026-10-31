@@ -103,7 +103,7 @@ func TestAuthSettingsSchema(t *testing.T) {
 	if _, err := svc.Update(ctx, input); !errors.Is(err, accessdomain.ErrFreshAuthRequired) {
 		t.Fatal("proof-less write", err)
 	}
-	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=clock_timestamp() WHERE user_id=$1`, actor.UserID)
+	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=clock_timestamp(),mfa_method='totp' WHERE user_id=$1`, actor.UserID)
 	current, err := svc.Update(ctx, input)
 	if err != nil || current.Version != 2 || current.Policy != input.Policy {
 		t.Fatal(current, err)

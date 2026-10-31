@@ -127,7 +127,7 @@ func TestRetentionSettingsSchema(t *testing.T) {
 	if _, err := svc.Read(ctx, actor); err != nil {
 		t.Fatal("reading requires fresh proof", err)
 	}
-	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=clock_timestamp() WHERE token_hash=$1`, actor.TokenHash)
+	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=clock_timestamp(),mfa_method='totp' WHERE token_hash=$1`, actor.TokenHash)
 	accessExec(t, db, ctx, `DELETE FROM auth.role_permissions WHERE permission_key='auth.settings.manage'`)
 	if _, err := svc.Update(ctx, input); !errors.Is(err, accessdomain.ErrForbidden) {
 		t.Fatal("missing current permission", err)

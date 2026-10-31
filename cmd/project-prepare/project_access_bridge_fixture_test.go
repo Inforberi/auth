@@ -64,9 +64,9 @@ func isolationPlatformOperator(t *testing.T, ctx context.Context, pair preparedH
  ('d2000000-0000-4000-8000-000000000001',decode(repeat('11',64),'hex'),0)`)
 	require.NoError(t, err)
 	_, err = pair.admin.Exec(ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,
- primary_method,primary_verified_at,password_verified_at,mfa_verified_at,user_agent,ip_address)
+ primary_method,primary_verified_at,password_verified_at,mfa_verified_at,mfa_method,user_agent,ip_address)
  VALUES($1,$2,1,statement_timestamp(),statement_timestamp()+interval '1 hour',statement_timestamp()+interval '2 hours',
- 'password',statement_timestamp(),statement_timestamp(),statement_timestamp(),'HTTP isolation operator fixture','192.0.2.1')`, actor.TokenHash, actor.UserID)
+ 'password',statement_timestamp(),statement_timestamp(),statement_timestamp(),'totp','HTTP isolation operator fixture','192.0.2.1')`, actor.TokenHash, actor.UserID)
 	require.NoError(t, err)
 	return managed, actor
 }

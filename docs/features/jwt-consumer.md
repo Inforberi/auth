@@ -80,3 +80,21 @@ Middleware **не настраивает CORS**, не обходит OPTIONS, н
 5. Пройти negative/rotation/outage/expiry/cancellation tests и реальную deployment/load/GC/restore приёмку. Совместимость OAuth/OIDC/RFC7662 этим собственным wire contract не заявляется.
 
 Локальное evidence — [history J5.2](../planning/history.md#результат-j52-local--17-октября-2026). [J7.5 sandbox](../operations/local-sandbox.md#ротация-и-недоступность-jwks--j75-local) дополняет его actual HTTPS signing rotation/overlap/early distrust и full-Auth outage с реальным ожиданием60s: local grace не продлевает trust, stale Ready/middleware503 при живом JWT, restart/backoff recovery. Strict при full-Auth outage также не имеет online authority; это не selective JWKS-only partition. Real ingress/multi-instance/fleet/operator rotation/recovery/load/GC/restore и полный planned TTL-drain остаются J7/pre-ui/A8, RPS не установлен.
+
+## Строгое MFA для отдельных ручек — A6.3m.6b
+
+RequireStrongMFA(maxAge) принят в A6.3m.6b: Luna V1 task check/affected races/SQL regressions и V2 operator HTTPS/targeted lint PASS, cleanup/manifest36 подтверждены. Это отдельная авторизация после Consumer.Middleware, например для routes с изменением важных данных; ordinary JWT routes не меняются. Допустимы явно записанные otp/recovery с текущим mfa_time; coarse mfa исторической session не считается строгим. Principal.AuthenticationMethods() возвращает копию AMR, Principal.MFAVerifiedAt() — время либо zero. Порядок AMR не влияет на проверку. Конфигурационные ошибки guard/permissions нужно обработать при старте.
+
+```go
+strong, err := authjwt.RequireStrongMFA(5 * time.Minute)
+if err != nil {
+    return err
+}
+permissions, err := authjwt.RequirePermissions("orders.write")
+if err != nil {
+    return err
+}
+handler := consumer.Middleware(strong(permissions(writeHandler)))
+```
+
+Missing/expired principal получает401; historical/weak/missing/future/stale proof —403 strong_mfa_required. Возраст строго меньше maxAge, настройка положительна и не больше15m. Guard не обновляет session, не делает сетевой запрос и не заменяет проверки доступа к конкретным строкам/полям. В local mode остаётся прежнее окно отзыва JWT; strict online authority включается Consumer отдельно. Новые email/Telegram second factors этим API не реализуются; контракт и SQL guards — [MFA policy](mfa-policy.md#строгий-proof-для-критических-действий--a63m6b).

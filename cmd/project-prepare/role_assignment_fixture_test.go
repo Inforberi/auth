@@ -76,9 +76,9 @@ func newAssignmentFixture(t *testing.T, catalog *pgx.Conn, binding credentials.B
 	 INSERT INTO auth.password_credentials(user_id,email_id,password_hash) VALUES($1,'f6000000-0000-4000-8000-000000000005','sql-fixture-hash');
 	 INSERT INTO auth.mfa_totp(user_id,secret,last_step) VALUES($1,decode(repeat('11',64),'hex'),0)`, assignmentAdmin)
 	require.NoError(t, err)
-	_, err = db.Exec(ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,primary_method,primary_verified_at,password_verified_at,mfa_verified_at,user_agent,ip_address)
-	 VALUES($1,$2,1,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours','password',clock_timestamp(),clock_timestamp(),clock_timestamp(),'local admin SQL fixture','192.0.2.1'),
-	 ($3,$4,1,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours','emailotp',clock_timestamp(),NULL,NULL,'pre-grant SQL fixture','192.0.2.2')`, strings.Repeat("b", 64), assignmentAdmin, strings.Repeat("a", 64), assignmentActive)
+	_, err = db.Exec(ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,primary_method,primary_verified_at,password_verified_at,mfa_verified_at,mfa_method,user_agent,ip_address)
+	 VALUES($1,$2,1,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours','password',clock_timestamp(),clock_timestamp(),clock_timestamp(),'totp','local admin SQL fixture','192.0.2.1'),
+	 ($3,$4,1,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours','emailotp',clock_timestamp(),NULL,NULL,NULL,'pre-grant SQL fixture','192.0.2.2')`, strings.Repeat("b", 64), assignmentAdmin, strings.Repeat("a", 64), assignmentActive)
 	require.NoError(t, err)
 	require.NoError(t, db.QueryRow(ctx, `INSERT INTO auth.roles(key,name,mfa_required) VALUES('bridge_http_assignment_mfa','Existing MFA role',true) RETURNING id`).Scan(&fixture.mfa))
 	_, err = db.Exec(ctx, `WITH roles AS (INSERT INTO auth.roles(key,name) SELECT 'bridge_http_assignment_cap_'||n,'Cap role' FROM generate_series(1,32) n RETURNING id)

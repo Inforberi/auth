@@ -682,7 +682,8 @@ CREATE TRIGGER sessions_role_binding BEFORE INSERT OR UPDATE OF credential_profi
 
 -- Role and MFA revision bindings prevent old credentials from reviving.
 CREATE VIEW auth.role_bound_sessions WITH (security_invoker=true) AS
-  SELECT s.* FROM auth.sessions s
+  SELECT s.*,CASE WHEN s.mfa_method IN ('totp','recovery')
+    THEN s.mfa_verified_at END AS strong_mfa_verified_at FROM auth.sessions s
   WHERE EXISTS(SELECT 1 FROM auth.mfa_settings WHERE singleton AND session_revision=s.mfa_policy_revision)
   AND (s.mfa_method IS NULL OR s.mfa_method IN ('totp','recovery'))
   AND ((s.mfa_verified_at IS NULL AND NOT auth.mfa_login_required(s.user_id)) OR

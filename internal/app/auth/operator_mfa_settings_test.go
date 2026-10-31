@@ -28,8 +28,8 @@ func operatorMFASettingsDrill(t *testing.T, admin *pgxpool.Pool, h *operatorHTTP
 	require.NoError(t, err)
 	actor.TokenHash = tokens.Hash(raw)
 	// A synthetic completed password/MFA proof belongs only to this final HTTP scenario.
-	_, err = admin.Exec(ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,primary_method,primary_verified_at,password_verified_at,mfa_verified_at,user_agent,ip_address)
- SELECT $1,id,auth_version,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours','password',clock_timestamp(),clock_timestamp(),clock_timestamp(),'MFA settings fixture','192.0.2.90'
+	_, err = admin.Exec(ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,primary_method,primary_verified_at,password_verified_at,mfa_verified_at,mfa_method,user_agent,ip_address)
+ SELECT $1,id,auth_version,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours','password',clock_timestamp(),clock_timestamp(),clock_timestamp(),'totp','MFA settings fixture','192.0.2.90'
  FROM auth.users WHERE id=$2`, actor.TokenHash, actor.UserID)
 	require.NoError(t, err)
 	cookies := []*http.Cookie{{Name: sessionhttp.SessionCookieName, Value: raw}}

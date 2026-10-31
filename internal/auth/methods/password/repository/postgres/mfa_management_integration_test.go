@@ -48,6 +48,33 @@ func managementProof(t *testing.T, ctx context.Context, f mfaLoginFixture) mfase
 
 func checkMFAManagement(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	svc := mfaManagement(t, db)
+	t.Run("historical proof requires strong step-up", func(t *testing.T) {
+		f := newMFALoginFixture(t, db, ctx, "historical-assurance")
+		proof := managementProof(t, ctx, f)
+		accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_method=NULL WHERE token_hash=$1`, proof.TokenHash)
+		if _, err := f.sessions.FindSession(ctx, proof.TokenHash); err != nil {
+			t.Fatal("ordinary historical session lost", err)
+		}
+		status, err := svc.Status(ctx, proof)
+		if err != nil || status.FreshMFAProof {
+			t.Fatal("historical method promoted to strong proof", err)
+		}
+		if _, err := svc.RegenerateRecovery(ctx, proof); !errors.Is(err, mfadomain.ErrProofRequired) {
+			t.Fatal("unknown method authorized factor change", err)
+		}
+		step, err := svc.StepUp(ctx, mfaservice.StepUpInput{Proof: proof, Recovery: true, Code: f.codes[1]})
+		if err != nil {
+			t.Fatal("strong step-up unavailable", err)
+		}
+		proof.TokenHash = tokengenerate.New().Hash(step.Token)
+		status, err = svc.Status(ctx, proof)
+		if err != nil || !status.FreshMFAProof {
+			t.Fatal("new strong proof not recognized", err)
+		}
+		if _, err := svc.RegenerateRecovery(ctx, proof); err != nil {
+			t.Fatal("strong proof did not authorize factor change", err)
+		}
+	})
 	for _, action := range []string{"disable", "regenerate", "replace"} {
 		t.Run(action, func(t *testing.T) {
 			f := newMFALoginFixture(t, db, ctx, "management-"+action)
@@ -110,7 +137,8 @@ func checkMFAManagement(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		f := newMFALoginFixture(t, db, ctx, "management-guards")
 		proof := managementProof(t, ctx, f)
 		var verified time.Time
-		if err := db.QueryRow(ctx, `SELECT mfa_verified_at FROM auth.sessions WHERE token_hash=$1`, proof.TokenHash).Scan(&verified); err != nil {
+		var method mfadomain.Method
+		if err := db.QueryRow(ctx, `SELECT mfa_verified_at,mfa_method FROM auth.sessions WHERE token_hash=$1`, proof.TokenHash).Scan(&verified, &method); err != nil {
 			t.Fatal(err)
 		}
 		accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL,mfa_method=NULL WHERE token_hash=$1`, proof.TokenHash)
@@ -123,7 +151,7 @@ func checkMFAManagement(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		if _, err := svc.StepUp(ctx, mfaservice.StepUpInput{Proof: proof, Recovery: true, Code: f.codes[1]}); !errors.Is(err, mfadomain.ErrProofRequired) {
 			t.Fatal("invalidated MFA session allowed step-up", err)
 		}
-		accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=$2 WHERE token_hash=$1`, proof.TokenHash, verified)
+		accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=$2,mfa_method=$3 WHERE token_hash=$1`, proof.TokenHash, verified, method)
 		step, err := svc.StepUp(ctx, mfaservice.StepUpInput{Proof: proof, Recovery: true, Code: f.codes[1]})
 		if err != nil {
 			t.Fatal(err)

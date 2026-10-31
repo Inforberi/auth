@@ -214,7 +214,7 @@ func checkLifecycleRevocationWait(t *testing.T, db *pgxpool.Pool, ctx context.Co
 		}
 		query := map[string]string{
 			"permission":   `DELETE FROM auth.user_roles WHERE user_id=$1`,
-			"proof":        `UPDATE auth.sessions SET mfa_verified_at=clock_timestamp()-interval '6 minutes' WHERE user_id=$1`,
+			"proof":        `UPDATE auth.sessions SET mfa_verified_at=clock_timestamp()-interval '6 minutes',mfa_method='totp' WHERE user_id=$1`,
 			"auth_version": `UPDATE auth.users SET auth_version=auth_version+1 WHERE id=$1`,
 			"session":      `UPDATE auth.sessions SET revoked_at=clock_timestamp() WHERE user_id=$1`,
 		}[kind]
@@ -268,7 +268,7 @@ func checkLifecycleRevocationWait(t *testing.T, db *pgxpool.Pool, ctx context.Co
 		if kind != "session" {
 			accessExec(t, db, ctx, `INSERT INTO auth.user_roles(user_id,role_id) SELECT $1,id FROM auth.roles WHERE key='lifecycle_manager' ON CONFLICT DO NOTHING`, actor.UserID)
 			accessExec(t, db, ctx, `UPDATE auth.users SET auth_version=1 WHERE id=$1`, actor.UserID)
-			accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=clock_timestamp() WHERE user_id=$1`, actor.UserID)
+			accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=clock_timestamp(),mfa_method='totp' WHERE user_id=$1`, actor.UserID)
 		}
 	}
 }

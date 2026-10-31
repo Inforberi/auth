@@ -73,6 +73,7 @@ func operatorRecoveryPools(t *testing.T, admin *pgxpool.Pool) (*pgxpool.Pool, *p
 	open := func(user string) *pgxpool.Pool {
 		cfg := admin.Config()
 		cfg.ConnConfig.User = user
+		cfg.ConnConfig.Password = "fixture-offline-only"
 		cfg.MaxConns = 1
 		pool, err := pgxpool.NewWithConfig(ctx, cfg)
 		if err != nil {

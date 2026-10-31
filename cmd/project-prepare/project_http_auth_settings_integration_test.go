@@ -28,8 +28,8 @@ func (f projectAccountFixture) httpAuthSettings(t *testing.T, ctx context.Contex
  INSERT INTO auth.password_credentials(user_id,email_id,password_hash)
  SELECT $1,e.id,p.password_hash FROM auth.user_emails e CROSS JOIN auth.password_credentials p WHERE e.user_id=$1 AND p.user_id=$2::uuid;
  INSERT INTO auth.mfa_totp(user_id,secret,last_step) VALUES($1,$3,0);
- INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,primary_method,primary_verified_at,mfa_verified_at,user_agent,ip_address)
- SELECT $4,id,auth_version,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours','password',clock_timestamp(),clock_timestamp(),'settings-fixture','192.0.2.88' FROM auth.users WHERE id=$5`, administrator, f.sourceUser, make([]byte, 48), tokens.Hash(stale), actor)
+ INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,primary_method,primary_verified_at,mfa_verified_at,mfa_method,user_agent,ip_address)
+ SELECT $4,id,auth_version,clock_timestamp(),clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours','password',clock_timestamp(),clock_timestamp(),'totp','settings-fixture','192.0.2.88' FROM auth.users WHERE id=$5`, administrator, f.sourceUser, make([]byte, 48), tokens.Hash(stale), actor)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
