@@ -1,19 +1,23 @@
 # Текущий шаг
 
-Обновлено 31 октября 2026. [Карта](index.md) · [MP5](../planning/multi-project.md#сессии-и-почта-двух-проектов--mp5-sessions-email). Git/staging проверять по факту.
+Обновлено 31 октября 2026. [Карта](index.md) · [MP5-token-http](../planning/multi-project.md#jwt-и-native-двух-проектов--mp5-token-http). Git/staging проверять по факту.
 
-## Завершён MP5-sessions-email — Luna V1/V2 PASS
+## Завершён MP5-token-http — Luna V1 PASS
 
-TestTwoProjectSessionLifecycleIsolationSQL: actual HTTPS login/reauthentication, foreign cookie/session IDs, list/revoke/rotate/logout/logout-all, account block/unblock/delete A без повреждения B, stale/tombstone retries. TestTwoProjectEmailIsolationSQL: настоящие component ProjectEmail/ProjectPassword A/B, scoped payload/cipher, verify/reset/invite/temporary/change/report/recovery cross-token/one-time guards, independent UUIDs, own revocation и B unchanged. Раздельные SMTP settings/from/credentials/listeners; существующий scheduler и TLS-required rejection → независимые outbox retries. SQL-seeded component proofs не считаются проверкой login, successful delivery или email HTTP/browser matrix.
+TestTwoProjectTokenIsolationSQL использует прежние prepareHTTPProjects/newProjectIsolationHTTP и два настоящих HTTP profiles с own origins/issuer/prepared keys/client secrets; одинаковые user UUID/email/audience/client ID, разные DB names/OID. Browser exchange, JWKS cache/ETag/signature/issuer, чужие cookies/clients/tokens, introspection inactive/audience scope, native password/refresh/replay/logout и logout-all A при действующем B. Foreign well-formed logout204 без эффекта — прежний контракт. Offline signature после online revoke остаётся валидной до TTL, не заменяет strict authority.
 
-V1 task check и Email root race PASS; V2 targeted lint/SessionLifecycle root race/count1 PASS. Cleanup и manifest14 подтверждены Luna; main сверил все14 файлов с V2 до итогового обновления Markdown, Go не менялся. V1 fixture HTTP expectation401 исправлена на контрактный400 invalid_credentials без production/API изменений. Snapshot `/private/tmp/auth-two-project-sessions-email-v2.w8ce8ztd`, manifest/metadata рядом, base c9e5cfa182910cb628b350b27edc2677f49f4522; evidence `/private/tmp/auth-two-project-sessions-email-v1-*` и `v2-*`, подробности в history. Shared helpers/production/schema/ENV/dependencies прежние. Пользователь разрешил коммит после PASS. Исследователь закрыт, UI не начинался.
+Production/shared helpers/schema/ENV/deps прежние. Formatter/source review выполнены; main tests/lint/SQL не запускал, researcher закрыт. Cleanup удаляет свои audits/refresh rows/role assignments и точные scoped Redis keys, включая session IDs перед удалением sessions. Luna V1: task check и TestTwoProjectTokenIsolationSQL race/count1 PASS, fixture cleanup и manifest11 подтверждены. Main сверил все11 файлов с V1 до итогового обновления Markdown, Go не менялся. Пользователь разрешил коммит после PASS. [Scope](../planning/multi-project.md#jwt-и-native-двух-проектов--mp5-token-http), evidence/история — history.
 
-## Следующий блок
+## Дальше
 
-Два actual JWT/native/JWKS/introspection HTTP profiles, затем OIDC callbacks/state/PKCE/nonce. Directory/identity pending и полная email HTTP/browser matrix, public project lifecycle/fault/fleet остаются gates полной MP5. Далее A6.3m.6 email/Telegram second factors, backend templates, security/refactor и MP7/MP8 ресурсы/maxRPS. UI только после предупреждения и отдельного согласования.
+Следующий блок — two-project OIDC callbacks/state/PKCE/nonce. Directory/identity pending и полная email HTTP/browser matrix, public project lifecycle/fault/fleet остаются gates полной MP5. Затем A6.3m.6 email/Telegram second factors, backend templates, security/refactor и MP7/MP8 ресурсы/maxRPS. UI только после предупреждения и отдельного согласования.
 
 ## Проверки
 
-Только чат «Проверки Auth — Luna» `01a16eab-c777-78a0-a815-47b45ff0860d`, host local, cursor `944a6e9d-49fe-49f7-8ff5-48acb6c615a1:28`. Main не запускает tests/lint/SQL и не ждёт полный прогон. Принятые проверки не повторять без изменения их гарантий. Pinned Go1.27.3/lint2.14.0; старый installed lint не подходит.
+Чат «Проверки Auth — Luna» `01a16eab-c777-78a0-a815-47b45ff0860d`, host local, cursor `944a6e9d-49fe-49f7-8ff5-48acb6c615a1:29`. Main не запускает tests/lint/SQL и не ждёт полный прогон. Текущий блок принят: task check с Go1.27.3/pinned lint2.14.0 и ^TestTwoProjectTokenIsolationSQL$ -race -count=1. Не повторять без изменения затронутых гарантий. Shared helpers/прежние roots не менялись — не повторять формально. Старый installed lint не подходит Go1.27.3.
 
-Two-project roots имеют independent setup, legacy TestPrepareCommandSQL не нужен. Own PG18.6/Redis8.2/TLS/SCRAM/readonly /src; disposable auth_prepare_catalog_test/auth_storage_test ENV, RedisDB15 exact-key cleanup. Реальные ENV/DB/staging не трогать.
+Own PG18.6/Redis8.2/TLS/SCRAM/readonly /src; explicit disposable auth_prepare_catalog_test/auth_storage_test ENV, RedisDB15 exact-key cleanup. Legacy TestPrepareCommandSQL не нужен. Реальные ENV/DB/staging не трогать. Native email/MFA и rotation/fleet этим новым root не перепроверяются.
+
+Прежний MP5-sessions-email принят Luna V1/V2 и закоммичен 5df1020; snapshot /private/tmp/auth-two-project-sessions-email-v2.w8ce8ztd, evidence v1/v2 siblings. Это не результат текущего изменения.
+
+MP5-token-http V1 snapshot `/private/tmp/auth-two-project-token-http-v1.tri3xhsi`; manifest/metadata рядом, base `5df1020a669e71bdc962a011e9a87826ccddfa03`. Принят Luna V1; evidence /private/tmp/auth-two-project-token-http-v1-* и manifest/metadata рядом.
