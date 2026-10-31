@@ -27,6 +27,9 @@ type mfaApp struct {
 
 func (s realmSecurity) assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, sessions *sessionservice.SessionService, tokens *tokengenerate.TokenManager, mail mfaservice.RecoveryMailer, cfg *config.Config, log *zap.Logger) (*mfaApp, error) {
 	repo := mfapostgres.NewWithEmailProof(pool, cfg.EmailOTP.ReauthenticationEnabled)
+	if cfg.Platform.Enabled {
+		repo = mfapostgres.NewPlatform(pool)
+	}
 	cipher, err := s.cipher(cfg.Account.EncryptionKey, "mfa:v1")
 	if err != nil {
 		return nil, err

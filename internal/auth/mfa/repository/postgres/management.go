@@ -70,7 +70,7 @@ func (r *Repository) Disable(ctx context.Context, proof service.Proof) error {
 			return err
 		}
 		var required bool
-		err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1)`, proof.UserID).Scan(&required)
+		err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1,$2)`, proof.UserID, r.administrative).Scan(&required)
 		if err != nil {
 			return err
 		}

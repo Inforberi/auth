@@ -37,7 +37,11 @@ func TestOperatorHTTPAllowlist(t *testing.T) {
 		r.Header.Set("Origin", cfg.Platform.Origin)
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, r)
-		if w.Code != http.StatusNotFound {
+		want := http.StatusNotFound
+		if path == "/api/v1/auth/mfa/totp" {
+			want = http.StatusMethodNotAllowed // DELETE is registered, POST remains unavailable.
+		}
+		if w.Code != want {
 			t.Errorf("unexpected exposed path %s: %d", path, w.Code)
 		}
 	}

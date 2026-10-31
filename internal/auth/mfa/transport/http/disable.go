@@ -8,7 +8,7 @@ import (
 )
 
 // @Summary Disable TOTP for the current account
-// @Description Requires fresh primary and MFA proofs. Primary is password, or opt-in verified-email proof for an external-only account. Administrative-role policy cannot be bypassed. Removes recovery codes, raises auth_version and revokes all sessions atomically.
+// @Description Requires fresh primary and MFA proofs. Primary is password, or opt-in verified-email proof for an external-only account. Platform assembly always applies administrative realm intent, including operators without local Auth roles. Realm and role requirements cannot be bypassed. Recovery codes are consumed through step-up first. Removes recovery codes, raises auth_version and revokes all sessions atomically.
 // @Tags MFA
 // @Produce json
 // @Param Origin header string true "Exact allowed HTTPS origin"

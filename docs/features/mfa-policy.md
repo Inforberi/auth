@@ -120,9 +120,19 @@ POST возвращает200 с сохранённой version/policy. No-op с�
 
 Project adapter берёт один scoped lease с пятисекундным пределом, проверяет каталог до и после операции; повторная проверка actor после собственного policy commit не выполняется. MFA readiness принадлежит сборке выбранного проекта, не платформе и не JSON body. При доступном browser transport POST допускается и без MFA engine: existing writer разрешает optional/no-op и запрещает включение обязательности без готового engine. Проверка совместимости профиля по A6.3m.5a сохраняется.
 
-Platform profile подключает existing login enrollment start/confirm и owner TOTP enrollment start/confirm: после включения обязательности оператор без фактора может завершить ограниченный flow до выдачи сессии. DELETE личного platform TOTP этим блоком не публикуется; согласование полного управления личным фактором всех типов операторов и оставшаяся optional matrix — отдельный gate. Платформенный engine по-прежнему обязателен технически. UI не начинался.
+Platform profile подключает existing login enrollment start/confirm и owner TOTP enrollment start/confirm: после включения обязательности оператор без фактора может завершить ограниченный flow до выдачи сессии. A6.3m.3b ниже дополняет это DELETE личного platform TOTP; проверки Luna V1/V2/V3 PASS. Платформенный engine по-прежнему обязателен технически. UI не начинался.
 
 HTTP unit/contracts и SQL HTTPS сценарии добавлены для session/Origin/permissions, client authority rejection, version/no-op/audit, weakening with personal factor, strengthening with own-session revocation и project/platform isolation. Luna: task check/API, targeted lint/race, schema policy/runtime/capability SQL, platform operators, полный ARM64 command SQL и operator HTTPS PASS. V2/V3 исправили только test fixtures; manifest33 совпал с main, fixtures очищены. Подробные evidence и первые FAIL в history.
+
+## Личная MFA операторов — A6.3m.3b
+
+Проверки Luna V1/V2/V3 PASS, 31 октября. Платформа использует прежние status/enrollment/step-up/replacement/recovery-code ручки и дополнительно `DELETE /api/v1/auth/mfa/totp`. Проверяются session/Origin и fresh password+MFA; recovery-код сначала потребляется через `/api/v1/auth/mfa/step-up`, который меняет verifier cookie. DELETE не принимает код или административный intent от клиента.
+
+Trusted platform assembly создаёт `mfa.Repository.NewPlatform`: administrative intent фиксирован внутри репозитория и применяется при Status/Disable. Он не зависит от наличия локальной роли Auth-admin или конкретного platform permission. Поэтому operator без local Auth-role не может отключить фактор при `administrators`/`required`; обязательные роли также сохраняют требование в optional. Standalone и проекты используют прежние конструкторы и свои правила. Новых полей в HTTP DTO/service.Proof, ENV или schema нет.
+
+Optional разрешает отключение только со свежими proofs. Удаление фактора каскадно удаляет recovery digests, повышает auth_version, отзывает все сессии пользователя и удаляет pending enrollment/login challenges в прежней транзакции под Access lock. Ответ200 очищает cookie; старые сессии получают401. После нового парольного входа optional-оператор без фактора может подключить TOTP снова. Если policy усилена до required, вход возвращает только bound enrollment challenge; до подтверждения и повторного входа полноценной session нет. Ослабление режима не удаляет личный фактор, а recovery-code replay запрещён. Потеря всех факторов остаётся отдельным recovery flow, не способом выключить обязательность.
+
+Добавлены SQL-проверки platform-only intent/status/disable, required/optional/custom-role OR, stale proofs, cascade/revoke/audit; HTTPS-сценарий проверяет policy denial, recovery step-up/rotation/replay, optional disable/password-only login, доступность voluntary enrollment и forced enrollment после required с повторным MFA-входом. Existing loss-all-factors и last-admin suites остаются regression gates. Полная двухпроектная/resource/release приёмка этим подэтапом не закрывается.
 
 ## Проверки подэтапа
 

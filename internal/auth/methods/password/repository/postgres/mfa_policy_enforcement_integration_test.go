@@ -151,9 +151,9 @@ func TestOptionalMFALastAdministratorSchema(t *testing.T) {
 	t.Cleanup(func() { migrateFixture(t, db, ctx, "down") })
 	a := newStatusFixture(t, db, ctx, "optional-admin-a")
 	b := newStatusFixture(t, db, ctx, "optional-admin-b")
-	accessExec(t, db, ctx, `UPDATE auth.mfa_settings SET mode='optional';
-	UPDATE auth.user_emails SET verified_at=clock_timestamp() WHERE user_id=ANY($1::uuid[]);
- WITH r AS(INSERT INTO auth.roles(key,name,system) VALUES('super_admin','Administrator',true) RETURNING id),
+	accessExec(t, db, ctx, `UPDATE auth.mfa_settings SET mode='optional'`)
+	accessExec(t, db, ctx, `UPDATE auth.user_emails SET verified_at=clock_timestamp() WHERE user_id=ANY($1::uuid[])`, []string{string(a.user), string(b.user)})
+	accessExec(t, db, ctx, `WITH r AS(INSERT INTO auth.roles(key,name,system) VALUES('super_admin','Administrator',true) RETURNING id),
  p AS(INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,'access.assignments.manage' FROM r)
  INSERT INTO auth.user_roles(user_id,role_id) SELECT u.id,r.id FROM auth.users u CROSS JOIN r WHERE u.id=ANY($1::uuid[])`, []string{string(a.user), string(b.user)})
 	tx, err := db.Begin(ctx)

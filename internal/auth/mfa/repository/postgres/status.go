@@ -24,8 +24,8 @@ const freshManagementPrimary = `(s.password_verified_at<=clock_timestamp()
 func (r *Repository) Status(ctx context.Context, proof service.Proof) (*service.SecurityStatus, error) {
 	var result service.SecurityStatus
 	err := r.db.QueryRow(ctx, `SELECT
-		EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1),auth.realm_requires_mfa($1),auth.role_requires_mfa($1),
-		auth.administrative_mfa_required($1) AND (SELECT mode FROM auth.mfa_settings WHERE singleton)<>'optional',
+		EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1),auth.realm_requires_mfa($1,$5),auth.role_requires_mfa($1),
+		($5 OR auth.administrative_mfa_required($1)) AND (SELECT mode FROM auth.mfa_settings WHERE singleton)<>'optional',
 		(SELECT count(*) FROM auth.mfa_recovery_codes WHERE user_id=$1),
 		EXISTS(SELECT 1 FROM auth.user_emails WHERE user_id=$1 AND verified_at IS NOT NULL),
 		EXISTS(SELECT 1 FROM auth.password_credentials WHERE user_id=$1),
@@ -36,7 +36,7 @@ func (r *Repository) Status(ctx context.Context, proof service.Proof) (*service.
 		WHERE s.user_id=$1 AND s.token_hash=$2 AND s.auth_version=$3
 		AND u.status='active' AND u.deleted_at IS NULL AND s.revoked_at IS NULL
 		AND s.expires_at>statement_timestamp() AND s.absolute_expires_at>statement_timestamp()`,
-		proof.UserID, proof.TokenHash, proof.AuthVersion, r.emailProofEnabled).Scan(
+		proof.UserID, proof.TokenHash, proof.AuthVersion, r.emailProofEnabled, r.administrative).Scan(
 		&result.TOTPEnabled, &result.RequiredByPolicy, &result.RequiredByRole, &result.RequiredByAdministration,
 		&result.RecoveryCodesRemaining, &result.VerifiedEmail, &result.PasswordConfigured,
 		&result.FreshPrimaryProof, &result.FreshMFAProof,

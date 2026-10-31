@@ -60,6 +60,7 @@ func NewOperator(h Handlers) (http.Handler, error) {
 			owner.Post("/mfa/totp/enrollment", h.MFA.StartEnrollment)
 			owner.Post("/mfa/totp/enrollment/confirm", h.MFA.ConfirmEnrollment)
 			owner.Post("/mfa/step-up", h.MFA.StepUp)
+			owner.Delete("/mfa/totp", h.MFA.Disable)
 			owner.Post("/mfa/recovery-codes/regenerate", h.MFA.RegenerateRecovery)
 			owner.Post("/mfa/totp/replacement", h.MFA.StartReplacement)
 			owner.Post("/mfa/totp/replacement/confirm", h.MFA.ConfirmReplacement)

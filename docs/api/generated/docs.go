@@ -4120,7 +4120,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/mfa/totp": {
             "delete": {
-                "description": "Requires fresh primary and MFA proofs. Primary is password, or opt-in verified-email proof for an external-only account. Administrative-role policy cannot be bypassed. Removes recovery codes, raises auth_version and revokes all sessions atomically.",
+                "description": "Requires fresh primary and MFA proofs. Primary is password, or opt-in verified-email proof for an external-only account. Platform assembly always applies administrative realm intent, including operators without local Auth roles. Realm and role requirements cannot be bypassed. Recovery codes are consumed through step-up first. Removes recovery codes, raises auth_version and revokes all sessions atomically.",
                 "produces": [
                     "application/json"
                 ],

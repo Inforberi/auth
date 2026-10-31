@@ -180,4 +180,5 @@ func TestOperatorProfileSQLHTTPS(t *testing.T) {
 		t.Fatal("initialized realm cannot restart without setup secret", err)
 	}
 	t.Run("platform MFA policy HTTP", func(t *testing.T) { operatorMFASettingsDrill(t, admin, h, actor) })
+	t.Run("platform personal MFA", func(t *testing.T) { operatorPersonalMFADrill(t, admin, deps, cfg, h, user) })
 }

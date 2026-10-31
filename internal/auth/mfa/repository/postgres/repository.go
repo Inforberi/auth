@@ -16,12 +16,18 @@ import (
 type Repository struct {
 	db                *pgxpool.Pool
 	emailProofEnabled bool
+	administrative    bool
 }
 
 func New(db *pgxpool.Pool) *Repository { return NewWithEmailProof(db, false) }
 
 func NewWithEmailProof(db *pgxpool.Pool, enabled bool) *Repository {
 	return &Repository{db: db, emailProofEnabled: enabled}
+}
+
+// NewPlatform binds administrative policy to the trusted platform assembly, never an HTTP field.
+func NewPlatform(db *pgxpool.Pool) *Repository {
+	return &Repository{db: db, administrative: true}
 }
 
 func (r *Repository) transaction(ctx context.Context, fn func(pgx.Tx) error) error {
