@@ -28,7 +28,7 @@ func (s *Service) RequestReauthentication(ctx context.Context, proof mfaservice.
 	if err := s.requestLimits(ctx, email.String(), ip); err != nil {
 		return nil, err
 	}
-	result, challenge, err := s.prepareCode(email.String(), "подтверждения управления MFA", "reauth:")
+	result, challenge, err := prepareCode(s.cipher, s.tokens, s.cfg.TTL, email.String(), "подтверждения управления MFA", "reauth:")
 	if err != nil {
 		return nil, err
 	}

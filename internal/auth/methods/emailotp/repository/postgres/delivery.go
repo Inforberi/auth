@@ -26,7 +26,17 @@ func (r *Repository) ClaimDelivery(ctx context.Context) (*domain.Delivery, error
       AND EXISTS(SELECT 1 FROM auth.linked_identities WHERE user_id=u.id)
       AND EXISTS(SELECT 1 FROM auth.role_bound_sessions s WHERE s.user_id=u.id AND s.token_hash=c.session_hash
         AND s.auth_version=u.auth_version AND s.revoked_at IS NULL
-        AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp())))
+        AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()))
+    OR (c.purpose='mfa_email_prepare'
+      AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials WHERE user_id=u.id)
+      AND NOT EXISTS(SELECT 1 FROM auth.account_provisions WHERE user_id=u.id AND (activated_at IS NULL OR password_change_required))
+      AND EXISTS(SELECT 1 FROM auth.password_credentials WHERE user_id=u.id)
+      AND EXISTS(SELECT 1 FROM auth.role_bound_sessions s WHERE s.user_id=u.id AND s.token_hash=c.session_hash
+        AND s.auth_version=u.auth_version AND s.credential_profile='browser' AND s.primary_method='password'
+        AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()
+        AND s.password_verified_at<=clock_timestamp() AND s.password_verified_at>clock_timestamp()-interval '5 minutes'
+        AND (NOT auth.mfa_login_required(u.id) OR (s.strong_mfa_verified_at<=clock_timestamp()
+          AND s.strong_mfa_verified_at>clock_timestamp()-interval '5 minutes')))))
   ORDER BY o.available_at,o.id FOR UPDATE OF o SKIP LOCKED LIMIT 1
  ) UPDATE auth.email_login_outbox o SET attempts=attempts+1,lease=gen_random_uuid(),
   lease_until=clock_timestamp()+interval '30 seconds' FROM due WHERE o.id=due.id

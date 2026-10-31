@@ -211,3 +211,9 @@ JWT exchange/native/refresh/introspection сохраняют контракт .6
 Strong guard не заменяет permission/object/field guards и не добавляет online authority в local JWT mode: срок отзыва остаётся прежним TTL/strict режимом Consumer. Никакого автоматического downgrade или выбора другого фактора нет. Primary/second-factor independence и доступные способы пользователя станут частью реализации новых email/Telegram flow, не считаются закрытыми этим этапом.
 
 В schema baseline изменена только projection существующей view, без новой функции/grants/round trips/индекса. Synthetic completed TOTP fixtures теперь задают method явно; новый SQL negative case сохраняет ordinary historical session, отказывает factor mutation до реального recovery step-up. Проверки — task check, affected race, core schema/platform authority/оператор HTTPS/two-project access, включая обновляемость view и собственный cleanup. Existing DB/view upgrade и rolling compatibility отдельно MP6; реальные env/data не меняются.
+
+## Подготовка email-канала — A6.3m.6c.1
+
+Подготовлен [внутренний email possession workflow](email-mfa.md) на существующих OTP outbox/delivery и session proofs, проверки Luna пройдены. Request/confirm связаны с текущей password/browser session и owned verified email, исходным hash/version, отдельным code purpose и строгой MFA по действующей policy. Ротируется только текущий token, но не включается фактор/новый вход и не повышается assurance. Сохраняются разные pending purposes; expiry/attempts/authority/аудит проверяются SQL.
+
+До публикации обязательны A6.3m.6c.2 activation/policy/выбор и .6c.3 atomic login/native enforcement с channel independence. Новых HTTP/ENV/startup flags/UI пока нет; не считать EmailPreparation уже работающим email MFA.

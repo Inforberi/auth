@@ -50,7 +50,7 @@ func (r *Repository) IssueReauthentication(ctx context.Context, proof mfaservice
 		if err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `DELETE FROM auth.email_login_challenges WHERE user_id=$1`, proof.UserID); err != nil {
+		if _, err := tx.Exec(ctx, `DELETE FROM auth.email_login_challenges WHERE user_id=$1 AND purpose='reauthenticate'`, proof.UserID); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO auth.email_login_challenges

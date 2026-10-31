@@ -788,17 +788,18 @@ CREATE TABLE auth.email_login_challenges (
   credential_profile TEXT NOT NULL DEFAULT 'browser' CHECK (credential_profile IN ('browser','api')),
   native_audience TEXT COLLATE "C",
   native_scope TEXT[],
-  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   email_id UUID NOT NULL,
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
   verifier TEXT NOT NULL CHECK (verifier ~ '^[a-f0-9]{64}$'),
-  purpose TEXT NOT NULL DEFAULT 'login' CHECK (purpose IN ('login','reauthenticate')),
+  purpose TEXT NOT NULL DEFAULT 'login' CHECK (purpose IN ('login','reauthenticate','mfa_email_prepare')),
   session_hash TEXT CHECK (session_hash ~ '^[a-f0-9]{64}$'),
   attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   expires_at TIMESTAMPTZ NOT NULL CHECK (expires_at>created_at),
   FOREIGN KEY (user_id,email_id) REFERENCES auth.user_emails(user_id,id) ON DELETE CASCADE,
-  CHECK ((purpose='reauthenticate')=(session_hash IS NOT NULL)),
+  UNIQUE (user_id,purpose),
+  CHECK ((purpose IN ('reauthenticate','mfa_email_prepare'))=(session_hash IS NOT NULL)),
   CHECK ((credential_profile='browser' AND native_audience IS NULL AND native_scope IS NULL)
     OR (credential_profile='api' AND purpose='login'
       AND native_audience IS NOT NULL AND octet_length(native_audience) BETWEEN 1 AND 128 AND native_audience ~ '^[!-~]+$'
@@ -807,14 +808,14 @@ CREATE TABLE auth.email_login_challenges (
 );
 CREATE FUNCTION auth.protect_email_login_target() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-  IF ROW(NEW.digest,NEW.credential_profile,NEW.native_audience,NEW.native_scope,NEW.purpose,NEW.session_hash)
-    IS DISTINCT FROM ROW(OLD.digest,OLD.credential_profile,OLD.native_audience,OLD.native_scope,OLD.purpose,OLD.session_hash) THEN
+  IF ROW(NEW.digest,NEW.user_id,NEW.email_id,NEW.auth_version,NEW.credential_profile,NEW.native_audience,NEW.native_scope,NEW.purpose,NEW.session_hash)
+    IS DISTINCT FROM ROW(OLD.digest,OLD.user_id,OLD.email_id,OLD.auth_version,OLD.credential_profile,OLD.native_audience,OLD.native_scope,OLD.purpose,OLD.session_hash) THEN
     RAISE EXCEPTION 'email login challenge target is immutable';
   END IF;
   RETURN NEW;
 END;
 $$;
-CREATE TRIGGER email_login_target BEFORE UPDATE OF digest,credential_profile,native_audience,native_scope,purpose,session_hash
+CREATE TRIGGER email_login_target BEFORE UPDATE OF digest,user_id,email_id,auth_version,credential_profile,native_audience,native_scope,purpose,session_hash
   ON auth.email_login_challenges FOR EACH ROW EXECUTE FUNCTION auth.protect_email_login_target();
 CREATE INDEX email_login_challenges_expiry ON auth.email_login_challenges(expires_at,digest);
 
@@ -836,7 +837,7 @@ CREATE INDEX email_login_outbox_exhausted ON auth.email_login_outbox(lease_until
 CREATE TABLE auth.email_login_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
-  event TEXT NOT NULL CHECK (event IN ('code_issued','code_consumed','reauthentication_issued','email_reauthenticated')),
+  event TEXT NOT NULL CHECK (event IN ('code_issued','code_consumed','reauthentication_issued','email_reauthenticated','email_factor_preparation_issued','email_factor_prepared')),
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

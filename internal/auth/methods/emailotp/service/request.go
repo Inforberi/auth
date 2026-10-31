@@ -40,7 +40,7 @@ func (s *Service) request(ctx context.Context, input, ip string, target *mfaserv
 	if target != nil {
 		purpose = "native:"
 	}
-	result, challenge, err := s.prepareCode(email.String(), "входа", purpose)
+	result, challenge, err := prepareCode(s.cipher, s.tokens, s.cfg.TTL, email.String(), "входа", purpose)
 	if err != nil {
 		return nil, err
 	}

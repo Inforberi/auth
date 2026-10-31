@@ -9,9 +9,10 @@ import (
 )
 
 var (
-	ErrDisabled    = errors.New("email OTP disabled")
-	ErrInvalidCode = errors.New("invalid email login")
-	ErrLimited     = errors.New("email OTP rate limited")
+	ErrDisabled           = errors.New("email OTP disabled")
+	ErrInvalidCode        = errors.New("invalid email login")
+	ErrLimited            = errors.New("email OTP rate limited")
+	ErrInvalidPreparation = errors.New("invalid email factor preparation")
 )
 
 const MaxAttempts = 5

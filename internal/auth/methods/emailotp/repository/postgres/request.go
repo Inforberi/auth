@@ -37,7 +37,7 @@ func (r *Repository) Issue(ctx context.Context, email string, challenge domain.C
 		if err := settingspostgres.RequirePublicLogin(ctx, tx, user, "emailotp", ""); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `DELETE FROM auth.email_login_challenges WHERE user_id=$1`, user); err != nil {
+		if _, err := tx.Exec(ctx, `DELETE FROM auth.email_login_challenges WHERE user_id=$1 AND purpose='login'`, user); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO auth.email_login_challenges(digest,user_id,email_id,auth_version,verifier,expires_at,credential_profile,native_audience,native_scope)
