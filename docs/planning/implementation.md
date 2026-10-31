@@ -269,7 +269,9 @@ J7.2-local: [atomic auth-state invalidation и disposable pg_dump/pg_restore dri
 
 ### Настраиваемая обязательность MFA — A6.3m / A7
 
-Согласовано 18 октября: **администратор платформы тоже выбирает обязательность MFA**. Прежнее требование «для platform administrator всегда обязательна» больше не является целевым продуктовым правилом. Это план изменения, не описание уже работающих переключателей: сейчас operator profile/admin login/часть SQL guards требуют MFA. Существующий `mfaRequired` custom roles уже реализован частично; его переиспользовать, не создавать второй механизм.
+Подэтап A6.3m.5b завершён: дополнена SQL/coordinator matrix optional/required для Google, Telegram и email OTP и проверено отключение TOTP одновременно с ужесточением realm/роли. Luna V1/V2 PASS: task check/fullGo/pinned lint0, новые SQL race/count3 и затронутый SQL regression. [Границы evidence](../features/mfa-policy.md#дополнение-матрицы--a63m5b). Production/API/schema/dependencies в этом блоке не меняются. Полная двухпроектная и выделенная native/JWT матрица остаются открытыми; UI и новые second-factor методы сюда не входят.
+
+Согласовано 18 октября: **администратор платформы тоже выбирает обязательность MFA**. Прежнее требование «для platform administrator всегда обязательна» заменено сохранённой realm policy, HTTP API и условными guards. Реализованные подэтапы и оставшиеся границы приёмки описаны в [контракте](../features/mfa-policy.md). Существующий `mfaRequired` custom roles переиспользован, без второго механизма.
 
 | Где настраивается | Целевые режимы |
 | --- | --- |

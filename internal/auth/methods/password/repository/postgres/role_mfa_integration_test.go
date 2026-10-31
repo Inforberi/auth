@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
@@ -165,59 +166,77 @@ func TestRoleMFAOtherPrimaryMethods(t *testing.T) {
 	migrateFixture(t, db, ctx, "up")
 	t.Cleanup(func() { migrateFixture(t, db, ctx, "down") })
 	accessExec(t, db, ctx, `INSERT INTO auth.roles(key,name,mfa_required) VALUES('primary_mfa','Primary MFA',true)`)
-	for _, kind := range []string{"google", "telegram", "emailotp"} {
-		t.Run(kind, func(t *testing.T) {
-			f := newStatusFixture(t, db, ctx, "required-"+kind)
-			accessExec(t, db, ctx, `INSERT INTO auth.user_roles(user_id,role_id) SELECT $1,id FROM auth.roles WHERE key='primary_mfa'`, f.user)
-			proof := mfaservice.PrimaryProof{UserID: f.user, AuthVersion: 1, VerifiedAt: time.Now().UTC()}
-			if kind == "emailotp" {
-				proof.Method = "emailotp"
-				accessExec(t, db, ctx, `UPDATE auth.user_emails SET verified_at=clock_timestamp() WHERE user_id=$1`, f.user)
-				if err := db.QueryRow(ctx, `SELECT email_id FROM auth.password_credentials WHERE user_id=$1`, f.user).Scan(&proof.Reference); err != nil {
+	for _, source := range []string{"role", "realm"} {
+		for _, kind := range []string{"google", "telegram", "emailotp"} {
+			t.Run(source+"/"+kind, func(t *testing.T) {
+				accessExec(t, db, ctx, `UPDATE auth.mfa_settings SET mode='optional'`)
+				f := newStatusFixture(t, db, ctx, source+"-"+kind)
+				proof := mfaservice.PrimaryProof{UserID: f.user, AuthVersion: 1, VerifiedAt: time.Now().UTC()}
+				if kind == "emailotp" {
+					proof.Method = "emailotp"
+					accessExec(t, db, ctx, `UPDATE auth.user_emails SET verified_at=clock_timestamp() WHERE user_id=$1`, f.user)
+					if err := db.QueryRow(ctx, `SELECT email_id FROM auth.password_credentials WHERE user_id=$1`, f.user).Scan(&proof.Reference); err != nil {
+						t.Fatal(err)
+					}
+				} else {
+					proof.Method, proof.Reference, proof.Issuer = "oidc", "primary-"+source+"-"+kind, "https://accounts.google.com"
+					if kind == "telegram" {
+						proof.Issuer = "https://oauth.telegram.org"
+					}
+					accessExec(t, db, ctx, `INSERT INTO auth.linked_identities(user_id,issuer,subject) VALUES($1,$2,$3)`, f.user, proof.Issuer, proof.Reference)
+					accessExec(t, db, ctx, `DELETE FROM auth.password_credentials WHERE user_id=$1`, f.user)
+				}
+				cipher, err := secretbox.NewScoped(base64.StdEncoding.EncodeToString(make([]byte, 32)), "mfa:v1")
+				if err != nil {
 					t.Fatal(err)
 				}
-			} else {
-				proof.Method, proof.Reference, proof.Issuer = "oidc", "primary-"+kind, "https://accounts.google.com"
-				if kind == "telegram" {
-					proof.Issuer = "https://oauth.telegram.org"
+				login, err := mfaservice.NewLogin(mfapostgres.New(db), cipher, mfatotp.Authenticator{}, mfaTestLimit{}, tokengenerate.New(), mfaservice.LoginConfig{
+					ChallengeTTL: 5 * time.Minute, SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, UserLimitPerMinute: 5, IPLimitPerMinute: 10, GlobalLimitPerMinute: 500,
+				})
+				if err != nil {
+					t.Fatal(err)
 				}
-				accessExec(t, db, ctx, `INSERT INTO auth.linked_identities(user_id,issuer,subject) VALUES($1,$2,$3)`, f.user, proof.Issuer, proof.Reference)
-				accessExec(t, db, ctx, `DELETE FROM auth.password_credentials WHERE user_id=$1`, f.user)
-			}
-			cipher, err := secretbox.NewScoped(base64.StdEncoding.EncodeToString(make([]byte, 32)), "mfa:v1")
-			if err != nil {
-				t.Fatal(err)
-			}
-			login, err := mfaservice.NewLogin(mfapostgres.New(db), cipher, mfatotp.Authenticator{}, mfaTestLimit{}, tokengenerate.New(), mfaservice.LoginConfig{
-				ChallengeTTL: 5 * time.Minute, SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, UserLimitPerMinute: 5, IPLimitPerMinute: 10, GlobalLimitPerMinute: 500,
+				coordinator := sessionservice.NewLogin(sessionservice.New(clock.UTCClock{}, f.sessions, tokengenerate.New(), sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour}), login)
+				optional, err := coordinator.BeginLogin(ctx, proof, "", "")
+				require.NoError(t, err)
+				require.Nil(t, optional.Challenge)
+				require.NotEmpty(t, optional.RawToken, "optional primary without factor must get a session")
+				if source == "role" {
+					accessExec(t, db, ctx, `INSERT INTO auth.user_roles(user_id,role_id) SELECT $1,id FROM auth.roles WHERE key='primary_mfa'`, f.user)
+				} else {
+					accessExec(t, db, ctx, `UPDATE auth.mfa_settings SET mode='required'`)
+				}
+				first, err := coordinator.BeginLogin(ctx, proof, "", "")
+				if err != nil || first.Challenge == nil || !first.Challenge.EnrollmentRequired || first.RawToken != "" {
+					t.Fatal("primary bypassed required MFA", first, err)
+				}
+				input := mfaservice.LoginEnrollmentInput{Challenge: first.Challenge.Token, Binding: first.Challenge.Binding}
+				enrollment, err := login.StartRequiredEnrollment(ctx, input)
+				if err != nil {
+					t.Fatal(err)
+				}
+				codes, err := login.ConfirmRequiredEnrollment(ctx, mfaservice.ConfirmLoginEnrollmentInput{LoginEnrollmentInput: input, Token: enrollment.Token, Code: mfaCode(t, db, ctx, enrollment.Secret, 0)})
+				if err != nil {
+					t.Fatal(err)
+				}
+				proof.AuthVersion = 2
+				proof.VerifiedAt = time.Now().UTC()
+				second, err := coordinator.BeginLogin(ctx, proof, "", "")
+				if err != nil || second.Challenge == nil || second.Challenge.EnrollmentRequired {
+					t.Fatal("enrolled primary skipped normal MFA", second, err)
+				}
+				accessExec(t, db, ctx, `UPDATE auth.mfa_settings SET mode='optional'`)
+				accessExec(t, db, ctx, `DELETE FROM auth.user_roles WHERE user_id=$1`, f.user)
+				second, err = coordinator.BeginLogin(ctx, proof, "", "")
+				require.NoError(t, err)
+				require.NotNil(t, second.Challenge, "relaxing policy must preserve the enrolled factor")
+				require.False(t, second.Challenge.EnrollmentRequired)
+				require.Empty(t, second.RawToken)
+				if _, err := login.Complete(ctx, mfaservice.CompleteLoginInput{Token: second.Challenge.Token, Binding: second.Challenge.Binding, Recovery: true, Code: codes.Codes[0]}); err != nil {
+					t.Fatal(err)
+				}
 			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			coordinator := sessionservice.NewLogin(sessionservice.New(clock.UTCClock{}, f.sessions, tokengenerate.New(), sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour}), login)
-			first, err := coordinator.BeginLogin(ctx, proof, "", "")
-			if err != nil || first.Challenge == nil || !first.Challenge.EnrollmentRequired || first.RawToken != "" {
-				t.Fatal("primary bypassed required MFA", first, err)
-			}
-			input := mfaservice.LoginEnrollmentInput{Challenge: first.Challenge.Token, Binding: first.Challenge.Binding}
-			enrollment, err := login.StartRequiredEnrollment(ctx, input)
-			if err != nil {
-				t.Fatal(err)
-			}
-			codes, err := login.ConfirmRequiredEnrollment(ctx, mfaservice.ConfirmLoginEnrollmentInput{LoginEnrollmentInput: input, Token: enrollment.Token, Code: mfaCode(t, db, ctx, enrollment.Secret, 0)})
-			if err != nil {
-				t.Fatal(err)
-			}
-			proof.AuthVersion = 2
-			proof.VerifiedAt = time.Now().UTC()
-			second, err := coordinator.BeginLogin(ctx, proof, "", "")
-			if err != nil || second.Challenge == nil || second.Challenge.EnrollmentRequired {
-				t.Fatal("enrolled primary skipped normal MFA", second, err)
-			}
-			if _, err := login.Complete(ctx, mfaservice.CompleteLoginInput{Token: second.Challenge.Token, Binding: second.Challenge.Binding, Recovery: true, Code: codes.Codes[0]}); err != nil {
-				t.Fatal(err)
-			}
-		})
+		}
 	}
 }
 

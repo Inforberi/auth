@@ -10,9 +10,9 @@
 
 Полный план — [A6.3m](../planning/implementation.md#настраиваемая-обязательность-mfa--a63m--a7). Optional-профиль нельзя публиковать до согласованного enforcement для login, SQL authority, management, native/JWT и уже выданных сессий.
 
-## Текущая реализация — A6.3m.1a
+## Разделение требований — A6.3m.1a
 
-Этот подэтап сохраняет прежнее поведение. Новых настроек, API и доступного optional-профиля пока нет. В initial migration выделены две `STABLE`, `SECURITY INVOKER` SQL-функции:
+На этом подэтапе прежнее поведение было сохранено; настройки и optional-профиль добавлены следующими подэтапами ниже. В initial migration выделены две `STABLE`, `SECURITY INVOKER` SQL-функции:
 
 | Правило | Применение | Текущий смысл |
 | --- | --- | --- |
@@ -28,7 +28,7 @@
 
 ## Сохранение политики — A6.3m.2a
 
-На этапе 2a подготовлено внутреннее хранение. Теперь mode читается runtime-проверками подэтапа 3a; HTTP-ручек для его смены пока нет.
+На этапе 2a подготовлено внутреннее хранение. Mode применяется runtime-проверками подэтапа 3a; HTTP API добавлен в подэтапе 2c.
 
 В каждой Auth schema существует собственная строка `auth.mfa_settings`: `version` и `mode`. Платформа и отдельные project БД не разделяют её. Начальная миграция создаёт `version=1, mode=administrators`; runtime не выполняет Initialize, не восстанавливает строку и не использует ENV fallback. Standalone/platform startup и подготовка project onboarding проверяют наличие и допустимость настройки. Рабочие БД этим изменением не сбрасываются и автоматически не мигрируются.
 
@@ -50,7 +50,7 @@
 
 Операции ограничены deadline 3 секунды; используются существующие пулы и locks. Нет массового UPDATE пользователей/сессий, новых workers, кеша или polling. Audit включён в существующую очистку security audit с прежними размером партии, индексом `(created_at,id)` и сроком хранения. Фактор и recovery codes при сохранении режима не удаляются.
 
-Domain-тесты и SQL fixture добавлены для mode validation, прав, no-op, capability denial, конфликтов и конкурентных записей, отката при отказе audit, сохранения роли/фактора и missing-row без seed. Platform fixture проверяет отдельную authority и wrong-realm отказ. Luna V1/V2: Go tests, targeted race, полный Linux ARM64 command SQL, четыре schema-теста, platform operators/MFA settings, operator HTTPS и lint закреплённой v2.14.0 — PASS. Все 17 source hashes совпали со снимком; временные fixtures удалены. HTTP optional profile, first-run выбор режима, работа старых сессий/native/JWT и полная двухпроектная матрица остаются открытыми.
+Domain-тесты и SQL fixture добавлены для mode validation, прав, no-op, capability denial, конфликтов и конкурентных записей, отката при отказе audit, сохранения роли/фактора и missing-row без seed. Platform fixture проверяет отдельную authority и wrong-realm отказ. Luna V1/V2: Go tests, targeted race, полный Linux ARM64 command SQL, четыре schema-теста, platform operators/MFA settings, operator HTTPS и lint закреплённой v2.14.0 — PASS. Все 17 source hashes совпали со снимком; временные fixtures удалены. Этот PASS относился только к storage: последующие runtime, first-run и HTTP изменения описаны ниже; полная двухпроектная матрица остаётся открытой.
 
 ## Применение в runtime — A6.3m.3a
 
@@ -64,19 +64,19 @@ Browser и native password/email/OIDC paths используют общий SQL-
 
 Локальные и platform mutations всегда требуют свежий password proof; свежий MFA proof добавляется, если обязателен режимом/ролью либо фактор подключён. Realm/session/permission/version locks и deadlines сохранены. Last-admin credential check учитывает optional без скрытого обязательного enrollment. Отключение личного фактора по-прежнему требует свежий primary и проверку действующего фактора/recovery; оно не заменяется mode toggle. Delivery initial email binding учитывает ту же conditional MFA authority; final confirmation независимо перепроверяет права.
 
-Статус MFA дополнен `requiredByPolicy`; `disableAllowedByPolicy` учитывает его вместе с ролью и административной обязанностью. Swagger обновлён: administrative login может вернуть 200 session либо 202 challenge. Настройки MFA через новый HTTP endpoint не публиковались. Отключение технической MFA capability на standalone отклоняется при enrolled factors, required roles либо требующем её realm profile.
+Статус MFA дополнен `requiredByPolicy`; `disableAllowedByPolicy` учитывает его вместе с ролью и административной обязанностью. Swagger обновлён: administrative login может вернуть 200 session либо 202 challenge. HTTP API опубликован позднее, в подэтапе 2c ниже. Отключение технической MFA capability на standalone отклоняется при enrolled factors, required roles либо требующем её realm profile.
 
-Добавлены SQL-сценарии optional administrator, обязательного enrollment, гонки issuance/усиления, stale sessions/challenges и отсутствия revival после смягчения. Platform fixture проверяет optional operator с fresh password без TOTP, stale password refusal и сохранение защиты уже подключённого фактора. Legacy storage tests получают новую login session после усиления вместо обхода immutable revision. Luna V1/V2: task check/API, targeted race, полный Linux ARM64 command SQL, schema enforcement/role/administrative/native/JWT/refresh, platform optional authority и operator HTTPS — PASS. V2 восстановил conditional FOR SHARE фактора и согласовал ограниченный administrative enrollment со schema. Все 35 source hashes и Swagger artifacts совпали со снимком; fixtures удалены. First-run, capability matrix и settings HTTP остаются открытыми.
+Добавлены SQL-сценарии optional administrator, обязательного enrollment, гонки issuance/усиления, stale sessions/challenges и отсутствия revival после смягчения. Platform fixture проверяет optional operator с fresh password без TOTP, stale password refusal и сохранение защиты уже подключённого фактора. Legacy storage tests получают новую login session после усиления вместо обхода immutable revision. Luna V1/V2: task check/API, targeted race, полный Linux ARM64 command SQL, schema enforcement/role/administrative/native/JWT/refresh, platform optional authority и operator HTTPS — PASS. V2 восстановил conditional FOR SHARE фактора и согласовал ограниченный administrative enrollment со schema. Все 35 source hashes и Swagger artifacts совпали со снимком; fixtures удалены. First-run, capability matrix и settings HTTP были проверены следующими подэтапами ниже.
 
-## Дальнейшая реализация
+## Границы приёмки
 
-Следующие блоки — platform/project capability/readiness matrix и публикация защищённых HTTP настроек. Ужесточение должно закрывать обход через старые factorless sessions и pending login, без полного прохода пользователей в горячем пути. Required нельзя включить без готовой capability. Platform MFA readiness не заменяет project MFA readiness.
+Capability/readiness, защищённый HTTP API и личная MFA операторов реализованы в подэтапах 5a, 2c и 3b ниже. Их пройденные проверки не заменяют полную двухпроектную приёмку и проверки реальных провайдеров. Required нельзя включить без готовой capability. Platform MFA readiness не заменяет project MFA readiness.
 
 ### Первый запуск — A6.3m.2b
 
-[Контракт setup](initial-setup.md): оператор с существующим installation proof выбирает `mfaMode` при start. Optional подтверждает email без enrollment; administrators/required завершают email+TOTP до создания владельца. Отсутствующее поле и прежние pending intents сохраняют administrators. Completion не принимает режим и не выдаёт сессию. Режим сохраняется существующим version/audit writer атомарно с Auth owner и platform authority; rollback не оставляет новую policy. Setup marker, operator pin, TTL, cooldown и attempts сохранены. Optional не генерирует factor/recovery data. Technical MFA capability для setup пока остаётся обязательной; disabled/readiness matrix — отдельный незавершённый этап. Проверки Luna V1/V2 PASS: Go tests/API/race, setup SQL трёх режимов, platform rollback/owner authority и operator HTTPS. Manifest20 совпал с main, fixtures очищены. Полный optional platform profile ещё не принят.
+[Контракт setup](initial-setup.md): оператор с существующим installation proof выбирает `mfaMode` при start. Optional подтверждает email без enrollment; administrators/required завершают email+TOTP до создания владельца. Отсутствующее поле и прежние pending intents сохраняют administrators. Completion не принимает режим и не выдаёт сессию. Режим сохраняется существующим version/audit writer атомарно с Auth owner и platform authority; rollback не оставляет новую policy. Setup marker, operator pin, TTL, cooldown и attempts сохранены. Optional не генерирует factor/recovery data. Technical MFA capability для setup остаётся обязательной; project disabled/readiness matrix проверена в подэтапе 5a ниже. Проверки Luna V1/V2 PASS: Go tests/API/race, setup SQL трёх режимов, platform rollback/owner authority и operator HTTPS. Manifest20 совпал с main, fixtures очищены. Личная MFA optional platform profile проверена в подэтапе 3b ниже; полная межпроектная приёмка остаётся отдельной.
 
-Проверить оба first-run профиля, изоляцию платформы/проектов, личный фактор в optional-режиме, объединение ролей, freshness, last-admin, конкурентные изменения, native/JWT и recovery. Только после этого публиковать optional API и переходить к UI выбора.
+Границы оставшейся приёмки перечислены в дополнении A6.3m.5b. Наличие backend API не разрешает начинать UI без отдельного согласования.
 
 ## Совместимость capability — A6.3m.5a
 
@@ -136,4 +136,17 @@ Optional разрешает отключение только со свежим�
 
 ## Проверки подэтапа
 
-Новый `TestMFARequirementPredicatesSchema` проверяет все восемь permissions и обычное продуктовое permission, system administrator, объединение/отзыв ролей и invoker ACL. Существующие SQL-сценарии должны подтвердить сохранение административного login, MFA status/disable, длительностей сессий и platform/project readiness. Luna V1: task check, targeted race и полный Linux ARM64 TestPrepareCommandSQL — PASS. После исправления параметризованных multi-statement запросов в новом fixture Luna V2 подтвердила targeted lint (0 issues) и все шесть schema-тестов в штатном query mode. Все шесть source hashes совпали со снимком и рабочими файлами; временные стенды удалены.
+### Дополнение матрицы — A6.3m.5b
+
+Проверки Luna V1/V2 PASS, 31 октября. Task check/fullGo/pinned lint и SQL regression пройдены на V1; оба новых SQL-сценария прошли с race по три раза (primary matrix — на V2 после исправления уникальности synthetic subject). Проверенные Go-файлы совпали с V2 перед коммитом; fixtures очищены. Подробные логи и первый FAIL — в history.
+
+| Гарантия | Проверка | Граница |
+| --- | --- | --- |
+| Google/Telegram/email OTP: добровольный вход без фактора, обязательное enrollment от роли либо realm, сохранение личного фактора после смягчения | `TestRoleMFAOtherPrimaryMethods` | SQL/coordinator fixtures; не реальная проверка assertions провайдеров или доставки почты |
+| Отключение TOTP против усиления realm либо назначенной роли | `TestMFAPolicyFactorRacesSchema` | Оба последовательных порядка и конкурентный запуск; актуальная обязательность, сохранность фактора при отказе, auth_version, отзыв старой сессии и запрет новой factorless session |
+
+Предыдущие PASS для recovery/replay/last-admin, first-run и platform↔project остаются действительными для своих снимков. Отдельно остаются полная приёмка двух проектных БД, выделенная optional/required матрица native/JWT, внешние провайдеры и UI. Общая schema regression не объявляется доказательством каждой комбинации. Email/Telegram как **второй** фактор ещё не реализованы; это A6.3m.6, отдельный от существующих основных методов входа.
+
+### Предыдущая приёмка предикатов — A6.3m.1a
+
+`TestMFARequirementPredicatesSchema` проверяет все восемь permissions и обычное продуктовое permission, system administrator, объединение/отзыв ролей и invoker ACL. Существующие SQL-сценарии подтвердили сохранение административного login, MFA status/disable, длительностей сессий и platform/project readiness. Luna V1: task check, targeted race и полный Linux ARM64 TestPrepareCommandSQL — PASS. После исправления параметризованных multi-statement запросов в новом fixture Luna V2 подтвердила targeted lint (0 issues) и все шесть schema-тестов в штатном query mode. Все шесть source hashes совпали со снимком и рабочими файлами; временные стенды удалены.

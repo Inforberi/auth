@@ -1,21 +1,21 @@
 # Текущий шаг
 
-Обновлено 31 октября 2026. [Карта](index.md) · [план](../planning/implementation.md#текущий-выпуск-auth-роли-и-ui). Git/staging проверять по факту.
+Обновлено 31 октября 2026. [Карта](index.md) · [план](../planning/implementation.md#настраиваемая-обязательность-mfa--a63m--a7). Git/staging проверять по факту.
 
-## Завершённый блок — A6.3m.3b личная MFA операторов
+## Завершённый блок — A6.3m.5b матрица MFA и гонки отключения
 
-[Контракт](../features/mfa-policy.md#личная-mfa-операторов--a63m3b). Server-only NewPlatform MFA repository закрепляет administrative=true для Status/Disable. Assembly выбирает его только платформе, standalone/project constructors прежние. Platform-only actor без Auth-admin роли не обходит administrators/required policy, optional не отменяет required role. Operator DELETE TOTP использует прежние fresh proofs/Access lock/cascade/auth_version/revoke/audit. Proof/HTTP DTO без нового флага; no deps/ENV/schema/workers.
+SQL/coordinator matrix Google/Telegram/email OTP проверяет optional без фактора, required от роли/realm, enrollment и сохранение личного фактора после смягчения. Disable TOTP проверен против realm/role tightening: оба последовательных порядка и concurrent, конечная обязательность/factor/auth_version, отзыв старой сессии и отказ новой factorless session. Production/API/schema/ENV/dependencies без изменений. [Контракт и границы](../features/mfa-policy.md#дополнение-матрицы--a63m5b).
 
-Luna V1/V2/V3 PASS: API/Go tests/router unit, pinned lint0, targeted race, full schema/platform operators, platform-management/optional-last-admin SQL и полный operator HTTPS. HTTPS покрывает recovery StepUp/rotation/replay, optional disable/password-only login, voluntary enrollment start, required limited enrollment/confirmation без session и повторный MFA login. Production/Swagger после V1 не менялись. Fixture corrections: unsupported POST405, допустимый порядок proof timestamps, single prepared Exec, изоляция одного scoped login:factor-user budget в начале отдельного scenario на эксклюзивнойDB15 без изменения production5/min. Подробные первые FAIL/tool-block в history.
+Luna V1/V2 PASS: task check/fullGo/pinned lint0, оба новых SQL tests с race/count3, три SQL regression. V1 primary matrix падала из-за повторного synthetic issuer+subject; V2 включил source в subject, повторил только affected SQL/race/lint. Formatter выполнен; оба Go-файла совпали с проверенным V2. Own fixtures очищены; подробности/первый FAIL в history.
 
-Snapshot `/private/tmp/auth-platform-personal-mfa-v3.daz256tv`, base `c04bffbe55db45f6a90051ab4a68bd4217915d69`, manifest17/metadata рядом. Все17 hashes совпали после проверок и с main перед обновлением статусов документации. Fixtures очищены. Последний pinned lint `/private/tmp/auth-platform-personal-mfa-v3-lint-pinned.log`/`.exit` PASS0. Пользователь разрешил коммит после PASS, факт проверять Git.
+V2 `/private/tmp/auth-mfa-policy-matrix-v2.8ljq3gtq`, parent `/private/tmp/auth-mfa-policy-matrix-v1.ifnt178v`, base `4a80e035f66b007b23181c7b05b65b9fc54eb2ee`, manifest5/metadata рядом. Логи/exit-коды `/private/tmp/auth-mfa-policy-matrix-v{1,2}-*`. Пользователь разрешил коммит после PASS; факт смотреть Git.
 
 ## Следующий шаг
 
-Сверить оставшуюся platform/project MFA matrix и A6.3m.6 email/Telegram second factors (не реализованы), без повторов уже принятых TOTP/recovery gates. MP5/MP6R security/refactor/MP7/MP8 ресурсы/двухпроектная приёмка отдельно. UI только после предупреждения и отдельного согласования; внешние OAuth/SMTP, GC/maxRPS не закрыты.
+Выделенная optional/required матрица native/JWT, затем полная двухпроектная приёмка остаются открытыми. A6.3m.6 email/Telegram **second factors** ещё не реализованы. MP6R security/refactor, MP7/MP8 ресурсы/maxRPS и внешние OAuth/SMTP не закрыты. UI только после предупреждения и отдельного согласования.
 
-## Процесс
+## Исполнители
 
-Researcher Luna medium `01a18e7d-c688-7ad1-adde-123d62863064`. Executable checks только чат «Проверки Auth — Luna», `01a16eab-c777-78a0-a815-47b45ff0860d`, host local/exact snapshot; старый checkout6377 не использовать. Cursor `944a6e9d-49fe-49f7-8ff5-48acb6c615a1:12`. Main не повторяет проверки и не ждёт полный прогон.
+Локальные исследователи закрыты по запросу пользователя. Все исполняемые проверки — только чат «Проверки Auth — Luna» `01a16eab-c777-78a0-a815-47b45ff0860d`, host local; main не повторяет их и не ждёт полный прогон. Последний cursor `944a6e9d-49fe-49f7-8ff5-48acb6c615a1:15`.
 
-Pinned lint через `/Users/inforberi/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.3.darwin-arm64/bin/go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0`; GOPROXY=file:///Users/inforberi/go/pkg/mod/cache/download, cachedtool при sumdbmetadata GOSUMDB=off без редактирования deps. Старый installed golangci непригоден. Own LinuxARM64 PG18.6/Redis8.2/readonly /src/TLS SAN127/SCRAM; RedisDB15. Schema auth_schema_test DB/role/env AUTH_SCHEMA_TEST_DATABASE_URL/cwd package; platform auth_platform_test/userauth/AUTH_PLATFORM_TEST_DATABASE_URL/cwd migrations/platform; app AUTH_OPERATOR_TEST_DATABASE_URL/REDIS_ADDR/ROOT=/src. Только own fixtures; realENV/DB/staging не трогать. Новые dependencies требуют согласования.
+Pinned lint: Go1.27.3 из cached toolchain + `go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0`; GOPROXY=file:///Users/inforberi/go/pkg/mod/cache/download, при cached metadata GOSUMDB=off без изменения deps. Installed старый lint не подходит. SQL: только own LinuxARM64 PG18.6/Redis8.2/readonly snapshot, TLS SAN127/SCRAM, role/DB auth_schema_test, AUTH_SCHEMA_TEST_DATABASE_URL; cleanup только own fixtures. Реальные ENV/DB/staging не трогать.
