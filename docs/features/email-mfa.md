@@ -1,13 +1,13 @@
 # Email как дополнительный фактор
 
-Текущий подэтап A6.3m.6c.1 — внутреннее подтверждение канала, проверки Luna пройдены. **Email MFA пока нельзя включить в настройках или использовать для входа.** HTTP/routes/Swagger/runtime profile/новых ENV для этого подэтапа нет. Объект EmailPreparation предоставляет request/confirm только серверному коду; его нельзя считать включённым фактором.
+Подготовка канала A6.3m.6c.1 проверена Луной; внутреннее управление A6.3m.6c.2 проверено Луной. **Email MFA пока нельзя включить в настройках или использовать для входа.** HTTP/routes/Swagger/runtime profile/новых ENV для этого подэтапа нет. Объект EmailPreparation предоставляет request/confirm только серверному коду; его нельзя считать включённым фактором.
 
 ## Сценарии и границы
 
 | Сценарий | Входные гарантии | Результат |
 | --- | --- | --- |
 | Подготовка канала — этот подэтап | Текущая browser/password session, explicit password proof моложе5m, уже подтверждённый принадлежащий пользователю email; строгий TOTP/recovery, если текущая policy/personal factor требует MFA | Почтовой possession proof и ротация существующего session token с прежними ID/сроками/primary/password/MFA proofs. Не новый вход/роль/фактор |
-| Активация и выбор — следующий подэтап | Актуальные права/политика, осознанное включение, подготовленный канал, допустимый primary/factor pair | Активный factor binding/preference, отзыв затронутых credentials; до готовности enforcement не публиковать |
+| Активация и выбор — внутренний .6c.2, Luna PASS | Актуальные права/политика, осознанное включение, подготовленный канал, допустимый primary/factor pair | Сохранённая привязка к контакту и отзыв credentials; публичное включение закрыто до полного enforcement |
 | Завершение email MFA login — следующий подэтап | Подтверждённый primary, bound challenge, разрешённый активный фактор/канал, одноразовый код | Consume+session/native issuance в одной transaction с явным слабым методом; не TOTP/strict authority |
 
 Первый компонент принимает только password primary. Email OTP и OIDC не допускаются: дополнительный код после email primary нельзя назвать независимой MFA; для внешнего provider нужна отдельно согласованная policy независимости канала. API/native session не принимается. Подтверждённый контакт сам по себе не означает согласие включить MFA.
@@ -32,10 +32,26 @@ Delivery проверяет актуальность канала/source session
 
 Schema меняется в исходной prerelease migration; реальные DB/ENV не менялись, upgrade существующей БД отдельно MP6. Подготовлены unit crypto/admission и TestEmailFactorPreparationSchema: purpose coexistence, owned channel, no authority/lifetime increase, one-winner/replay/attempts, stale/revoked/unverified/primary/native guards и audit rollback. Luna: task check, emailotp race, TestEmailFactorPreparationSchema, TestPostgresSchema и TestTwoProjectEmailOTPHTTPIsolationSQL — PASS; manifest 24/24, тестовый стенд очищен.
 
+## Внутреннее управление — A6.3m.6c.2
+
+Разрешение проекта и выбор пользователя разделены. Новая колонка `auth.mfa_settings.email_factor_allowed` по умолчанию false; режим optional/administrators/required остаётся в действующей MFA policy. `settings/service.EmailMFA` читает и изменяет разрешение с тем же version, что и режим MFA: параллельное изменение любого из них требует перечитать настройки. Read/update заново проверяют `auth.settings.manage`, пользователя, session и свежие proofs. Update использует Access exclusive lock и финальный deadline, сохраняет non-secret audit. Включение требует trusted assembly readiness, передать её через запрос нельзя. Отключение запрещено, пока есть хоть одна привязка, включая приостановленную: без массового обхода пользователей, снятия защиты или автоматического fallback.
+
+`mfa/service.EmailFactors` предоставляет внутренние Status/Enable/Disable. Enable не принимает user ID/email/method из DTO как готовую authority: Proof связывается с актуальной browser/password session, текущими credentials и version. Нужны свежий явный password proof и email possession proof той же session на verified owned contact; при действующей защите также свежий записанный TOTP/recovery. Сроки перепроверяются перед commit. Нормализация адреса уже выполнена при подготовке, повторной domain-валидации здесь нет. Mutation admission использует project-scoped MFA cipher/limiter, errors fail-closed.
+
+`auth.mfa_email` хранит одну привязку пользователя к конкретному email ID, enabled_at и nullable suspended_at. FK проверяет принадлежность контакта, привязка не зависит от TOTP row и не исчезает при изменении общего режима. Enable/Disable атомарно меняют auth_version, отзывают все SQL/browser/native sessions, удаляют pending MFA/email OTP challenges и записывают audit. Новую session или MFA proof они не выдают; новый вход нужен даже после успешного изменения. Два конкурентных Enable с одной исходной session дают один успех. Повтор активного Enable с новым доказательством возвращает conflict; приостановленную привязку можно подготовить и включить заново.
+
+Status различает Allowed, Configured и Usable. Последнее означает только разрешённый, неподвешенный verified канал; не готовность runtime и не выданный MFA proof. Read проверяет актуальную session/version/status пользователя, но не требует свежих proofs изменения.
+
+Смена email, security report и protected recovery приостанавливают прежнюю привязку в существующей транзакции инвалидирования доступа и сохраняют audit. Новый verified email не наследует второй фактор. Неподтверждённый/приостановленный контакт не считается пригодным каналом, однако сам факт настроенного фактора продолжает требовать MFA: нельзя получить password-only доступ из-за потери почты или optional policy. Block/unblock сохраняет привязку и отзывает credentials; удаление аккаунта очищает её. Смена/reset пароля не удаляют независимо настроенный фактор. Recovery потерянного email-only фактора ещё не опубликован.
+
+**Временный закрытый gate:** полноценного email login/step-up ещё нет. CheckCapability отказывает runtime с разрешённым email MFA или привязками; startup/project profiles, HTTP и новые ENV не подключены. Email-only primary не может пройти обычную выдачу сессии или попасть в first-TOTP enrollment вместо своего фактора. До .6c.3 удаление email-фактора требует действующего свежего strong proof; удаление TOTP при существующей email-привязке также закрыто, чтобы не оставить только ещё не подключённый способ. Это ограничения внутреннего этапа, не финальная политика выбора методов. Публиковать private policy с readiness=true до готовности всей цепочки нельзя.
+
+Подготовлены unit fail-closed admission и SQL `TestEmailFactorLifecycleSchema`: shared version/permissions/readiness, one-winner активации, отзыв sessions, независимость TOTP, policy/activation race, optional email-only без обхода, block/unverify, stale/missing mail proof, audit rollback, реальная смена email и удаление. Luna: task check, affected race и пять назначенных SQL roots — PASS; manifest 25/25, cleanup подтверждён. Новых зависимостей/воркеров/публичных маршрутов нет. Исходные up/down изменены без отдельной лишней migration; реальный upgrade остаётся MP6.
+
 ## Что остаётся до публикации email MFA
 
-1. Сохраняемая project policy разрешённых методов и личный выбор/активация с версией, аудитом, повторной проверкой и отсутствием auto-downgrade.
-2. Явный email-factor binding к verified contact, правила смены/удаления адреса, last-factor/recovery; не привязывать email-factor lifetime к TOTP только ради упрощения кода.
+1. Подэтап .6c.2 принят после Luna; runtime/profile readiness для разрешения email MFA подключать только с полным login/step-up enforcement.
+2. В .6c.3 завершить выбор пригодных primary/second combinations, email-only recovery/отключение и last-factor rules; критические strong операции и требования к администраторам не понижать до email.
 3. Bound login challenge, разрешённые primary/second combinations; для email-primary повторный email код запрещён. Выбор и deadline нельзя подменить клиентским assurance-флагом.
 4. Атомарный consume+browser/native issuance, явный метод/assurance/JWT/introspection; слабый код не открывает strong critical operations.
-5. Runtime/project/platform compatibility и readiness, защищённые HTTP методы, два проекта/конкуренция/recovery и отсутствие bypass. Только после этого публиковать флаги/маршруты, затем Telegram и UI отдельно.
+5. Runtime/project/platform compatibility и readiness, параметры admission из действующей MFA configuration, защищённые HTTP методы, два проекта/конкуренция/recovery и отсутствие bypass. Только после этого публиковать флаги/маршруты, затем Telegram и UI отдельно.

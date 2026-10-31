@@ -22,6 +22,10 @@ func lockChangeAccount(ctx context.Context, tx pgx.Tx, user domain.UserID) (doma
 
 func invalidateChangeAccess(ctx context.Context, tx pgx.Tx, user domain.UserID) error {
 	for _, query := range []string{
+		`WITH suspended AS (
+            UPDATE auth.mfa_email SET suspended_at=clock_timestamp()
+            WHERE user_id=$1 AND suspended_at IS NULL RETURNING user_id
+          ) INSERT INTO auth.mfa_audit(user_id,event) SELECT user_id,'email_factor_suspended' FROM suspended`,
 		`UPDATE auth.users SET auth_version=auth_version+1 WHERE id=$1`,
 		`UPDATE auth.sessions SET revoked_at=clock_timestamp() WHERE user_id=$1 AND revoked_at IS NULL`,
 		`DELETE FROM auth.password_resets WHERE user_id=$1`,

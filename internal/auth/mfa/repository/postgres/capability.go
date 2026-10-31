@@ -17,14 +17,14 @@ func (r *Repository) CheckDisabled(ctx context.Context) error {
 func (r *Repository) CheckCapability(ctx context.Context, enabled bool) error {
 	var policy settingsdomain.MFAPolicy
 	var compatible bool
-	err := r.db.QueryRow(ctx, `SELECT p.mode,$1::boolean OR NOT (
+	err := r.db.QueryRow(ctx, `SELECT p.mode,NOT p.email_factor_allowed AND NOT EXISTS(SELECT 1 FROM auth.mfa_email) AND ($1::boolean OR NOT (
  EXISTS(SELECT 1 FROM auth.mfa_totp) OR EXISTS(SELECT 1 FROM auth.roles WHERE mfa_required)
  OR p.mode='required' OR p.mode='administrators'
  AND EXISTS(SELECT 1 FROM auth.roles r WHERE EXISTS(SELECT 1 FROM auth.user_roles WHERE role_id=r.id)
   AND ((r.system AND r.key='super_admin') OR EXISTS(SELECT 1 FROM auth.role_permissions rp WHERE rp.role_id=r.id
    AND rp.permission_key IN ('access.roles.manage','access.assignments.manage','accounts.email.bind','accounts.users.manage',
     'accounts.users.status.manage','accounts.users.delete','auth.settings.manage')))))
- FROM auth.mfa_settings p WHERE singleton AND version>0`, enabled).Scan(&policy.Mode, &compatible)
+  ) FROM auth.mfa_settings p WHERE singleton AND version>0`, enabled).Scan(&policy.Mode, &compatible)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return settingsdomain.ErrNotInitialized
 	}
@@ -35,7 +35,7 @@ func (r *Repository) CheckCapability(ctx context.Context, enabled bool) error {
 		return err
 	}
 	if !compatible {
-		return errors.New("MFA_ENABLED=false conflicts with enrolled factors or required MFA policies")
+		return errors.New("MFA runtime is incompatible with stored factors or policy")
 	}
 	return nil
 }

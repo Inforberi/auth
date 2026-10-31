@@ -103,7 +103,8 @@ CREATE TABLE auth.mfa_settings (
   singleton BOOLEAN PRIMARY KEY CHECK(singleton),
   version BIGINT NOT NULL DEFAULT 1 CHECK(version>0),
   session_revision BIGINT NOT NULL DEFAULT 1 CHECK(session_revision>0),
-  mode TEXT NOT NULL CHECK(mode IN ('optional','administrators','required'))
+  mode TEXT NOT NULL CHECK(mode IN ('optional','administrators','required')),
+  email_factor_allowed BOOLEAN NOT NULL DEFAULT false
 );
 INSERT INTO auth.mfa_settings(singleton,mode) VALUES(true,'administrators');
 
@@ -397,6 +398,15 @@ CREATE TABLE auth.mfa_totp (
   enabled_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
 
+CREATE TABLE auth.mfa_email (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email_id UUID NOT NULL,
+  enabled_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  suspended_at TIMESTAMPTZ,
+  FOREIGN KEY(user_id,email_id) REFERENCES auth.user_emails(user_id,id),
+  CHECK(suspended_at IS NULL OR suspended_at>=enabled_at)
+);
+
 CREATE TABLE auth.mfa_enrollments (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   digest TEXT NOT NULL UNIQUE CHECK (digest ~ '^[a-f0-9]{64}$'),
@@ -488,7 +498,7 @@ CREATE TABLE auth.mfa_recovery_codes (
 CREATE TABLE auth.mfa_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
-  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated','recovery_requested','recovery_approved','recovery_cancelled','recovery_completed')),
+  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated','recovery_requested','recovery_approved','recovery_cancelled','recovery_completed','email_factor_enabled','email_factor_disabled','email_factor_suspended')),
   request_id UUID,
   auth_version BIGINT CHECK (auth_version>0),
   operator_oid OID,
@@ -623,7 +633,8 @@ $$;
 CREATE FUNCTION auth.mfa_login_required(owner_id UUID, administrative BOOLEAN DEFAULT false)
 RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
   SELECT auth.mfa_required(owner_id,administrative)
-    OR EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=owner_id);
+    OR EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=owner_id)
+    OR EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=owner_id);
 $$;
 
 CREATE FUNCTION auth.bind_session_roles() RETURNS TRIGGER

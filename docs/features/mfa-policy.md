@@ -217,3 +217,7 @@ Strong guard не заменяет permission/object/field guards и не доб
 Подготовлен [внутренний email possession workflow](email-mfa.md) на существующих OTP outbox/delivery и session proofs, проверки Luna пройдены. Request/confirm связаны с текущей password/browser session и owned verified email, исходным hash/version, отдельным code purpose и строгой MFA по действующей policy. Ротируется только текущий token, но не включается фактор/новый вход и не повышается assurance. Сохраняются разные pending purposes; expiry/attempts/authority/аудит проверяются SQL.
 
 До публикации обязательны A6.3m.6c.2 activation/policy/выбор и .6c.3 atomic login/native enforcement с channel independence. Новых HTTP/ENV/startup flags/UI пока нет; не считать EmailPreparation уже работающим email MFA.
+
+## Управление email-фактором — A6.3m.6c.2
+
+[Внутренний lifecycle](email-mfa.md#внутреннее-управление--a63m6c2) отделяет разрешение проекта от личной привязки. Policy/version/permissions и fresh password/email/current strong proofs проверяются транзакционно; Enable/Disable отзывают credentials, email change приостанавливает прежний binding без auto-downgrade. Luna task check/race/пять SQL roots PASS, manifest 25/25 и cleanup подтверждены. Публичных флагов/маршрутов нет; runtime закрыт до .6c.3–.6c.4. Email-only completion/recovery/step-up и финальный выбор факторов ещё не реализованы, TOTP/recovery остаются единственным strong proof.

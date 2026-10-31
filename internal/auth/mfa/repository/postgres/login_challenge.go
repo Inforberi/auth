@@ -57,9 +57,12 @@ func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.Prima
 		if err := RequireLoginPrimary(ctx, tx, proof); err != nil {
 			return err
 		}
-		var enabled, required bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1),auth.mfa_required($1,$2)`, proof.UserID, proof.Administrative).Scan(&enabled, &required); err != nil {
+		var enabled, required, email bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1),auth.mfa_required($1,$2),EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1)`, proof.UserID, proof.Administrative).Scan(&enabled, &required, &email); err != nil {
 			return err
+		}
+		if email && !enabled {
+			return domain.ErrUnavailable
 		}
 		if !enabled && !required {
 			return domain.ErrConflict

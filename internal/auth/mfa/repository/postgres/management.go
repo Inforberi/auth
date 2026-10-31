@@ -69,13 +69,16 @@ func (r *Repository) Disable(ctx context.Context, proof service.Proof) error {
 		if err := requireFreshMFA(ctx, tx, proof); err != nil {
 			return err
 		}
-		var required bool
-		err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1,$2)`, proof.UserID, r.administrative).Scan(&required)
+		var required, email bool
+		err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1,$2),EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1)`, proof.UserID, r.administrative).Scan(&required, &email)
 		if err != nil {
 			return err
 		}
 		if required {
 			return domain.ErrRequiredByPolicy
+		}
+		if email {
+			return domain.ErrUnavailable
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_totp WHERE user_id=$1`, proof.UserID); err != nil {
 			return err
@@ -114,6 +117,7 @@ func invalidateFactors(ctx context.Context, tx pgx.Tx, user accountdomain.UserID
 		`UPDATE auth.sessions SET revoked_at=clock_timestamp() WHERE user_id=$1 AND revoked_at IS NULL`,
 		`DELETE FROM auth.mfa_enrollments WHERE user_id=$1`,
 		`DELETE FROM auth.mfa_login_challenges WHERE user_id=$1`,
+		`DELETE FROM auth.email_login_challenges WHERE user_id=$1`,
 	} {
 		if _, err := tx.Exec(ctx, query, user); err != nil {
 			return err

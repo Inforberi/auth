@@ -1,5 +1,7 @@
 # Краткий отчёт по проверкам
 
+Принят [A6.3m.6c.2 — внутренний email-factor lifecycle](../features/email-mfa.md#внутреннее-управление--a63m6c2): shared policy version/permissions, Enable/Disable/Status, suspension/cleanup/revocation и fail-closed guards. Luna task check, affected race и пять назначенных SQL roots — PASS; manifest 25/25 и cleanup подтверждены. Публичный email MFA и runtime readiness не включены.
+
 Подготовлен [A6.3m.6c.1 — email-канал](../features/email-mfa.md): internal request/confirm с owned verified email, fresh source session, отдельным purpose и ротацией без повышения authority. Luna: task check, affected race и три SQL roots — PASS, manifest 24/24 и cleanup подтверждены; HTTP/ENV/runtime activation/email MFA login ещё не опубликованы.
 
 Принят [A6.3m.6b — строгий proof](../features/mfa-policy.md#строгий-proof-для-критических-действий--a63m6b): critical SQL guards отличают записанный TOTP/recovery от historical unknown proof, ordinary session/optional policy сохранены; external JWT routes могут применять RequireStrongMFA(maxAge). Luna V1 task check/affected races/core schema/platform operators/two-project Access и V2 targeted lint/operator HTTPS race PASS, cleanup/manifest36 подтверждены. Новые email/Telegram flows закрыты, DB/view upgrade отдельно MP6.
