@@ -131,9 +131,13 @@ func roleCreationIntent(t *testing.T, admin *pgxpool.Pool, ctx context.Context, 
 				t.Fatal("intent did not reach project lock")
 			}
 		}
+		// A canceled autocommit has an unknown outcome; this probe must never persist a revoke.
+		revokeTx, err := admin.Begin(ctx)
+		require.NoError(t, err)
 		bounded, stop := context.WithTimeout(ctx, 100*time.Millisecond)
-		_, revoke := admin.Exec(bounded, `UPDATE auth.sessions SET revoked_at=clock_timestamp() WHERE token_hash=$1`, actor.TokenHash)
+		_, revoke := revokeTx.Exec(bounded, `UPDATE auth.sessions SET revoked_at=clock_timestamp() WHERE token_hash=$1`, actor.TokenHash)
 		stop()
+		_ = revokeTx.Rollback(ctx)
 		require.ErrorIs(t, revoke, context.DeadlineExceeded)
 		require.NoError(t, tx.Rollback(ctx))
 		require.NoError(t, <-result)

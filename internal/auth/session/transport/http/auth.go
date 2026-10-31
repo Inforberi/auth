@@ -65,6 +65,7 @@ func (m *Middleware) authenticate(next http.Handler, clearInvalid, refreshCookie
 				PrimaryMethod:     session.PrimaryMethod,
 				PrimaryVerifiedAt: session.PrimaryVerifiedAt,
 				MFAVerifiedAt:     session.MFAVerifiedAt,
+				MFAMethod:         session.MFAMethod,
 			},
 		)
 

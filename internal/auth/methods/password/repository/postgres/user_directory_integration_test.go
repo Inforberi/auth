@@ -81,7 +81,7 @@ func TestUserDirectorySchema(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		accessExec(t, db, ctx, `UPDATE auth.sessions SET token_hash=$2,password_verified_at=NULL,mfa_verified_at=NULL WHERE user_id=$1`, actor.UserID, tokens.Hash(token))
+		accessExec(t, db, ctx, `UPDATE auth.sessions SET token_hash=$2,password_verified_at=NULL,mfa_verified_at=NULL,mfa_method=NULL WHERE user_id=$1`, actor.UserID, tokens.Hash(token))
 		return token
 	}
 	readerRaw, managerRaw := raw(reader), raw(manager)

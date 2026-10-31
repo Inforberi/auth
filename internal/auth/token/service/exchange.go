@@ -8,6 +8,7 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
+	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/signing"
@@ -27,6 +28,7 @@ type SessionProof struct {
 	Deadline      time.Time
 	VerifiedAt    time.Time
 	MFAVerifiedAt *time.Time
+	MFAMethod     mfadomain.Method
 	Method        string
 	Now           time.Time
 }
@@ -81,6 +83,9 @@ func (s *Service) signSession(ctx context.Context, input ExchangeInput, mode str
 		deadline = proof.Deadline
 	}
 	method := map[string]string{"password": "pwd", "emailotp": "emailotp", "oidc": "oidc"}[proof.Method]
+	if proof.MFAVerifiedAt == nil && proof.MFAMethod != "" {
+		return nil, domain.ErrUnavailable
+	}
 	claims := authjwt.Claims{
 		Subject: string(input.Actor.UserID), SessionID: input.SessionID, Audience: input.Audience,
 		AuthVersion: proof.AuthVersion, Scope: permissionScope(input.Scope), Mode: mode, ExpiresAt: deadline.Unix(),
@@ -89,8 +94,11 @@ func (s *Service) signSession(ctx context.Context, input ExchangeInput, mode str
 	if proof.MFAVerifiedAt != nil {
 		verified := proof.MFAVerifiedAt.Unix()
 		claims.MFATime = &verified
-		// The session ledger retains the fact of MFA, not the individual TOTP/recovery mechanism.
-		claims.Methods = append(claims.Methods, "mfa")
+		factor := proof.MFAMethod.AuthenticationMethod()
+		if factor == "" {
+			return nil, domain.ErrUnavailable
+		}
+		claims.Methods = append(claims.Methods, factor)
 	}
 	return s.signer.Sign(ctx, claims, proof.Now)
 }

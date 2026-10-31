@@ -4,6 +4,7 @@ import (
 	"time"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 )
 
 type Session struct {
@@ -20,6 +21,7 @@ type Session struct {
 	PrimaryMethod      string               `json:"primaryMethod,omitempty"`
 	PrimaryVerifiedAt  *time.Time           `json:"primaryVerifiedAt,omitempty"`
 	MFAVerifiedAt      *time.Time           `json:"mfaVerifiedAt,omitempty"`
+	MFAMethod          mfadomain.Method     `json:"mfaMethod,omitempty"`
 }
 
 type PasswordConfirmation struct {

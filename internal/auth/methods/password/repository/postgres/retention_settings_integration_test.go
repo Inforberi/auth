@@ -120,7 +120,7 @@ func TestRetentionSettingsSchema(t *testing.T) {
 	}
 
 	input.ExpectedVersion = 2
-	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL WHERE token_hash=$1`, actor.TokenHash)
+	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL,mfa_method=NULL WHERE token_hash=$1`, actor.TokenHash)
 	if _, err := svc.Update(ctx, input); !errors.Is(err, accessdomain.ErrFreshAuthRequired) {
 		t.Fatal("no-op bypassed MFA", err)
 	}

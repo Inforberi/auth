@@ -67,3 +67,7 @@ Content-Type: application/json
 Evidence — [history](../planning/history.md#результат-j51-local--17-октября-2026). SQL проверки: binding/proof/version/revoke/block/delete/MFA/grants, неизменность ledger, concurrent revoke и independent family revoke; HTTP проверяет service auth/transport/safe response. JWT выключен в ENV-примерах; working DB/ENV/secrets не меняются.
 
 Локальная реализация J5.1/J5.2 выполнена; real TLS ingress/credentials rotation/fleet/outage/load/GC/restore не заменяются fixtures и остаются release gates J7/pre-ui/A8.
+
+## Метод MFA — A6.3m.6a
+
+Introspection сопоставляет factor label с сохранённым mfa_method и SQL временем proof: otp для TOTP, recovery для recovery-code, mfa только для исторического NULL method. Совпавший timestamp не позволяет поменять метод в claims. Отсутствие proof не допускает лишний factor label. Эти правила не превращают подпись JWT в текущую SQL authority и не меняют offline TTL. Реализация принята в A6.3m.6a: Luna V1 task check/affected races/core SQL PASS, V2 platform regression/targeted lint PASS; cleanup/manifest42 подтверждены.

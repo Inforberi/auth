@@ -270,7 +270,7 @@ func checkPendingAssignment(t *testing.T, db *pgxpool.Pool, ctx context.Context,
 func checkAccessSessionGuards(t *testing.T, db *pgxpool.Pool, ctx context.Context, svc *accessservice.Service, target, actor accessservice.Principal) {
 	t.Helper()
 	for _, query := range []string{
-		`UPDATE auth.sessions SET mfa_verified_at=NULL WHERE token_hash=$1`,
+		`UPDATE auth.sessions SET mfa_verified_at=NULL,mfa_method=NULL WHERE token_hash=$1`,
 		`UPDATE auth.sessions SET mfa_verified_at=clock_timestamp()-interval '6 minutes',primary_verified_at=clock_timestamp()-interval '7 minutes' WHERE token_hash=$1`,
 	} {
 		accessExec(t, db, ctx, query, actor.TokenHash)

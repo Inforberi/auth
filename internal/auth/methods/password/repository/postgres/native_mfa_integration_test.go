@@ -105,11 +105,12 @@ func checkNativeMFA(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 				t.Fatal(err)
 			}
 			claims, err := verify.VerifySignature(ctx, winner.Raw, time.Now())
-			if err != nil || claims.Subject != string(f.user) || claims.AuthVersion != 2 || claims.Scope != "orders.read" || claims.MFATime == nil || *claims.MFATime < claims.AuthTime || len(claims.Methods) != 2 || claims.Methods[1] != "mfa" {
+			if err != nil || claims.Subject != string(f.user) || claims.AuthVersion != 2 || claims.Scope != "orders.read" || claims.MFATime == nil || *claims.MFATime < claims.AuthTime || len(claims.Methods) != 2 || claims.Methods[1] != map[bool]string{true: "recovery", false: "otp"}[recovery] {
 				t.Fatal("incorrect MFA claims", err)
 			}
 			var privateProof, challenge bool
-			if err := db.QueryRow(ctx, `SELECT password_verified_at IS NOT NULL,EXISTS(SELECT 1 FROM auth.mfa_login_challenges WHERE user_id=$2) FROM auth.sessions WHERE id=$1`, claims.SessionID, f.user).Scan(&privateProof, &challenge); err != nil || privateProof || challenge {
+			var storedMethod string
+			if err := db.QueryRow(ctx, `SELECT mfa_method,password_verified_at IS NOT NULL,EXISTS(SELECT 1 FROM auth.mfa_login_challenges WHERE user_id=$2) FROM auth.sessions WHERE id=$1`, claims.SessionID, f.user).Scan(&storedMethod, &privateProof, &challenge); err != nil || privateProof || challenge || storedMethod != name {
 				t.Fatal("false private proof or reusable challenge", err)
 			}
 			if _, err := f.tokens.Refresh(ctx, tokenservice.RefreshInput{Token: winner.RefreshToken, IP: f.input.IP}); err != nil {

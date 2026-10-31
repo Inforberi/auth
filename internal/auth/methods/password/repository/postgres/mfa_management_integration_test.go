@@ -61,7 +61,7 @@ func checkMFAManagement(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 			}
 			proof.TokenHash = tokengenerate.New().Hash(step.Token)
 			session, err := f.sessions.FindSession(ctx, proof.TokenHash)
-			if err != nil || session.MFAVerifiedAt == nil || !session.MFAVerifiedAt.Equal(step.VerifiedAt) {
+			if err != nil || session.MFAMethod != mfadomain.RecoveryCode || session.MFAVerifiedAt == nil || !session.MFAVerifiedAt.Equal(step.VerifiedAt) {
 				t.Fatal("step-up context", err)
 			}
 			switch action {
@@ -113,7 +113,7 @@ func checkMFAManagement(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		if err := db.QueryRow(ctx, `SELECT mfa_verified_at FROM auth.sessions WHERE token_hash=$1`, proof.TokenHash).Scan(&verified); err != nil {
 			t.Fatal(err)
 		}
-		accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL WHERE token_hash=$1`, proof.TokenHash)
+		accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL,mfa_method=NULL WHERE token_hash=$1`, proof.TokenHash)
 		if err := svc.Disable(ctx, proof); !errors.Is(err, mfadomain.ErrProofRequired) {
 			t.Fatal("password bypassed MFA", err)
 		}

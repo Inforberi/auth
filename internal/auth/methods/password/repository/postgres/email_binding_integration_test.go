@@ -223,7 +223,7 @@ func checkEmailBinding(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 			case "actor-password":
 				accessExec(t, db, ctx, `UPDATE auth.sessions SET password_verified_at=NULL WHERE token_hash=$1`, f.principal.TokenHash)
 			case "actor-mfa":
-				accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL WHERE token_hash=$1`, f.principal.TokenHash)
+				accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL,mfa_method=NULL WHERE token_hash=$1`, f.principal.TokenHash)
 			case "actor-session":
 				accessExec(t, db, ctx, `UPDATE auth.sessions SET revoked_at=clock_timestamp() WHERE token_hash=$1`, f.principal.TokenHash)
 			case "actor-blocked":

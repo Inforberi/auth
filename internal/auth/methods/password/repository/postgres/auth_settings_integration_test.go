@@ -96,7 +96,7 @@ func TestAuthSettingsSchema(t *testing.T) {
 	if _, err := svc.Update(ctx, bad); !errors.Is(err, accessdomain.ErrForbidden) {
 		t.Fatal("write survived permission revoke", err)
 	}
-	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL WHERE user_id=$1`, actor.UserID)
+	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL,mfa_method=NULL WHERE user_id=$1`, actor.UserID)
 	if _, err := svc.Read(ctx, actor); err != nil {
 		t.Fatal("read unexpectedly requires fresh proof", err)
 	}

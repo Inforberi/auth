@@ -590,6 +590,7 @@ CREATE TABLE auth.sessions (
   primary_method TEXT CHECK (primary_method IN ('password','oidc','emailotp')),
   primary_verified_at TIMESTAMPTZ,
   mfa_verified_at TIMESTAMPTZ,
+  mfa_method TEXT CHECK (mfa_method IN ('totp','recovery')),
   user_agent TEXT NOT NULL,
   ip_address TEXT NOT NULL,
   CHECK (created_at<expires_at AND expires_at<=absolute_expires_at),
@@ -598,6 +599,7 @@ CREATE TABLE auth.sessions (
   CHECK ((email_reauthenticated_at IS NULL)=(email_reauthenticated_id IS NULL)),
   CHECK (email_reauthenticated_at IS NULL OR (email_reauthenticated_at>=created_at
     AND email_reauthenticated_at<absolute_expires_at)),
+  CHECK (mfa_method IS NULL OR mfa_verified_at IS NOT NULL),
   CHECK (mfa_verified_at IS NULL OR (primary_verified_at IS NOT NULL
     AND primary_verified_at<=mfa_verified_at AND mfa_verified_at<absolute_expires_at))
 );
@@ -682,6 +684,7 @@ CREATE TRIGGER sessions_role_binding BEFORE INSERT OR UPDATE OF credential_profi
 CREATE VIEW auth.role_bound_sessions WITH (security_invoker=true) AS
   SELECT s.* FROM auth.sessions s
   WHERE EXISTS(SELECT 1 FROM auth.mfa_settings WHERE singleton AND session_revision=s.mfa_policy_revision)
+  AND (s.mfa_method IS NULL OR s.mfa_method IN ('totp','recovery'))
   AND ((s.mfa_verified_at IS NULL AND NOT auth.mfa_login_required(s.user_id)) OR
     (s.mfa_verified_at<=statement_timestamp() AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=s.user_id)))
   AND NOT EXISTS (

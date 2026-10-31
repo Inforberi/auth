@@ -37,13 +37,13 @@ func (r *Repository) StepUp(ctx context.Context, proof service.Proof, replacemen
 		if err != nil {
 			return err
 		}
-		result.VerifiedAt = verified
-		err = tx.QueryRow(ctx, `UPDATE auth.role_bound_sessions SET token_hash=$3,mfa_verified_at=$4,
+		result.VerifiedAt = verified.VerifiedAt
+		err = tx.QueryRow(ctx, `UPDATE auth.role_bound_sessions SET token_hash=$3,mfa_verified_at=$4,mfa_method=$5,
 			primary_method=COALESCE(primary_method,CASE WHEN password_verified_at IS NOT NULL THEN 'password' ELSE 'emailotp' END),
 			primary_verified_at=COALESCE(primary_verified_at,password_verified_at,email_reauthenticated_at)
 			WHERE user_id=$1 AND token_hash=$2 AND revoked_at IS NULL AND expires_at>clock_timestamp()
 			AND absolute_expires_at>clock_timestamp() RETURNING LEAST(expires_at,absolute_expires_at)`,
-			proof.UserID, proof.TokenHash, replacement, verified).Scan(&result.ExpiresAt)
+			proof.UserID, proof.TokenHash, replacement, verified.VerifiedAt, verified.Method).Scan(&result.ExpiresAt)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.ErrProofRequired
 		}

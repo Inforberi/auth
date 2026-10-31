@@ -15,6 +15,7 @@ type NativeFactorResult struct {
 	Proof      service.PrimaryProof
 	Target     service.NativeTarget
 	VerifiedAt time.Time
+	Method     domain.Method
 	Rejected   bool
 }
 
@@ -47,7 +48,8 @@ func CompleteNativeFactor(ctx context.Context, tx pgx.Tx, attempt service.Native
 	if err != nil {
 		return result, err
 	}
-	result.Proof, result.Target, result.VerifiedAt = proof.PrimaryProof, proof.Target, verified
+	result.Proof, result.Target, result.VerifiedAt = proof.PrimaryProof, proof.Target, verified.VerifiedAt
+	result.Method = verified.Method
 	return result, nil
 }
 

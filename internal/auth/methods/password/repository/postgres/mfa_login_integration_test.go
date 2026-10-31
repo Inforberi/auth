@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
@@ -108,9 +109,21 @@ func checkMFALogin(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 			}
 			hash := tokengenerate.New().Hash(winner.Token)
 			session, err := f.sessions.FindSession(ctx, hash)
-			if err != nil || session.PrimaryMethod != "password" || session.PrimaryVerifiedAt == nil || session.MFAVerifiedAt == nil ||
+			if err != nil || session.PrimaryMethod != "password" || session.MFAMethod != mfadomain.Method(name) || session.PrimaryVerifiedAt == nil || session.MFAVerifiedAt == nil ||
 				session.PrimaryVerifiedAt.After(*session.MFAVerifiedAt) || !session.MFAVerifiedAt.Equal(winner.MFAVerified) {
 				t.Fatal("session authentication context", err)
+			}
+			for _, method := range []string{"email", "telegram", "unknown"} {
+				_, err := db.Exec(ctx, `UPDATE auth.sessions SET mfa_method=$2 WHERE token_hash=$1`, hash, method)
+				var constraint *pgconn.PgError
+				if !errors.As(err, &constraint) || constraint.Code != "23514" {
+					t.Fatal("unsupported factor accepted by SQL", method, err)
+				}
+			}
+			_, err = db.Exec(ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL WHERE token_hash=$1`, hash)
+			var constraint *pgconn.PgError
+			if !errors.As(err, &constraint) || constraint.Code != "23514" {
+				t.Fatal("method without proof accepted by SQL", err)
 			}
 			var count, pending int
 			if err := db.QueryRow(ctx, `SELECT (SELECT count(*) FROM auth.sessions WHERE user_id=$1 AND revoked_at IS NULL),
@@ -119,7 +132,7 @@ func checkMFALogin(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 			}
 			cfg := sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour}
 			validation, err := sessionservice.New(clock.UTCClock{}, f.sessions, tokengenerate.New(), cfg).ValidateSessionWithoutRefresh(ctx, winner.Token)
-			if err != nil || validation.MFAVerifiedAt == nil || validation.PrimaryMethod != "password" {
+			if err != nil || validation.MFAVerifiedAt == nil || validation.PrimaryMethod != "password" || validation.MFAMethod != session.MFAMethod {
 				t.Fatal("context lost in validation", err)
 			}
 			newHash := tokengenerate.New().Hash("rotated-mfa-" + name)
@@ -127,7 +140,7 @@ func checkMFALogin(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 				t.Fatal(err)
 			}
 			rotated, err := f.sessions.FindSession(ctx, newHash)
-			if err != nil || rotated.MFAVerifiedAt == nil || !rotated.MFAVerifiedAt.Equal(*session.MFAVerifiedAt) {
+			if err != nil || rotated.MFAMethod != session.MFAMethod || rotated.MFAVerifiedAt == nil || !rotated.MFAVerifiedAt.Equal(*session.MFAVerifiedAt) {
 				t.Fatal("rotation lost MFA", err)
 			}
 			rotated.ExpiresAt = rotated.ExpiresAt.Add(10 * time.Minute)
@@ -135,7 +148,7 @@ func checkMFALogin(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 				t.Fatal(err)
 			}
 			refreshed, err := f.sessions.FindSession(ctx, newHash)
-			if err != nil || refreshed.MFAVerifiedAt == nil || !refreshed.MFAVerifiedAt.Equal(*session.MFAVerifiedAt) {
+			if err != nil || refreshed.MFAMethod != session.MFAMethod || refreshed.MFAVerifiedAt == nil || !refreshed.MFAVerifiedAt.Equal(*session.MFAVerifiedAt) {
 				t.Fatal("refresh renewed MFA freshness", err)
 			}
 		})

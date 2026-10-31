@@ -123,7 +123,7 @@ func TestSMTPSettingsSchema(t *testing.T) {
 	if err := svc.TestConnection(ctx, actor, 1); !errors.Is(err, settingsdomain.ErrPolicyConflict) || probeCalls != 1 {
 		t.Fatal("stale test reached network", err)
 	}
-	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL WHERE token_hash=$1`, actor.TokenHash)
+	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL,mfa_method=NULL WHERE token_hash=$1`, actor.TokenHash)
 	if _, err := svc.Read(ctx, actor); err != nil {
 		t.Fatal("read requires fresh proof", err)
 	}

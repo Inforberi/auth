@@ -96,9 +96,10 @@ func matchesAccessProof(claims authjwt.Claims, proof service.SessionProof) bool 
 		return false
 	}
 	if claims.MFATime == nil {
-		return proof.MFAVerifiedAt == nil
+		return proof.MFAVerifiedAt == nil && len(claims.Methods) == 1
 	}
-	return proof.MFAVerifiedAt != nil && *claims.MFATime == proof.MFAVerifiedAt.Unix()
+	return proof.MFAVerifiedAt != nil && proof.MFAMethod.AuthenticationMethod() != "" && *claims.MFATime == proof.MFAVerifiedAt.Unix() &&
+		len(claims.Methods) == 2 && claims.Methods[1] == proof.MFAMethod.AuthenticationMethod()
 }
 
 func introspectionFamily(ctx context.Context, tx pgx.Tx, claims authjwt.Claims) error {

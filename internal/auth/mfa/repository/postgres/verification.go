@@ -24,8 +24,9 @@ func (r *Repository) Consume(ctx context.Context, user accountdomain.UserID, exp
 		if err != nil {
 			return err
 		}
-		verified, err = consumeFactor(ctx, tx, user, check, recovery)
-		return err
+		factor, consumeErr := consumeFactor(ctx, tx, user, check, recovery)
+		verified = factor.VerifiedAt
+		return consumeErr
 	})
 	if err != nil {
 		return time.Time{}, err
@@ -34,38 +35,40 @@ func (r *Repository) Consume(ctx context.Context, user accountdomain.UserID, exp
 }
 
 // The caller locks and validates the user first; challenge completion must share this transaction.
-func consumeFactor(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, check service.Check, recovery string) (time.Time, error) {
+func consumeFactor(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, check service.Check, recovery string) (domain.Verification, error) {
 	var verified time.Time
 	var encrypted []byte
 	var lastStep int64
 	err := tx.QueryRow(ctx, `SELECT secret,last_step,clock_timestamp() FROM auth.mfa_totp WHERE user_id=$1 FOR UPDATE`, user).Scan(&encrypted, &lastStep, &verified)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return time.Time{}, domain.ErrInvalidCode
+		return domain.Verification{}, domain.ErrInvalidCode
 	}
 	if err != nil {
-		return time.Time{}, err
+		return domain.Verification{}, err
 	}
 	event := "totp_verified"
+	method := domain.TOTP
 	if recovery != "" {
 		event = "recovery_used"
+		method = domain.RecoveryCode
 		result, err := tx.Exec(ctx, `DELETE FROM auth.mfa_recovery_codes WHERE user_id=$1 AND digest=$2`, user, recovery)
 		if err != nil {
-			return time.Time{}, err
+			return domain.Verification{}, err
 		}
 		if result.RowsAffected() != 1 {
-			return time.Time{}, domain.ErrInvalidCode
+			return domain.Verification{}, domain.ErrInvalidCode
 		}
 	} else {
 		step, err := check(encrypted, lastStep, verified)
 		if err != nil {
-			return time.Time{}, err
+			return domain.Verification{}, err
 		}
 		if _, err := tx.Exec(ctx, `UPDATE auth.mfa_totp SET last_step=$2 WHERE user_id=$1`, user, step); err != nil {
-			return time.Time{}, err
+			return domain.Verification{}, err
 		}
 	}
 	if err := audit(ctx, tx, user, event); err != nil {
-		return time.Time{}, err
+		return domain.Verification{}, err
 	}
-	return verified, nil
+	return domain.Verification{Method: method, VerifiedAt: verified}, nil
 }

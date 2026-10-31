@@ -104,7 +104,7 @@ func (f nativeEmailFixture) verify(t *testing.T, ctx context.Context, result *to
 	claims, err := verifier.VerifySignature(ctx, result.Raw, time.Now())
 	methods := []string{"emailotp"}
 	if mfa {
-		methods = append(methods, "mfa")
+		methods = append(methods, "recovery")
 	}
 	if err != nil || claims.Subject != string(f.user) || !slices.Equal(claims.Methods, methods) || (claims.MFATime != nil) != mfa || claims.Scope != "orders.read" {
 		t.Fatal("incorrect email assurance or target", err)

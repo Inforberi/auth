@@ -1,5 +1,7 @@
 # Краткий отчёт по проверкам
 
+Принят [A6.3m.6a — метод MFA](../features/mfa-policy.md#метод-подтверждения--a63m6a): SQL proof различает новые TOTP/recovery, JWT/refresh сохраняют метод, introspection проверяет точное соответствие. Luna V1 task check/affected races/core schema/two-project HTTPS и V2 platform SQL race/targeted lint PASS, cleanup/manifest42 подтверждены. Legacy NULL остаётся coarse mfa; новые email/Telegram factors закрыты. Source baseline изменён, реальный DB upgrade/rolling отдельно.
+
 Сверка MP5 обновлена по принятым email HTTP/lifecycle-fault результатам без повторных прогонов. Недостающий [двухпроектный email OTP login/reauth HTTP](../planning/multi-project.md#email-otp-двух-проектов--mp5-email-otp-http) принят Luna V1: task check/actual SQL race/count1 PASS, штатный Redis/PostgreSQL cleanup и manifest8 подтверждены. Новые email/Telegram вторые факторы этим не реализованы; полный MP5 остаётся открытым.
 
 Принят [MP5-lifecycle-fault](../planning/multi-project.md#жизненный-цикл-и-восстановление-зависимостей--mp5-lifecycle-fault): public lifecycle handlers над двумя БД и recovery после SQL permission/Redis command faults. Luna V1 Go tests/оба SQL race roots и V2 targeted lint PASS, штатный cleanup/manifest11 подтверждены. Full operator router/process restart/network partition этим блоком не заявляются; полный MP5 открыт.

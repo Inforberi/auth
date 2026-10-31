@@ -43,7 +43,7 @@ func (r *Repository) CompleteNativeMFA(ctx context.Context, p service.NativeMFAP
 		return nil, err
 	}
 	params := service.NativeParams{Input: service.NativeInput{Proof: factor.Proof, Audience: factor.Target.Audience, Scope: factor.Target.Scope, UserAgent: p.UserAgent, IP: p.IP}, Policy: p.Policy, Mode: mode, LedgerVerifier: p.LedgerVerifier, RefreshVerifier: p.RefreshVerifier}
-	result, err := issueNativeSession(ctx, tx, params, &factor.VerifiedAt, sign)
+	result, err := issueNativeSession(ctx, tx, params, &factor.VerifiedAt, factor.Method, sign)
 	if err != nil {
 		return nil, err
 	}

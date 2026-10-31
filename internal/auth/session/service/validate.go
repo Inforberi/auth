@@ -6,6 +6,7 @@ import (
 	"time"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 )
 
@@ -19,6 +20,7 @@ type ValidationResult struct {
 	PrimaryMethod     string
 	PrimaryVerifiedAt *time.Time
 	MFAVerifiedAt     *time.Time
+	MFAMethod         mfadomain.Method
 }
 
 func (s *SessionService) ValidateSession(ctx context.Context, rawToken string) (*ValidationResult, error) {
@@ -75,5 +77,6 @@ func (s *SessionService) validateSession(ctx context.Context, rawToken string, r
 		PrimaryMethod:     session.PrimaryMethod,
 		PrimaryVerifiedAt: session.PrimaryVerifiedAt,
 		MFAVerifiedAt:     session.MFAVerifiedAt,
+		MFAMethod:         session.MFAMethod,
 	}, nil
 }

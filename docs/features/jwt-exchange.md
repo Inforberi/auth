@@ -44,7 +44,7 @@ Source `000001` содержит `auth.token_issuance_audit`: user/session UUID,
 
 ## Proof и отзыв
 
-Primary: password → `pwd`, emailotp → `emailotp`, внешний OIDC (включая Telegram) → `oidc`. Существующая session хранит факт MFA, но не различает TOTP/recovery-code при её создании. Поэтому exchange выдаёт честное общее `amr=mfa` с исходным `mfa_time`, а не выдумывает `otp`/`recovery`. Verifier поддерживает эти три factor labels, но один токен может содержать только один фактор. Это уточнение контракта перед публикацией J3, не изменение session schema.
+Primary: password → `pwd`, emailotp → `emailotp`, внешний OIDC (включая Telegram) → `oidc`. A6.3m.6a добавляет сохранение метода новых MFA proofs в session ledger: TOTP → `amr=otp`, recovery-code → `amr=recovery`, исходный `mfa_time` берётся из SQL. Исторический proof с `mfa_method=NULL` остаётся общим `amr=mfa`; backfill/infer по наличию TOTP запрещён. Один токен содержит только один factor label. Introspection сверяет и метод, и время с актуальной session; offline verifier сохраняет прежний TTL-контракт. Проверки A6.3m.6a приняты Luna V1/V2: task check, affected races, core SQL и platform authority/two-project HTTPS regression PASS; новые email/Telegram factors не включены.
 
 Revoke/reset/block/role mutation, завершившийся до получения соответствующего lock, не оставляет устаревший issuance snapshot. Если issuance получила locks первой, она может commit до последующего revoke; это корректный порядок, не обещание «все уже выданные JWT исчезают». Затем strict consumer обязан проверить current authority в J5. Local JWT сохраняет [согласованное окно](../adr/004-jwt-access-profiles.md#2-strict-и-local) до exp, а не немедленный отзыв.
 

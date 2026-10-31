@@ -94,7 +94,7 @@ func sessionAuthority(ctx context.Context, tx pgx.Tx, input service.ExchangeInpu
 	proof := service.SessionProof{AuthVersion: version}
 	var verified *time.Time
 	var allowed, mfaReady bool
-	err := tx.QueryRow(ctx, `SELECT LEAST(s.expires_at,s.absolute_expires_at),COALESCE(s.primary_method,''),s.primary_verified_at,s.mfa_verified_at,
+	err := tx.QueryRow(ctx, `SELECT LEAST(s.expires_at,s.absolute_expires_at),COALESCE(s.primary_method,''),s.primary_verified_at,s.mfa_verified_at,COALESCE(s.mfa_method,''),
 		NOT EXISTS(SELECT 1 FROM unnest($5::text[]) needed(key) WHERE NOT EXISTS(
 			SELECT 1 FROM auth.user_roles ur JOIN auth.role_permissions rp ON rp.role_id=ur.role_id
 			WHERE ur.user_id=s.user_id AND rp.permission_key=needed.key)),
@@ -107,7 +107,7 @@ func sessionAuthority(ctx context.Context, tx pgx.Tx, input service.ExchangeInpu
 		AND NOT EXISTS(SELECT 1 FROM auth.account_provisions p WHERE p.user_id=s.user_id AND (p.activated_at IS NULL OR p.password_change_required))
 		AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials t WHERE t.user_id=s.user_id)
 		FOR SHARE OF s`, input.Actor.UserID, input.Actor.TokenHash, input.SessionID, proof.AuthVersion, input.Scope, profile).
-		Scan(&proof.Deadline, &proof.Method, &verified, &proof.MFAVerifiedAt, &allowed, &mfaReady, &proof.Now)
+		Scan(&proof.Deadline, &proof.Method, &verified, &proof.MFAVerifiedAt, &proof.MFAMethod, &allowed, &mfaReady, &proof.Now)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return proof, sessiondomain.ErrSessionNotFound
 	}

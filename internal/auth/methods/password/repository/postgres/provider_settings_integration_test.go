@@ -167,7 +167,7 @@ func TestProviderSettingsSchema(t *testing.T) {
 	if err := db.QueryRow(ctx, `SELECT string_agg(previous_configuration::text||next_configuration::text,'') FROM auth.provider_settings_audit`).Scan(&audit); err != nil || strings.Contains(audit, rotated) {
 		t.Fatal("secret in audit", err)
 	}
-	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL WHERE token_hash=$1`, actor.TokenHash)
+	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL,mfa_method=NULL WHERE token_hash=$1`, actor.TokenHash)
 	input.ClientID = before.ClientID
 	if _, err := svc.Update(ctx, input); !errors.Is(err, accessdomain.ErrFreshAuthRequired) {
 		t.Fatal("rotation missing MFA", err)
