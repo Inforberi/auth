@@ -1,12 +1,14 @@
 # Краткий отчёт по проверкам
 
+MP5-directory-identity-http принят Luna V1/V2: actual двухпроектный users list/card и Google/Telegram link/callback/unlink с independent session/data/permission scopes. V1 Go tests и оба SQL race roots PASS, V2 targeted lint PASS, cleanup/manifest11 подтверждены; [контракт и границы](../planning/multi-project.md#пользователи-и-привязки-двух-проектов--mp5-directory-identity-http). Этот локальный management gate закрыт отдельно от принятого OIDC login scope; полная MP5 остаётся открытой.
+
 ## Актуальная сводка MP5 — 31 октября 2026
 
 Документальная сверка дополнена принятым MP5-access V4; прежние результаты сохраняют свои границы. [Основная матрица MP5 и следующий блок](../planning/multi-project.md#сверка-приёмки-mp5--31-октября-2026) определяет текущую границу покрытия.
 
 - A6.3m.5d принят: три отдельные Auth БД, scoped crypto/Redis, cross-session/JWT/refresh/MFA denial и независимость соседей при MFA policy/role/factor changes. Это component SQL scope.
 - A6.3m.5e принят Luna V2: два настоящих project HTTP profiles с reader/registry, TLS/cookies/MFA/Origin/Host/CSRF/CORS и suspension A при доступном B; task check и SQL/HTTPS race PASS. [Контракт и ограничения](../features/mfa-policy.md#два-проекта-через-https--a63m5e).
-- OIDC callback matrix с контролируемыми TLS providers принята MP5-oidc-http V4; реальный provider/browser/linking sign-off остаётся отдельно. Email component scope принят отдельно, полная email HTTP/browser matrix остаётся открытой. Project JWT/introspection tests с другим manifest на той же БД также не заменяют два настоящих token profiles.
+- OIDC callback matrix с контролируемыми TLS providers принята MP5-oidc-http V4; local linking принят отдельно, реальный provider/browser sign-off остаётся открытым. Email component scope принят отдельно, полная email HTTP/browser matrix остаётся открытой. Project JWT/introspection tests с другим manifest на той же БД также не заменяют два настоящих token profiles.
 - Двухпроектные roles/settings/administrative guards и target-bound platform role bridge приняты в `TestTwoProjectAccessIsolationSQL`: Luna V4 PASS (targeted lint/race, cleanup, manifest13); V1 task check и прежний HTTPS root PASS; [сценарии и достаточные проверки](../planning/multi-project.md#двухпроектные-роли-и-настройки--mp5-access). Затем оставшиеся lifecycle/email, JWT/native HTTP и OIDC cases. Общий operator management из одной разрешённой сессии сохраняется.
 - Реальный браузер/внешний ingress/providers/SMTP/fleet/load/GC и UI не объявляются принятыми. Backend управляемых email templates и email/Telegram second factors остаются плановыми задачами.
 - MP5-sessions-email принят Luna V1/V2: task check, Email root race, targeted lint и SessionLifecycle root race PASS; cleanup/manifest14 подтверждены. Покрыты HTTP sessions/account lifecycle и component verify/reset/invite/temporary/change/report/recovery, payload isolation и SMTP retry; [контракт и границы](../planning/multi-project.md#сессии-и-почта-двух-проектов--mp5-sessions-email). SQL proof fixture и намеренный SMTP отказ не подтверждают login, browser или успешную внешнюю доставку.
