@@ -297,6 +297,18 @@ Linking/unlinking pending-flow matrix принята отдельно MP5-direct
 
 Для Identity root нужны прежние aliases/loopback443/fixture CA в собственном контейнере, отдельный процесс до system root cache. Directory root не требует OIDC aliases, но также получает свой disposable setup. Реальные provider/browser/external ingress, полная email HTTP matrix и public project lifecycle/fault/fleet остаются gates MP5; UI не начинается.
 
+### Почтовые HTTP-сценарии двух проектов — MP5-email-http
+
+31 октября принят `TestTwoProjectEmailHTTPIsolationSQL` на существующей fixture двух физических проектных БД, настоящем HTTPS dispatcher и общем Redis с project scopes. Luna V2 task check PASS; V4 targeted pinned lint и actual SQL root race/count1 PASS, штатный cleanup оставил Redis15 пустым, PostgreSQL resources clean, manifest12 подтверждён. Main сверил все12 файлов/base HEAD с V4 перед итоговым обновлением Markdown; Go не менялся. Fixture FAIL/исправления сохранены в history. Production, shared helpers, schema, ENV и зависимости не менялись.
+
+- Verification/reset: собственные resend/confirm/forgot/reset, чужие живые токены, replay, Origin, GET без потребления; подтверждение не создаёт вход, reset отзывает прежние сессии только своего проекта.
+- Provisioning: приглашение и временный пароль через HTTP владельца, чужая cookie/Origin, одинаковые email/idempotency keys при независимых UUID, replay без повторной выдачи временного секрета. Activation и temporary setup не создают session; чужой пароль/setup token не принимается. Reissue API отдельно этим root не проверяется.
+- Email change: request/confirm/report/recover, повторные и чужие токены, отзыв сессий только своего проекта, восстановление прежнего адреса и смена пароля без автоматического входа.
+- Email binding: HTTP approval владельца и подтверждение восьмизначным кодом из действующей session адресата; отсутствие cookie, чужой проект, другой пользователь и отсутствие approval отклоняются. Другая действующая session того же адресата допустима; approval привязан к session администратора. OIDC identity/session адресата — явная SQL-предпосылка fixture, не повторная проверка provider login.
+- Readiness обеспечивает настоящий delivery worker. Локальные SMTP probes намеренно не предлагают STARTTLS: проверяется безопасный отказ, а не успешная внешняя доставка. HTTP закрывается до worker/probes, затем удаляются собственные binding/outbox/audit/user данные и точные Redis keys; стенд изолирован.
+
+Достаточные проверки: formatter подготовленных файлов, Luna `task check` и новый actual SQL root с `-race -count=1` на own PG18.6/Redis8.2/TLS/SCRAM. Старые принятые roots без изменения helpers не повторять. Следом public project lifecycle/fault; browser/внешний SMTP/provider/fleet и полный MP5 открыты. UI требует отдельного согласования.
+
 ## MP6. Обновления, перенос и эксплуатация
 
 - [ ] Определить catalog audit retention и срок хранения operation receipts/окно идемпотентности. До решения `platform.project_events` не очищать и не применять к нему Auth audit retention180d; удаление receipt без согласованного horizon не должно разрешать повтор уже завершённого действия.
