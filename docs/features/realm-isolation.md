@@ -1,6 +1,6 @@
 # Изоляция Redis и шифрования — MP2.3-realm-scope
 
-18 октября 2026. Реализован внутренний scope-контракт перед подключением операторского Auth. **Второй realm и новые HTTP endpoints не опубликованы.** Текущий runtime использует явный legacy scope; рабочие данные/ENV/ключи не мигрировались. [План](../planning/multi-project.md), [ADR005](../adr/005-independent-projects.md).
+Исходный подэтап 18 октября 2026 выделил внутренний scope-контракт перед подключением операторского Auth. На том этапе второй realm и новые HTTP endpoints ещё не публиковались, runtime использовал явный legacy scope; рабочие данные/ENV/ключи не мигрировались. Более поздняя component-приёмка описана в конце документа; статус полной multi-project приёмки — в плане. [План](../planning/multi-project.md), [ADR005](../adr/005-independent-projects.md).
 
 ## Идентификатор области
 
@@ -47,3 +47,7 @@ Namespace **не заменяет независимые deployment keys**, issu
 - Cleanup удаляет только заранее зарегистрированные fixture keys, без SCAN/FLUSHDB/FLUSHALL. DB15 вернулась к0, DB0 count0 остался0. Scratch binary/пустой каталог удалены, остановленный до проверки Redis возвращён в stopped. PostgreSQL/API/прочие контейнеры не запускались.
 
 NOT RUN: два полноценных Auth runtime/HTTPS/cookies/ingress/SQL/grants, independent key provisioning/rotation/recovery/cutover, Redis Cluster/fleet/outage/load/GC/capacity. Scoped codecs/adapters не закрывают эти gates и не разрешают публикацию management bridge.
+
+## Приёмка трёх Auth БД — A6.3m.5d
+
+Подготовлен [component-level SQL/crypto/Redis сценарий](mfa-policy.md#межпроектная-изоляция--a63m5d) для двух project БД и отдельной platform Auth БД. Luna V1/V2/V3 PASS: fullGo/JWT SQL regression, isolation SQL race, pinned lint0. Он проверяет независимость stored MFA policy/roles/factors/sessions/refresh/audit, scoped ciphertext/HMAC и Redis budgets, cross-realm proof denial. Полный `ProjectProfile`/HTTP ingress/provisioner acceptance этим не закрывается; исходный NOT RUN для полной сквозной приёмки не заменять component PASS.

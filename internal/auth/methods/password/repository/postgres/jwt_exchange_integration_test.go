@@ -47,6 +47,11 @@ func (b tokenBudget) AllowNative(ctx context.Context, user accountdomain.UserID,
 
 func jwtSigningFixture(t *testing.T) (*signing.Signer, *authjwt.PublicKeys) {
 	t.Helper()
+	return jwtSigningIssuerFixture(t, "https://auth.example")
+}
+
+func jwtSigningIssuerFixture(t *testing.T, issuer string) (*signing.Signer, *authjwt.PublicKeys) {
+	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +68,7 @@ func jwtSigningFixture(t *testing.T) (*signing.Signer, *authjwt.PublicKeys) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	signer, err := signing.New("https://auth.example", "test", pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}), keys)
+	signer, err := signing.New(issuer, "test", pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}), keys)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -2,18 +2,20 @@
 
 Обновлено 31 октября 2026. [Карта](index.md) · [план](../planning/implementation.md#настраиваемая-обязательность-mfa--a63m--a7). Git/staging проверять по факту.
 
-## Завершённый блок — A6.3m.5c native/JWT MFA matrix
+## Завершённый блок — A6.3m.5d component realm isolation
 
-Добавлены и проверены TestMFAPolicyNativeSchema (password/email OTP × realm/role, optional credentials, required enrollment без credentials, реальные TOTP enrollment/recovery completion, JWT claims/refresh/introspection и отсутствие revival) и TestMFAPolicyJWTConsumersSchema (primary-only/personal MFA × realm/role, browser exchange/online introspection, старые sessions после tighten/relax, новый login и offline TTL). [Контракт](../features/mfa-policy.md#native-и-jwt--a63m5c).
+TestMFAProjectIsolationSQL проверяет две реальные project Auth БД + platform Auth БД с отдельными SQL credentials, одинаковыми user UUID/email/root key, scoped crypto и независимыми JWT keys/issuers при одном kid. Cross-realm session/exchange/JWT/introspection/refresh/MFA challenge и чужой SQL login отвергаются. Policy/role/enrollment/recovery/Disable в A не меняют полный state digest B/platform; их sessions/JWT/refresh сохраняются. Реальный общий Redis проверяет независимые scoped project/user MFA budgets. [Границы](../features/mfa-policy.md#межпроектная-изоляция--a63m5d).
 
-Production/API/schema/ENV/dependencies без изменений. Formatter выполнен. Снимок `/private/tmp/auth-mfa-native-jwt-v1.kbrq7ko3` (base `5f9ac6c0a0a37bb8a3a96ece4948ceb8728cb54e`, manifest6/metadata рядом) передан Luna на task check/fullGo/pinned lint и два новых SQL tests с race/count1 без SKIP. Luna V1 PASS: task check и оба SQL tests с race на LinuxARM64/TLS/SCRAM без SKIP. Manifest6 совпал до/после, оба Go-файла совпали с main, own fixture удалён. Логи/exit-коды `/private/tmp/auth-mfa-native-jwt-v1-*`. Пользователь разрешил коммит после PASS; факт смотреть Git. Предыдущий блок A6.3m.5b принят Luna V1/V2 и закоммичен в 5f9ac6c; повторять его проверки без причины не нужно.
+Luna V1/V2/V3 PASS: fullGo и JWT SQL regression, exact isolation SQL race/count1, финальный pinned lint0. Исправлены только fixtures: ctx через helpers и отдельная ConfirmPassword/cookie rotation после MFA completion перед Disable. Production/API/schema/ENV продукта/dependencies прежние. Formatter выполнен; все3 Go-файла совпали с V3 перед коммитом. Own3DB/roles удалены, RedisDB15 пуст. Подробные первые FAIL/evidence в history.
+
+V3 `/private/tmp/auth-mfa-realm-isolation-v3.jou1lmaw`, parentV2 `/private/tmp/auth-mfa-realm-isolation-v2.fcjo_b8t`, base `c54b2f36542e2e5daac89551c0b6dc7b3a565c7e`, manifest9/metadata рядом. Логи/exit-коды `/private/tmp/auth-mfa-realm-isolation-v{1,2,3}-*`. Пользователь разрешил коммит после PASS; факт смотреть Git.
 
 ## Следующий шаг
 
-Полная двухпроектная приёмка остаётся открытой. A6.3m.6 email/Telegram **second factors** ещё не реализованы. MP6R security/refactor, MP7/MP8 ресурсы/maxRPS и внешние OAuth/SMTP не закрыты. UI только после предупреждения и отдельного согласования.
+Полная MP5 остаётся открытой: actual ProjectProfile/registry/provisioner и HTTPS cookies/ingress/CSRF/Origin, operator bridge, providers/SMTP и прочие flows — отдельные gates; component PASS их не заменяет. A6.3m.6 email/Telegram second factors ещё не реализованы. MP6R security/refactor, MP7/MP8 ресурсы/maxRPS не закрыты. UI только после предупреждения и отдельного согласования.
 
-## Исполнители
+## Исполнители и стенд
 
-Все исполняемые проверки — только чат «Проверки Auth — Luna» `01a16eab-c777-78a0-a815-47b45ff0860d`, host local; main не повторяет их и не ждёт полный прогон. Последний cursor `944a6e9d-49fe-49f7-8ff5-48acb6c615a1:16`. Локальный исследователь завершил bounded review и закрыт; старых агентов не восстанавливать.
+Все исполняемые проверки — только чат «Проверки Auth — Luna» `01a16eab-c777-78a0-a815-47b45ff0860d`, host local; main не повторяет их и не ждёт полный прогон. Последний cursor `944a6e9d-49fe-49f7-8ff5-48acb6c615a1:20`. Локальный read-only researcher завершил review и закрыт; старых агентов не восстанавливать.
 
-Pinned lint: Go1.27.3 из cached toolchain + `go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0`; GOPROXY=file:///Users/inforberi/go/pkg/mod/cache/download, при cached metadata GOSUMDB=off без изменения deps. Installed старый lint не подходит. SQL: только own LinuxARM64 PG18.6/Redis8.2/readonly snapshot, TLS SAN127/SCRAM, role/DB auth_schema_test, AUTH_SCHEMA_TEST_DATABASE_URL/cwd password repo; cleanup только own fixtures. Реальные ENV/DB/staging не трогать.
+Pinned lint: cached Go1.27.3 + `go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0`, GOPROXY=file:///Users/inforberi/go/pkg/mod/cache/download, при cached metadata GOSUMDB=off. Installed старый lint не подходит. Test ENV AUTH_MFA_ISOLATION_TEST_DATABASE_URL: own LinuxARM64 PG18.6/TLS/SCRAM, loopback127/databaseauth_storage_test/userauth, CREATE ROLE/DATABASE для fixed disposable ресурсов auth_mfa_isolation_{a,b,platform}_test. Fixture требует отсутствия, создаёт отдельных owners, cleanup только own databases/roles. Own Redis8.2 DB15 пуст; AUTH_PROJECT_PASSWORD_TEST_REDIS_ADDR, точный cleanup без scan/FLUSHDB. Реальные ENV/DB/staging не трогать.
