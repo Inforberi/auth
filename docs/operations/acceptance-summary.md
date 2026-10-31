@@ -1,5 +1,7 @@
 # Краткий отчёт по проверкам
 
+Принят [MP5-lifecycle-fault](../planning/multi-project.md#жизненный-цикл-и-восстановление-зависимостей--mp5-lifecycle-fault): public lifecycle handlers над двумя БД и recovery после SQL permission/Redis command faults. Luna V1 Go tests/оба SQL race roots и V2 targeted lint PASS, штатный cleanup/manifest11 подтверждены. Full operator router/process restart/network partition этим блоком не заявляются; полный MP5 открыт.
+
 Принят [MP5-email-http](../planning/multi-project.md#почтовые-http-сценарии-двух-проектов--mp5-email-http): actual A/B HTTPS verification/reset/invite/temporary/change/report/recover/binding. Luna V2 task check и V4 targeted lint/actual SQL race PASS, штатный Redis/PostgreSQL cleanup и manifest12 подтверждены. SMTP probes подтверждают только безопасный отказ; внешний SMTP/browser/reissue API и полный MP5 открыты.
 
 MP5-directory-identity-http принят Luna V1/V2: actual двухпроектный users list/card и Google/Telegram link/callback/unlink с independent session/data/permission scopes. V1 Go tests и оба SQL race roots PASS, V2 targeted lint PASS, cleanup/manifest11 подтверждены; [контракт и границы](../planning/multi-project.md#пользователи-и-привязки-двух-проектов--mp5-directory-identity-http). Этот локальный management gate закрыт отдельно от принятого OIDC login scope; полная MP5 остаётся открытой.

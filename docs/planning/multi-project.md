@@ -309,6 +309,18 @@ Linking/unlinking pending-flow matrix принята отдельно MP5-direct
 
 Достаточные проверки: formatter подготовленных файлов, Luna `task check` и новый actual SQL root с `-race -count=1` на own PG18.6/Redis8.2/TLS/SCRAM. Старые принятые roots без изменения helpers не повторять. Следом public project lifecycle/fault; browser/внешний SMTP/provider/fleet и полный MP5 открыты. UI требует отдельного согласования.
 
+### Жизненный цикл и восстановление зависимостей — MP5-lifecycle-fault
+
+31 октября приняты `TestTwoProjectPlatformLifecycleSQL` и `TestTwoProjectDependencyRecoverySQL`: Luna V1 ordinary Go tests и оба actual SQL race/count1 roots PASS; V2 targeted pinned lint PASS после reference-aware rename тестовой ошибки в errIsolationRedisUnavailable. Штатный fixture cleanup и manifest11 подтверждены. Main сверил все11 файлов/base HEAD со снимком перед итоговым обновлением Markdown; Go не менялся. Production/shared helpers/schema/ENV/deps прежние. Полный MP5 остаётся открытым.
+
+- Lifecycle: настоящие HTTP handlers suspend/resume/retry, production BrowserProtection/NoRefreshAuth/Capacity и SQL managed authority с observer реестра. Platform operator session — явная SQL-предпосылка прежней fixture; полный operator router/login принят отдельно и здесь не собирается заново. Проверяются чужая project cookie/Origin, suspend A при работающем B, resume с сохранением SQL sessions, replay исходного receipt после resume без нового suspension, stale revision/ready retry conflict, текущий отзыв projects.manage перед replay, ровно два события и неизменные revisions B.
+- Пересборка: HTTP dispatcher/resident profiles закрываются и создаются заново над тем же registry/SQL; обе session cookies остаются действующими. Это не полный process/fleet restart и не воспроизведение сбоя provisioner; прежние preparation fault/replay tests сохраняют свой scope.
+- Project SQL fault: временный отзыв существующего SELECT на auth.sessions только у runtime роли A даёт503 без SQL error text/cookie и без fallback к B. После точного восстановления grant A снова доступен, B работает во время отказа.
+- Общий catalog fault: временный отзыв SELECT platform.projects у runtime reader закрывает оба warm проекта до восстановления SQL authority. Redis fault: управляемый test Hook существующего go-redis9.19.0 client возвращает command error, оба password login fail-closed503 без credentials, после снятия ошибки login и cross-cookie guards снова работают. Это не сетевой обрыв/падение Redis server; обычное чтение SQL session без Redis не запрещается искусственно.
+- Все faults только на своём одноразовом стенде, с bounded restore даже при падении теста. Точные platform admission keys добавлены к существующему Redis cleanup; никаких новых production механизмов, dependency/ENV/host changes.
+
+Достаточно formatter, Luna task check и оба actual SQL roots race/count1 отдельными процессами на own PG18.6/Redis8.2/TLS/SCRAM. Прежние принятые roots не повторять при прежних helpers. Локальный gate принят с manifest/штатным cleanup; Real network partitions/full restart, multi-instance/fleet/browser/внешний SMTP/provider и весь MP5 отдельно; UI не начинать.
+
 ## MP6. Обновления, перенос и эксплуатация
 
 - [ ] Определить catalog audit retention и срок хранения operation receipts/окно идемпотентности. До решения `platform.project_events` не очищать и не применять к нему Auth audit retention180d; удаление receipt без согласованного horizon не должно разрешать повтор уже завершённого действия.

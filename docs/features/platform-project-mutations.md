@@ -62,3 +62,7 @@ Unit/HTTP/router/Swagger: actor/action/DTO mapping, JSON/query bounds, Origin/Ho
 В конкурентном fixture обнаружено изменение общего pgx Config после открытия административного пула; runtime теперь получает отдельный `Config.Copy()`. Ошибка исправлена в тестовой инфраструктуре, production grants ради теста не расширялись.
 
 Команды/результаты/cleanup/NOT RUN — [history](../planning/history.md#результат-mp25-write-lifecycle--19-октября-2026). Общий race-прогон без opt-in ENV не является SQL-race acceptance. External browser/ingress/SMTP, two-realm/fleet, bridge/provisioning/load/GC/capacity этим блоком не проверены. UI не начинался.
+
+## Связь с двумя runtime — MP5-lifecycle-fault
+
+Принят отдельный [двухпроектный сценарий](../planning/multi-project.md#жизненный-цикл-и-восстановление-зависимостей--mp5-lifecycle-fault): Luna V1 Go tests/оба actual SQL race roots и V2 targeted lint PASS, штатный cleanup/manifest11 подтверждены. Реальные HTTP handlers/production middleware/SQL managed authority связывают suspend/resume/replay с runtime registry observer и доступом к двум физическим БД. Operator proof задаётся SQL fixture, full router/setup/login остаются отдельной принятой приёмкой. Старые исторические ограничения «runtime отсутствует» выше относятся к MP2.5, не к текущей реализации.
