@@ -70,6 +70,28 @@ Configured binding учитывается для assisted recovery даже пр
 
 Подготовлены `TestEmailFactorLoginSchema` (browser/native one-winner, profile/purpose/factor immutability, JWT/introspection/refresh, fail-closed guards, attempts, audit rollback, last-factor и TOTP transitions) и `TestEmailFactorRecoverySchema` (suspended email-only, operator separation/approval, rollback, замена на TOTP и повторный вход). Unit admission и JWT tests проверяют dependent primaries и отсутствие strong elevation. Luna V3: task check и четыре SQL roots с race PASS; V2 token service race и пять успешных SQL roots V1 сохранены без повторения. Manifest 48/48 и cleanup подтверждены. Публичных маршрутов, нового worker/dependency/ENV и реальных DB изменений нет.
 
+## HTTP-адаптеры — A6.3m.6c.4a (Luna PASS)
+
+Следующие контракты подготовлены в transport/http и пока **не зарегистрированы** в router/startup/project profiles и generated Swagger. Наличие обработчика не делает endpoint доступным. Подключение выполняется единым профилем .6c.4b после readiness и межпроектной приёмки.
+
+| Планируемая ручка | JSON / контекст | Результат |
+| --- | --- | --- |
+| POST /api/v1/auth/mfa/email/login | email, password; trusted adapter проверяет пароль | 202 challenge/expiresAt, статус email_mfa_required, отдельная HttpOnly binding cookie; полноценная session не создаётся |
+| POST /api/v1/auth/mfa/email/login/complete | challenge, code; binding только из одной __Host-mfa-email cookie | 200 ok и session cookie; binding cookie очищена, raw session token не возвращается в JSON |
+| POST /api/v1/auth/mfa/email/preparation | email; текущая session proof | 202 binding/expiresAt; кода в JSON нет |
+| POST /api/v1/auth/mfa/email/preparation/confirm | binding, code; текущая session proof | 200 ok, ротация cookie текущей session; не включение MFA |
+| GET /api/v1/auth/mfa/email | текущая session proof | allowed/configured/usable/emailId/enabledAt/suspendedAt, без token/verifier |
+| POST /api/v1/auth/mfa/email | текущая session proof, JSON-параметров authority нет | 200 ok, текущая cookie очищена после успешного revoke |
+| DELETE /api/v1/auth/mfa/email | текущая session proof | 200 ok, cookie очищена; policy/last-factor отказ сохраняет cookie |
+| GET /api/v1/admin/auth/settings/mfa/email | principal из текущей session, SQL permissions | version/allowed |
+| POST /api/v1/admin/auth/settings/mfa/email | expectedVersion, обязательный allowed (false допустим); principal из context | version/allowed либо version/readiness/in-use conflict |
+
+Browser-привязка Secure/HttpOnly/SameSite=Lax/Path=/, без Domain; дубли cookie отклоняются до completion service. JSON binding для browser login, UUID/actor/version/capability вне описанных DTO отклоняются декодером. Owner actions используют только request context, не параметры target user. Все ответы, в том числе ошибки, no-store; ошибки политики/лимитов/фактора переводятся существующим httpx mapper с локальными правилами. Domain-проверки email/password/code остаются в service/domain. Origin/CSRF и NoRefreshAuth принадлежат route middleware: unit контракт использует existing RequireOrigin, реальный защищённый router проверяется в .6c.4b.
+
+NewEmail требует сразу password/login/preparation/factor services; сборка частичного handler не допускается. Это ещё не SMTP/profile readiness: приложение пока этот constructor не вызывает. Новых runtime flags, маршрутов, schema, зависимостей и worker в .6c.4a нет. Native method selection должен создавать именно bound MFA challenge: выбранный email-вариант не должен незаметно выдать plain credentials через обычный NativeLogin.Begin. Его сборка, recovery next-step response и project cookie rewriting — .6c.4b.
+
+Luna: task check и race для MFA/settings HTTP — PASS, manifest 19/19, временные проверочные caches очищены. SQL/Docker для transport-only изменения не запускались.
+
 ## Что остаётся до публикации email MFA
 
 1. Внутренний .6c.3 принят после Luna; публичная приёмка остаётся .6c.4.

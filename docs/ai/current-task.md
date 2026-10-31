@@ -2,18 +2,18 @@
 
 Обновлено 1 ноября 2026. [Карта](index.md) · [Email MFA](../features/email-mfa.md).
 
-## Завершён A6.3m.6c.3 — внутренний email-factor login/recovery
+## Завершён A6.3m.6c.4a — HTTP-адаптеры
 
-Password→email code использует bound MFA parent/OTP outbox и атомарную выдачу browser/native credentials с sign/audit/deadline. Session email → JWT pwd+email_otp; refresh/introspection сохраняют точный proof, strict SQL/SDK остаются TOTP/recovery. Last required factor защищён; email-only личный lifecycle требует fresh password/current factor. Первый TOTP enrollment не обходит email proof.
+EmailHandler: password→email challenge/complete, preparation/confirm, status/enable/disable. Отдельные файлы операций; proof только из context, отдельная Secure HttpOnly binding cookie, duplicate-cookie/unknown JSON rejection, cookie rotation/clear после успешной операции, no-store и существующий mapper. EmailMFAHandler policy Read/Update сохраняет expectedVersion/allowed; readiness и actor не берутся из JSON. Domain rules остаются в service/SQL.
 
-Потерянный/suspended email-only заменяется новым TOTP через existing password+operator-approved recovery, с отзывом credentials и без автоматической session. Optional режим без личного фактора сохранён. Административный email-only management пока закрыт: существующий TOTP сохраняется до compatibility matrix.
+Router/startup/profile/generated Swagger ещё не подключены, app эти constructors не вызывает; CheckCapability остаётся закрытым. SQL/services/runtime/ENV/dependencies/worker не менялись. Новых публичных ручек нет.
 
 ## Следующий шаг
 
-A6.3m.6c.4 — profiles/readiness, выбор метода, бюджеты из конфигурации, защищённый HTTP/Swagger и реальные two-project/strong/recovery gates; отдельно platform/admin/role-transition/last-admin compatibility. CheckCapability пока закрывает email-enabled runtime; новых HTTP/ENV/startup публикаций нет. Source up/down baseline изменён, реальные DB/ENV не трогались, upgrade MP6 отдельно. UI только после предупреждения и согласования.
+A6.3m.6c.4b — scoped factories/readiness/SMTP/Redis/config budgets, явный выбор метода, forced native MFA без plain fallback, project/realm rewriting новой cookie, routes/Swagger и actual two-project/strong/role-transition/last-admin/recovery acceptance до публикации. Admin/platform matrix отдельно; UI только после предупреждения и согласования.
 
 ## Проверки
 
-Luna V3: task check и actual TestEmailFactorLoginSchema/TestPostgresSchema/TestMFAPolicyNativeSchema/TestMFAPolicyJWTConsumersSchema с -race -count=1 PASS. V2 token service race и пять успешных SQL roots V1 сохранены без повторения. Manifest48/48 и cleanup подтверждены, main сверил рабочие файлы до обновления Markdown; Go/SQL не менялись.
+Luna: task check и targeted race обоих HTTP packages PASS; manifest19/19, temporary caches cleanup подтверждены. SQL/Docker не запускались для transport-only изменения. Main сверил рабочие файлы со снимком до обновления Markdown; Go не менялся.
 
-Снимок `/private/tmp/auth-email-factor-login-v3.ydb9tm2o`, manifest/metadata рядом, base 0c970d7b1f4993740c2f2ba1c90df8a3bb704a78. Luna thread 01a16eab-c777-78a0-a815-47b45ff0860d, host local, cursor 944a6e9d-49fe-49f7-8ff5-48acb6c615a1:52. Все исполняемые проверки выполняет Luna. V1/V2 blockers и полные evidence — в [history](../planning/history.md).
+Снимок `/private/tmp/auth-email-mfa-http-v1.w6nln1wl`, manifest/metadata рядом, base 7777c07d2021c2736456afdcb66eba6b02ad44fe. Luna thread 01a16eab-c777-78a0-a815-47b45ff0860d, host local, cursor 944a6e9d-49fe-49f7-8ff5-48acb6c615a1:53. Все executable checks выполняет Luna; evidence — в [history](../planning/history.md).
