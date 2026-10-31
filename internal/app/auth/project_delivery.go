@@ -117,7 +117,11 @@ func (d *ProjectDelivery) deliverProject(ctx context.Context, key projectruntime
 		return ctx.Err()
 	}
 	otpErr := runtime.deliverEmailOTP(ctx)
-	return errors.Join(verificationErr, resetErr, otpErr)
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	mfaErr := runtime.deliverMFARecovery(ctx)
+	return errors.Join(verificationErr, resetErr, otpErr, mfaErr)
 }
 
 func assembleProjectDelivery(cfg config.PlatformConfig, runtime *projectRuntime, rdb *redis.Client) (*ProjectDelivery, error) {

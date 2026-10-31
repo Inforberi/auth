@@ -2485,3 +2485,27 @@ Enable/Disable допускают пустое тело или JSON без по�
 ### A6.3m.6c.4a принят после Luna
 
 Снимок `/private/tmp/auth-email-mfa-http-v1.w6nln1wl`, base 7777c07d2021c2736456afdcb66eba6b02ad44fe: task check и обе requested HTTP race suites (`internal/auth/mfa/transport/http`, `internal/auth/settings/transport/http`) — PASS. Manifest 19/19, temporary verification caches cleanup подтверждены; SQL/Docker stand не использовался. Evidence: Luna thread 01a16eab-c777-78a0-a815-47b45ff0860d, turn 01a19427-1261-7910-a6d5-983e38cae2e9, cursor 944a6e9d-49fe-49f7-8ff5-48acb6c615a1:53. Логи task check/HTTP race и matching .exit сохранены Луной. Main сверил все19 файлов с manifest перед обновлением Markdown; Go не менялся. Пользователь разрешил коммит после PASS. .6c.4b assembly/readiness/routes/Swagger/two-project/admin acceptance остаётся открытым, публичных endpoint не появилось.
+
+### A6.3m.6c.4b.1 — project MFA recovery prerequisite, 1 ноября 2026
+
+Обнаружено: validateProjectMFA отклонял RecoveryEnabled, profile/ProjectDelivery не собирали loss-all-factors service/notice. Подключены existing recovery service в одном guarded lease, runtime/operator SQL capability check, SMTP configuration/Redis/delivery readiness, existing recovery routes/Origin/binding и bounded notice drain. Runtime approval не добавлен. Deployment opt-in остаётся выключенным, email capability не открыт. Schema/ENV/dependencies/новых scheduler нет.
+
+Добавлены prerequisite/unit и actual two-project HTTPS/SQL/Redis tests: prerequisites hide routes, CSRF/cross-project denial, pending approval denial, exact decision/completion/replay и scoped notice encryption. Formatter выполнен, task check/race/SQL — PENDING Luna. Успешная SMTP-доставка не заявляется.
+
+Снимок `/private/tmp/auth-project-mfa-recovery-v1.k7LpDX5J`, base bb3700d; manifest/metadata рядом. Main не запускал executable checks. Полная .4b и UI gates остаются открыты.
+
+### A6.3m.6c.4b.1 — результат Luna V1 и исправление fixture
+
+V1 manifest19 совпал; task check с DB env unset, app/MFA HTTP race и RecoveryDelivery race PASS. Actual TestTwoProjectMFARecoverySQL выполнен, FAIL на строке40: cannot insert multiple commands into a prepared statement (42601). Stand project DB/roles/schemas отсутствуют, disposable PostgreSQL/Redis и caches очищены. Evidence Luna turn 01a19436-1c60-7d63-9ae5-a8ea1d084bf6, cursor 944a6e9d-49fe-49f7-8ff5-48acb6c615a1:54. Main разделил только fixture INSERT/UPDATE на отдельные Exec; runtime не менялся. Formatter выполнен. V2 `/private/tmp/auth-project-mfa-recovery-v2.DC3gV67b`: повтор actual SQL и targeted lint теста PENDING; V1 несвязанные PASS сохраняются при совпадении исходников. Коммит до SQL PASS запрещён условием пользователя.
+
+### A6.3m.6c.4b.1 — результат Luna V2 и исправление времени fixture
+
+V2 manifest19/19 и targeted lint PASS0. Actual SQL выполнен, FAIL в fixture user_emails_check1: verified_at=clock_timestamp()-1minute оказался раньше created_at. Main изменил только timestamp на текущее SQL-время, ограничение БД сохранено. Formatter выполнен. Cleanup DB/roles/schemas/Redis15/certificates/containers подтверждён. Evidence Luna turn 01a1943c-6121-7b63-a2c3-c90e0630a4db, cursor 944a6e9d-49fe-49f7-8ff5-48acb6c615a1:55. V3 `/private/tmp/auth-project-mfa-recovery-v3.sVMmtRA5`: actual SQL/targeted lint PENDING; прежние неизменённые runtime check/race PASS сохраняются. Коммит до SQL PASS не выполнен.
+
+### A6.3m.6c.4b.1 — Luna V3 и cleanup fixture
+
+V3 manifest19/19 и targeted lint PASS0. Функциональные two-project SQL/HTTP assertions завершились, но go test FAIL при cleanup project_http_isolation_fixture_test.go:109: outbox FK блокировал удаление fixture user (23503). Внешняя очистка DB/roles/schemas/Redis15/containers/certificates подтверждена. Evidence Luna turn 01a19442-01bc-7063-b49a-9654fca19a42, cursor 944a6e9d-49fe-49f7-8ff5-48acb6c615a1:56. Main добавил DELETE только auth.mfa_recovery_outbox WHERE user_id=fixture перед parent cleanup; runtime/constraints не менялись, formatter выполнен. V4 `/private/tmp/auth-project-mfa-recovery-v4.yWwkfsqD`: повтор actual SQL/targeted lint PENDING; ранее неизменённые runtime check/race PASS сохраняются. Коммита пока нет.
+
+### A6.3m.6c.4b.1 — принят после Luna V4
+
+Снимок `/private/tmp/auth-project-mfa-recovery-v4.yWwkfsqD`, base bb3700d134ae8fbf5522e47b0b2fcfd55e4946ab: manifest19/19, targeted lint0, actual `go test -race -count=1 ./cmd/project-prepare -run '^TestTwoProjectMFARecoverySQL$'` PASS/exit0, включая cleanup. V1 task check/app+MFA HTTP/RecoveryDelivery race PASS сохранены по неизменённому runtime; после V1 изменялся только fixture тест. V1–V3 fixture failures исправлены, constraints/production guarantees не ослаблены. Cleanup DB/roles/schemas/Redis15/disposable containers/certificates подтверждён. Evidence Luna turn 01a19447-d057-7ac3-8e22-728f724cd9f9, cursor 944a6e9d-49fe-49f7-8ff5-48acb6c615a1:57; логи lint/SQL и exit у Луны. Main сверил все19 файлов с manifest, пустой staging и исходный HEAD, затем обновил только Markdown статусы. Пользователь разрешил коммит после PASS. Полная .4b/email capability/deployment opt-in/UI остаются закрытыми; успешная внешняя SMTP-доставка не заявляется.

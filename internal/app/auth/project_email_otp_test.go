@@ -58,5 +58,5 @@ func TestProjectMFAPrimaryBinding(t *testing.T) {
 		require.False(t, factory.config.AllowPrimary(method, "https://foreign.example.test"))
 	}
 	cfg.RecoveryEnabled = true
-	require.Error(t, validateProjectMFA(cfg), "loss-all-factors prerequisites are not assembled")
+	require.NoError(t, validateProjectMFA(cfg), "recovery routes separately require project SMTP and operator readiness")
 }

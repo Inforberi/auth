@@ -31,7 +31,7 @@ Pending enrollment привязан к user/session/auth_version/purpose; про
 
 MFA configuration/session policy всех сконфигурированных browser methods должны совпадать. При disabled browser/MFA routes отсутствуют; неготовый Redis/невалидный config/inconsistent policy закрывает management. `MFA.Enabled` означает наличие поддерживаемой реализации, а не автоматическое требование второго фактора каждому пользователю. Регистрация фактора не разрешается при несогласованной конфигурации разных browser methods.
 
-Management собирается независимо от SQL включённости primary methods: уже аутентифицированный пользователь может читать/менять фактор по действующим proofs и после временного отключения всех способов входа. Это не выдаёт новый login/session и не обходит suspend, auth_version, роль или сроки. Email proof не превращается в доступный метод при неготовой reauthentication capability. SMTP не нужен для password/TOTP management; неподготовленный loss-all-factors recovery остаётся закрытым.
+Management собирается независимо от SQL включённости primary methods: уже аутентифицированный пользователь может читать/менять фактор по действующим proofs и после временного отключения всех способов входа. Это не выдаёт новый login/session и не обходит suspend, auth_version, роль или сроки. Email proof не превращается в доступный метод при неготовой reauthentication capability. SMTP не нужен для password/TOTP management; операторское восстановление имеет отдельную [readiness](project-mfa-runtime.md#операторское-восстановление-проектного-mfa).
 
 ## Сборка
 

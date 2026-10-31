@@ -24,6 +24,9 @@ func RespondChallenge(w http.ResponseWriter, challenge *service.LoginChallenge) 
 	if challenge.EnrollmentRequired {
 		status = "mfa_enrollment_required"
 	}
+	if challenge.RecoveryRequired {
+		status = "mfa_recovery_required"
+	}
 	httpx.JSON(w, 202, ChallengeResponse{Status: status, Challenge: challenge.Token, ExpiresAt: challenge.ExpiresAt})
 }
 

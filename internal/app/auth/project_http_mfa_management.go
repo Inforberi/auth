@@ -9,6 +9,11 @@ import (
 )
 
 func (p *ProjectProfile) mfaManagementHandlers(handlers map[string]http.HandlerFunc, log *zap.Logger) {
+	if p.mfaRecovery != nil {
+		h := mfahttp.NewWithRecovery(nil, nil, p.mfaRecovery, log)
+		handlers["/api/v1/auth/mfa/recovery/start"] = p.requireHTTPDelivery(h.StartRecovery)
+		handlers["/api/v1/auth/mfa/recovery/complete"] = p.requireHTTPDelivery(h.CompleteRecovery)
+	}
 	if p.mfaManagement == nil {
 		return
 	}

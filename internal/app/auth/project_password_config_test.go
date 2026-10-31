@@ -23,9 +23,6 @@ func TestProjectPasswordConfiguration(t *testing.T) {
 	require.NoError(t, cfg.validate(deps))
 	for _, change := range []func(*ProjectPasswordConfig){
 		func(c *ProjectPasswordConfig) { c.MFA.Enabled = true },
-		func(c *ProjectPasswordConfig) {
-			c.MFA = mfaservice.Config{Enabled: true, RecoveryEnabled: true, Issuer: "Fixture", ChallengeTTL: time.Minute, UserLimitPerMinute: 10, IPLimitPerMinute: 10, GlobalLimitPerMinute: 100}
-		},
 		func(c *ProjectPasswordConfig) { c.Timeout = 0 }, func(c *ProjectPasswordConfig) { c.Timeout = 31 * time.Second },
 		func(c *ProjectPasswordConfig) { c.Capacity.LoginGlobalLimit = 0 }, func(c *ProjectPasswordConfig) { c.Session.SessionTTL = 0 },
 	} {
@@ -34,6 +31,9 @@ func TestProjectPasswordConfiguration(t *testing.T) {
 		_, err := NewProjectPassword(t.Context(), projectruntime.Key{}, invalid, deps)
 		require.Error(t, err)
 	}
+	withRecovery := cfg
+	withRecovery.MFA = mfaservice.Config{Enabled: true, RecoveryEnabled: true, Issuer: "Fixture", ChallengeTTL: time.Minute, UserLimitPerMinute: 10, IPLimitPerMinute: 10, GlobalLimitPerMinute: 100}
+	require.NoError(t, withRecovery.validate(deps), "runtime readiness is checked in the profile, not configuration validation")
 	for _, change := range []func(*ProjectPasswordDependencies){
 		func(d *ProjectPasswordDependencies) { d.Registry = nil }, func(d *ProjectPasswordDependencies) { d.Reader = nil },
 		func(d *ProjectPasswordDependencies) { d.Redis = nil }, func(d *ProjectPasswordDependencies) { d.Hash = nil },

@@ -62,6 +62,7 @@ type ProjectProfile struct {
 	tokens                   *ProjectTokens
 	mfa                      *projectMFA
 	mfaManagement            *projectMFA
+	mfaRecovery              *projectMFARecovery
 	userDirectory            *projectUserDirectory
 	userLifecycle            *projectUserLifecycle
 	access                   *projectAccess
@@ -107,6 +108,7 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	p.buildProfileTokens(ctx, cfg, redisReady)
 	p.bindProfileMFA(configuration.EncryptionKey())
 	p.buildProfileMFAManagement(cfg, configuration.EncryptionKey(), redisReady)
+	p.buildProfileMFARecovery(ctx, cfg, configuration.EncryptionKey(), redisReady)
 	p.buildProfileEmailManagement(ctx, cfg, redisReady)
 	p.finishProfileRegistration(cfg)
 	p.buildProfileProvisioning(ctx, cfg, redisReady)

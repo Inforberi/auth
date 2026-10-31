@@ -21,7 +21,7 @@ MP4.1c, 25 октября2026. Решение зафиксировано до р
 
 ## Внутренний контракт
 
-`ProjectPasswordConfig.MFA` принимает существующую MFA config; default Enabled=false сохраняет прежний fail-closed профиль. Enabled=true собирает только Login pipeline на project-scoped cipher/limiter и existing TOTP authenticator. Loss-all-factors `RecoveryEnabled=true` отклоняется как неподготовленный отдельный сценарий; recovery codes для второго фактора работают независимо от этого флага, как в standalone Login.
+`ProjectPasswordConfig.MFA` принимает существующую MFA config; default Enabled=false сохраняет прежний fail-closed профиль. Enabled=true собирает Login pipeline на project-scoped cipher/limiter и existing TOTP authenticator. Recovery codes для второго фактора работают независимо от RecoveryEnabled, как в standalone Login. Opt-in операторское восстановление в ProjectProfile описано ниже; runtime readiness проверяется при сборке профиля, а не синтаксической валидацией config.
 
 `ProjectPassword.Login` использует existing sessionservice.NewLogin: обычному пользователю без MFA выдаётся сессия; enrolled/required-role — challenge с Token/Binding/EnrollmentRequired, без обычного token. `CompleteMFA(ctx,CompleteLoginInput)` выбирает TOTP или recovery code по существующему Recovery boolean и делегирует mfaservice.Login.Complete.
 
@@ -38,3 +38,20 @@ TOTP test API сверена через Context7 `/pquerna/otp` и installed v1.
 ## Приёмка блока
 
 Luna V1: task check и affected race PASS. V2 после typed-nil wiring fix: полный TestPrepareCommandSQL PASS без SKIP, включая disabled/enrolled/required MFA regression и enabled project MFA flow; targeted app/auth+cmd lint PASS (0 issues). Manifest7 совпал до/после и с рабочим source. PG18.6 TLS/SCRAM и Redis8.2 DB15 fixtures удалены, DB15 пуста; cleanup55006 не повторился. Это internal local acceptance, не public/full MP4/fleet. Проверенный блок подготовлен к запрошенному пользователем коммиту.
+
+## Операторское восстановление проектного MFA
+
+A6.3m.6c.4b.1 принят: Luna task check/race и actual two-project SQL/HTTP V4 с cleanup PASS; targeted lint0. Evidence — [history](../planning/history.md). `ProjectProfile` принимает явный `MFA.RecoveryEnabled=true` в согласованной browser-конфигурации. Это не автоматическое включение: deployment source пока принудительно сохраняет флаг false; email-фактор и его CheckCapability остаются закрыты до всей .4b.
+
+При сборке нужны готовый browser MFA login, Redis, работающий ProjectDelivery, сохранённые допустимые SMTP credentials и отдельная `auth_mfa_recovery_operator NOLOGIN` с EXECUTE на existing decision function. Runtime не должен состоять в этой группе или иметь EXECUTE. Без зависимостей feature `mfa_recovery` недоступна и её маршрутов нет; после остановки delivery обработчики возвращают unavailable. Проверка SMTP здесь подтверждает конфигурацию, не успешную внешнюю доставку.
+
+| Метод | Путь | Условия |
+| --- | --- | --- |
+| POST | `/api/v1/auth/mfa/recovery/start` | Origin + существующий primary challenge и ровно одна browser binding cookie; без owner session |
+| POST | `/api/v1/auth/mfa/recovery/complete` | Тот же challenge/browser, актуальное независимое одобрение и код предложенного TOTP |
+
+Используются существующие handlers/DTO/Swagger и recovery SQL. Сервис создаётся внутри одного project pool lease, с project-scoped cipher/Redis и проверкой актуальности binding до/после. На каждом вызове проверяются граница DB operator/runtime и текущие SMTP credentials. Одобрение остаётся отдельной DBA/CLI операцией после проверки личности; обычный пользователь, UI/runtime и пароль сами по себе его не заменяют. Разрешённые primary methods сверяются с профилем и SQL заново.
+
+Completion заменяет фактор и recovery codes, повышает auth_version, отзывает прежний доступ и ставит зашифрованное уведомление в существующий outbox. Возвращаются только recovery codes один раз; новой сессии нет. ProjectDelivery обрабатывает не более одного MFA recovery job на проект за проход, в том же bounded scheduler и лимитах parallelism; новая goroutine/очередь/schema не добавлены. Уже записанные уведомления обрабатываются независимо от флага новых recovery requests, с прежними lease/retry правилами. Межпроектные keys/payload изолированы.
+
+Добавлен `TestTwoProjectMFARecoverySQL`: реальный router/HTTPS, две БД и Redis; отсутствие delivery/DB grant скрывает routes, CSRF/cross-project отказ, pending approval отказ, независимое решение, completion/replay и scoped encryption уведомления. Успешная SMTP-доставка этим тестом не доказывается. Email-MFA/native/admin compatibility и общая .4b ещё не приняты.

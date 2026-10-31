@@ -52,11 +52,5 @@ func (m *projectMFALogin) newLogin(pool *pgxpool.Pool) (*mfaservice.Login, error
 }
 
 func validateProjectMFA(cfg mfaservice.Config) error {
-	if err := cfg.Validate(); err != nil {
-		return err
-	}
-	if cfg.RecoveryEnabled {
-		return errors.New("project loss-all-factors recovery is not assembled")
-	}
-	return nil
+	return cfg.Validate()
 }
