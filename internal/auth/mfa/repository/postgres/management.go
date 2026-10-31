@@ -69,16 +69,16 @@ func (r *Repository) Disable(ctx context.Context, proof service.Proof) error {
 		if err := requireFreshMFA(ctx, tx, proof); err != nil {
 			return err
 		}
-		var required, email bool
-		err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1,$2),EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1)`, proof.UserID, r.administrative).Scan(&required, &email)
+		var required, email, usableEmail, administrative bool
+		err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1,$2),EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1),auth.email_factor_usable($1),$2 OR auth.has_administrative_access($1)`, proof.UserID, r.administrative).Scan(&required, &email, &usableEmail, &administrative)
 		if err != nil {
 			return err
 		}
-		if required {
+		if required && !usableEmail || email && administrative {
 			return domain.ErrRequiredByPolicy
 		}
-		if email {
-			return domain.ErrUnavailable
+		if email && !usableEmail {
+			return domain.ErrRequiredByPolicy
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_totp WHERE user_id=$1`, proof.UserID); err != nil {
 			return err

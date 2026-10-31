@@ -99,7 +99,7 @@ func sessionAuthority(ctx context.Context, tx pgx.Tx, input service.ExchangeInpu
 			SELECT 1 FROM auth.user_roles ur JOIN auth.role_permissions rp ON rp.role_id=ur.role_id
 			WHERE ur.user_id=s.user_id AND rp.permission_key=needed.key)),
 		NOT auth.mfa_login_required(s.user_id)
-			OR (s.mfa_verified_at IS NOT NULL AND EXISTS(SELECT 1 FROM auth.mfa_totp m WHERE m.user_id=s.user_id)),
+			OR (s.mfa_verified_at IS NOT NULL AND auth.mfa_proof_usable(s.user_id,s.primary_method,s.mfa_method)),
 		clock_timestamp()
 		FROM auth.role_bound_sessions s WHERE s.user_id=$1 AND s.token_hash=$2 AND s.id=$3 AND s.auth_version=$4
 		AND s.credential_profile=$6

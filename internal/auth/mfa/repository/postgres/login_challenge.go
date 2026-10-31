@@ -7,22 +7,21 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
-	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 )
 
 func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.PrimaryProof, digest, binding string, ttl time.Duration) (*service.LoginChallengeState, error) {
-	return r.saveLoginChallenge(ctx, proof, nil, digest, binding, ttl)
+	return r.saveLoginChallenge(ctx, proof, nil, digest, binding, ttl, nil)
 }
 
 func (r *Repository) SaveNativeLoginChallenge(ctx context.Context, proof service.PrimaryProof, target service.NativeTarget, digest, binding string, ttl time.Duration) (*service.LoginChallengeState, error) {
-	return r.saveLoginChallenge(ctx, proof, &target, digest, binding, ttl)
+	return r.saveLoginChallenge(ctx, proof, &target, digest, binding, ttl, nil)
 }
 
-func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.PrimaryProof, target *service.NativeTarget, digest, binding string, ttl time.Duration) (*service.LoginChallengeState, error) {
+func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.PrimaryProof, target *service.NativeTarget, digest, binding string, ttl time.Duration, mail *otpservice.EmailLoginIntent) (*service.LoginChallengeState, error) {
 	profile := "browser"
 	var bound service.NativeTarget
 	var audience *string
@@ -33,36 +32,28 @@ func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.Prima
 	}
 	var result service.LoginChallengeState
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
-		if proof.Administrative {
-			if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
-				return err
-			}
-		} else {
-			if err := accesspostgres.LockAccessSnapshot(ctx, tx); err != nil {
-				return err
-			}
-		}
-		var version int64
-		var fresh bool
-		// Bounded backend/DB clock skew must not turn into a future authentication time.
-		err := tx.QueryRow(ctx, `SELECT auth_version,$2::timestamptz<=clock_timestamp()+interval '5 seconds'
-			AND $2>clock_timestamp()-interval '1 minute' FROM auth.users
-			WHERE id=$1 AND status='active' AND deleted_at IS NULL FOR UPDATE`, proof.UserID, proof.VerifiedAt).Scan(&version, &fresh)
-		if errors.Is(err, pgx.ErrNoRows) || (err == nil && (version != proof.AuthVersion || !fresh)) {
-			return domain.ErrProofRequired
-		}
-		if err != nil {
-			return err
-		}
-		if err := RequireLoginPrimary(ctx, tx, proof); err != nil {
+		if err := lockLoginPrimary(ctx, tx, proof); err != nil {
 			return err
 		}
 		var enabled, required, email bool
 		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1),auth.mfa_required($1,$2),EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1)`, proof.UserID, proof.Administrative).Scan(&enabled, &required, &email); err != nil {
 			return err
 		}
-		if email && !enabled {
-			return domain.ErrUnavailable
+		factor := domain.TOTP
+		var emailID *string
+		var emailExpiry *time.Time
+		if mail != nil {
+			id, err := lockEmailLoginChannel(ctx, tx, proof, mail.Channel)
+			if err != nil {
+				return err
+			}
+			factor, emailID, emailExpiry, enabled = domain.EmailCode, &id, &mail.Code.ExpiresAt, true
+		} else if email && !enabled {
+			if proof.Method != "password" || proof.Administrative {
+				return domain.ErrProofRequired
+			}
+			factor, enabled = assistedRecoveryFactor, true
+			result.RecoveryRequired = true
 		}
 		if !enabled && !required {
 			return domain.ErrConflict
@@ -72,17 +63,25 @@ func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.Prima
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_recovery_requests WHERE user_id=$1`, proof.UserID); err != nil {
 			return err
 		}
-		err = tx.QueryRow(ctx, `INSERT INTO auth.mfa_login_challenges
-			(user_id,digest,binding_hash,auth_version,primary_method,primary_reference,primary_issuer,primary_verified_at,expires_at,administrative,enrollment_required,provider_version,credential_profile,native_audience,native_scope,mfa_policy_revision)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,LEAST($8::timestamptz,statement_timestamp()),statement_timestamp()+$9::double precision*interval '1 second',$10,$11,$12,$13,$14,$15,(SELECT session_revision FROM auth.mfa_settings WHERE singleton))
+		if _, err := tx.Exec(ctx, `DELETE FROM auth.email_login_challenges WHERE user_id=$1 AND purpose='mfa_email_login'`, proof.UserID); err != nil {
+			return err
+		}
+		err := tx.QueryRow(ctx, `INSERT INTO auth.mfa_login_challenges
+			(user_id,digest,binding_hash,auth_version,primary_method,primary_reference,primary_issuer,primary_verified_at,expires_at,administrative,enrollment_required,provider_version,credential_profile,native_audience,native_scope,mfa_policy_revision,factor_method,factor_email_id)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,LEAST($8::timestamptz,statement_timestamp()),LEAST(statement_timestamp()+$9::double precision*interval '1 second',$18::timestamptz),$10,$11,$12,$13,$14,$15,(SELECT session_revision FROM auth.mfa_settings WHERE singleton),$16,$17)
 			ON CONFLICT(user_id) DO UPDATE SET digest=EXCLUDED.digest,binding_hash=EXCLUDED.binding_hash,
 			auth_version=EXCLUDED.auth_version,primary_method=EXCLUDED.primary_method,primary_reference=EXCLUDED.primary_reference,
 			primary_issuer=EXCLUDED.primary_issuer,primary_verified_at=EXCLUDED.primary_verified_at,administrative=EXCLUDED.administrative,enrollment_required=EXCLUDED.enrollment_required,provider_version=EXCLUDED.provider_version,attempts=0,
-			credential_profile=EXCLUDED.credential_profile,native_audience=EXCLUDED.native_audience,native_scope=EXCLUDED.native_scope,mfa_policy_revision=EXCLUDED.mfa_policy_revision,
+			credential_profile=EXCLUDED.credential_profile,native_audience=EXCLUDED.native_audience,native_scope=EXCLUDED.native_scope,mfa_policy_revision=EXCLUDED.mfa_policy_revision,factor_method=EXCLUDED.factor_method,factor_email_id=EXCLUDED.factor_email_id,
 			created_at=statement_timestamp(),expires_at=EXCLUDED.expires_at RETURNING expires_at`,
-			proof.UserID, digest, binding, proof.AuthVersion, proof.Method, proof.Reference, proof.Issuer, proof.VerifiedAt, ttl.Seconds(), proof.Administrative, result.EnrollmentRequired, proof.ProviderVersion, profile, audience, bound.Scope).Scan(&result.ExpiresAt)
+			proof.UserID, digest, binding, proof.AuthVersion, proof.Method, proof.Reference, proof.Issuer, proof.VerifiedAt, ttl.Seconds(), proof.Administrative, result.EnrollmentRequired, proof.ProviderVersion, profile, audience, bound.Scope, factor, emailID, emailExpiry).Scan(&result.ExpiresAt)
 		if err != nil {
 			return err
+		}
+		if mail != nil {
+			if err := saveEmailLoginCode(ctx, tx, *mail, profile, audience, bound.Scope, result.ExpiresAt); err != nil {
+				return err
+			}
 		}
 		return audit(ctx, tx, proof.UserID, "login_challenge_started")
 	})
@@ -90,65 +89,6 @@ func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.Prima
 		return nil, err
 	}
 	return &result, nil
-}
-
-func RequireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof) error {
-	return requireLoginPrimary(ctx, tx, p, false)
-}
-
-func RequireNativeLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof) error {
-	return requireLoginPrimary(ctx, tx, p, true)
-}
-
-func requireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof, native bool) error {
-	var valid bool
-	var err error
-	if p.Administrative {
-		if p.Method != "password" || native {
-			return domain.ErrProofRequired
-		}
-		valid, err = accesspostgres.AdministrativePasswordAllowed(ctx, tx, p.UserID, p.Reference)
-		if err != nil {
-			return err
-		}
-		if !valid {
-			return domain.ErrProofRequired
-		}
-		return nil
-	}
-	checkPolicy := settingspostgres.RequirePublicLogin
-	if native {
-		checkPolicy = settingspostgres.RequireNativeLogin
-	}
-	if err := checkPolicy(ctx, tx, p.UserID, p.Method, p.Issuer); err != nil {
-		return err
-	}
-	if p.Method == "oidc" {
-		if err := settingspostgres.RequireProviderRevision(ctx, tx, p.Issuer, p.ProviderVersion); err != nil {
-			return err
-		}
-	}
-	switch p.Method {
-	case "password":
-		err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.password_credentials
-			WHERE user_id=$1 AND password_hash=$2)`, p.UserID, p.Reference).Scan(&valid)
-	case "oidc":
-		err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.linked_identities
-			WHERE user_id=$1 AND issuer=$2 AND subject=$3)`, p.UserID, p.Issuer, p.Reference).Scan(&valid)
-	case "emailotp":
-		err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.user_emails e
-			JOIN auth.password_credentials c ON c.user_id=e.user_id AND c.email_id=e.id
-			WHERE e.user_id=$1 AND e.id=$2::uuid AND e.verified_at IS NOT NULL
-			AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials WHERE user_id=$1)
-			AND NOT EXISTS(SELECT 1 FROM auth.account_provisions WHERE user_id=$1 AND activated_at IS NULL))`, p.UserID, p.Reference).Scan(&valid)
-	}
-	if err != nil {
-		return err
-	}
-	if !valid {
-		return domain.ErrProofRequired
-	}
-	return nil
 }
 
 func (r *Repository) FindLoginOwner(ctx context.Context, digest, binding string) (accountdomain.UserID, error) {

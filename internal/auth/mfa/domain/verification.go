@@ -7,6 +7,7 @@ type Method string
 const (
 	TOTP         Method = "totp"
 	RecoveryCode Method = "recovery"
+	EmailCode    Method = "email"
 )
 
 // Empty means a historical proof whose mechanism was not recorded.
@@ -16,6 +17,8 @@ func (m Method) AuthenticationMethod() string {
 		return "otp"
 	case RecoveryCode:
 		return "recovery"
+	case EmailCode:
+		return "email_otp"
 	case "":
 		return "mfa"
 	default:

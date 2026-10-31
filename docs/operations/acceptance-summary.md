@@ -1,5 +1,7 @@
 # Краткий отчёт по проверкам
 
+Принят [A6.3m.6c.3 — внутренний email-factor login/recovery](../features/email-mfa.md#внутренний-вход-и-восстановление--a63m6c3): atomic browser/native, explicit email method/JWT/refresh/introspection, last-factor/strong boundaries и operator-approved восстановление в TOTP. V3 task check и четыре actual SQL roots с race PASS; V2 token service race и пять успешных SQL roots V1 приняты без повторения. Manifest 48/48, cleanup подтверждён. V1/V2 blockers и исправления сохранены в history. Runtime/HTTP публикация закрыта до .6c.4.
+
 Принят [A6.3m.6c.2 — внутренний email-factor lifecycle](../features/email-mfa.md#внутреннее-управление--a63m6c2): shared policy version/permissions, Enable/Disable/Status, suspension/cleanup/revocation и fail-closed guards. Luna task check, affected race и пять назначенных SQL roots — PASS; manifest 25/25 и cleanup подтверждены. Публичный email MFA и runtime readiness не включены.
 
 Подготовлен [A6.3m.6c.1 — email-канал](../features/email-mfa.md): internal request/confirm с owned verified email, fresh source session, отдельным purpose и ротацией без повышения authority. Luna: task check, affected race и три SQL roots — PASS, manifest 24/24 и cleanup подтверждены; HTTP/ENV/runtime activation/email MFA login ещё не опубликованы.

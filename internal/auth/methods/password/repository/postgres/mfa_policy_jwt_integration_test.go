@@ -68,7 +68,7 @@ func TestMFAPolicyJWTConsumersSchema(t *testing.T) {
 				require.Equal(t, enrolled, claims.MFATime != nil)
 				methods := []string{"pwd"}
 				if enrolled {
-					methods = append(methods, "mfa")
+					methods = append(methods, "recovery")
 				}
 				require.Equal(t, methods, claims.Methods)
 				repo := tokenpostgres.New(db)

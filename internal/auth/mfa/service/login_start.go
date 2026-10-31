@@ -40,5 +40,5 @@ func (s *Login) startLogin(ctx context.Context, proof PrimaryProof, ip string, t
 	if err != nil {
 		return nil, err
 	}
-	return &LoginChallenge{Token: token, Binding: binding, ExpiresAt: state.ExpiresAt, EnrollmentRequired: state.EnrollmentRequired}, nil
+	return &LoginChallenge{Token: token, Binding: binding, ExpiresAt: state.ExpiresAt, EnrollmentRequired: state.EnrollmentRequired, RecoveryRequired: state.RecoveryRequired}, nil
 }

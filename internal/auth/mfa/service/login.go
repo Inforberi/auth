@@ -63,10 +63,7 @@ type Login struct {
 }
 
 func NewLogin(repo LoginRepository, cipher Cipher, code Authenticator, limit Limiter, tokens loginTokens, cfg LoginConfig) (*Login, error) {
-	if repo == nil || cipher == nil || code == nil || limit == nil || tokens == nil ||
-		cfg.ChallengeTTL <= 0 || cfg.ChallengeTTL > 5*time.Minute || cfg.SessionTTL <= 0 ||
-		cfg.AbsoluteSessionTTL < cfg.SessionTTL || cfg.UserLimitPerMinute < 2 ||
-		cfg.IPLimitPerMinute < 2 || cfg.GlobalLimitPerMinute < 2 {
+	if repo == nil || cipher == nil || code == nil || limit == nil || tokens == nil || cfg.Validate() != nil {
 		return nil, errors.New("invalid MFA login configuration")
 	}
 	if cfg.Issuer == "" {
@@ -75,12 +72,23 @@ func NewLogin(repo LoginRepository, cipher Cipher, code Authenticator, limit Lim
 	return &Login{repo: repo, cipher: cipher, code: code, limit: limit, tokens: tokens, cfg: cfg}, nil
 }
 
+func (c LoginConfig) Validate() error {
+	if c.ChallengeTTL <= 0 || c.ChallengeTTL > 5*time.Minute || c.SessionTTL <= 0 ||
+		c.AbsoluteSessionTTL < c.SessionTTL || c.UserLimitPerMinute < 2 ||
+		c.IPLimitPerMinute < 2 || c.GlobalLimitPerMinute < 2 {
+		return errors.New("invalid MFA login configuration")
+	}
+	return nil
+}
+
 type LoginChallengeState struct {
+	RecoveryRequired   bool
 	ExpiresAt          time.Time
 	EnrollmentRequired bool
 }
 
 type LoginChallenge struct {
+	RecoveryRequired   bool
 	Token              string `json:"-"`
 	Binding            string `json:"-"`
 	ExpiresAt          time.Time

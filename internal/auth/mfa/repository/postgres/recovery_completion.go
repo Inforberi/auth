@@ -49,7 +49,7 @@ func (r *Repository) CompleteRecovery(ctx context.Context, input service.Recover
 		if err != nil {
 			return err
 		}
-		if proof.EnrollmentRequired || proof.UserID != input.UserID || (!proof.Administrative && (input.AllowPrimary == nil || !input.AllowPrimary(proof.Method, proof.Issuer))) {
+		if proof.FactorMethod == domain.EmailCode || proof.EnrollmentRequired || proof.UserID != input.UserID || (!proof.Administrative && (input.AllowPrimary == nil || !input.AllowPrimary(proof.Method, proof.Issuer))) {
 			return domain.ErrInvalidCode
 		}
 		if err := RequireLoginPrimary(ctx, tx, proof.PrimaryProof); err != nil {
@@ -79,7 +79,10 @@ func (r *Repository) CompleteRecovery(ctx context.Context, input service.Recover
 		if err != nil {
 			return err
 		}
-		return commitRecoveredFactor(ctx, tx, proof.PrimaryProof, input, intent, step)
+		if err := commitRecoveredFactor(ctx, tx, proof.PrimaryProof, input, intent, step, proof.FactorMethod == assistedRecoveryFactor); err != nil {
+			return err
+		}
+		return requireLoginDeadline(ctx, tx, proof.ExpiresAt)
 	})
 	if err != nil {
 		return err
@@ -90,13 +93,27 @@ func (r *Repository) CompleteRecovery(ctx context.Context, input service.Recover
 	return nil
 }
 
-func commitRecoveredFactor(ctx context.Context, tx pgx.Tx, proof service.PrimaryProof, input service.RecoveryCompletion, intent recoveryIntent, step int64) error {
-	changed, err := tx.Exec(ctx, `UPDATE auth.mfa_totp SET secret=$2,last_step=$3,enabled_at=clock_timestamp() WHERE user_id=$1`, proof.UserID, intent.secret, step)
+func commitRecoveredFactor(ctx context.Context, tx pgx.Tx, proof service.PrimaryProof, input service.RecoveryCompletion, intent recoveryIntent, step int64, emailRecovery bool) error {
+	query := `UPDATE auth.mfa_totp SET secret=$2,last_step=$3,enabled_at=clock_timestamp() WHERE user_id=$1`
+	if emailRecovery {
+		query = `INSERT INTO auth.mfa_totp(user_id,secret,last_step)
+ SELECT $1,$2,$3 WHERE EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1)
+ AND NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1)`
+	}
+	changed, err := tx.Exec(ctx, query, proof.UserID, intent.secret, step)
 	if err != nil {
 		return err
 	}
 	if changed.RowsAffected() != 1 {
 		return domain.ErrInvalidCode
+	}
+	if emailRecovery {
+		if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_email WHERE user_id=$1`, proof.UserID); err != nil {
+			return err
+		}
+		if err := audit(ctx, tx, proof.UserID, "email_factor_disabled"); err != nil {
+			return err
+		}
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_recovery_codes WHERE user_id=$1`, proof.UserID); err != nil {
 		return err

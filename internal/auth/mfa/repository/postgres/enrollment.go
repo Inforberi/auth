@@ -30,6 +30,8 @@ func (r *Repository) saveEnrollment(ctx context.Context, proof service.Proof, di
 			if err := requireFreshMFA(ctx, tx, proof); err != nil {
 				return err
 			}
+		} else if err := requireEmailEnrollmentProof(ctx, tx, proof); err != nil {
+			return err
 		}
 		var enabled bool
 		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1)`, proof.UserID).Scan(&enabled); err != nil {
@@ -69,6 +71,8 @@ func (r *Repository) confirmEnrollment(ctx context.Context, proof service.Proof,
 			if err := requireFreshMFA(ctx, tx, proof); err != nil {
 				return err
 			}
+		} else if err := requireEmailEnrollmentProof(ctx, tx, proof); err != nil {
+			return err
 		}
 		var secret []byte
 		var now time.Time

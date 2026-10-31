@@ -221,3 +221,7 @@ Strong guard не заменяет permission/object/field guards и не доб
 ## Управление email-фактором — A6.3m.6c.2
 
 [Внутренний lifecycle](email-mfa.md#внутреннее-управление--a63m6c2) отделяет разрешение проекта от личной привязки. Policy/version/permissions и fresh password/email/current strong proofs проверяются транзакционно; Enable/Disable отзывают credentials, email change приостанавливает прежний binding без auto-downgrade. Luna task check/race/пять SQL roots PASS, manifest 25/25 и cleanup подтверждены. Публичных флагов/маршрутов нет; runtime закрыт до .6c.3–.6c.4. Email-only completion/recovery/step-up и финальный выбор факторов ещё не реализованы, TOTP/recovery остаются единственным strong proof.
+
+## Email после пароля — A6.3m.6c.3
+
+Принят [внутренний browser/native login и assisted recovery](email-mfa.md#внутренний-вход-и-восстановление--a63m6c3): Luna task check, token service race и девять SQL roots с учётом V1/V3 PASS; manifest 48/48 и cleanup подтверждены. SQL proof различает usable email и TOTP/recovery, JWT сохраняет pwd+email_otp; strict guards не повышают email до strong. Email-only личный фактор можно отключить по optional policy после fresh password/current email proof, обязательный последний фактор сохраняется. При потере почты существующее operator-approved восстановление заменяет email-only на подтверждённый новый TOTP и отзывает credentials. Usability потерянной почты для этого восстановления не требуется; отдельные primary/operator/new-factor proofs обязательны. Capability/HTTP/profile publication остаются закрыты до .6c.4.

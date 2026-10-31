@@ -54,6 +54,7 @@ func (s *Login) StartNative(ctx context.Context, proof PrimaryProof, target Nati
 // NativeAttempt is server-owned admission/check material, not proof of completed MFA.
 // The repository rechecks the owner and consumes the factor under the final transaction.
 type NativeAttempt struct {
+	Email               *EmailCodeProof
 	UserID              accountdomain.UserID
 	Digest, BindingHash string
 	Factor              LoginFactor

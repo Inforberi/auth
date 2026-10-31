@@ -35,8 +35,17 @@ func (r *Repository) ClaimDelivery(ctx context.Context) (*domain.Delivery, error
         AND s.auth_version=u.auth_version AND s.credential_profile='browser' AND s.primary_method='password'
         AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()
         AND s.password_verified_at<=clock_timestamp() AND s.password_verified_at>clock_timestamp()-interval '5 minutes'
-        AND (NOT auth.mfa_login_required(u.id) OR (s.strong_mfa_verified_at<=clock_timestamp()
-          AND s.strong_mfa_verified_at>clock_timestamp()-interval '5 minutes')))))
+        AND (NOT auth.mfa_login_required(u.id) OR (auth.email_mfa_management_time(s.user_id,s.mfa_method,s.mfa_verified_at)<=clock_timestamp()
+          AND auth.email_mfa_management_time(s.user_id,s.mfa_method,s.mfa_verified_at)>clock_timestamp()-interval '5 minutes'))))
+    OR (c.purpose='mfa_email_login' AND auth.email_factor_usable(u.id)
+      AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials WHERE user_id=u.id)
+      AND NOT EXISTS(SELECT 1 FROM auth.account_provisions WHERE user_id=u.id AND (activated_at IS NULL OR password_change_required))
+      AND EXISTS(SELECT 1 FROM auth.mfa_login_challenges m JOIN auth.password_credentials p ON p.user_id=m.user_id
+        WHERE m.digest=c.mfa_digest AND m.user_id=c.user_id AND m.auth_version=c.auth_version
+        AND m.credential_profile=c.credential_profile AND m.factor_method='email' AND m.factor_email_id=c.email_id
+        AND m.primary_method='password' AND p.password_hash=m.primary_reference AND NOT m.administrative
+        AND NOT m.enrollment_required AND m.mfa_policy_revision=(SELECT session_revision FROM auth.mfa_settings WHERE singleton)
+        AND m.expires_at>clock_timestamp() AND m.attempts<5)))
   ORDER BY o.available_at,o.id FOR UPDATE OF o SKIP LOCKED LIMIT 1
  ) UPDATE auth.email_login_outbox o SET attempts=attempts+1,lease=gen_random_uuid(),
   lease_until=clock_timestamp()+interval '30 seconds' FROM due WHERE o.id=due.id

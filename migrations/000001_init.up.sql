@@ -431,6 +431,10 @@ CREATE TABLE auth.mfa_login_challenges (
   binding_hash TEXT NOT NULL CHECK (binding_hash ~ '^[a-f0-9]{64}$'),
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
   primary_method TEXT NOT NULL CHECK (primary_method IN ('password','oidc','emailotp')),
+  factor_method TEXT NOT NULL DEFAULT 'totp' CHECK(factor_method IN ('totp','email','assisted_recovery')),
+  factor_email_id UUID,
+  FOREIGN KEY(user_id,factor_email_id) REFERENCES auth.user_emails(user_id,id),
+  CHECK((factor_method='email')=(factor_email_id IS NOT NULL)),
   administrative BOOLEAN NOT NULL DEFAULT false CHECK (NOT administrative OR primary_method='password'),
   enrollment_required BOOLEAN NOT NULL DEFAULT false,
   primary_reference TEXT NOT NULL CHECK (octet_length(primary_reference) BETWEEN 1 AND 1024),
@@ -442,6 +446,7 @@ CREATE TABLE auth.mfa_login_challenges (
   expires_at TIMESTAMPTZ NOT NULL,
   CHECK (expires_at>created_at AND expires_at<=created_at+interval '5 minutes'),
   CHECK (primary_verified_at<=created_at),
+  CHECK (factor_method NOT IN ('email','assisted_recovery') OR (primary_method='password' AND NOT administrative AND NOT enrollment_required)),
   CHECK ((credential_profile='browser' AND native_audience IS NULL AND native_scope IS NULL)
     OR (credential_profile='api' AND NOT administrative AND primary_method IN ('password','emailotp')
       AND native_audience IS NOT NULL AND octet_length(native_audience) BETWEEN 1 AND 128 AND native_audience ~ '^[!-~]+$'
@@ -452,14 +457,14 @@ CREATE INDEX mfa_login_challenges_expiry ON auth.mfa_login_challenges(expires_at
 
 CREATE FUNCTION auth.protect_login_target() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.digest=OLD.digest AND ROW(NEW.credential_profile,NEW.native_audience,NEW.native_scope,NEW.binding_hash,NEW.mfa_policy_revision)
-    IS DISTINCT FROM ROW(OLD.credential_profile,OLD.native_audience,OLD.native_scope,OLD.binding_hash,OLD.mfa_policy_revision) THEN
+  IF NEW.digest=OLD.digest AND ROW(NEW.credential_profile,NEW.native_audience,NEW.native_scope,NEW.binding_hash,NEW.mfa_policy_revision,NEW.factor_method,NEW.factor_email_id)
+    IS DISTINCT FROM ROW(OLD.credential_profile,OLD.native_audience,OLD.native_scope,OLD.binding_hash,OLD.mfa_policy_revision,OLD.factor_method,OLD.factor_email_id) THEN
     RAISE EXCEPTION 'login challenge target is immutable';
   END IF;
   RETURN NEW;
 END;
 $$;
-CREATE TRIGGER mfa_login_target BEFORE UPDATE OF credential_profile,native_audience,native_scope,binding_hash,mfa_policy_revision
+CREATE TRIGGER mfa_login_target BEFORE UPDATE OF credential_profile,native_audience,native_scope,binding_hash,mfa_policy_revision,factor_method,factor_email_id
   ON auth.mfa_login_challenges FOR EACH ROW EXECUTE FUNCTION auth.protect_login_target();
 
 CREATE TABLE auth.mfa_recovery_requests (
@@ -564,7 +569,9 @@ BEGIN
     AND request_id=request AND auth_version=version AND challenge_digest=challenge
     AND attempts<5 AND expires_at>clock_timestamp() FOR UPDATE;
   IF NOT FOUND OR pending.state='cancelled' OR (approve AND pending.state<>'pending')
-    OR NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=target) THEN RETURN false; END IF;
+    OR NOT (EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=target) OR (
+      EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=target) AND EXISTS(
+        SELECT 1 FROM auth.mfa_login_challenges WHERE digest=challenge AND factor_method='assisted_recovery'))) THEN RETURN false; END IF;
   UPDATE auth.mfa_recovery_requests SET state=CASE WHEN approve THEN 'approved' ELSE 'cancelled' END,
     operator_oid=CASE WHEN approve THEN actor END,
     operator_name=CASE WHEN approve THEN session_user::text END,
@@ -600,7 +607,7 @@ CREATE TABLE auth.sessions (
   primary_method TEXT CHECK (primary_method IN ('password','oidc','emailotp')),
   primary_verified_at TIMESTAMPTZ,
   mfa_verified_at TIMESTAMPTZ,
-  mfa_method TEXT CHECK (mfa_method IN ('totp','recovery')),
+  mfa_method TEXT CHECK (mfa_method IN ('totp','recovery','email')),
   user_agent TEXT NOT NULL,
   ip_address TEXT NOT NULL,
   CHECK (created_at<expires_at AND expires_at<=absolute_expires_at),
@@ -637,6 +644,32 @@ RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
     OR EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=owner_id);
 $$;
 
+-- Email proves the second factor; strict administrative guards use strong_mfa_verified_at.
+CREATE FUNCTION auth.email_factor_usable(owner_id UUID)
+RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
+  SELECT EXISTS(
+    SELECT 1 FROM auth.mfa_email f JOIN auth.user_emails e ON e.user_id=f.user_id AND e.id=f.email_id
+    JOIN auth.users u ON u.id=f.user_id CROSS JOIN auth.mfa_settings p
+    WHERE f.user_id=owner_id AND f.suspended_at IS NULL AND e.verified_at IS NOT NULL
+      AND u.status='active' AND u.deleted_at IS NULL AND p.singleton AND p.email_factor_allowed);
+$$;
+
+CREATE FUNCTION auth.mfa_proof_usable(owner_id UUID,primary_method TEXT,factor_method TEXT)
+RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
+  SELECT CASE WHEN factor_method='email' THEN primary_method='password' AND auth.email_factor_usable(owner_id)
+    WHEN factor_method IS NULL OR factor_method IN ('totp','recovery')
+      THEN EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=owner_id)
+    ELSE false END;
+$$;
+
+-- This proof is limited to a user's email-factor lifecycle, never strict administration.
+CREATE FUNCTION auth.email_mfa_management_time(owner_id UUID,factor_method TEXT,verified_at TIMESTAMPTZ)
+RETURNS TIMESTAMPTZ LANGUAGE SQL STABLE AS $$
+  SELECT CASE WHEN factor_method IN ('totp','recovery') AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=owner_id)
+    OR factor_method='email' AND NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=owner_id)
+      AND auth.email_factor_usable(owner_id) THEN verified_at END;
+$$;
+
 CREATE FUNCTION auth.bind_session_roles() RETURNS TRIGGER
 LANGUAGE plpgsql AS $$
 DECLARE required_mfa BOOLEAN;
@@ -663,8 +696,8 @@ BEGIN
       WHERE ur.user_id=NEW.user_id;
     SELECT session_revision INTO STRICT NEW.mfa_policy_revision FROM auth.mfa_settings WHERE singleton;
     required_mfa := auth.mfa_login_required(NEW.user_id);
-    IF required_mfa AND (NEW.mfa_verified_at IS NULL
-      OR NEW.mfa_verified_at>clock_timestamp() OR NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=NEW.user_id)) THEN
+    IF (required_mfa OR NEW.mfa_method='email') AND (NEW.mfa_verified_at IS NULL
+      OR NEW.mfa_verified_at>clock_timestamp() OR NOT auth.mfa_proof_usable(NEW.user_id,NEW.primary_method,NEW.mfa_method)) THEN
       RAISE EXCEPTION 'MFA required before session issuance';
     END IF;
     -- Administrative permissions, not the login URL, choose the stricter profile.
@@ -696,9 +729,9 @@ CREATE VIEW auth.role_bound_sessions WITH (security_invoker=true) AS
   SELECT s.*,CASE WHEN s.mfa_method IN ('totp','recovery')
     THEN s.mfa_verified_at END AS strong_mfa_verified_at FROM auth.sessions s
   WHERE EXISTS(SELECT 1 FROM auth.mfa_settings WHERE singleton AND session_revision=s.mfa_policy_revision)
-  AND (s.mfa_method IS NULL OR s.mfa_method IN ('totp','recovery'))
+  AND (s.mfa_method IS NULL OR s.mfa_method IN ('totp','recovery','email'))
   AND ((s.mfa_verified_at IS NULL AND NOT auth.mfa_login_required(s.user_id)) OR
-    (s.mfa_verified_at<=statement_timestamp() AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=s.user_id)))
+    (s.mfa_verified_at<=statement_timestamp() AND auth.mfa_proof_usable(s.user_id,s.primary_method,s.mfa_method)))
   AND NOT EXISTS (
     SELECT 1 FROM jsonb_each_text(s.role_revisions) binding(role_id,revision)
     LEFT JOIN auth.roles r ON r.id=binding.role_id::uuid
@@ -803,8 +836,10 @@ CREATE TABLE auth.email_login_challenges (
   email_id UUID NOT NULL,
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
   verifier TEXT NOT NULL CHECK (verifier ~ '^[a-f0-9]{64}$'),
-  purpose TEXT NOT NULL DEFAULT 'login' CHECK (purpose IN ('login','reauthenticate','mfa_email_prepare')),
+  purpose TEXT NOT NULL DEFAULT 'login' CHECK (purpose IN ('login','reauthenticate','mfa_email_prepare','mfa_email_login')),
   session_hash TEXT CHECK (session_hash ~ '^[a-f0-9]{64}$'),
+  mfa_digest TEXT UNIQUE REFERENCES auth.mfa_login_challenges(digest) ON DELETE CASCADE,
+  CHECK((purpose='mfa_email_login')=(mfa_digest IS NOT NULL)),
   attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   expires_at TIMESTAMPTZ NOT NULL CHECK (expires_at>created_at),
@@ -812,21 +847,21 @@ CREATE TABLE auth.email_login_challenges (
   UNIQUE (user_id,purpose),
   CHECK ((purpose IN ('reauthenticate','mfa_email_prepare'))=(session_hash IS NOT NULL)),
   CHECK ((credential_profile='browser' AND native_audience IS NULL AND native_scope IS NULL)
-    OR (credential_profile='api' AND purpose='login'
+    OR (credential_profile='api' AND purpose IN ('login','mfa_email_login')
       AND native_audience IS NOT NULL AND octet_length(native_audience) BETWEEN 1 AND 128 AND native_audience ~ '^[!-~]+$'
       AND native_scope IS NOT NULL AND cardinality(native_scope) BETWEEN 1 AND 64
       AND array_position(native_scope,NULL) IS NULL AND octet_length(array_to_string(native_scope,' '))<=2048))
 );
 CREATE FUNCTION auth.protect_email_login_target() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-  IF ROW(NEW.digest,NEW.user_id,NEW.email_id,NEW.auth_version,NEW.credential_profile,NEW.native_audience,NEW.native_scope,NEW.purpose,NEW.session_hash)
-    IS DISTINCT FROM ROW(OLD.digest,OLD.user_id,OLD.email_id,OLD.auth_version,OLD.credential_profile,OLD.native_audience,OLD.native_scope,OLD.purpose,OLD.session_hash) THEN
+  IF ROW(NEW.digest,NEW.user_id,NEW.email_id,NEW.auth_version,NEW.credential_profile,NEW.native_audience,NEW.native_scope,NEW.purpose,NEW.session_hash,NEW.mfa_digest)
+    IS DISTINCT FROM ROW(OLD.digest,OLD.user_id,OLD.email_id,OLD.auth_version,OLD.credential_profile,OLD.native_audience,OLD.native_scope,OLD.purpose,OLD.session_hash,OLD.mfa_digest) THEN
     RAISE EXCEPTION 'email login challenge target is immutable';
   END IF;
   RETURN NEW;
 END;
 $$;
-CREATE TRIGGER email_login_target BEFORE UPDATE OF digest,user_id,email_id,auth_version,credential_profile,native_audience,native_scope,purpose,session_hash
+CREATE TRIGGER email_login_target BEFORE UPDATE OF digest,user_id,email_id,auth_version,credential_profile,native_audience,native_scope,purpose,session_hash,mfa_digest
   ON auth.email_login_challenges FOR EACH ROW EXECUTE FUNCTION auth.protect_email_login_target();
 CREATE INDEX email_login_challenges_expiry ON auth.email_login_challenges(expires_at,digest);
 

@@ -1,4 +1,7 @@
 DROP VIEW IF EXISTS auth.role_bound_sessions;
+DROP FUNCTION IF EXISTS auth.email_mfa_management_time(UUID,TEXT,TIMESTAMPTZ);
+DROP FUNCTION IF EXISTS auth.mfa_proof_usable(UUID,TEXT,TEXT);
+DROP FUNCTION IF EXISTS auth.email_factor_usable(UUID);
 DROP FUNCTION IF EXISTS auth.mfa_login_required(UUID,BOOLEAN);
 DROP FUNCTION IF EXISTS auth.mfa_required(UUID,BOOLEAN);
 DROP FUNCTION IF EXISTS auth.realm_requires_mfa(UUID,BOOLEAN);

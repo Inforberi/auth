@@ -15,6 +15,7 @@ type CompleteLoginInput struct {
 }
 
 type LoginCompletion struct {
+	Email                            *EmailCodeProof
 	AllowPrimary                     func(method, issuer string) bool
 	Digest, BindingHash, SessionHash string
 	UserAgent, IP                    string
@@ -22,6 +23,12 @@ type LoginCompletion struct {
 	AdminIdleTimeout                 time.Duration
 	AdminAbsoluteTTL                 time.Duration
 	AdminActivityInterval            time.Duration
+}
+
+// EmailCodeProof contains scoped verifiers, not an assertion that a factor passed.
+type EmailCodeProof struct {
+	Digest   string
+	Verifier string
 }
 
 type LoginCommit struct {

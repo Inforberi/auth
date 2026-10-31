@@ -60,7 +60,7 @@ func TestMFAPolicyNativeSchema(t *testing.T) {
 						methods[0] = "emailotp"
 					}
 					if mfa {
-						methods = append(methods, "mfa")
+						methods = append(methods, "recovery")
 					}
 					require.Equal(t, methods, claims.Methods)
 					require.Equal(t, mfa, claims.MFATime != nil)

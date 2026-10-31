@@ -17,11 +17,11 @@ func (r *Repository) EnableEmailFactor(ctx context.Context, proof service.Proof)
 		if err != nil {
 			return err
 		}
-		var allowed bool
-		if err := tx.QueryRow(ctx, `SELECT email_factor_allowed FROM auth.mfa_settings WHERE singleton FOR SHARE`).Scan(&allowed); err != nil {
+		var allowed, eligible bool
+		if err := tx.QueryRow(ctx, `SELECT email_factor_allowed,NOT auth.has_administrative_access($1) OR EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1) FROM auth.mfa_settings WHERE singleton FOR SHARE`, proof.UserID).Scan(&allowed, &eligible); err != nil {
 			return err
 		}
-		if !allowed {
+		if !allowed || !eligible {
 			return domain.ErrUnavailable
 		}
 		var emailID string

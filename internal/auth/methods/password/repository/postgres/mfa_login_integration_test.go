@@ -16,6 +16,7 @@ import (
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	mfatotp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
+	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
@@ -113,12 +114,21 @@ func checkMFALogin(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 				session.PrimaryVerifiedAt.After(*session.MFAVerifiedAt) || !session.MFAVerifiedAt.Equal(winner.MFAVerified) {
 				t.Fatal("session authentication context", err)
 			}
-			for _, method := range []string{"email", "telegram", "unknown"} {
+			for _, method := range []string{"telegram", "unknown"} {
 				_, err := db.Exec(ctx, `UPDATE auth.sessions SET mfa_method=$2 WHERE token_hash=$1`, hash, method)
 				var constraint *pgconn.PgError
 				if !errors.As(err, &constraint) || constraint.Code != "23514" {
 					t.Fatal("unsupported factor accepted by SQL", method, err)
 				}
+			}
+			if _, err = db.Exec(ctx, `UPDATE auth.sessions SET mfa_method='email' WHERE token_hash=$1`, hash); err != nil {
+				t.Fatal("known email method rejected", err)
+			}
+			if _, err = f.sessions.FindSession(ctx, hash); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
+				t.Fatal("email label without an enrolled channel granted session authority", err)
+			}
+			if _, err = db.Exec(ctx, `UPDATE auth.sessions SET mfa_method=$2 WHERE token_hash=$1`, hash, session.MFAMethod); err != nil {
+				t.Fatal(err)
 			}
 			_, err = db.Exec(ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL WHERE token_hash=$1`, hash)
 			var constraint *pgconn.PgError

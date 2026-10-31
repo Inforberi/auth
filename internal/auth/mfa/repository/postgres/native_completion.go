@@ -26,7 +26,7 @@ func CompleteNativeFactor(ctx context.Context, tx pgx.Tx, attempt service.Native
 	if err != nil {
 		return result, err
 	}
-	if proof.UserID != attempt.UserID || proof.Administrative || proof.EnrollmentRequired || (proof.Method != "password" && proof.Method != "emailotp") || attempt.Factor == nil {
+	if proof.UserID != attempt.UserID || proof.Administrative || proof.EnrollmentRequired || (proof.Method != "password" && proof.Method != "emailotp") {
 		return result, domain.ErrInvalidCode
 	}
 	if attempt.AllowPrimary != nil && !attempt.AllowPrimary(proof.Method, proof.Issuer) {
@@ -38,8 +38,7 @@ func CompleteNativeFactor(ctx context.Context, tx pgx.Tx, attempt service.Native
 		}
 		return result, err
 	}
-	check, recovery := attempt.Factor(proof.UserID)
-	verified, err := consumeFactor(ctx, tx, proof.UserID, check, recovery)
+	verified, err := consumeLoginFactor(ctx, tx, *proof, attempt.Factor, attempt.Email)
 	if errors.Is(err, domain.ErrInvalidCode) {
 		_, err = tx.Exec(ctx, `UPDATE auth.mfa_login_challenges SET attempts=attempts+1 WHERE user_id=$1`, proof.UserID)
 		result.Rejected = true
@@ -54,13 +53,17 @@ func CompleteNativeFactor(ctx context.Context, tx pgx.Tx, attempt service.Native
 }
 
 func FinishNativeLogin(ctx context.Context, tx pgx.Tx, attempt service.NativeAttempt) error {
-	tag, err := tx.Exec(ctx, `DELETE FROM auth.mfa_login_challenges WHERE digest=$1 AND binding_hash=$2 AND user_id=$3
-		AND credential_profile='api' AND expires_at>clock_timestamp() AND attempts<5`, attempt.Digest, attempt.BindingHash, attempt.UserID)
+	var deadline time.Time
+	err := tx.QueryRow(ctx, `DELETE FROM auth.mfa_login_challenges WHERE digest=$1 AND binding_hash=$2 AND user_id=$3
+		AND credential_profile='api' AND expires_at>clock_timestamp() AND attempts<5 RETURNING expires_at`, attempt.Digest, attempt.BindingHash, attempt.UserID).Scan(&deadline)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.ErrInvalidCode
+	}
 	if err != nil {
 		return err
 	}
-	if tag.RowsAffected() != 1 {
-		return domain.ErrInvalidCode
+	if err := audit(ctx, tx, attempt.UserID, "mfa_login_completed"); err != nil {
+		return err
 	}
-	return audit(ctx, tx, attempt.UserID, "mfa_login_completed")
+	return requireLoginDeadline(ctx, tx, deadline)
 }
