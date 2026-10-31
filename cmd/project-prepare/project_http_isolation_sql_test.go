@@ -22,6 +22,19 @@ import (
 )
 
 func TestTwoProjectHTTPIsolationSQL(t *testing.T) {
+	f := prepareHTTPProjects(t)
+	projectHTTPIsolationDrill(t, f.admin, f.reader, f.a, f.b, f.target)
+}
+
+type preparedHTTPProjects struct {
+	admin  *pgx.Conn
+	reader *catalog.RuntimeCredentialReader
+	a, b   projectruntime.Key
+	target projectruntime.Target
+}
+
+func prepareHTTPProjects(t *testing.T) preparedHTTPProjects {
+	t.Helper()
 	dsn := os.Getenv("AUTH_PREPARE_TEST_CATALOG_URL")
 	if dsn == "" {
 		t.Skip("requires explicit disposable catalog/storage/Redis/TLS fixture")
@@ -119,5 +132,5 @@ func TestTwoProjectHTTPIsolationSQL(t *testing.T) {
 	require.NoError(t, reader.CheckRuntime(ctx))
 	target, err := projectruntime.NewTarget("127.0.0.1", physical.Config().Port, &tls.Config{RootCAs: ca, ServerName: "127.0.0.1", MinVersion: tls.VersionTLS12})
 	require.NoError(t, err)
-	projectHTTPIsolationDrill(t, admin, reader, a, b, target)
+	return preparedHTTPProjects{admin: admin, reader: reader, a: a, b: b, target: target}
 }

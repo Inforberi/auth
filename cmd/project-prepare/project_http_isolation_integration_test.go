@@ -28,6 +28,28 @@ import (
 
 func projectHTTPIsolationDrill(t *testing.T, admin *pgx.Conn, reader *catalog.RuntimeCredentialReader, a, b projectruntime.Key, target projectruntime.Target) {
 	t.Helper()
+	f := newProjectIsolationHTTP(t, admin, reader, a, b, target)
+	webs, handler, builds := f.serve(t, appauth.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, Timeout: 5 * time.Second})
+	checkProjectHTTPIsolation(t, t.Context(), admin, f.databases, a, webs, handler)
+	for i := range builds {
+		require.EqualValues(t, 1, builds[i].Load(), "both resident profiles stay warm; suspended A must not be rebuilt")
+	}
+}
+
+type projectIsolationHTTP struct {
+	databases      [2]*pgx.Conn
+	origins        [2]string
+	projects       [2]projectruntime.Key
+	traces         [2]func(string, string, any)
+	passwordCipher [2]*secretbox.Cipher
+	passwordPrefix [2]string
+	redisKeys      map[string]struct{}
+	password       appauth.ProjectPasswordConfig
+	deps           appauth.ProjectProfileDependencies
+}
+
+func newProjectIsolationHTTP(t *testing.T, admin *pgx.Conn, reader *catalog.RuntimeCredentialReader, a, b projectruntime.Key, target projectruntime.Target) projectIsolationHTTP {
+	t.Helper()
 	ctx := t.Context()
 	registry, err := projectruntime.New(projectruntime.Config{
 		MaxRuntimes: 2, ConnectionsPerProject: 1, ConnectionBudget: 2, MaxAcquiring: 4,
@@ -69,6 +91,8 @@ func projectHTTPIsolationDrill(t *testing.T, admin *pgx.Conn, reader *catalog.Ru
 	var origins [2]string
 	var databases [2]*pgx.Conn
 	var traces [2]func(string, string, any)
+	var passwordCiphers [2]*secretbox.Cipher
+	var passwordPrefixes [2]string
 	for i, key := range []projectruntime.Key{a, b} {
 		require.NoError(t, admin.QueryRow(ctx, `SELECT origin FROM platform.projects WHERE id=$1`, key.Binding.ProjectID).Scan(&origins[i]))
 		cfg := admin.Config().Copy()
@@ -88,6 +112,7 @@ func projectHTTPIsolationDrill(t *testing.T, admin *pgx.Conn, reader *catalog.Ru
 		require.NoError(t, err)
 		prefix, err := scope.RedisPrefix("password-limit", "auth:password-recovery:limit:")
 		require.NoError(t, err)
+		passwordCiphers[i], passwordPrefixes[i] = passwordCipher, prefix
 		for _, name := range []string{"login-ip:127.0.0.1", "login-email:" + httpIsolationEmail, "login-global"} {
 			keys[prefix+passwordCipher.Digest(name)] = struct{}{}
 		}
@@ -104,17 +129,27 @@ func projectHTTPIsolationDrill(t *testing.T, admin *pgx.Conn, reader *catalog.Ru
 	}
 	password := projectPasswordFixtureConfig()
 	password.MFA = mfaservice.Config{Enabled: true, Issuer: "HTTP isolation", ChallengeTTL: time.Minute, UserLimitPerMinute: 100, IPLimitPerMinute: 100, GlobalLimitPerMinute: 100}
-	var builds [2]atomic.Int32
+	return projectIsolationHTTP{
+		databases: databases, origins: origins, projects: [2]projectruntime.Key{a, b}, traces: traces,
+		passwordCipher: passwordCiphers, passwordPrefix: passwordPrefixes, redisKeys: keys, password: password,
+		deps: appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: registry, Reader: reader, Redis: rdb, Hash: hash}},
+	}
+}
+
+func (f projectIsolationHTTP) serve(t *testing.T, features appauth.ProjectProfileConfig) ([2]isolationHTTP, *appauth.ProjectHTTP, *[2]atomic.Int32) {
+	t.Helper()
+	ctx := t.Context()
+	builds := new([2]atomic.Int32)
 	handler, err := appauth.NewProjectHTTP(appauth.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test",
 		Residents:      projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute},
-		Capacity:       middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &password.Session,
-	}, appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: registry, Reader: reader, Redis: rdb, Hash: hash}},
+		Capacity:       middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &f.password.Session,
+	}, f.deps,
 		func(_ context.Context, key projectruntime.Key, origin string) (appauth.ProjectProfileConfig, error) {
-			for i, expected := range []projectruntime.Key{a, b} {
-				if key == expected && origin == origins[i] {
+			for i, expected := range f.projects {
+				if key == expected && origin == f.origins[i] {
 					builds[i].Add(1)
-					return appauth.ProjectProfileConfig{BrowserEnabled: true, Password: &password, Timeout: 5 * time.Second}, nil
+					return features, nil
 				}
 			}
 			return appauth.ProjectProfileConfig{}, projectdomain.ErrConflict
@@ -128,9 +163,12 @@ func projectHTTPIsolationDrill(t *testing.T, admin *pgx.Conn, reader *catalog.Ru
 		defer cancel()
 		require.NoError(t, handler.Close(cleanup))
 	})
-	webs := [2]isolationHTTP{{server: server, origin: origins[0], trace: traces[0]}, {server: server, origin: origins[1], trace: traces[1]}}
-	checkProjectHTTPIsolation(t, ctx, admin, databases, a, webs, handler)
-	for i := range builds {
-		require.EqualValues(t, 1, builds[i].Load(), "both resident profiles stay warm; suspended A must not be rebuilt")
+	webs := [2]isolationHTTP{{server: server, origin: f.origins[0], trace: f.traces[0]}, {server: server, origin: f.origins[1], trace: f.traces[1]}}
+	return webs, handler, builds
+}
+
+func (f projectIsolationHTTP) trackLogin(email string) {
+	for i := range f.projects {
+		f.redisKeys[f.passwordPrefix[i]+f.passwordCipher[i].Digest("login-email:"+email)] = struct{}{}
 	}
 }

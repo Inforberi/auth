@@ -1,5 +1,17 @@
 # Краткий отчёт по проверкам
 
+## Актуальная сводка MP5 — 31 октября 2026
+
+Документальная сверка дополнена принятым MP5-access V4; прежние результаты сохраняют свои границы. [Основная матрица MP5 и следующий блок](../planning/multi-project.md#сверка-приёмки-mp5--31-октября-2026) определяет текущую границу покрытия.
+
+- A6.3m.5d принят: три отдельные Auth БД, scoped crypto/Redis, cross-session/JWT/refresh/MFA denial и независимость соседей при MFA policy/role/factor changes. Это component SQL scope.
+- A6.3m.5e принят Luna V2: два настоящих project HTTP profiles с reader/registry, TLS/cookies/MFA/Origin/Host/CSRF/CORS и suspension A при доступном B; task check и SQL/HTTPS race PASS. [Контракт и ограничения](../features/mfa-policy.md#два-проекта-через-https--a63m5e).
+- Для email pending/outbox и OIDC есть свои локальные single-project PASS; их двухпроектная матрица ещё не подтверждена. Project JWT/introspection tests с другим manifest на той же БД также не заменяют два настоящих token profiles.
+- Двухпроектные roles/settings/administrative guards и target-bound platform role bridge приняты в `TestTwoProjectAccessIsolationSQL`: Luna V4 PASS (targeted lint/race, cleanup, manifest13); V1 task check и прежний HTTPS root PASS; [сценарии и достаточные проверки](../planning/multi-project.md#двухпроектные-роли-и-настройки--mp5-access). Затем оставшиеся lifecycle/email, JWT/native HTTP и OIDC cases. Общий operator management из одной разрешённой сессии сохраняется.
+- Реальный браузер/внешний ingress/providers/SMTP/fleet/load/GC и UI не объявляются принятыми. Backend управляемых email templates и email/Telegram second factors остаются плановыми задачами.
+
+Ниже сохранены протоколы прежних снимков. Формулировки «ещё не подключено» и NOT RUN в них относятся к дате соответствующего блока; позднее покрытие уточняет основная матрица, а не автоматическое снятие всех прежних ограничений.
+
 21 октября, MP3-initial-project-smtp: Go tests/финальный lint0, targeted race/security и actual PostgreSQL18.6/SCRAM command regression PASS5.50s. Scoped SMTP ciphertext+receipt atomic rollback, immutable replay, orphan/lost/tamper/mismatch/authority refusal, no users/roles и sealed runtime проверены. [Evidence/NOT RUN](../planning/history.md#результат-mp3-initial-project-smtp--21-октября-2026). Уточнён platform-owner контракт без копии identity/setup-token handoff/обязательного local super_admin; typed bridge/owner-managed readiness/real SMTP/UI ещё не готовы. Рабочие БД/secrets не менялись.
 
 21 октября, MP3-physical-onboarding: tests/lint0, targeted race/security и actual PostgreSQL18.6/SCRAM regression пройдены; target journal, publication rollback, session-loss/restart, epoch fencing, withdrawal-before-DDL, runtime transaction termination и foreign-session refusal. [Полное evidence/NOT RUN](../planning/history.md#результат-mp3-physical-onboarding--21-октября-2026). Это явный закрытый provisioning API, не server/CLI activation, scheduler/автоматический suspend drain, ready, UI или fleet/load/GC sign-off. Новых dependencies/ENV/миграций нет; рабочие БД и secrets не изменялись.

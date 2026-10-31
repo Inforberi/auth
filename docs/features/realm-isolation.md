@@ -46,7 +46,7 @@ Namespace **не заменяет независимые deployment keys**, issu
 - Финальные `task check` PASS/lint0 и targeted race PASS. Race выполнялся для unit tests, opt-in Redis под race не запускался; standalone Redis acceptance — отдельный Linux binary без race.
 - Cleanup удаляет только заранее зарегистрированные fixture keys, без SCAN/FLUSHDB/FLUSHALL. DB15 вернулась к0, DB0 count0 остался0. Scratch binary/пустой каталог удалены, остановленный до проверки Redis возвращён в stopped. PostgreSQL/API/прочие контейнеры не запускались.
 
-NOT RUN: два полноценных Auth runtime/HTTPS/cookies/ingress/SQL/grants, independent key provisioning/rotation/recovery/cutover, Redis Cluster/fleet/outage/load/GC/capacity. Scoped codecs/adapters не закрывают эти gates и не разрешают публикацию management bridge.
+На исходном снимке 18 октября NOT RUN: два полноценных Auth runtime/HTTPS/cookies/ingress/SQL/grants, independent key provisioning/rotation/recovery/cutover, Redis Cluster/fleet/outage/load/GC/capacity. Позднее 5d закрыл component SQL/crypto/Redis matrix, а [5e](mfa-policy.md#два-проекта-через-https--a63m5e) — конкретную двухпроектную HTTPS/session/MFA matrix с настоящими reader/registry/profiles. Они не закрывают остальные flows, реальный browser/external ingress, rotation/recovery/fleet/load. Текущее покрытие — в [основной матрице MP5](../planning/multi-project.md#сверка-приёмки-mp5--31-октября-2026).
 
 ## Приёмка трёх Auth БД — A6.3m.5d
 
