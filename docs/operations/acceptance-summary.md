@@ -6,9 +6,10 @@
 
 - A6.3m.5d принят: три отдельные Auth БД, scoped crypto/Redis, cross-session/JWT/refresh/MFA denial и независимость соседей при MFA policy/role/factor changes. Это component SQL scope.
 - A6.3m.5e принят Luna V2: два настоящих project HTTP profiles с reader/registry, TLS/cookies/MFA/Origin/Host/CSRF/CORS и suspension A при доступном B; task check и SQL/HTTPS race PASS. [Контракт и ограничения](../features/mfa-policy.md#два-проекта-через-https--a63m5e).
-- Для email pending/outbox и OIDC есть свои локальные single-project PASS; их двухпроектная матрица ещё не подтверждена. Project JWT/introspection tests с другим manifest на той же БД также не заменяют два настоящих token profiles.
+- Для OIDC есть свой single-project PASS; двухпроектная callback matrix ещё не подтверждена. Email component scope принят отдельно, полная email HTTP/browser matrix остаётся открытой. Project JWT/introspection tests с другим manifest на той же БД также не заменяют два настоящих token profiles.
 - Двухпроектные roles/settings/administrative guards и target-bound platform role bridge приняты в `TestTwoProjectAccessIsolationSQL`: Luna V4 PASS (targeted lint/race, cleanup, manifest13); V1 task check и прежний HTTPS root PASS; [сценарии и достаточные проверки](../planning/multi-project.md#двухпроектные-роли-и-настройки--mp5-access). Затем оставшиеся lifecycle/email, JWT/native HTTP и OIDC cases. Общий operator management из одной разрешённой сессии сохраняется.
 - Реальный браузер/внешний ingress/providers/SMTP/fleet/load/GC и UI не объявляются принятыми. Backend управляемых email templates и email/Telegram second factors остаются плановыми задачами.
+- MP5-sessions-email принят Luna V1/V2: task check, Email root race, targeted lint и SessionLifecycle root race PASS; cleanup/manifest14 подтверждены. Покрыты HTTP sessions/account lifecycle и component verify/reset/invite/temporary/change/report/recovery, payload isolation и SMTP retry; [контракт и границы](../planning/multi-project.md#сессии-и-почта-двух-проектов--mp5-sessions-email). SQL proof fixture и намеренный SMTP отказ не подтверждают login, browser или успешную внешнюю доставку.
 
 Ниже сохранены протоколы прежних снимков. Формулировки «ещё не подключено» и NOT RUN в них относятся к дате соответствующего блока; позднее покрытие уточняет основная матрица, а не автоматическое снятие всех прежних ограничений.
 
