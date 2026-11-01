@@ -11,7 +11,7 @@ import (
 
 func (r *Repository) DisableEmailFactor(ctx context.Context, proof service.Proof) error {
 	return r.transaction(ctx, func(tx pgx.Tx) error {
-		deadline, err := r.lockEmailFactorManagement(ctx, tx, proof)
+		deadline, err := r.lockPasswordFactorManagement(ctx, tx, proof)
 		if err != nil {
 			return err
 		}
@@ -35,6 +35,6 @@ func (r *Repository) DisableEmailFactor(ctx context.Context, proof service.Proof
 		if err := audit(ctx, tx, proof.UserID, "email_factor_disabled"); err != nil {
 			return err
 		}
-		return emailFactorDeadline(ctx, tx, deadline)
+		return factorManagementDeadline(ctx, tx, deadline)
 	})
 }

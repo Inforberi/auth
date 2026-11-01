@@ -33,6 +33,7 @@ type sessions interface {
 
 type tokens interface {
 	GenerateToken(...int) (string, error)
+	GenerateCode() (string, error)
 	Hash(string) string
 }
 

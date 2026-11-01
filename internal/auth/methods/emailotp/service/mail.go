@@ -1,10 +1,7 @@
 package service
 
 import (
-	"crypto/rand"
 	"encoding/json"
-	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/domain"
@@ -21,11 +18,10 @@ func prepareCode(cipher cipher, tokens tokens, ttl time.Duration, email, action,
 	if err != nil {
 		return nil, domain.Challenge{}, err
 	}
-	value, err := rand.Int(rand.Reader, big.NewInt(100000000))
+	code, err := tokens.GenerateCode()
 	if err != nil {
 		return nil, domain.Challenge{}, err
 	}
-	code := fmt.Sprintf("%08d", value.Int64())
 	plain, err := json.Marshal(codeMail{To: email, Subject: "Код для " + action, Body: "<p>Код для " + action + ": <strong>" + code + "</strong>.</p><p>Если вы не запрашивали эту операцию, никому не сообщайте код.</p>"})
 	if err != nil {
 		return nil, domain.Challenge{}, err

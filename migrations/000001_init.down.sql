@@ -1,4 +1,5 @@
 DROP VIEW IF EXISTS auth.role_bound_sessions;
+DROP TABLE IF EXISTS auth.mfa_telegram_preparations;
 DROP FUNCTION IF EXISTS auth.email_mfa_management_time(UUID,TEXT,TIMESTAMPTZ);
 DROP FUNCTION IF EXISTS auth.mfa_proof_usable(UUID,TEXT,TEXT);
 DROP FUNCTION IF EXISTS auth.email_factor_usable(UUID);

@@ -1,17 +1,19 @@
 # Текущий шаг
 
-Обновлено 1 ноября 2026. [Карта](index.md) · [Telegram MFA](../features/telegram-mfa.md) · [Implementation](../planning/implementation.md).
+Обновлено 1 ноября 2026. [Карта](index.md) · [Telegram MFA](../features/telegram-mfa.md#private-подготовка-канала--a63m6d2a-pass-luna) · [Implementation](../planning/implementation.md).
 
-## Завершён A6.3m.6d.1 — Luna V3 PASS
+## Завершён A6.3m.6d.2a — Luna V4 PASS
 
-Внутренний Bot API adapter internal/integrations/telegram/bot: bounded shared client, getMe identity check, private SendCode, безопасные credentials/errors, authenticated private /start decoder. OIDC секреты не используются. Привязка в БД, factor lifecycle/login, public webhook и bot settings ещё не подключены: parser не обеспечивает SQL single-use или готовую MFA.
+Private Request/Receive/Confirm: исходная browser/password/требуемый factor proof, короткий SQL intent, trusted bot candidate, encrypted retry payload без reset guesses/TTL, current bot/settings version, same-source code confirmation/token rotation без login/MFA/proof elevation. Session ID FK+index для cleanup, token hash отдельным snapshot; внешняя rotation/logout/version делает intent stale. Source000001/table/metadata/checks/indexes/audit, bounded retention/deletion; shared password-factor guard перенесён без изменения условий, CSPRNG8-digit generator внедряется через token port.
 
-Luna V3: manifest10/10, task check/lint0 и package race/count1 PASS/exit0; cache и test server/transport ресурсы очищены. Снимок `/private/tmp/auth-telegram-mfa-bot-v3.14fggzk7`, base affc554; evidence turn `01a196e2-210f-7de3-a3df-647ccf720811`, cursor `944a6e9d-49fe-49f7-8ff5-48acb6c615a1:67`. V1/V2 lint findings исправлены: cohesive response/private-message validation, checked Close в HTTP caller, style; два точечных объяснённых owner-lifetime lint exceptions без изменения правил проекта. [История/evidence](../planning/history.md).
+Luna: V2 Go tests/architecture/affected race и все4 actual schema roots с race/count1 PASS без SKIP; V4 final lint0, formatting-only V2→V4, manifest29/29 и cleanup DB/role/schema/TLS/cache подтверждены. Снимок `/private/tmp/auth-telegram-channel-v4.re2xxzjs`, base004ca08; evidence turn `01a19722-ff16-72e2-b5be-e930066ea5de`, cursor `944a6e9d-49fe-49f7-8ff5-48acb6c615a1:71`. Full task check/SQL после style-only правок не повторялись, успешные части сохранены. [History/FAIL и исправления](../planning/history.md).
 
-Main сверил10/10 перед обновлением только Markdown, проверки не повторял. Schema/ENV/dependencies/routes/settings/workers не добавлены; real Telegram/secrets/БД не использовались. Пользователь разрешил коммит после PASS.
+Main сверил29/29 до обновления только Markdown, executable checks не запускал; pinned formatter — подготовка изменения. Перед следующим снимком применять штатный formatter Taskfile: одного gofmt недостаточно для gofumpt/gci. Пользователь разрешил коммит после PASS. Новых dependencies/ENV/routes/workers/очередей нет; real DB/secrets не менялись.
 
-## Далее — .6d.2
+## Далее — .6d.2b
 
-Source browser/password/factor proof + project SQL intent, authenticated bot candidate, confirmation code в исходной browser session, owner/version/config/expiry/replay guards. Start URL сам не включает фактор и не назначает владельца. Guarded bot settings/secret storage и bot identity revision до реальных credentials. Сетевой вызов не выполнять под SQL locks. Public flow закрыт до lifecycle/login/readiness/двухпроектной приёмки .6d.3–.4. UI не начинать без предупреждения и отдельного согласования.
+Guarded Bot API settings/secret storage/rotation: отдельные project crypto purposes для bot token/webhook secret, verified bot ID, permission/fresh-proof/version/audit guards, masked reads. Config verification без сетевого вызова под SQL locks; atomic settings.version change инвалидирует pending proofs даже при прежнем bot ID. Сейчас telegram_bot_id default NULL и SQL authority fail-closed; private preparation не открывает публичный flow.
 
-Локальный исследователь Luna gpt-6-luna (Jason, 01a196ae-b5d3-7313-acb1-b14dad3aa9b6) дал read-only карту Telegram/MFA helpers; для связанных уточнений переиспользовать. Проверки — только отдельный чат «Проверки Auth — Luna», 01a16eab-c777-78a0-a815-47b45ff0860d, host local. Локальная email .4b уже принята, коммит affc554; её проверки не повторять.
+Затем .6d.3/.4: factor policy/lifecycle и method-aware login/delivery/protected routes/readiness/actual two-project fault/recovery acceptance. Schema нужна binary даже при disabled Telegram (retention); upgrade MP6 отдельно. Внешние Telegram/ingress/capacity/GC/UI — отдельные gates. UI не начинать без предупреждения и отдельного согласования.
+
+Локальный исследователь Luna gpt-6-luna (Jason,01a196ae-b5d3-7313-acb1-b14dad3aa9b6) дал bounded source/cleanup map. Проверки — только чат «Проверки Auth — Luna»,01a16eab-c777-78a0-a815-47b45ff0860d, host local.

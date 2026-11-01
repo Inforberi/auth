@@ -104,7 +104,8 @@ CREATE TABLE auth.mfa_settings (
   version BIGINT NOT NULL DEFAULT 1 CHECK(version>0),
   session_revision BIGINT NOT NULL DEFAULT 1 CHECK(session_revision>0),
   mode TEXT NOT NULL CHECK(mode IN ('optional','administrators','required')),
-  email_factor_allowed BOOLEAN NOT NULL DEFAULT false
+  email_factor_allowed BOOLEAN NOT NULL DEFAULT false,
+  telegram_bot_id BIGINT CHECK(telegram_bot_id>0 AND telegram_bot_id<4503599627370496)
 );
 INSERT INTO auth.mfa_settings(singleton,mode) VALUES(true,'administrators');
 
@@ -503,7 +504,7 @@ CREATE TABLE auth.mfa_recovery_codes (
 CREATE TABLE auth.mfa_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
-  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated','recovery_requested','recovery_approved','recovery_cancelled','recovery_completed','email_factor_enabled','email_factor_disabled','email_factor_suspended')),
+  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated','recovery_requested','recovery_approved','recovery_cancelled','recovery_completed','email_factor_enabled','email_factor_disabled','email_factor_suspended','telegram_channel_requested','telegram_channel_received','telegram_channel_confirmed')),
   request_id UUID,
   auth_version BIGINT CHECK (auth_version>0),
   operator_oid OID,
@@ -737,6 +738,33 @@ CREATE VIEW auth.role_bound_sessions WITH (security_invoker=true) AS
     LEFT JOIN auth.roles r ON r.id=binding.role_id::uuid
     WHERE r.id IS NULL OR r.session_revision<>binding.revision::bigint
   );
+
+CREATE TABLE auth.mfa_telegram_preparations (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  digest TEXT NOT NULL UNIQUE CHECK(digest ~ '^[a-f0-9]{64}$'),
+  session_id UUID NOT NULL REFERENCES auth.sessions(id) ON DELETE CASCADE,
+  session_hash TEXT NOT NULL CHECK(session_hash ~ '^[a-f0-9]{64}$'),
+  auth_version BIGINT NOT NULL CHECK(auth_version>0),
+  bot_id BIGINT NOT NULL CHECK(bot_id>0 AND bot_id<4503599627370496),
+  policy_version BIGINT NOT NULL CHECK(policy_version>0),
+  telegram_user_id BIGINT CHECK(telegram_user_id>0 AND telegram_user_id<4503599627370496),
+  update_id BIGINT CHECK(update_id>=0),
+  verifier TEXT CHECK(verifier ~ '^[a-f0-9]{64}$'),
+  payload BYTEA CHECK(octet_length(payload) BETWEEN 36 AND 512),
+  attempts INTEGER NOT NULL DEFAULT 0 CHECK(attempts BETWEEN 0 AND 5),
+  confirmed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  CHECK(expires_at>created_at AND expires_at<=created_at+interval '5 minutes'),
+  CHECK((telegram_user_id IS NULL)=(update_id IS NULL)),
+  CHECK((telegram_user_id IS NULL AND verifier IS NULL AND payload IS NULL AND confirmed_at IS NULL AND attempts=0)
+    OR (telegram_user_id IS NOT NULL AND ((confirmed_at IS NULL AND verifier IS NOT NULL AND payload IS NOT NULL)
+      OR (confirmed_at IS NOT NULL AND confirmed_at>=created_at AND confirmed_at<expires_at AND verifier IS NULL AND payload IS NULL)))),
+  UNIQUE(bot_id,telegram_user_id),
+  UNIQUE(bot_id,update_id)
+);
+CREATE INDEX mfa_telegram_preparations_expiry ON auth.mfa_telegram_preparations(expires_at,user_id);
+CREATE INDEX mfa_telegram_preparations_session ON auth.mfa_telegram_preparations(session_id);
 
 CREATE TABLE auth.refresh_families (
   session_id UUID PRIMARY KEY REFERENCES auth.sessions(id) ON DELETE CASCADE,
