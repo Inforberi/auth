@@ -17,6 +17,16 @@ type PasswordPrimary interface {
 type NativePasswordLogin struct {
 	login    *NativeLogin
 	password PasswordPrimary
+	forceMFA bool
+}
+
+func NewNativePasswordMFA(login *NativeLogin, password PasswordPrimary) (*NativePasswordLogin, error) {
+	service, err := NewNativePasswordLogin(login, password)
+	if err != nil {
+		return nil, err
+	}
+	service.forceMFA = true
+	return service, nil
 }
 
 type NativePasswordInput struct {
@@ -45,5 +55,9 @@ func (s *NativePasswordLogin) Login(ctx context.Context, input NativePasswordInp
 	if err != nil {
 		return nil, err
 	}
-	return s.login.Begin(ctx, NativeInput{Proof: proof, Audience: input.Audience, Scope: scope, UserAgent: input.UserAgent, IP: input.IP})
+	begin := s.login.Begin
+	if s.forceMFA {
+		begin = s.login.BeginMFA
+	}
+	return begin(ctx, NativeInput{Proof: proof, Audience: input.Audience, Scope: scope, UserAgent: input.UserAgent, IP: input.IP})
 }

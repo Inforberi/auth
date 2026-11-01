@@ -65,7 +65,7 @@ type NativeChallengeResponse struct {
 	Challenge string    `json:"challenge"`
 	Binding   string    `json:"binding"`
 	ExpiresAt time.Time `json:"expiresAt"`
-	NextStep  string    `json:"nextStep" enums:"mfa,enrollment"`
+	NextStep  string    `json:"nextStep" enums:"mfa,enrollment,recovery"`
 } // @name token_http.NativeChallengeResponse
 
 func (h *NativeHandler) writeLogin(w http.ResponseWriter, r *http.Request, result *service.NativeLoginResult) {
@@ -77,6 +77,9 @@ func (h *NativeHandler) writeLogin(w http.ResponseWriter, r *http.Request, resul
 		step := "mfa"
 		if result.Challenge.EnrollmentRequired {
 			step = "enrollment"
+		}
+		if result.Challenge.RecoveryRequired {
+			step = "recovery"
 		}
 		c := result.Challenge
 		httpx.JSON(w, 202, NativeChallengeResponse{Challenge: c.Token, Binding: c.Binding, ExpiresAt: c.ExpiresAt, NextStep: step})

@@ -74,6 +74,38 @@ func emailHTTPAuth() sessionhttp.Auth {
 	return sessionhttp.Auth{UserID: "11111111-1111-4111-8111-111111111111", TokenHash: strings.Repeat("a", 64), AuthVersion: 2}
 }
 
+func TestEmailMFAProjectCookieIsolation(t *testing.T) {
+	f := &emailHTTPFixture{}
+	name := EmailLoginCookie + "-project-a"
+	h, err := NewEmailWithCookie(f, f, f, f, zap.NewNop(), name)
+	require.NoError(t, err)
+	for _, invalid := range []string{"mfa-email", "__Host-invalid;name", "__Host-invalid\r\n"} {
+		_, err := NewEmailWithCookie(f, f, f, f, zap.NewNop(), invalid)
+		require.Error(t, err)
+	}
+	w := httptest.NewRecorder()
+	h.StartEmailLogin(w, emailHTTPRequest(`{"email":"user@example.test","password":"secret"}`, false))
+	require.Equal(t, 202, w.Code)
+	cookies := w.Result().Cookies()
+	require.Equal(t, name, cookies[len(cookies)-1].Name)
+	request := emailHTTPRequest(`{"challenge":"challenge","code":"12345678"}`, false)
+	request.AddCookie(&http.Cookie{Name: EmailLoginCookie, Value: "foreign-binding"})
+	w = httptest.NewRecorder()
+	before := f.calls
+	h.CompleteEmailLogin(w, request)
+	require.Equal(t, 400, w.Code)
+	require.Equal(t, before, f.calls)
+	request = emailHTTPRequest(`{"challenge":"challenge","code":"12345678"}`, false)
+	request.AddCookie(&http.Cookie{Name: EmailLoginCookie, Value: "foreign-binding"})
+	request.AddCookie(&http.Cookie{Name: name, Value: "own-binding"})
+	w = httptest.NewRecorder()
+	h.CompleteEmailLogin(w, request)
+	require.Equal(t, 200, w.Code)
+	require.Equal(t, "own-binding", f.input.Binding)
+	require.Equal(t, name, w.Result().Cookies()[0].Name)
+	require.Negative(t, w.Result().Cookies()[0].MaxAge)
+}
+
 func emailHTTPRequest(body string, auth bool) *http.Request {
 	r := httptest.NewRequest("POST", "https://auth.example/test", strings.NewReader(body))
 	r.Header.Set("Content-Type", "application/json")

@@ -37,22 +37,10 @@ func (s *Service) IssueNative(ctx context.Context, input NativeInput) (*RefreshR
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	if s.native == nil {
-		return nil, domain.ErrNativeDisabled
-	}
-	if !mfaservice.ValidPrimary(input.Proof) || input.Proof.Administrative || (input.Proof.Method != "password" && input.Proof.Method != "emailotp") || len(input.UserAgent) > 512 {
-		return nil, domain.ErrInvalidRequest
-	}
-	ip, err := netip.ParseAddr(input.IP)
-	if err != nil || ip.Zone() != "" {
-		return nil, domain.ErrInvalidRequest
-	}
-	input.IP = ip.Unmap().String()
-	resource, scope, err := s.requestedResource(input.Audience, input.Scope)
+	input, mode, err := s.prepareNativeInput(input)
 	if err != nil {
 		return nil, err
 	}
-	input.Scope = scope
 	select {
 	case s.admission <- struct{}{}:
 	default:
@@ -67,7 +55,7 @@ func (s *Service) IssueNative(ctx context.Context, input NativeInput) (*RefreshR
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.repo.IssueNative(ctx, NativeParams{Input: input, Policy: *s.native, Mode: resource.mode, LedgerVerifier: credentials.ledgerVerifier, RefreshVerifier: credentials.refreshVerifier}, s.signSession)
+	result, err := s.repo.IssueNative(ctx, NativeParams{Input: input, Policy: *s.native, Mode: mode, LedgerVerifier: credentials.ledgerVerifier, RefreshVerifier: credentials.refreshVerifier}, s.signSession)
 	if err != nil {
 		return nil, err
 	}
@@ -76,6 +64,26 @@ func (s *Service) IssueNative(ctx context.Context, input NativeInput) (*RefreshR
 	}
 	result.RefreshToken = credentials.refresh
 	return result, nil
+}
+
+func (s *Service) prepareNativeInput(input NativeInput) (NativeInput, string, error) {
+	if s.native == nil {
+		return input, "", domain.ErrNativeDisabled
+	}
+	if !mfaservice.ValidPrimary(input.Proof) || input.Proof.Administrative || (input.Proof.Method != "password" && input.Proof.Method != "emailotp") || len(input.UserAgent) > 512 {
+		return input, "", domain.ErrInvalidRequest
+	}
+	ip, err := netip.ParseAddr(input.IP)
+	if err != nil || ip.Zone() != "" {
+		return input, "", domain.ErrInvalidRequest
+	}
+	input.IP = ip.Unmap().String()
+	resource, scope, err := s.requestedResource(input.Audience, input.Scope)
+	if err != nil {
+		return input, "", err
+	}
+	input.Scope = scope
+	return input, resource.mode, nil
 }
 
 func (s *Service) newNativeCredentials() (nativeCredentials, error) {

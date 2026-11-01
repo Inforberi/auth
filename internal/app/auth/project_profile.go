@@ -29,6 +29,7 @@ type ProjectProfileConfig struct {
 	Access                   *accesssettings.Catalog
 	Password                 *ProjectPasswordConfig
 	EmailOTP                 *ProjectEmailOTPConfig
+	EmailMFA                 *ProjectEmailMFAConfig
 	Google, Telegram         *ProjectOIDCConfig
 	Verification             *accountservice.Config
 	Recovery                 *passwordservice.Config
@@ -63,6 +64,7 @@ type ProjectProfile struct {
 	mfa                      *projectMFA
 	mfaManagement            *projectMFA
 	mfaRecovery              *projectMFARecovery
+	emailMFA                 *projectEmailMFA
 	userDirectory            *projectUserDirectory
 	userLifecycle            *projectUserLifecycle
 	access                   *projectAccess
@@ -95,9 +97,6 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 		return nil, err
 	}
 	p := &ProjectProfile{key: key, origin: origin, policy: configuration.Policy(), deps: deps, states: make(map[string]ProjectFeatureState)}
-	if err := p.checkMFACapability(ctx, cfg); err != nil {
-		return nil, err
-	}
 	observed := p.policy
 	if assess {
 		p.selectAssessmentPolicy(cfg)
@@ -109,6 +108,7 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	p.bindProfileMFA(configuration.EncryptionKey())
 	p.buildProfileMFAManagement(cfg, configuration.EncryptionKey(), redisReady)
 	p.buildProfileMFARecovery(ctx, cfg, configuration.EncryptionKey(), redisReady)
+	p.buildProfileEmailMFA(cfg)
 	p.buildProfileEmailManagement(ctx, cfg, redisReady)
 	p.finishProfileRegistration(cfg)
 	p.buildProfileProvisioning(ctx, cfg, redisReady)
@@ -120,6 +120,9 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	p.buildProfileProviderSettings(cfg, configuration.EncryptionKey())
 	p.buildProfileRetentionSettings(cfg)
 	p.buildProfileMFASettings(cfg)
+	if err := p.checkMFACapability(ctx, cfg); err != nil {
+		return nil, err
+	}
 	if err := p.checkSnapshotCurrent(ctx, observed); err != nil {
 		return nil, err
 	}

@@ -25,6 +25,7 @@ type projectNative struct {
 	password    *passwordservice.LoginLimit
 	limits      *passwordredis.RedisRepo
 	emailCipher *secretbox.Cipher
+	emailMFA    *projectEmailMFA
 }
 
 func newProjectNative(ctx context.Context, key projectruntime.Key, scope realmscope.Scope, root string, cfg ProjectTokenConfig, deps ProjectTokenDependencies) (*projectNative, error) {

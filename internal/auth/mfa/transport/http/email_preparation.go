@@ -16,6 +16,20 @@ type EmailPreparationResponse struct {
 	ExpiresAt time.Time `json:"expiresAt"`
 } // @name mfa_http.EmailPreparationResponse
 
+// @Summary Prove possession of an email MFA channel
+// @Description Requires current owner session, fresh explicit password proof and any currently required MFA proof. Only an owned verified address is accepted. Sends a separate-purpose code; does not enable a factor or create a session.
+// @Tags MFA
+// @Produce json
+// @Accept json
+// @Param body body EmailPreparationRequest true "request"
+// @Success 202 {object} EmailPreparationResponse
+// @Failure 400 {object} httpx.ErrorResponse
+// @Failure 401 {object} httpx.ErrorResponse
+// @Failure 403 {object} httpx.ErrorResponse
+// @Failure 409 {object} httpx.ErrorResponse
+// @Failure 429 {object} httpx.ErrorResponse
+// @Failure 503 {object} httpx.ErrorResponse
+// @Router /api/v1/auth/mfa/email/preparation [post]
 func (h *EmailHandler) RequestEmailPreparation(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	proof, ok := requestProof(w, r)

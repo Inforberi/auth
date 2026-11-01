@@ -32,10 +32,17 @@ type EmailPreparation struct {
 }
 
 func NewEmailPreparation(repo emailPreparationRepository, cipher cipher, limits limiter, tokens tokens, cfg EmailPreparationConfig) (*EmailPreparation, error) {
-	if repo == nil || cipher == nil || limits == nil || tokens == nil || cfg.TTL < time.Minute || cfg.TTL > 5*time.Minute || cfg.ResendInterval < time.Second || cfg.ResendInterval >= cfg.TTL || cfg.RequestsPerMinute < 1 || cfg.ConfirmationsPerMinute < 1 {
+	if repo == nil || cipher == nil || limits == nil || tokens == nil || cfg.Validate() != nil {
 		return nil, errors.New("invalid email factor preparation configuration")
 	}
 	return &EmailPreparation{repo: repo, cipher: cipher, limits: limits, tokens: tokens, cfg: cfg}, nil
+}
+
+func (c EmailPreparationConfig) Validate() error {
+	if c.TTL < time.Minute || c.TTL > 5*time.Minute || c.ResendInterval < time.Second || c.ResendInterval >= c.TTL || c.RequestsPerMinute < 1 || c.ConfirmationsPerMinute < 1 {
+		return errors.New("invalid email factor preparation configuration")
+	}
+	return nil
 }
 
 func (s *EmailPreparation) admit(ctx context.Context, proof mfaservice.Proof, ip string, confirm bool) error {

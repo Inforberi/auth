@@ -3,6 +3,7 @@ package mfahttp
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"go.uber.org/zap"
 
@@ -42,13 +43,19 @@ type EmailHandler struct {
 	login       emailLogin
 	password    emailPassword
 	log         *zap.Logger
+	cookieName  string
 }
 
 func NewEmail(preparation emailPreparation, factors emailFactors, login emailLogin, password emailPassword, log *zap.Logger) (*EmailHandler, error) {
-	if preparation == nil || factors == nil || login == nil || password == nil {
+	return NewEmailWithCookie(preparation, factors, login, password, log, EmailLoginCookie)
+}
+
+func NewEmailWithCookie(preparation emailPreparation, factors emailFactors, login emailLogin, password emailPassword, log *zap.Logger, cookieName string) (*EmailHandler, error) {
+	cookie := &http.Cookie{Name: cookieName, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode}
+	if preparation == nil || factors == nil || login == nil || password == nil || !strings.HasPrefix(cookieName, "__Host-") || len(cookieName) > 100 || cookie.Valid() != nil {
 		return nil, domain.ErrUnavailable
 	}
-	return &EmailHandler{preparation: preparation, factors: factors, login: login, password: password, log: log}, nil
+	return &EmailHandler{preparation: preparation, factors: factors, login: login, password: password, log: log, cookieName: cookieName}, nil
 }
 
 var emailMFAErrors = append([]httpx.ErrorRule{

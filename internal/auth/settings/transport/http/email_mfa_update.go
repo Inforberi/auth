@@ -12,6 +12,20 @@ type EmailMFAUpdateRequest struct {
 	Allowed         *bool `json:"allowed"`
 } // @name mfa_settings_http.EmailUpdateRequest
 
+// @Summary Update project email MFA policy
+// @Description Requires fresh administrative proofs, current permission and optimistic version. Enabling requires a complete project runtime; disabling is rejected while bindings exist. Shares the policy version with MFA mode.
+// @Tags Auth settings
+// @Produce json
+// @Accept json
+// @Param body body EmailMFAUpdateRequest true "request"
+// @Success 200 {object} EmailMFASettingsResponse
+// @Failure 400 {object} httpx.ErrorResponse
+// @Failure 401 {object} httpx.ErrorResponse
+// @Failure 403 {object} httpx.ErrorResponse
+// @Failure 409 {object} httpx.ErrorResponse
+// @Failure 429 {object} httpx.ErrorResponse
+// @Failure 503 {object} httpx.ErrorResponse
+// @Router /api/v1/admin/auth/settings/mfa/email [post]
 func (h *EmailMFAHandler) Update(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	actor, ok := principal(w, r)

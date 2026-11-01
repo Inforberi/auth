@@ -30,7 +30,7 @@ func (p *ProjectProfile) checkMFACapability(ctx context.Context, cfg ProjectProf
 		enabled = enabled && cfg.Tokens.Native.MFA.Enabled
 	}
 	return p.deps.Registry.UsePool(ctx, p.key, func(ctx context.Context, pool *pgxpool.Pool) error {
-		return mfapostgres.New(pool).CheckCapability(ctx, enabled)
+		return mfapostgres.New(pool).CheckEmailCapability(ctx, enabled, p.emailMFA != nil)
 	})
 }
 

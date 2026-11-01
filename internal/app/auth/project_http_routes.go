@@ -16,6 +16,9 @@ func (p *ProjectProfile) httpRoutes(fallback *sessionservice.Config, log *zap.Lo
 		return nil, errors.New("unbuilt project HTTP profile")
 	}
 	handlers := p.browserHandlers(log)
+	if err := p.emailMFAHandlers(handlers, log); err != nil {
+		return nil, err
+	}
 	native := p.tokenHandlers(handlers, log)
 	var protection router.ProjectRouteProtection
 	if native != nil {

@@ -688,6 +688,13 @@ definitions:
       status:
         type: string
     type: object
+  mfa_http.CompleteEmailLoginRequest:
+    properties:
+      challenge:
+        type: string
+      code:
+        type: string
+    type: object
   mfa_http.CompleteLoginRequest:
     properties:
       challenge:
@@ -711,6 +718,47 @@ definitions:
       code:
         type: string
       token:
+        type: string
+    type: object
+  mfa_http.EmailFactorResponse:
+    properties:
+      allowed:
+        type: boolean
+      configured:
+        type: boolean
+      emailId:
+        type: string
+      enabledAt:
+        type: string
+      suspendedAt:
+        type: string
+      usable:
+        type: boolean
+    type: object
+  mfa_http.EmailLoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  mfa_http.EmailPreparationConfirmation:
+    properties:
+      binding:
+        type: string
+      code:
+        type: string
+    type: object
+  mfa_http.EmailPreparationRequest:
+    properties:
+      email:
+        type: string
+    type: object
+  mfa_http.EmailPreparationResponse:
+    properties:
+      binding:
+        type: string
+      expiresAt:
         type: string
     type: object
   mfa_http.EnrollmentResponse:
@@ -790,6 +838,20 @@ definitions:
     properties:
       verifiedAt:
         type: string
+    type: object
+  mfa_settings_http.EmailSettingsResponse:
+    properties:
+      allowed:
+        type: boolean
+      version:
+        type: integer
+    type: object
+  mfa_settings_http.EmailUpdateRequest:
+    properties:
+      allowed:
+        type: boolean
+      expectedVersion:
+        type: integer
     type: object
   mfa_settings_http.Policy:
     properties:
@@ -1477,6 +1539,7 @@ definitions:
         enum:
         - mfa
         - enrollment
+        - recovery
         type: string
     type: object
   token_http.NativeEmailConfirmRequest:
@@ -1897,6 +1960,91 @@ paths:
       summary: Change realm MFA policy
       tags:
       - MFA settings
+  /api/v1/admin/auth/settings/mfa/email:
+    get:
+      description: Requires current project auth.settings.manage permission. Reads
+        saved allowed/version; readiness is a server capability, not a client field.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_settings_http.EmailSettingsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read project email MFA policy
+      tags:
+      - Auth settings
+    post:
+      consumes:
+      - application/json
+      description: Requires fresh administrative proofs, current permission and optimistic
+        version. Enabling requires a complete project runtime; disabling is rejected
+        while bindings exist. Shares the policy version with MFA mode.
+      parameters:
+      - description: request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/mfa_settings_http.EmailUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_settings_http.EmailSettingsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Update project email MFA policy
+      tags:
+      - Auth settings
   /api/v1/admin/auth/settings/providers/{provider}:
     get:
       description: Live session, HTTPS Origin and auth.settings.manage; no fresh proof
@@ -4213,6 +4361,315 @@ paths:
       summary: Get authenticated user and current session IDs
       tags:
       - Session
+  /api/v1/auth/mfa/email:
+    delete:
+      description: Requires current primary/factor proofs, allowed Origin and session.
+        Cannot remove the last mandatory factor. Atomically revokes old credentials
+        and audits; disabling project policy alone does not remove bindings.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Disable personal email MFA
+      tags:
+      - MFA
+    get:
+      description: Current owner session only. Does not refresh its lifetime or reveal
+        another user. Configured, usable and suspended are distinct states.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.EmailFactorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read personal email MFA status
+      tags:
+      - MFA
+    post:
+      description: 'Current owner, fresh password/channel possession and current factor
+        proofs required. Email-only administrative factor is unsupported: enroll TOTP
+        first. Atomically binds the channel, audits and revokes old credentials; no
+        new session.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Enable the proved email MFA channel
+      tags:
+      - MFA
+  /api/v1/auth/mfa/email/login:
+    post:
+      consumes:
+      - application/json
+      description: Requires the project email-factor capability, allowed Origin and
+        enrolled verified channel. Returns only a challenge and project-scoped HttpOnly
+        binding cookie; never creates a session before the code. Email proof is not
+        strong TOTP assurance.
+      parameters:
+      - description: request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/mfa_http.EmailLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/mfa_http.ChallengeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Start password login with an explicitly selected email factor
+      tags:
+      - MFA
+  /api/v1/auth/mfa/email/login/complete:
+    post:
+      consumes:
+      - application/json
+      description: Requires exactly one project binding cookie and the same one-use
+        challenge/code. TOTP, native, foreign, replaced, expired and replayed challenges
+        fail closed. Sets the shared browser session cookie; never returns its token
+        in JSON.
+      parameters:
+      - description: request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/mfa_http.CompleteEmailLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Complete browser email second-factor login
+      tags:
+      - MFA
+  /api/v1/auth/mfa/email/preparation:
+    post:
+      consumes:
+      - application/json
+      description: Requires current owner session, fresh explicit password proof and
+        any currently required MFA proof. Only an owned verified address is accepted.
+        Sends a separate-purpose code; does not enable a factor or create a session.
+      parameters:
+      - description: request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/mfa_http.EmailPreparationRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/mfa_http.EmailPreparationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Prove possession of an email MFA channel
+      tags:
+      - MFA
+  /api/v1/auth/mfa/email/preparation/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Consumes the dedicated code and rotates the current session verifier
+        without increasing its lifetime or granting strong MFA. Requires allowed Origin
+        and the original owner session proof.
+      parameters:
+      - description: request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/mfa_http.EmailPreparationConfirmation'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mfa_http.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Confirm email MFA channel possession
+      tags:
+      - MFA
   /api/v1/auth/mfa/login/complete:
     post:
       consumes:
@@ -4959,6 +5416,96 @@ paths:
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
       summary: Complete native MFA login
+      tags:
+      - Native tokens
+  /api/v1/auth/native/mfa/email/complete:
+    post:
+      consumes:
+      - application/json
+      description: Requires the exact challenge/binding from the selected email route
+        and its one-use email code. Recovery=true, TOTP/browser challenges and arbitrary
+        target changes fail closed. Issuance/sign/audit are atomic; the resulting
+        email proof does not satisfy strong-MFA guards.
+      parameters:
+      - description: Challenge, binding and email code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/token_http.NativeMFARequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/token_http.NativeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Complete a native email second-factor challenge
+      tags:
+      - Native tokens
+  /api/v1/auth/native/mfa/email/login:
+    post:
+      consumes:
+      - application/json
+      description: Cookie-free native route. Requires an enrolled allowed email factor
+        after a password; never falls back to password-only tokens. Email is not strong
+        TOTP assurance. Recovery of a lost channel uses the browser operator-assisted
+        flow.
+      parameters:
+      - description: Password and resource scope
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/token_http.NativePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/token_http.NativeChallengeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Sign in with password and an explicitly selected email factor
       tags:
       - Native tokens
   /api/v1/auth/native/mfa/enrollment:

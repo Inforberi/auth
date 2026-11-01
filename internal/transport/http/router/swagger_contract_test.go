@@ -53,6 +53,12 @@ func TestSwaggerMatchesRoutes(t *testing.T) {
 			for path, methods := range doc.Paths {
 				for method := range methods {
 					present := routes[method+" "+path]
+					if projectEmailMFAPath(path) {
+						if present {
+							t.Fatal("standalone exposes project-only email MFA")
+						}
+						continue // ProjectProfile route parity is checked in app/auth; SQL tests cover mounting/protection.
+					}
 					if strings.HasPrefix(path, "/api/v1/platform/") {
 						if present {
 							t.Fatal("standalone exposes a platform route")
@@ -72,6 +78,11 @@ func TestSwaggerMatchesRoutes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func projectEmailMFAPath(path string) bool {
+	return path == "/api/v1/auth/mfa/email" || strings.HasPrefix(path, "/api/v1/auth/mfa/email/") ||
+		strings.HasPrefix(path, "/api/v1/auth/native/mfa/email/") || path == "/api/v1/admin/auth/settings/mfa/email"
 }
 
 func TestSwaggerMatchesPlatformRoutes(t *testing.T) {
@@ -105,6 +116,9 @@ func TestSwaggerMatchesPlatformRoutes(t *testing.T) {
 	if err := chi.Walk(router, func(method, path string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
 		if method == http.MethodOptions {
 			return nil
+		}
+		if projectEmailMFAPath(path) {
+			t.Fatal("operator exposes project-only email MFA")
 		}
 		routes[strings.ToLower(method)+" "+path] = true
 		if _, ok := doc.Paths[path][strings.ToLower(method)]; !ok {

@@ -37,6 +37,7 @@ func consumeEmailLoginCode(ctx context.Context, tx pgx.Tx, proof lockedLoginChal
  WHERE c.digest=$1 AND c.mfa_digest=$2 AND c.user_id=$3 AND c.auth_version=$4 AND c.email_id=$5
  AND c.credential_profile=$6 AND c.purpose='mfa_email_login' AND c.session_hash IS NULL
  AND c.attempts<5 AND c.expires_at>clock_timestamp() AND p.singleton AND auth.email_factor_usable(c.user_id)
+ AND NOT auth.has_administrative_access(c.user_id)
  AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials WHERE user_id=c.user_id)
  AND NOT EXISTS(SELECT 1 FROM auth.account_provisions WHERE user_id=c.user_id AND (activated_at IS NULL OR password_change_required))
  FOR UPDATE OF c FOR SHARE OF f,e,p`, input.Digest, proof.Digest, proof.UserID, proof.AuthVersion, proof.FactorEmailID, proof.Profile).Scan(&expected, &now)

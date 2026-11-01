@@ -33,6 +33,12 @@ func (p *ProjectProfile) RoutePlan() []ProjectRoute {
 	}
 	add("mfa", "browser", "POST", "/api/v1/auth/mfa/login/complete", "/api/v1/auth/mfa/login/enrollment", "/api/v1/auth/mfa/login/enrollment/confirm")
 	add("mfa_recovery", "browser", "POST", "/api/v1/auth/mfa/recovery/start", "/api/v1/auth/mfa/recovery/complete")
+	add("email_mfa_login", "browser", "POST", "/api/v1/auth/mfa/email/login", "/api/v1/auth/mfa/email/login/complete")
+	add("email_mfa", "session_no_refresh", "POST", "/api/v1/auth/mfa/email/preparation", "/api/v1/auth/mfa/email/preparation/confirm", "/api/v1/auth/mfa/email")
+	add("email_mfa", "session_no_refresh", "GET", "/api/v1/auth/mfa/email")
+	add("email_mfa", "session_no_refresh", "DELETE", "/api/v1/auth/mfa/email")
+	add("mfa_settings", "session_no_refresh", "GET", "/api/v1/admin/auth/settings/mfa/email")
+	add("mfa_settings", "session_no_refresh", "POST", "/api/v1/admin/auth/settings/mfa/email")
 	add("mfa_management", "session_no_refresh", "GET", "/api/v1/auth/mfa/status")
 	add("mfa_management", "session_no_refresh", "POST", "/api/v1/auth/mfa/totp/enrollment", "/api/v1/auth/mfa/totp/enrollment/confirm", "/api/v1/auth/mfa/step-up", "/api/v1/auth/mfa/recovery-codes/regenerate", "/api/v1/auth/mfa/totp/replacement", "/api/v1/auth/mfa/totp/replacement/confirm")
 	add("mfa_management", "session_no_refresh", "DELETE", "/api/v1/auth/mfa/totp")
@@ -67,6 +73,7 @@ func (p *ProjectProfile) RoutePlan() []ProjectRoute {
 	add("email_change", "session_no_refresh", "POST", "/api/v1/auth/email/change")
 	add("email_change_protection", "browser", "POST", "/api/v1/auth/email/change/confirm", "/api/v1/auth/email/change/report", "/api/v1/auth/email/change/recover")
 	for _, method := range []string{"POST", "OPTIONS"} {
+		add("native_email_mfa", "native", method, "/api/v1/auth/native/mfa/email/login", "/api/v1/auth/native/mfa/email/complete")
 		add("native_password", "native", method, "/api/v1/auth/native/password/login")
 		add("native_email", "native", method, "/api/v1/auth/native/email/request", "/api/v1/auth/native/email/confirm")
 		add("native_mfa", "native", method, "/api/v1/auth/native/mfa/complete", "/api/v1/auth/native/mfa/enrollment", "/api/v1/auth/native/mfa/enrollment/confirm")

@@ -64,3 +64,36 @@ func TestNativePasswordUsesSharedPrimary(t *testing.T) {
 		t.Fatal("nil primary accepted")
 	}
 }
+
+func TestNativePasswordMFAHasNoPlainFallback(t *testing.T) {
+	tokens, repo, _, _, base := nativeServiceFixture(t)
+	factor := &nativeMFAStub{}
+	login, err := NewNativeLogin(tokens, factor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	primary := &nativePrimaryStub{proof: base.Proof}
+	service, err := NewNativePasswordMFA(login, primary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := NativePasswordInput{Email: "user@example.test", Password: "Password12345", Audience: base.Audience, Scope: base.Scope, IP: base.IP}
+	result, err := service.Login(t.Context(), input)
+	if err != nil || result.Challenge == nil || result.Tokens != nil || repo.calls != 0 || factor.starts != 1 {
+		t.Fatal("explicit MFA tried plain issuance", err)
+	}
+	factor.err = domain.ErrUnavailable
+	if result, err := service.Login(t.Context(), input); result != nil || !errors.Is(err, factor.err) || repo.calls != 0 {
+		t.Fatal("factor failure fell back to plain issuance", err)
+	}
+	before := factor.starts
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if result, err := login.BeginMFA(ctx, base); result != nil || !errors.Is(err, context.Canceled) || factor.starts != before {
+		t.Fatal("cancelled request reached MFA", err)
+	}
+	primary.proof.Administrative = true
+	if result, err := service.Login(t.Context(), input); result != nil || !errors.Is(err, domain.ErrInvalidRequest) || factor.starts != before {
+		t.Fatal("administrative proof reached weaker factor", err)
+	}
+}

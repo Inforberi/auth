@@ -18,7 +18,8 @@ func (r *Repository) EmailLoginChannel(ctx context.Context, proof service.Primar
 	err := r.db.QueryRow(ctx, `SELECT e.id,e.email::text FROM auth.mfa_email f
  JOIN auth.user_emails e ON e.id=f.email_id AND e.user_id=f.user_id
  JOIN auth.users u ON u.id=f.user_id JOIN auth.password_credentials p ON p.user_id=u.id
- WHERE u.id=$1 AND u.auth_version=$2 AND p.password_hash=$3 AND auth.email_factor_usable(u.id)`,
+ WHERE u.id=$1 AND u.auth_version=$2 AND p.password_hash=$3 AND auth.email_factor_usable(u.id)
+ AND NOT auth.has_administrative_access(u.id)`,
 		proof.UserID, proof.AuthVersion, proof.Reference).Scan(&channel.ID, &channel.Email)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return channel, domain.ErrProofRequired
@@ -38,6 +39,7 @@ func lockEmailLoginChannel(ctx context.Context, tx pgx.Tx, proof service.Primary
 	err := tx.QueryRow(ctx, `SELECT e.id FROM auth.mfa_email f
  JOIN auth.user_emails e ON e.id=f.email_id AND e.user_id=f.user_id CROSS JOIN auth.mfa_settings p
  WHERE f.user_id=$1 AND e.id=$2 AND e.email=$3 AND p.singleton AND auth.email_factor_usable(f.user_id)
+ AND NOT auth.has_administrative_access(f.user_id)
  AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials WHERE user_id=$1)
  AND NOT EXISTS(SELECT 1 FROM auth.account_provisions WHERE user_id=$1 AND (activated_at IS NULL OR password_change_required))
  FOR SHARE OF f,e,p`, proof.UserID, channel.ID, channel.Email).Scan(&id)

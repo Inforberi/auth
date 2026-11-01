@@ -58,6 +58,33 @@ func (s *NativeLogin) Begin(ctx context.Context, input NativeInput) (*NativeLogi
 	return &NativeLoginResult{Challenge: challenge}, nil
 }
 
+// BeginMFA never tries plain issuance, even when SQL would allow a password-only session.
+func (s *NativeLogin) BeginMFA(ctx context.Context, input NativeInput) (*NativeLoginResult, error) {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	input, _, err := s.tokens.prepareNativeInput(input)
+	if err != nil {
+		return nil, err
+	}
+	select {
+	case s.tokens.admission <- struct{}{}:
+	default:
+		return nil, authjwt.ErrBusy
+	}
+	defer func() { <-s.tokens.admission }()
+	if err := s.tokens.limiter.AllowNative(ctx, input.Proof.UserID, input.IP); err != nil {
+		return nil, err
+	}
+	challenge, err := s.mfa.StartNative(ctx, input.Proof, mfaservice.NativeTarget{Audience: input.Audience, Scope: input.Scope}, input.IP)
+	if err != nil {
+		return nil, err
+	}
+	return &NativeLoginResult{Challenge: challenge}, nil
+}
+
 func (s *NativeLogin) Complete(ctx context.Context, input mfaservice.CompleteLoginInput) (*RefreshResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()

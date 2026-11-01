@@ -28,7 +28,11 @@ func (p *ProjectProfile) buildProfileMFARecovery(ctx context.Context, cfg Projec
 		p.state("mfa_recovery", "browser_disabled")
 		return
 	}
-	if p.mfa == nil || !p.featureReady("mfa") {
+	mfa := p.mfa
+	if mfa == nil {
+		mfa = p.mfaManagement
+	}
+	if mfa == nil {
 		p.state("mfa_recovery", "mfa_unavailable")
 		return
 	}
@@ -41,7 +45,7 @@ func (p *ProjectProfile) buildProfileMFARecovery(ctx context.Context, cfg Projec
 		p.feature("mfa_recovery", err)
 		return
 	}
-	recovery := &projectMFARecovery{mfa: p.mfa, mail: mail}
+	recovery := &projectMFARecovery{mfa: mfa, mail: mail}
 	if err := recovery.use(ctx, func(context.Context, *mfaservice.Recovery) error { return nil }); err != nil {
 		p.state("mfa_recovery", "recovery_dependencies_unavailable")
 		return

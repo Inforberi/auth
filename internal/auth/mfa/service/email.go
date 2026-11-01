@@ -17,13 +17,29 @@ type EmailFactors struct {
 	repo   EmailFactorRepository
 	cipher Cipher
 	limit  Limiter
+	cfg    EmailFactorConfig
+}
+
+type EmailFactorConfig struct {
+	UserMutationsPerMinute, ProjectMutationsPerMinute int
+}
+
+func (c EmailFactorConfig) Validate() error {
+	if c.UserMutationsPerMinute < 1 || c.ProjectMutationsPerMinute < 1 {
+		return domain.ErrUnavailable
+	}
+	return nil
 }
 
 func NewEmailFactors(repo EmailFactorRepository, cipher Cipher, limit Limiter) (*EmailFactors, error) {
-	if repo == nil || cipher == nil || limit == nil {
+	return NewConfiguredEmailFactors(repo, cipher, limit, EmailFactorConfig{UserMutationsPerMinute: 5, ProjectMutationsPerMinute: 500})
+}
+
+func NewConfiguredEmailFactors(repo EmailFactorRepository, cipher Cipher, limit Limiter, cfg EmailFactorConfig) (*EmailFactors, error) {
+	if repo == nil || cipher == nil || limit == nil || cfg.Validate() != nil {
 		return nil, domain.ErrUnavailable
 	}
-	return &EmailFactors{repo: repo, cipher: cipher, limit: limit}, nil
+	return &EmailFactors{repo: repo, cipher: cipher, limit: limit, cfg: cfg}, nil
 }
 
 func (s *EmailFactors) Status(ctx context.Context, proof Proof) (*domain.EmailFactor, error) {
@@ -50,8 +66,8 @@ func (s *EmailFactors) change(ctx context.Context, proof Proof, write func(conte
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	if err := admitBudgets(ctx, s.limit, []Budget{
-		{s.cipher.Digest("email-factor:user:" + string(proof.UserID)), 5},
-		{s.cipher.Digest("email-factor:project"), 500},
+		{s.cipher.Digest("email-factor:user:" + string(proof.UserID)), s.cfg.UserMutationsPerMinute},
+		{s.cipher.Digest("email-factor:project"), s.cfg.ProjectMutationsPerMinute},
 	}); err != nil {
 		return err
 	}

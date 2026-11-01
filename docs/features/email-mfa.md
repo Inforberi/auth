@@ -72,7 +72,7 @@ Configured binding учитывается для assisted recovery даже пр
 
 ## HTTP-адаптеры — A6.3m.6c.4a (Luna PASS)
 
-Следующие контракты подготовлены в transport/http и пока **не зарегистрированы** в router/startup/project profiles и generated Swagger. Наличие обработчика не делает endpoint доступным. Подключение выполняется единым профилем .6c.4b после readiness и межпроектной приёмки.
+Контракты transport/http подготовлены в .6c.4a. В .6c.4b.2 ниже добавлена opt-in сборка ProjectProfile и маршруты; Luna V1–V3 checks/race/API/SQL PASS. Deployment source/manifest и standalone/platform пока не включают email-фактор. Наличие Swagger не означает включённый метод.
 
 | Планируемая ручка | JSON / контекст | Результат |
 | --- | --- | --- |
@@ -99,3 +99,34 @@ Luna: task check и race для MFA/settings HTTP — PASS, manifest 19/19, вр
 3. Отдельно сверить platform/administrative profiles и требования strong действий, first-run/last-admin, переходы ролей для email-only аккаунтов и recovery readiness; административный primary не направлять в обычный email-login adapter.
 4. Реальная приёмка двух проектов со scoped crypto/Redis, текущие lifetime/revision/role guards, concurrent changes/faults/recovery и отсутствие bypass. До неё новые флаги/маршруты закрыты.
 5. После этого Telegram-фактор и UI — отдельные согласованные этапы.
+
+## Проектная сборка и явный выбор — A6.3m.6c.4b.2
+
+Принято после Luna V3: task check/API/targeted race, email schema roots и actual project SQL/HTTP/Redis PASS с cleanup; evidence — [history](../planning/history.md). `ProjectProfileConfig.EmailMFA` — доверенная operational capability, не JSON-флаг клиента. Требуются browser/password MFA config с RecoveryEnabled, действующие management/recovery factories, project-scoped ключи/Redis, сохранённый SMTP и работающий ProjectDelivery. Проверка recovery отдельно подтверждает NOLOGIN group/grants и отсутствие approval authority у runtime. Фактическую внешнюю SMTP-доставку одна readiness не доказывает.
+
+`ProjectEmailMFAConfig.Preparation` задаёт TTL 1–5 минут, resend interval, RequestsPerMinute/ConfirmationsPerMinute. `Factors` задаёт UserMutationsPerMinute/ProjectMutationsPerMinute (рекомендуемые исходные значения 5/500). Login использует существующие MFA user/IP/project budgets и TTL, с общими guessing counters и отдельным resend cooldown. Значения — попытки за окно, не capacity/RPS. Новых ENV и manifest-полей пока нет: production deployment по умолчанию не активирован; конфигурация передаётся сборщику профиля.
+
+При каждой операции сервис/SQL repository создаются внутри одного project lease. Owner preparation/confirm, Status/Enable/Disable и browser login/complete используют existing services/SQL; новый сервисный контейнер или очередь не вводятся. SMTP-отправка остаётся в общем ProjectDelivery через существующий OTP outbox. На Read/Disable/завершении уже полученного кода сетевой SMTP не требуется; выдача нового письма/Enable защищена delivery gate. При включении project policy дополнительно перепроверяются текущие SMTP credentials и operator/runtime grants; при Read этой проверки нет.
+
+| Метод | Путь | Защита |
+| --- | --- | --- |
+| POST | `/api/v1/auth/mfa/email/login` | Password primary → email challenge, Origin |
+| POST | `/api/v1/auth/mfa/email/login/complete` | Origin + ровно одна проектная binding cookie + challenge/code |
+| POST | `/api/v1/auth/mfa/email/preparation` | NoRefresh owner session + свежий отдельный password proof/current factor |
+| POST | `/api/v1/auth/mfa/email/preparation/confirm` | Тот же owner/session proof + отдельные binding/code |
+| GET / POST / DELETE | `/api/v1/auth/mfa/email` | NoRefresh owner context; Status / Enable / Disable |
+| GET / POST | `/api/v1/admin/auth/settings/mfa/email` | Current permission/proofs + version; readiness не принимается из JSON |
+| POST / OPTIONS | `/api/v1/auth/native/mfa/email/login` | Cookie-free native password/resource; только bound challenge |
+| POST / OPTIONS | `/api/v1/auth/native/mfa/email/complete` | Cookie-free native challenge/binding/code; atomic JWT/refresh/session |
+
+Browser cookie имеет имя `__Host-mfa-email-<project UUID>`: Secure, HttpOnly, Lax, Path=/, без Domain. UUID задаёт backend после выбора проекта по trusted origin; исходная cookie другого проекта/standalone не используется. Подмена имени без соответствующих scoped cryptographic proof не помогает. Общая session cookie и TOTP cookie сохраняют прежний контракт; их crypto/SQL authority остаётся project-scoped. Нового универсального cookie-rewriting middleware нет.
+
+Default password/TOTP endpoints не меняют семантику. Email-only пользователь на обычном MFA пути получает recovery next-step, а для обычного email входа явно выбирает новые endpoints. Native selected-email coordinator вызывает BeginMFA, не plain-first Begin: даже при разрешённой обычной password-only выдаче выбранный вариант не может получить токены без фактора. При потере email native клиент проходит existing browser operator-assisted recovery, затем обычный вход; собственного native bypass/recovery approval нет.
+
+Email primary + email factor не считается независимой MFA и не поддерживается; selected flow принимает только password primary. Email session/JWT сохраняют фактический метод email/email_otp и не становятся strong TOTP/recovery proof. Administrative email login остаётся запрещён: при Channel lookup, transactional start и consume повторно проверяются **текущие** административные права, а не только старый Administrative marker challenge.
+
+Обычную administrative role нельзя назначить email-only пользователю; изменение permissions роли не может сделать таких участников администраторами без TOTP. Проверка использует existing auth.has_administrative_access и общий Access lock в той же транзакции, без нового списка permissions. Super-admin readiness/last-admin guard также не считают email-only достаточным фактором. Сначала подключается TOTP, затем назначаются права; пользователи с TOTP+email сохраняют эту возможность. Ошибка ordinary role transition — conflict, super-admin target — target_unavailable. Повышение роли после выдачи email challenge закрывает его completion даже при неизменённом auth_version.
+
+Старый CheckCapability продолжает запрещать email в standalone/platform. Проектный CheckEmailCapability получает readiness только после полной сборки; при сохранённых email-policy/bindings и отсутствующей capability cold profile отклоняется. Новые handler/config/generation не означают закрытый release gate.
+
+Добавлены unit tests forced-native/no-plain, scoped-cookie, configured budgets/readiness и actual TestTwoProjectEmailMFAHTTP: два проекта/DB/Redis/HTTPS, policy/version, channel preparation, Enable/revoke, replay/cross-profile/cross-project/Origin, native issuance и AMR, role grant/update/last-admin guards, stale challenge после повышения роли, cold-profile fail-closed. Код извлекается только из зашифрованного тестового outbox; успешная внешняя SMTP-доставка этим тестом не доказывается. Full standalone/platform matrix и включение deployment/ENV/manifest остаются до завершения .4b.

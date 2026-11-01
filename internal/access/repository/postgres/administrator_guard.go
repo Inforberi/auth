@@ -65,6 +65,7 @@ func RequireUsableAdministrator(ctx context.Context, tx pgx.Tx) error {
 const usableAdministrator = `u.status='active' AND u.deleted_at IS NULL
 	AND EXISTS(SELECT 1 FROM auth.password_credentials p JOIN auth.user_emails e
 		ON e.id=p.email_id AND e.user_id=p.user_id WHERE p.user_id=u.id AND e.verified_at IS NOT NULL)
-	AND (NOT auth.mfa_required(u.id) OR EXISTS(SELECT 1 FROM auth.mfa_totp m WHERE m.user_id=u.id))
+	AND ((NOT auth.mfa_required(u.id) AND NOT EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=u.id))
+		OR EXISTS(SELECT 1 FROM auth.mfa_totp m WHERE m.user_id=u.id))
 	AND NOT EXISTS(SELECT 1 FROM auth.temporary_password_credentials t WHERE t.user_id=u.id)
 	AND NOT EXISTS(SELECT 1 FROM auth.account_provisions p WHERE p.user_id=u.id AND (p.activated_at IS NULL OR p.password_change_required))`

@@ -92,10 +92,8 @@ func (r *Repository) UpdateRole(ctx context.Context, input service.UpdateRoleInp
 			session_revision=session_revision+CASE WHEN $5 THEN 1 ELSE 0 END WHERE id=$1 RETURNING version`, role.ID, role.Key, role.Name, role.Description, elevated, role.MFARequired).Scan(&role.Version); err != nil {
 			return err
 		}
-		if !slices.Equal(current.Permissions, requested) {
-			if err := replacePermissions(ctx, tx, role); err != nil {
-				return err
-			}
+		if err := updateRolePermissions(ctx, tx, current, role); err != nil {
+			return err
 		}
 		return recordAudit(ctx, tx, input.Actor, role, "role_updated", "", nil)
 	})
@@ -103,6 +101,16 @@ func (r *Repository) UpdateRole(ctx context.Context, input service.UpdateRoleInp
 		return domain.Role{}, err
 	}
 	return role, nil
+}
+
+func updateRolePermissions(ctx context.Context, tx pgx.Tx, current, updated domain.Role) error {
+	if slices.Equal(current.Permissions, updated.Permissions) {
+		return nil
+	}
+	if err := replacePermissions(ctx, tx, updated); err != nil {
+		return err
+	}
+	return requireRoleEmailAdministrativeFactor(ctx, tx, updated.ID)
 }
 
 func replacePermissions(ctx context.Context, tx pgx.Tx, role domain.Role) error {

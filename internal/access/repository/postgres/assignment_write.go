@@ -38,6 +38,11 @@ func ApplyAssignmentInTransaction(ctx context.Context, tx pgx.Tx, user accountdo
 	if result.RowsAffected() == 0 {
 		return version, false, nil
 	}
+	if grant {
+		if err := requireEmailAdministrativeFactor(ctx, tx, user); err != nil {
+			return 0, false, err
+		}
+	}
 	// Grants invalidate pre-grant active sessions. Pending activation credentials
 	// remain valid; revocations take effect through the current SQL permissions.
 	err = tx.QueryRow(ctx, `UPDATE auth.users SET access_version=access_version+1,

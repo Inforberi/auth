@@ -1,5 +1,7 @@
 # Краткий отчёт по проверкам
 
+A6.3m.6c.4b.2 реализован в opt-in ProjectProfile: selected browser/native email MFA, scoped cookie, readiness/config budgets и SQL administrative-transition guards. Swagger сгенерирован; Luna V1–V3 check/API/race/schema и actual project SQL/HTTP PASS; V3 новый HTTP root exit0 без SKIP, lint0, manifest59/59 и cleanup подтверждены. Ошибки тестов V1/V2 исправлены; runtime constraints не ослаблены. Deployment/ENV/manifest и standalone/platform email не активированы, full .4b gate открыт.
+
 A6.3m.6c.4b.1: подключён prerequisite project loss-all-factors recovery + shared notice drain; Luna task check/race PASS; V4 targeted lint0 и actual two-project SQL/HTTP race PASS/exit0 с cleanup, manifest19 совпал. Ошибки fixture V1–V3 исправлены; runtime/constraints не менялись. Deployment recovery opt-in и email-factor capability остаются закрыты; полного .4b PASS нет.
 
 Принят A6.3m.6c.4a — HTTP-адаптеры email MFA (browser login/channel/owner actions/project policy): Luna task check/обе HTTP race suites PASS, manifest 19/19, временные caches очищены. Реальные router/startup/profile/Swagger не подключены; origin/session middleware и two-project фактической публикации проверяются в .6c.4b. Бизнес-логика/SQL не менялись, прежние SQL gates не повторять.

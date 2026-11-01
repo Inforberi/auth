@@ -13,6 +13,20 @@ type EmailPreparationConfirmation struct {
 	Code    string `json:"code"`
 } // @name mfa_http.EmailPreparationConfirmation
 
+// @Summary Confirm email MFA channel possession
+// @Description Consumes the dedicated code and rotates the current session verifier without increasing its lifetime or granting strong MFA. Requires allowed Origin and the original owner session proof.
+// @Tags MFA
+// @Produce json
+// @Accept json
+// @Param body body EmailPreparationConfirmation true "request"
+// @Success 200 {object} StatusResponse
+// @Failure 400 {object} httpx.ErrorResponse
+// @Failure 401 {object} httpx.ErrorResponse
+// @Failure 403 {object} httpx.ErrorResponse
+// @Failure 409 {object} httpx.ErrorResponse
+// @Failure 429 {object} httpx.ErrorResponse
+// @Failure 503 {object} httpx.ErrorResponse
+// @Router /api/v1/auth/mfa/email/preparation/confirm [post]
 func (h *EmailHandler) ConfirmEmailPreparation(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	proof, ok := requestProof(w, r)

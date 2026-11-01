@@ -18,6 +18,8 @@ func TestProjectMFASettingsPrerequisitesAndRoutes(t *testing.T) {
 	require.NotNil(t, p.mfaSettings)
 	require.Nil(t, p.mfaManagement, "optional policy read/no-op does not require engine assembly")
 	require.Equal(t, []ProjectRoute{
+		{Feature: "mfa_settings", Method: "GET", Path: "/api/v1/admin/auth/settings/mfa/email", Protection: "session_no_refresh"},
+		{Feature: "mfa_settings", Method: "POST", Path: "/api/v1/admin/auth/settings/mfa/email", Protection: "session_no_refresh"},
 		{Feature: "mfa_settings", Method: "GET", Path: "/api/v1/admin/auth/settings/mfa", Protection: "session_no_refresh"},
 		{Feature: "mfa_settings", Method: "POST", Path: "/api/v1/admin/auth/settings/mfa", Protection: "session_no_refresh"},
 	}, p.RoutePlan())
