@@ -1,20 +1,17 @@
 # Текущий шаг
 
-Обновлено 1 ноября 2026. [Карта](index.md) · [Матрица приёмки email MFA](../operations/acceptance-summary.md#сверка-email-mfa-4b--1-ноября-2026) · [Реализация](../planning/implementation.md).
+Обновлено 1 ноября 2026. [Карта](index.md) · [Матрица приёмки](../operations/acceptance-summary.md#сверка-email-mfa-4b--1-ноября-2026) · [Контракт](../features/email-mfa.md#завершение-приёмки--a63m6c4b4-pass-luna).
 
-## Завершена сверка .4b
+## Завершён .4b.4 — Luna V2 PASS
 
-.4b.1–.3 приняты Луной: recovery prerequisites, проектный browser/native email MFA и manifest/ENV opt-in default-off. Последний кодовый коммит `0e574f2`; снимок `/private/tmp/auth-email-mfa-deployment-v2.uZ7dUVWW`, manifest20/20, task check/affected race/actual manifest-backed HTTP/SQL PASS с cleanup. Evidence Luna: turn `01a19694-19dd-7501-89d8-45c500342cbd`, cursor `944a6e9d-49fe-49f7-8ff5-48acb6c615a1:62`; подробности — в [history](../planning/history.md).
+Расширен TestTwoProjectEmailMFAHTTP: реальный Redis counter fault при browser/native completion без credentials/consume/SQL attempts; после восстановления TTL/budget и одна сессия, replay. Новый TestTwoProjectEmailMFARecoveryHTTP: suspended email-only без TOTP, recovery next-step/binding, runtime self-approval denial, независимое operator approval, новый TOTP/recovery codes без auto-login, отзыв/replay/neighbor isolation и последующий вход.
 
-Сверка уточнила границы компонентных и HTTP проверок, убрала устаревший общий запрет проектного email MFA из описания текущего состояния. Expiry, concurrency, role transitions и strict-proof уже подтверждены; повтор полного набора не нужен. Код/config не менялись, новые исполняемые проверки не запускались.
+Luna V2: manifest8/8, task check и оба actual HTTP/SQL/Redis roots с race/count1 PASS без SKIP; DB/roles/schemas/Redis DB15, containers/certificates/caches очищены. Снимок `/private/tmp/auth-email-mfa-acceptance-v2.73yhniq0`, base a9d8628; evidence turn `01a196b9-5b12-7e11-b749-eabf73dc45b7`, cursor `944a6e9d-49fe-49f7-8ff5-48acb6c615a1:64`. V1 compile FAIL исправлен в operator fixture вызовом SQL через existing pgx.Conn. Подробности — в [history](../planning/history.md).
 
-## Далее — .4b.4
+Main сверил8/8 до обновления только Markdown, исполняемые проверки не запускал. Runtime/schema/config/API/dependencies не менялись. Локальная .4b завершена; пользователь разрешил коммит после PASS.
 
-Два недостающих интеграционных сценария, не найденные runtime-баги:
+## Далее
 
-1. Actual HTTP browser/native completion при отказе Redis admission: без consume/выдачи credentials/plain fallback; после восстановления — ограниченный повтор и один результат.
-2. Actual HTTP recovery именно email-only аккаунта без TOTP при потере/suspension email: recovery next-step/binding, независимое DB operator approval, новый TOTP, отзыв/replay/cross-project denial, без автоматического входа.
+Выбрать следующий согласованный pre-UI блок по implementation, не расширять закрытый .4b. Email MFA project-only/default-off; Redis counter fault не доказывает network partition. Внешний SMTP/browser/provider, MP6 upgrade, fleet/capacity/длительный GC остаются отдельными gates. UI не начинать без предупреждения и отдельного согласования пользователя.
 
-Использовать существующие fixtures/ручки, проверки передать отдельному чату «Проверки Auth — Luna». Shared Redis outage не предполагает доступность соседнего проекта. Общий .4b остаётся открытым до приёмки этих веток.
-
-Внешний SMTP/browser/provider, MP6 upgrade, fleet/capacity/длительные GC проверки — отдельные gates. UI не начинать без предупреждения и отдельного согласования пользователя.
+Локальный исследователь Luna (`gpt-6-luna`, Jason, `01a196ae-b5d3-7313-acb1-b14dad3aa9b6`) выполнил read-only recovery navigation. Проверочный чат отдельно: «Проверки Auth — Luna», `01a16eab-c777-78a0-a815-47b45ff0860d`, host local. Поиск и исполнение проверок не смешивать.

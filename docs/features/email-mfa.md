@@ -1,6 +1,6 @@
 # Email как дополнительный фактор
 
-Подготовка канала, управление, внутренний вход/recovery и проектная сборка/deployment .6c.1–.4b.3 проверены Луной. Email MFA доступен через явный project opt-in и отдельное разрешение политики/выбор пользователя; по умолчанию выключен. Standalone/platform email MFA не включён. Общий .4b остаётся открытым: [матрица покрытия](../operations/acceptance-summary.md#сверка-email-mfa-4b--1-ноября-2026). Разделы .6c.1–.4a ниже описывают отдельные шаги реализации; прежние ограничения подключения в них относятся к дате шага и заменены проектной сборкой .4b.2–.3.
+Подготовка канала, управление, внутренний вход/recovery и проектная сборка/deployment .6c.1–.4b.3 проверены Луной. Email MFA доступен через явный project opt-in и отдельное разрешение политики/выбор пользователя; по умолчанию выключен. Standalone/platform email MFA не включён. Локальная приёмка .4b завершена после Luna V2 .4b.4; внешние release gates отдельно: [матрица покрытия](../operations/acceptance-summary.md#сверка-email-mfa-4b--1-ноября-2026). Разделы .6c.1–.4a ниже описывают отдельные шаги реализации; прежние ограничения подключения в них относятся к дате шага и заменены проектной сборкой .4b.2–.3.
 
 ## Сценарии и границы
 
@@ -96,7 +96,7 @@ Luna: task check и race для MFA/settings HTTP — PASS, manifest 19/19, вр
 
 Сборка, method selection, budgets, browser/native HTTP/Swagger и межпроектные guards приняты в .4b.1–.3. Успешные expiry/concurrency/role/strong проверки не повторяются ради другой формы запуска. Полное покрытие и evidence — в [матрице .4b](../operations/acceptance-summary.md#сверка-email-mfa-4b--1-ноября-2026).
 
-Следующий ограниченный блок .4b.4: actual HTTP отказ Redis при завершении browser/native email MFA и восстановление именно email-only аккаунта без TOTP через существующее независимое одобрение. Это недостающие интеграционные проверки, а не обнаруженные ошибки runtime. Общий .4b до их приёмки остаётся открытым. Внешняя SMTP/браузерная приёмка и общий release gate отдельно; Telegram-фактор и UI не входят в этот блок.
+Оба оставшихся сценария .4b.4 приняты после Luna V2: actual HTTP отказ Redis при завершении browser/native email MFA и восстановление email-only аккаунта без TOTP через независимое одобрение. Локальная .4b завершена. Внешняя SMTP/браузерная приёмка и общий release gate отдельно; Telegram-фактор и UI не входят в этот блок.
 
 ## Проектная сборка и явный выбор — A6.3m.6c.4b.2
 
@@ -132,3 +132,9 @@ Email primary + email factor не считается независимой MFA 
 ## Включение через deployment — A6.3m.6c.4b.3
 
 В manifest добавлен opt-in `emailMFA` для UUID проекта (browser only), в ENV — отдельные channel/change budgets. Default off; SQL-разрешение и личная привязка не включаются автоматически. Общая конфигурация платформы не меняется, recovery включается только в копиях выбранного project profile. Static prerequisites отклоняют неверный запуск; runtime остаётся fail-closed по Redis/SMTP/delivery/operator-grants. [Настройка и ограничения](project-auth-deployment.md#email-mfa-из-manifest--a63m6c4b3). Новые schema/dependencies/workers не добавлены, внешняя SMTP-доставка не заявляется. Luna V2 task check/race и manifest-backed actual HTTP/SQL/Redis PASS с cleanup. Сводный .4b/release gate оценивается отдельно; внешние SMTP/capacity этим не закрыты.
+
+## Завершение приёмки — A6.3m.6c.4b.4 (PASS Luna)
+
+В TestTwoProjectEmailMFAHTTP добавлен реальный Redis admission fault на completion counter уже выданного browser/native challenge: два безопасных 503, без выдачи credentials/consume/SQL guessing charges; после восстановления счётчика успешный повтор создаёт одну сессию, budget имеет TTL, replay отвергается. Это command/counter fault, не имитация сетевого partition или общий capacity benchmark.
+
+Новый TestTwoProjectEmailMFARecoveryHTTP использует те же deployment/two-project fixtures: suspended email-only без TOTP даёт recovery next-step; missing/foreign binding и completion без approval отклоняются. Runtime не может одобрить заявку; отдельное operator-соединение одобряет, HTTP заменяет email-фактор на TOTP, отзывает старые сессии и выдаёт recovery codes без автоматического входа. Повтор completion запрещён, соседний проект не меняется, последующий вход с новым recovery code работает. Seed lost-mail состояния — setup теста, не новая публичная операция. Runtime/SQL schema/API/dependencies/workers не менялись. Formatter выполнен; Luna V2 task check и оба actual HTTP/SQL/Redis roots с race/count1 PASS без SKIP, manifest8/8 и cleanup подтверждены. V1 compile FAIL исправлен только в operator fixture: existing SQL вызывается через отдельное pgx.Conn; runtime denial использует pool. Локальная .4b завершена, внешний release gate отдельно.

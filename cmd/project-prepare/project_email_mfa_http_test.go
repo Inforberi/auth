@@ -69,7 +69,7 @@ func TestTwoProjectEmailMFAHTTP(t *testing.T) {
 	require.Equal(t, 400, foreign.status)
 	response = web.call(t, ctx, "POST", "/api/v1/auth/mfa/login/complete", web.origin, mfahttp.LoginCookie+"="+binding, mfahttp.CompleteLoginRequest{Challenge: challenge.Challenge, Code: code})
 	require.Equal(t, 400, response.status, "email challenge must not be accepted by the TOTP endpoint")
-	response = web.call(t, ctx, "POST", loginPath+"/complete", web.origin, cookie, completion)
+	response = completeEmailMFAAfterRedisFailure(t, f, loginPath+"/complete", cookie, challenge.Challenge, binding, completion)
 	require.Equal(t, 200, response.status, string(response.body))
 	user = response.cookie(t, "__Host-session")
 	var weak bool
@@ -114,7 +114,7 @@ func checkNativeEmailMFA(t *testing.T, f emailMFAHTTPFixture) {
 	require.Equal(t, 400, foreign.status)
 	wrong := web.call(t, ctx, "POST", "/api/v1/auth/native/mfa/complete", "", "", completion)
 	require.Equal(t, 400, wrong.status)
-	response = web.call(t, ctx, "POST", path, "", "", completion)
+	response = completeEmailMFAAfterRedisFailure(t, f, path, "", challenge.Challenge, challenge.Binding, completion)
 	require.Equal(t, 200, response.status, string(response.body))
 	require.Empty(t, response.cookies)
 	var tokens tokenhttp.NativeResponse

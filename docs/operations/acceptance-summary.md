@@ -2,7 +2,7 @@
 
 ## Сверка email MFA .4b — 1 ноября 2026
 
-Сборка и deployment приняты в .4b.1–.4b.3. Общий .4b остаётся открытым до двух интеграционных сценариев .4b.4 ниже. Это недостающее evidence, а не обнаруженные ошибки runtime. Результаты прежних снимков сохраняются; повторять успешные проверки без изменения затронутых гарантий не нужно. [Протоколы Luna](../planning/history.md), [контракт](../features/email-mfa.md).
+Сборка и deployment приняты в .4b.1–.4b.3; два оставшихся интеграционных сценария .4b.4 приняты после Luna V2. Локальная приёмка .4b завершена: manifest8/8, task check и оба actual HTTP/SQL/Redis roots с race/count1 PASS без SKIP, cleanup подтверждён. Снимок `/private/tmp/auth-email-mfa-acceptance-v2.73yhniq0`. V1 compile FAIL исправлен только в тестовой фикстуре; runtime не менялся. Результаты прежних снимков сохраняются; повторять успешные проверки без изменения затронутых гарантий не нужно. [Протоколы Luna](../planning/history.md), [контракт](../features/email-mfa.md).
 
 | Гарантия | Результат и граница покрытия |
 | --- | --- |
@@ -10,11 +10,11 @@
 | Browser/native вход, cookie/Origin, межпроектные отказы, replay, отсутствие plain-token fallback | PASS: actual `TestTwoProjectEmailMFAHTTP` над двумя БД/Redis/HTTPS, включая manifest-backed сборку; native выдаёт credentials только после MFA |
 | Однократное потребление, expiry, попытки, текущие версии/статус, rollback | PASS: `TestEmailFactorLoginSchema`, включая concurrent one-winner, native rollback и guards suspended/unverified/policy/password/version/blocked/expired/deleted. Отдельный повтор всей матрицы через HTTP не требуется |
 | Роли, последний фактор, strict proof, неподдерживаемые сочетания | PASS: lifecycle/login SQL, actual role grant/update/last-admin и challenge после повышения роли; email не повышается до strong TOTP/recovery. Standalone/operator email routes запрещены; project routes сверены со Swagger |
-| Потеря факторов и независимое одобрение | PASS на уровне компонентов: `TestEmailFactorRecoverySchema` для email-only; actual `TestTwoProjectMFARecoverySQL` подтверждает project recovery с TOTP-аккаунтом. Это ещё не HTTP email-only ветка |
-| Отказ Redis при завершении email MFA | OPEN .4b.4: actual browser/native completion существующего challenge должен fail-closed без consume/session/JWT/refresh/plain fallback; после восстановления — ограниченный повтор и не более одного результата |
-| HTTP-восстановление email-only аккаунта | OPEN .4b.4: потерянный/suspended email без TOTP → `mfa_recovery_required` → bound recovery → отдельное DB operator approval → новый TOTP; отзыв, replay/cross-project denial, без автоматического входа |
+| Потеря факторов и независимое одобрение | PASS на уровне компонентов: `TestEmailFactorRecoverySchema` для email-only; actual `TestTwoProjectMFARecoverySQL` подтверждает project recovery с TOTP-аккаунтом. HTTP email-only ветка дополнительно принята в TestTwoProjectEmailMFARecoveryHTTP (.4b.4) |
+| Отказ Redis при завершении email MFA | PASS Luna V2 .4b.4 (`TestTwoProjectEmailMFAHTTP`): actual browser/native completion существующего challenge fail-closed без consume/session/JWT/refresh/plain fallback; после восстановления — ограниченный повтор и не более одного результата |
+| HTTP-восстановление email-only аккаунта | PASS Luna V2 .4b.4 (`TestTwoProjectEmailMFARecoveryHTTP`): потерянный/suspended email без TOTP → `mfa_recovery_required` → bound recovery → отдельное DB operator approval → новый TOTP; отзыв, replay/cross-project denial, без автоматического входа |
 
-Для .4b.4 использовать существующие fixtures/ручки/approval workflow. Redis общий: его общий отказ не предполагает доступность соседнего проекта; проверяются fail-closed и сохранение изоляции. Новые механизмы, очереди и повтор полного набора не нужны. Исполняемые проверки выполняет отдельный чат Luna на неизменяемом снимке.
+Для .4b.4 использованы существующие fixtures/ручки/approval workflow. Redis counter fault проверяет command/admission failure, не network partition. Redis общий: его общий отказ не предполагает доступность соседнего проекта; проверяются fail-closed и сохранение изоляции. Новые механизмы, очереди и повтор полного набора не нужны. Исполняемые проверки выполняет отдельный чат Luna на неизменяемом снимке.
 
 Внешняя SMTP-доставка, настоящий browser/provider/ingress, DB upgrade MP6, fleet/capacity и длительные GC/resource проверки остаются отдельными gates. Локальная .4b не заменяет их. UI начинается только после предупреждения и отдельного согласования с пользователем.
 
