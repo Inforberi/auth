@@ -24,6 +24,7 @@ type ProjectAuthDeployment struct {
 	entries          map[projectdomain.ID]compiledProjectDeployment
 	google, telegram ProjectOIDCConfig
 	otp              otpservice.Config
+	emailMFA         ProjectEmailMFAConfig
 	oidc, jwt        bool
 }
 
@@ -46,6 +47,12 @@ func LoadProjectAuthDeployment(cfg *config.Config) (*ProjectAuthDeployment, erro
 	d.google.MFA.RecoveryEnabled, d.telegram.MFA.RecoveryEnabled = false, false
 	consumerHashes := make(map[string]projectdomain.ID)
 	for _, entry := range manifest.Projects {
+		if entry.EmailMFA {
+			d.emailMFA, err = compileProjectEmailMFA(cfg)
+			if err != nil {
+				return nil, err
+			}
+		}
 		compiled := compiledProjectDeployment{methods: entry}
 		compiled.access, err = compileProjectAccess(entry.Access)
 		if err != nil {
@@ -111,6 +118,7 @@ func (d *ProjectAuthDeployment) Profile(ctx context.Context, key projectruntime.
 			profile.Verification = base.Verification
 		}
 	}
+	d.applyEmailMFA(&profile, entry.methods.EmailMFA)
 	return profile, nil
 }
 

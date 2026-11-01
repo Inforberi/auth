@@ -6,6 +6,7 @@ import (
 )
 
 type ProjectHTTPConfig struct {
+	EmailMFA     ProjectEmailMFAConfig
 	ManifestFile string        `env:"PLATFORM_PROJECT_AUTH_CONFIG_FILE"`
 	Enabled      bool          `env:"PLATFORM_PROJECT_HTTP_ENABLED" env-default:"false"`
 	MaxProfiles  int           `env:"PLATFORM_PROJECT_HTTP_MAX_PROFILES" env-default:"8"`

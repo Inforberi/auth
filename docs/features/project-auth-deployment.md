@@ -25,6 +25,7 @@ Main formatter/source review, Luna task check/API-if-changed/affected race/secur
 | id | Exact canonical project UUID в текущем realm |
 | browser | Доступность browser password/регистрации/MFA/verification/recovery; фактическое включение — SQL policy |
 | emailOTP | OTP capability для browser и/или native в зависимости от профиля |
+| emailMFA | Второй фактор после пароля, default false; требует browser, MFA engine, project delivery/SMTP и отдельное recovery readiness |
 | reauthentication | Email proof для действующей browser session; требует browser=true |
 | google / telegram | Browser OIDC capability; требуется browser=true и сохранённые project credentials |
 | jwt | Optional project resources/catalog/consumers, без ключей подписи или произвольного issuer |
@@ -72,3 +73,28 @@ Main formatter/diff/read-only review. Luna task check, affected race/security, a
 `providerSettings` (default false, browser only) подключает local Google/Telegram credentials GET/POST независимо от enabled login methods. Scoped crypto/SQL revision guards и ограничения смены clientId — в [контракте](project-provider-settings.md).
 
 `retentionSettings` (по умолчанию false, требует browser) подключает проектные GET/POST сроков хранения. Подтверждение сокращения, версии и применение worker — в [контракте](project-retention-settings.md).
+
+## Email MFA из manifest — A6.3m.6c.4b.3
+
+Принято после Luna V2: task check/config-app-router race и actual manifest-backed HTTP/SQL/Redis PASS/exit0, cleanup подтверждён; evidence — [history](../planning/history.md). `emailMFA: true` выбирается явно для UUID проекта; поле отсутствует/false — capability не собирается. Без manifest прежний ограниченный профиль сохраняется. ENV сами по себе метод не включают. [Пример manifest](../../deploy/project-auth.example.json) оставляет `emailMFA: false`.
+
+Это capability, а не `auth.mfa_settings.email_factor_allowed`: сохранённая политика проекта отдельно разрешает фактор, пользователь отдельно подтверждает принадлежащий ему verified email и подключает его. Политикой/личной настройкой нельзя заменить отсутствующий runtime. Для настройки политики через проектный API отдельно включается `mfaSettings`; права и fresh proofs остаются обязательными.
+
+Статический loader отклоняет selected emailMFA без browser, `MFA_ENABLED`, включённого project delivery с непустым SMTP allowlist, корректной общей MFA config и положительных/допустимых channel/change budgets. Реальная готовность Redis, SMTP credentials, running delivery и отдельной NOLOGIN DB recovery group проверяется при сборке ProjectProfile. Конфигурационная readiness не гарантирует работоспособность внешнего SMTP.
+
+Email-only аккаунту необходим безопасный путь потери почты: selected capability собирает existing browser operator-assisted recovery. RecoveryEnabled=true устанавливается только на копиях project Password/EmailOTP/Google/Telegram/native MFA config, чтобы browser policies были согласованы. Глобальный `MFA_RECOVERY_ENABLED`, конфигурация оператора платформы и другие проекты не меняются; runtime не получает права approval. Сохраняются project DB grants, самостоятельная проверка личности и existing CLI decision workflow. Не создавать operator group/grants автоматически через manifest.
+
+| ENV | По умолчанию | Что ограничивает |
+| --- | --- | --- |
+| PLATFORM_PROJECT_EMAIL_MFA_PREPARATION_TTL | 3m | Срок proof подготовки канала; допустимо 1–5m |
+| PLATFORM_PROJECT_EMAIL_MFA_PREPARATION_RESEND_INTERVAL | 1m | Пауза отправки; минимум 1s, строго меньше TTL |
+| PLATFORM_PROJECT_EMAIL_MFA_PREPARATION_REQUEST_PROJECT_ATTEMPTS_PER_MINUTE | 100 | Запросы подготовки за минуту на каждый проект |
+| PLATFORM_PROJECT_EMAIL_MFA_PREPARATION_CONFIRM_PROJECT_ATTEMPTS_PER_MINUTE | 1000 | Подтверждения подготовки за минуту на каждый проект |
+| PLATFORM_PROJECT_EMAIL_MFA_USER_CHANGES_PER_MINUTE | 5 | Enable/Disable за минуту на пользователя |
+| PLATFORM_PROJECT_EMAIL_MFA_PROJECT_CHANGES_PER_MINUTE | 500 | Enable/Disable суммарно за минуту на проект |
+
+Login использует прежние MFA_USER/IP/PROJECT_OPERATIONS_PER_MINUTE и MFA_LOGIN_CHALLENGE_TTL; resend/guessing SQL/Redis guards не ослаблены. Это operational defaults для независимо scoped проектов, не общий счётчик всех проектов, не RPS и не постоянный максимум пользователей. Явный ноль не превращается в default: выбранная capability будет отклонена; синтаксически неверные ENV отвергает config parser. Изменение manifest/ENV требует restart, hot reload отсутствует.
+
+Если ранее email policy/bindings сохранены, а deployment capability удалена или её зависимости не готовы, cold profile отказывает по existing CheckEmailCapability. Перед удалением opt-in следует штатно отключить личные bindings/проектное разрешение; автоматического downgrade или массового удаления нет. Административный email-only вход по-прежнему закрыт: нужны TOTP для совместимого административного профиля, strong proof для критических действий.
+
+Приёмка включает env parsing/defaults/explicit-zero, static prerequisites, копии конфигурации и realm/UUID isolation, existing standalone/operator route contract и actual TestTwoProjectEmailMFAHTTP. Этот тест теперь использует настоящий временный manifest → LoadProjectAuthDeployment → ProjectHTTP, без вручную возвращённого профиля. Внешние SMTP secrets/доставка, production capacity и UI этим блоком не заявляются. Реальные ENV/manifest/БД этим изменением не редактировались.

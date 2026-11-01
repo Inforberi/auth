@@ -5,6 +5,7 @@
       "id": "c2000000-0000-4000-8000-000000000002",
       "browser": true,
       "emailOTP": true,
+      "emailMFA": false,
       "reauthentication": true,
       "access": {"permissions": [{"key": "reports.read", "name": "Read reports"}]},
       "userDirectory": true,

@@ -15,8 +15,6 @@ import (
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
@@ -63,17 +61,11 @@ func prepareEmailMFAHTTP(t *testing.T) emailMFAHTTPFixture {
 	f.trackLimits(t)
 	config := appauth.ProjectEmailMFAConfig{Preparation: otpservice.EmailPreparationConfig{TTL: 3 * time.Minute, ResendInterval: time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 100}, Factors: mfaservice.EmailFactorConfig{UserMutationsPerMinute: 5, ProjectMutationsPerMinute: 500}}
 	f.config = config
+	deployment := loadEmailMFADeployment(t, f, []string{email.listeners[0].Addr().String(), email.listeners[1].Addr().String()})
 	handler, err := appauth.NewProjectHTTP(appauth.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute},
 		Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &projects.password.Session,
-	}, projects.deps, func(_ context.Context, key projectruntime.Key, origin string) (appauth.ProjectProfileConfig, error) {
-		for i, expected := range projects.projects {
-			if key == expected && origin == projects.origins[i] {
-				return appauth.ProjectProfileConfig{BrowserEnabled: true, Password: &projects.password, EmailMFA: &config, MFASettingsEnabled: true, Tokens: &tokens.configs[i], Timeout: 10 * time.Second}, nil
-			}
-		}
-		return appauth.ProjectProfileConfig{}, projectdomain.ErrConflict
-	}, nil)
+	}, projects.deps, deployment.Profile, nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)
 	t.Cleanup(func() {

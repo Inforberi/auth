@@ -47,10 +47,10 @@ func (cfg Config) validateProjectDelivery() error {
 	if instances < 1 || c.FleetConcurrency < 1 || c.Parallelism > c.FleetConcurrency/instances {
 		return errors.New("project delivery exceeds declared fleet concurrency including surge")
 	}
-	return c.validateTargets()
+	return c.ValidateTargets()
 }
 
-func (c ProjectDeliveryConfig) validateTargets() error {
+func (c ProjectDeliveryConfig) ValidateTargets() error {
 	targets := c.Targets()
 	if len(targets) < 1 || len(targets) > 16 {
 		return errors.New("project delivery requires 1..16 SMTP targets")

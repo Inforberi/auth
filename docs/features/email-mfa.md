@@ -72,7 +72,7 @@ Configured binding учитывается для assisted recovery даже пр
 
 ## HTTP-адаптеры — A6.3m.6c.4a (Luna PASS)
 
-Контракты transport/http подготовлены в .6c.4a. В .6c.4b.2 ниже добавлена opt-in сборка ProjectProfile и маршруты; Luna V1–V3 checks/race/API/SQL PASS. Deployment source/manifest и standalone/platform пока не включают email-фактор. Наличие Swagger не означает включённый метод.
+Контракты transport/http подготовлены в .6c.4a. В .6c.4b.2 ниже добавлена opt-in сборка ProjectProfile и маршруты; Luna V1–V3 checks/race/API/SQL PASS. Standalone/platform email-фактор не включают; deployment opt-in .4b.3 принят после Luna V2; реальные настройки по умолчанию остаются выключенными. Наличие Swagger не означает включённый метод.
 
 | Планируемая ручка | JSON / контекст | Результат |
 | --- | --- | --- |
@@ -104,7 +104,7 @@ Luna: task check и race для MFA/settings HTTP — PASS, manifest 19/19, вр
 
 Принято после Luna V3: task check/API/targeted race, email schema roots и actual project SQL/HTTP/Redis PASS с cleanup; evidence — [history](../planning/history.md). `ProjectProfileConfig.EmailMFA` — доверенная operational capability, не JSON-флаг клиента. Требуются browser/password MFA config с RecoveryEnabled, действующие management/recovery factories, project-scoped ключи/Redis, сохранённый SMTP и работающий ProjectDelivery. Проверка recovery отдельно подтверждает NOLOGIN group/grants и отсутствие approval authority у runtime. Фактическую внешнюю SMTP-доставку одна readiness не доказывает.
 
-`ProjectEmailMFAConfig.Preparation` задаёт TTL 1–5 минут, resend interval, RequestsPerMinute/ConfirmationsPerMinute. `Factors` задаёт UserMutationsPerMinute/ProjectMutationsPerMinute (рекомендуемые исходные значения 5/500). Login использует существующие MFA user/IP/project budgets и TTL, с общими guessing counters и отдельным resend cooldown. Значения — попытки за окно, не capacity/RPS. Новых ENV и manifest-полей пока нет: production deployment по умолчанию не активирован; конфигурация передаётся сборщику профиля.
+`ProjectEmailMFAConfig.Preparation` задаёт TTL 1–5 минут, resend interval, RequestsPerMinute/ConfirmationsPerMinute. `Factors` задаёт UserMutationsPerMinute/ProjectMutationsPerMinute (рекомендуемые исходные значения 5/500). Login использует существующие MFA user/IP/project budgets и TTL, с общими guessing counters и отдельным resend cooldown. Значения — попытки за окно, не capacity/RPS. На этапе .4b.2 конфигурация передавалась напрямую сборщику; operational ENV и manifest opt-in добавлены в .4b.3, default остаётся выключенным.
 
 При каждой операции сервис/SQL repository создаются внутри одного project lease. Owner preparation/confirm, Status/Enable/Disable и browser login/complete используют existing services/SQL; новый сервисный контейнер или очередь не вводятся. SMTP-отправка остаётся в общем ProjectDelivery через существующий OTP outbox. На Read/Disable/завершении уже полученного кода сетевой SMTP не требуется; выдача нового письма/Enable защищена delivery gate. При включении project policy дополнительно перепроверяются текущие SMTP credentials и operator/runtime grants; при Read этой проверки нет.
 
@@ -129,4 +129,8 @@ Email primary + email factor не считается независимой MFA 
 
 Старый CheckCapability продолжает запрещать email в standalone/platform. Проектный CheckEmailCapability получает readiness только после полной сборки; при сохранённых email-policy/bindings и отсутствующей capability cold profile отклоняется. Новые handler/config/generation не означают закрытый release gate.
 
-Добавлены unit tests forced-native/no-plain, scoped-cookie, configured budgets/readiness и actual TestTwoProjectEmailMFAHTTP: два проекта/DB/Redis/HTTPS, policy/version, channel preparation, Enable/revoke, replay/cross-profile/cross-project/Origin, native issuance и AMR, role grant/update/last-admin guards, stale challenge после повышения роли, cold-profile fail-closed. Код извлекается только из зашифрованного тестового outbox; успешная внешняя SMTP-доставка этим тестом не доказывается. Full standalone/platform matrix и включение deployment/ENV/manifest остаются до завершения .4b.
+Добавлены unit tests forced-native/no-plain, scoped-cookie, configured budgets/readiness и actual TestTwoProjectEmailMFAHTTP: два проекта/DB/Redis/HTTPS, policy/version, channel preparation, Enable/revoke, replay/cross-profile/cross-project/Origin, native issuance и AMR, role grant/update/last-admin guards, stale challenge после повышения роли, cold-profile fail-closed. Код извлекается только из зашифрованного тестового outbox; успешная внешняя SMTP-доставка этим тестом не доказывается. Deployment/ENV/manifest и проверка границ конфигурации добавлены в .4b.3; release gate остаётся открытым до Luna PASS.
+
+## Включение через deployment — A6.3m.6c.4b.3
+
+В manifest добавлен opt-in `emailMFA` для UUID проекта (browser only), в ENV — отдельные channel/change budgets. Default off; SQL-разрешение и личная привязка не включаются автоматически. Общая конфигурация платформы не меняется, recovery включается только в копиях выбранного project profile. Static prerequisites отклоняют неверный запуск; runtime остаётся fail-closed по Redis/SMTP/delivery/operator-grants. [Настройка и ограничения](project-auth-deployment.md#email-mfa-из-manifest--a63m6c4b3). Новые schema/dependencies/workers не добавлены, внешняя SMTP-доставка не заявляется. Luna V2 task check/race и manifest-backed actual HTTP/SQL/Redis PASS с cleanup. Сводный .4b/release gate оценивается отдельно; внешние SMTP/capacity этим не закрыты.
