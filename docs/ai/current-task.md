@@ -1,17 +1,20 @@
 # Текущий шаг
 
-Обновлено 1 ноября 2026. [Карта](index.md) · [Deployment](../features/project-auth-deployment.md#email-mfa-из-manifest--a63m6c4b3).
+Обновлено 1 ноября 2026. [Карта](index.md) · [Матрица приёмки email MFA](../operations/acceptance-summary.md#сверка-email-mfa-4b--1-ноября-2026) · [Реализация](../planning/implementation.md).
 
-## Завершён A6.3m.6c.4b.3 — deployment opt-in email MFA
+## Завершена сверка .4b
 
-Manifest emailMFA default-off выбирает UUID; шесть operational ENV задают channel/change budgets. Loader требует browser/MFA/project delivery/валидный SMTP allowlist и budgets. RecoveryEnabled устанавливается только в копиях выбранного project browser/native profile, глобальная платформа и другие UUID не меняются. SQL allowed/personal binding отдельны; runtime readiness и cold-profile fail-closed сохраняются. Examples выключены, real ENV/manifest/DB не менялись. UI не начат; dependencies/schema/workers/routes не добавлены.
+.4b.1–.3 приняты Луной: recovery prerequisites, проектный browser/native email MFA и manifest/ENV opt-in default-off. Последний кодовый коммит `0e574f2`; снимок `/private/tmp/auth-email-mfa-deployment-v2.uZ7dUVWW`, manifest20/20, task check/affected race/actual manifest-backed HTTP/SQL PASS с cleanup. Evidence Luna: turn `01a19694-19dd-7501-89d8-45c500342cbd`, cursor `944a6e9d-49fe-49f7-8ff5-48acb6c615a1:62`; подробности — в [history](../planning/history.md).
 
-## Проверки
+Сверка уточнила границы компонентных и HTTP проверок, убрала устаревший общий запрет проектного email MFA из описания текущего состояния. Expiry, concurrency, role transitions и strict-proof уже подтверждены; повтор полного набора не нужен. Код/config не менялись, новые исполняемые проверки не запускались.
 
-Luna V2: manifest20/20, task check, targeted config/app/router race и actual manifest-backed TestTwoProjectEmailMFAHTTP race PASS/exit0. DB/roles/schemas/Redis15, containers/certificates/caches очищены. V1 lint/source/JSON/ENV consistency PASS. Пустой SMTP target V1 исправлен через существующий ValidateTargets, без копии parser/rules. Main сверил20/20 до обновления только Markdown; executable checks не запускал. Предыдущие .4b.2 schema/API PASS сохранены, SQL business/Swagger не менялись.
+## Далее — .4b.4
 
-Снимок `/private/tmp/auth-email-mfa-deployment-v2.uZ7dUVWW`, base 988109e. Evidence Luna turn 01a19694-19dd-7501-89d8-45c500342cbd, cursor 944a6e9d-49fe-49f7-8ff5-48acb6c615a1:62; thread 01a16eab-c777-78a0-a815-47b45ff0860d, host local. Подробности — [history](../planning/history.md).
+Два недостающих интеграционных сценария, не найденные runtime-баги:
 
-## Далее
+1. Actual HTTP browser/native completion при отказе Redis admission: без consume/выдачи credentials/plain fallback; после восстановления — ограниченный повтор и один результат.
+2. Actual HTTP recovery именно email-only аккаунта без TOTP при потере/suspension email: recovery next-step/binding, независимое DB operator approval, новый TOTP, отзыв/replay/cross-project denial, без автоматического входа.
 
-Сверить итоговую матрицу .4b/acceptance-summary и оставшиеся pre-UI gates по фактам; не объявлять весь релиз готовым по этому блоку. Внешние SMTP secrets/доставка и capacity не подтверждены. UI только после предупреждения и отдельного согласования.
+Использовать существующие fixtures/ручки, проверки передать отдельному чату «Проверки Auth — Luna». Shared Redis outage не предполагает доступность соседнего проекта. Общий .4b остаётся открытым до приёмки этих веток.
+
+Внешний SMTP/browser/provider, MP6 upgrade, fleet/capacity/длительные GC проверки — отдельные gates. UI не начинать без предупреждения и отдельного согласования пользователя.

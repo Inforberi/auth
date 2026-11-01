@@ -1,6 +1,6 @@
 # Email как дополнительный фактор
 
-Подготовка канала .6c.1 и управление .6c.2 проверены Луной. Внутренний вход и восстановление .6c.3 проверены Луной. **Email MFA пока нельзя включить в настройках или использовать для входа.** HTTP/routes/Swagger/runtime profile/новых ENV для этого подэтапа нет. Объект EmailPreparation предоставляет request/confirm только серверному коду; его нельзя считать включённым фактором.
+Подготовка канала, управление, внутренний вход/recovery и проектная сборка/deployment .6c.1–.4b.3 проверены Луной. Email MFA доступен через явный project opt-in и отдельное разрешение политики/выбор пользователя; по умолчанию выключен. Standalone/platform email MFA не включён. Общий .4b остаётся открытым: [матрица покрытия](../operations/acceptance-summary.md#сверка-email-mfa-4b--1-ноября-2026). Разделы .6c.1–.4a ниже описывают отдельные шаги реализации; прежние ограничения подключения в них относятся к дате шага и заменены проектной сборкой .4b.2–.3.
 
 ## Сценарии и границы
 
@@ -26,7 +26,7 @@
 
 ## Переиспользование и нагрузка
 
-Расширены существующие email_login_challenges/outbox/audit, отдельного worker/очереди/таблицы фактора нет. UNIQUE(user_id,purpose) ограничивает pending intents тремя назначениями; native/browser primary login по-прежнему заменяют одно общее login intent. Legacy request удаляет только свой purpose. Security revocation/reset/retention по-прежнему могут удалить все intents пользователя. Target tuple immutable, ownership FK и expiry/lease indexes сохранены.
+Подготовка переиспользует существующие email_login_challenges/outbox/audit без отдельного worker/очереди; привязка фактора хранится в auth.mfa_email (.6c.2). UNIQUE(user_id,purpose) ограничивает pending intents одним на назначение; native/browser primary login по-прежнему заменяют одно общее login intent. Legacy request удаляет только свой purpose. Security revocation/reset/retention по-прежнему могут удалить все intents пользователя. Target tuple immutable, ownership FK и expiry/lease indexes сохранены.
 
 Delivery проверяет актуальность канала/source session/password/строгой MFA на своей ветке и использует прежний sender, lease/retry/expiry cleanup. Нет keyspace scans, горячих full-table проходов или синхронной SMTP в request. Redis budgets purpose/user/IP/project; ошибки admission fail-closed. Перед HTTP подключением понадобятся profile readiness/route/CSRF/source-cookie и реальные scoped Redis приёмки — этот срез их не объявляет проверенными.
 
@@ -94,11 +94,9 @@ Luna: task check и race для MFA/settings HTTP — PASS, manifest 19/19, вр
 
 ## Что остаётся до публикации email MFA
 
-1. Внутренний .6c.3 принят после Luna; публичная приёмка остаётся .6c.4.
-2. В .6c.4 подключить project/runtime readiness, выбор метода и budgets из действующей MFA configuration, browser/native HTTP/DTO/Swagger/CSRF/binding/secure-cookie contracts. Не включать readiness=true только ради обхода capability guard.
-3. Отдельно сверить platform/administrative profiles и требования strong действий, first-run/last-admin, переходы ролей для email-only аккаунтов и recovery readiness; административный primary не направлять в обычный email-login adapter.
-4. Реальная приёмка двух проектов со scoped crypto/Redis, текущие lifetime/revision/role guards, concurrent changes/faults/recovery и отсутствие bypass. До неё новые флаги/маршруты закрыты.
-5. После этого Telegram-фактор и UI — отдельные согласованные этапы.
+Сборка, method selection, budgets, browser/native HTTP/Swagger и межпроектные guards приняты в .4b.1–.3. Успешные expiry/concurrency/role/strong проверки не повторяются ради другой формы запуска. Полное покрытие и evidence — в [матрице .4b](../operations/acceptance-summary.md#сверка-email-mfa-4b--1-ноября-2026).
+
+Следующий ограниченный блок .4b.4: actual HTTP отказ Redis при завершении browser/native email MFA и восстановление именно email-only аккаунта без TOTP через существующее независимое одобрение. Это недостающие интеграционные проверки, а не обнаруженные ошибки runtime. Общий .4b до их приёмки остаётся открытым. Внешняя SMTP/браузерная приёмка и общий release gate отдельно; Telegram-фактор и UI не входят в этот блок.
 
 ## Проектная сборка и явный выбор — A6.3m.6c.4b.2
 
@@ -129,7 +127,7 @@ Email primary + email factor не считается независимой MFA 
 
 Старый CheckCapability продолжает запрещать email в standalone/platform. Проектный CheckEmailCapability получает readiness только после полной сборки; при сохранённых email-policy/bindings и отсутствующей capability cold profile отклоняется. Новые handler/config/generation не означают закрытый release gate.
 
-Добавлены unit tests forced-native/no-plain, scoped-cookie, configured budgets/readiness и actual TestTwoProjectEmailMFAHTTP: два проекта/DB/Redis/HTTPS, policy/version, channel preparation, Enable/revoke, replay/cross-profile/cross-project/Origin, native issuance и AMR, role grant/update/last-admin guards, stale challenge после повышения роли, cold-profile fail-closed. Код извлекается только из зашифрованного тестового outbox; успешная внешняя SMTP-доставка этим тестом не доказывается. Deployment/ENV/manifest и проверка границ конфигурации добавлены в .4b.3; release gate остаётся открытым до Luna PASS.
+Добавлены unit tests forced-native/no-plain, scoped-cookie, configured budgets/readiness и actual TestTwoProjectEmailMFAHTTP: два проекта/DB/Redis/HTTPS, policy/version, channel preparation, Enable/revoke, replay/cross-profile/cross-project/Origin, native issuance и AMR, role grant/update/last-admin guards, stale challenge после повышения роли, cold-profile fail-closed. Код извлекается только из зашифрованного тестового outbox; успешная внешняя SMTP-доставка этим тестом не доказывается. Deployment/ENV/manifest и проверка границ конфигурации приняты после Luna V2 в .4b.3; оставшиеся границы приёмки перечислены выше и в матрице .4b.
 
 ## Включение через deployment — A6.3m.6c.4b.3
 

@@ -1,5 +1,27 @@
 # Краткий отчёт по проверкам
 
+## Сверка email MFA .4b — 1 ноября 2026
+
+Сборка и deployment приняты в .4b.1–.4b.3. Общий .4b остаётся открытым до двух интеграционных сценариев .4b.4 ниже. Это недостающее evidence, а не обнаруженные ошибки runtime. Результаты прежних снимков сохраняются; повторять успешные проверки без изменения затронутых гарантий не нужно. [Протоколы Luna](../planning/history.md), [контракт](../features/email-mfa.md).
+
+| Гарантия | Результат и граница покрытия |
+| --- | --- |
+| Prerequisites, scoped сборка, manifest/ENV/default-off | PASS .4b.1–.3: task check, affected race, immutable project config; последний принятый снимок `/private/tmp/auth-email-mfa-deployment-v2.uZ7dUVWW`, manifest20/20 |
+| Browser/native вход, cookie/Origin, межпроектные отказы, replay, отсутствие plain-token fallback | PASS: actual `TestTwoProjectEmailMFAHTTP` над двумя БД/Redis/HTTPS, включая manifest-backed сборку; native выдаёт credentials только после MFA |
+| Однократное потребление, expiry, попытки, текущие версии/статус, rollback | PASS: `TestEmailFactorLoginSchema`, включая concurrent one-winner, native rollback и guards suspended/unverified/policy/password/version/blocked/expired/deleted. Отдельный повтор всей матрицы через HTTP не требуется |
+| Роли, последний фактор, strict proof, неподдерживаемые сочетания | PASS: lifecycle/login SQL, actual role grant/update/last-admin и challenge после повышения роли; email не повышается до strong TOTP/recovery. Standalone/operator email routes запрещены; project routes сверены со Swagger |
+| Потеря факторов и независимое одобрение | PASS на уровне компонентов: `TestEmailFactorRecoverySchema` для email-only; actual `TestTwoProjectMFARecoverySQL` подтверждает project recovery с TOTP-аккаунтом. Это ещё не HTTP email-only ветка |
+| Отказ Redis при завершении email MFA | OPEN .4b.4: actual browser/native completion существующего challenge должен fail-closed без consume/session/JWT/refresh/plain fallback; после восстановления — ограниченный повтор и не более одного результата |
+| HTTP-восстановление email-only аккаунта | OPEN .4b.4: потерянный/suspended email без TOTP → `mfa_recovery_required` → bound recovery → отдельное DB operator approval → новый TOTP; отзыв, replay/cross-project denial, без автоматического входа |
+
+Для .4b.4 использовать существующие fixtures/ручки/approval workflow. Redis общий: его общий отказ не предполагает доступность соседнего проекта; проверяются fail-closed и сохранение изоляции. Новые механизмы, очереди и повтор полного набора не нужны. Исполняемые проверки выполняет отдельный чат Luna на неизменяемом снимке.
+
+Внешняя SMTP-доставка, настоящий browser/provider/ingress, DB upgrade MP6, fleet/capacity и длительные GC/resource проверки остаются отдельными gates. Локальная .4b не заменяет их. UI начинается только после предупреждения и отдельного согласования с пользователем.
+
+## Результаты отдельных подэтапов
+
+Ниже формулировки «ещё не подключено» относятся к моменту соответствующего подэтапа. Текущее состояние email MFA определяет матрица выше.
+
 A6.3m.6c.4b.3: manifest emailMFA/ENV/default-off и prerequisites реализованы, project recovery отделён от platform config. V1 SMTP len-check исправлен через existing validator. V2 manifest20/20, task check/race и actual manifest→HTTP PASS/exit0 с cleanup; прежний .4b.2 PASS не заменяет проверку нового deployment source. Сводная .4b/release матрица оценивается отдельно.
 
 A6.3m.6c.4b.2 реализован в opt-in ProjectProfile: selected browser/native email MFA, scoped cookie, readiness/config budgets и SQL administrative-transition guards. Swagger сгенерирован; Luna V1–V3 check/API/race/schema и actual project SQL/HTTP PASS; V3 новый HTTP root exit0 без SKIP, lint0, manifest59/59 и cleanup подтверждены. Ошибки тестов V1/V2 исправлены; runtime constraints не ослаблены. Deployment/ENV/manifest и standalone/platform email не активированы, full .4b gate открыт.
@@ -34,7 +56,7 @@ MP5-directory-identity-http принят Luna V1/V2: actual двухпроект
 - A6.3m.5e принят Luna V2: два настоящих project HTTP profiles с reader/registry, TLS/cookies/MFA/Origin/Host/CSRF/CORS и suspension A при доступном B; task check и SQL/HTTPS race PASS. [Контракт и ограничения](../features/mfa-policy.md#два-проекта-через-https--a63m5e).
 - OIDC callback matrix с контролируемыми TLS providers принята MP5-oidc-http V4; local linking принят отдельно, реальный provider/browser sign-off остаётся открытым. Email component и локальный email HTTP scope приняты отдельно; browser/внешняя доставка/reissue API остаются открытыми. Project JWT/introspection tests с другим manifest на той же БД также не заменяют два настоящих token profiles.
 - Двухпроектные roles/settings/administrative guards и target-bound platform role bridge приняты в `TestTwoProjectAccessIsolationSQL`: Luna V4 PASS (targeted lint/race, cleanup, manifest13); V1 task check и прежний HTTPS root PASS; [сценарии и достаточные проверки](../planning/multi-project.md#двухпроектные-роли-и-настройки--mp5-access). Затем оставшиеся lifecycle/email, JWT/native HTTP и OIDC cases. Общий operator management из одной разрешённой сессии сохраняется.
-- Реальный браузер/внешний ingress/providers/SMTP/fleet/load/GC и UI не объявляются принятыми. Backend управляемых email templates и email/Telegram second factors остаются плановыми задачами.
+- Реальный браузер/внешний ingress/providers/SMTP/fleet/load/GC и UI не объявляются принятыми. Backend управляемых email templates и Telegram second factor остаётся плановым; проектный email MFA уточнён в матрице .4b выше.
 - MP5-sessions-email принят Luna V1/V2: task check, Email root race, targeted lint и SessionLifecycle root race PASS; cleanup/manifest14 подтверждены. Покрыты HTTP sessions/account lifecycle и component verify/reset/invite/temporary/change/report/recovery, payload isolation и SMTP retry; [контракт и границы](../planning/multi-project.md#сессии-и-почта-двух-проектов--mp5-sessions-email). SQL proof fixture и намеренный SMTP отказ не подтверждают login, browser или успешную внешнюю доставку.
 - MP5-token-http принят Luna V1: actual A/B JWT/native/JWKS/introspection profiles над разными БД, собственные issuer/keys/client secrets, cross-token/credential/refresh denial, replay/logout и online revocation без воздействия на B. `task check` и token isolation race PASS, cleanup/manifest11 подтверждены; [scope](../planning/multi-project.md#jwt-и-native-двух-проектов--mp5-token-http). Offline подпись остаётся отдельной гарантией от strict online authority.
 - MP5-oidc-http принят Luna V4: новый actual Google/Telegram A/B start/callback root с контролируемым TLS token/JWKS provider и настоящим production verifier, cross-state/binding/code/nonce/PKCE/replay/credential revisions. V1 task check и V4 targeted lint/actual OIDC root race PASS, cleanup/manifest10 подтверждены; [изолированный стенд и границы](../planning/multi-project.md#oidc-callbacks-двух-проектов--mp5-oidc-http). Host DNS/реальные endpoint settings и рабочий клиент не меняются; внешний provider/browser sign-off не заявляется.
