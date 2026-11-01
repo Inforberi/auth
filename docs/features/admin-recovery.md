@@ -61,14 +61,14 @@ App запускает security delivery через существующий bou
 После устранения причины доставки DBA может явно повторить **конкретную** failed job, сверив incident и UUID, без чтения encrypted payload и без изменения MFA. Пример SQL, не автоматическая операция приложения:
 
 ```sql
-UPDATE auth.mfa_recovery_outbox
+UPDATE auth.mfa_security_outbox
 SET attempts=0,failed_at=NULL,available_at=clock_timestamp()
 WHERE id='33333333-3333-4333-8333-333333333333'
   AND failed_at IS NOT NULL AND lease IS NULL
 RETURNING id;
 ```
 
-Учитывать возможное повторное письмо и сохранять операционный след такого решения. Pending/failed job не удаляется обычным retention; срок ручного разбора и дальнейшего хранения encrypted recipient определяется операционной политикой. Пока нет реальной browser/SMTP/operator приёмки, не считать локальные тесты production acceptance.
+Учитывать возможное повторное письмо и сохранять операционный след такого решения. Pending job не удаляется обычным retention. Failed job хранится для разбора до SecurityAuditDays от failed_at (по умолчанию180 дней), затем ciphertext удаляется ограниченными партиями. Soft deletion аккаунта удаляет оставшиеся jobs; уже начатая SMTP-отправка может завершиться. Пока нет реальной browser/SMTP/operator приёмки, не считать локальные тесты production acceptance.
 
 ## Обычный путь
 

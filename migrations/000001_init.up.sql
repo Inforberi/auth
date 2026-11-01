@@ -433,6 +433,12 @@ CREATE TABLE auth.mfa_telegram (
   UNIQUE(bot_id,telegram_user_id)
 );
 
+CREATE TABLE auth.mfa_preferences (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  version BIGINT NOT NULL DEFAULT 1 CHECK(version>0),
+  preferred_method TEXT CHECK(preferred_method IN ('totp','email'))
+);
+
 CREATE TABLE auth.mfa_enrollments (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   digest TEXT NOT NULL UNIQUE CHECK (digest ~ '^[a-f0-9]{64}$'),
@@ -529,7 +535,7 @@ CREATE TABLE auth.mfa_recovery_codes (
 CREATE TABLE auth.mfa_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
-  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated','recovery_requested','recovery_approved','recovery_cancelled','recovery_completed','email_factor_enabled','email_factor_disabled','email_factor_suspended','telegram_channel_requested','telegram_channel_received','telegram_channel_confirmed','telegram_factor_enabled','telegram_factor_replaced','telegram_factor_disabled')),
+  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated','recovery_requested','recovery_approved','recovery_cancelled','recovery_completed','email_factor_enabled','email_factor_disabled','email_factor_suspended','telegram_channel_requested','telegram_channel_received','telegram_channel_confirmed','telegram_factor_enabled','telegram_factor_replaced','telegram_factor_disabled','factor_preference_changed')),
   request_id UUID,
   auth_version BIGINT CHECK (auth_version>0),
   operator_oid OID,
@@ -549,10 +555,12 @@ CREATE TABLE auth.mfa_audit (
 CREATE INDEX mfa_audit_retention ON auth.mfa_audit(created_at,id);
 
 -- Security notifications survive consumed requests, auth_version changes and audit retention.
-CREATE TABLE auth.mfa_recovery_outbox (
+CREATE TABLE auth.mfa_security_outbox (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
-  request_id UUID NOT NULL UNIQUE,
+  request_id UUID UNIQUE,
+  notice_kind TEXT NOT NULL DEFAULT 'recovery' CHECK(notice_kind IN ('recovery','telegram_factor_enabled','telegram_factor_replaced','telegram_factor_disabled')),
+  CHECK((notice_kind='recovery')=(request_id IS NOT NULL)),
   payload BYTEA NOT NULL CHECK (octet_length(payload) BETWEEN 28 AND 8192),
   attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
   available_at TIMESTAMPTZ NOT NULL DEFAULT statement_timestamp(),
@@ -564,7 +572,9 @@ CREATE TABLE auth.mfa_recovery_outbox (
   CHECK (attempts<5 OR lease IS NOT NULL OR failed_at IS NOT NULL),
   CHECK (failed_at IS NULL OR (attempts=5 AND lease IS NULL))
 );
-CREATE INDEX mfa_recovery_outbox_due ON auth.mfa_recovery_outbox(available_at,id) WHERE failed_at IS NULL;
+CREATE INDEX mfa_security_outbox_user ON auth.mfa_security_outbox(user_id);
+CREATE INDEX mfa_security_outbox_failed ON auth.mfa_security_outbox(failed_at,id) WHERE failed_at IS NOT NULL;
+CREATE INDEX mfa_security_outbox_due ON auth.mfa_security_outbox(available_at,id) WHERE failed_at IS NULL;
 
 -- Operators may decide on metadata, but cannot mutate candidates or forge another operator's approval.
 CREATE FUNCTION auth.decide_mfa_recovery(target UUID, request UUID, version BIGINT, approve BOOLEAN, env TEXT, incident TEXT)

@@ -13,17 +13,17 @@ import (
 )
 
 type recoveryDeliveryStub struct {
-	job       *domain.RecoveryDelivery
+	job       *domain.SecurityDelivery
 	finished  bool
 	sent      bool
 	finishErr error
 }
 
-func (s *recoveryDeliveryStub) ClaimRecoveryDelivery(context.Context) (*domain.RecoveryDelivery, error) {
+func (s *recoveryDeliveryStub) ClaimSecurityDelivery(context.Context) (*domain.SecurityDelivery, error) {
 	return s.job, nil
 }
 
-func (s *recoveryDeliveryStub) FinishRecoveryDelivery(_ context.Context, _ domain.RecoveryDelivery, sent bool) error {
+func (s *recoveryDeliveryStub) FinishSecurityDelivery(_ context.Context, _ domain.SecurityDelivery, sent bool) error {
 	s.finished, s.sent = true, sent
 	return s.finishErr
 }
@@ -49,9 +49,9 @@ func TestRecoveryDeliveryContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	repo := &recoveryDeliveryStub{job: &domain.RecoveryDelivery{Payload: payload, Attempts: 1}}
+	repo := &recoveryDeliveryStub{job: &domain.SecurityDelivery{Payload: payload, Attempts: 1}}
 	mail := &recoveryMailStub{}
-	worker, err := NewRecoveryDelivery(repo, cipher, mail)
+	worker, err := NewSecurityDelivery(repo, cipher, mail)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,17 +59,17 @@ func TestRecoveryDeliveryContract(t *testing.T) {
 		t.Fatal("delivery", processed, err)
 	}
 	mail.err = errors.New("SMTP secret payload")
-	if processed, err := worker.DeliverOne(context.Background()); !processed || !errors.Is(err, domain.ErrRecoveryDelivery) || repo.sent || strings.Contains(err.Error(), "secret payload") {
+	if processed, err := worker.DeliverOne(context.Background()); !processed || !errors.Is(err, domain.ErrSecurityDelivery) || repo.sent || strings.Contains(err.Error(), "secret payload") {
 		t.Fatal("sanitized SMTP failure", err)
 	}
 	repo.job.Exhausted = true
 	before := mail.calls
-	if _, err := worker.DeliverOne(context.Background()); !errors.Is(err, domain.ErrRecoveryDelivery) || mail.calls != before || !repo.finished {
+	if _, err := worker.DeliverOne(context.Background()); !errors.Is(err, domain.ErrSecurityDelivery) || mail.calls != before || !repo.finished {
 		t.Fatal("exhausted lease sent again", err)
 	}
 	repo.job.Exhausted = false
 	repo.job.Payload = []byte("corrupt")
-	if _, err := worker.DeliverOne(context.Background()); !errors.Is(err, domain.ErrRecoveryDelivery) || mail.calls != before {
+	if _, err := worker.DeliverOne(context.Background()); !errors.Is(err, domain.ErrSecurityDelivery) || mail.calls != before {
 		t.Fatal("corrupt mail sent", err)
 	}
 	repo.finishErr = errors.New("acknowledgement failed")

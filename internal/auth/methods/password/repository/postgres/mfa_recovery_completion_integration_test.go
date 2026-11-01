@@ -56,7 +56,7 @@ func assertLostFactorIntact(t *testing.T, db *pgxpool.Pool, ctx context.Context,
 		(SELECT count(*) FROM auth.mfa_recovery_codes WHERE user_id=u.id)=10
 		AND EXISTS(SELECT 1 FROM auth.mfa_recovery_codes WHERE user_id=u.id AND digest=$2)
 		AND EXISTS(SELECT 1 FROM auth.mfa_recovery_requests WHERE user_id=u.id)
-		AND NOT EXISTS(SELECT 1 FROM auth.mfa_recovery_outbox WHERE user_id=u.id)
+		AND NOT EXISTS(SELECT 1 FROM auth.mfa_security_outbox WHERE user_id=u.id)
 		AND NOT EXISTS(SELECT 1 FROM auth.mfa_audit WHERE user_id=u.id AND event='recovery_completed')
 		AND EXISTS(SELECT 1 FROM auth.sessions WHERE user_id=u.id AND revoked_at IS NULL)
 		FROM auth.users u WHERE u.id=$1`, f.user, mfaRecoveryDigest(t, f.user, f.codes[0])).Scan(&intact); err != nil || !intact {
@@ -118,7 +118,7 @@ func TestMFARecoveryCompletionSchema(t *testing.T) {
 			if failure == "audit" {
 				accessExec(t, db, ctx, `ALTER TABLE auth.mfa_audit ADD CONSTRAINT reject_completion CHECK(event<>'recovery_completed') NOT VALID`)
 			} else {
-				accessExec(t, db, ctx, `ALTER TABLE auth.mfa_recovery_outbox ADD CONSTRAINT reject_completion CHECK(false) NOT VALID`)
+				accessExec(t, db, ctx, `ALTER TABLE auth.mfa_security_outbox ADD CONSTRAINT reject_completion CHECK(false) NOT VALID`)
 			}
 			if result, err := f.svc.Complete(ctx, f.input); err == nil || result != nil {
 				t.Fatal("failure accepted", failure)
@@ -127,7 +127,7 @@ func TestMFARecoveryCompletionSchema(t *testing.T) {
 			if failure == "audit" {
 				accessExec(t, db, ctx, `ALTER TABLE auth.mfa_audit DROP CONSTRAINT reject_completion`)
 			} else {
-				accessExec(t, db, ctx, `ALTER TABLE auth.mfa_recovery_outbox DROP CONSTRAINT reject_completion`)
+				accessExec(t, db, ctx, `ALTER TABLE auth.mfa_security_outbox DROP CONSTRAINT reject_completion`)
 			}
 		}
 		var winners atomic.Int64
@@ -160,7 +160,7 @@ func TestMFARecoveryCompletionSchema(t *testing.T) {
 			AND NOT EXISTS(SELECT 1 FROM auth.sessions WHERE user_id=u.id AND revoked_at IS NULL)
 			AND NOT EXISTS(SELECT 1 FROM auth.mfa_login_challenges WHERE user_id=u.id)
 			AND NOT EXISTS(SELECT 1 FROM auth.mfa_recovery_requests WHERE user_id=u.id)
-			AND EXISTS(SELECT 1 FROM auth.mfa_recovery_outbox WHERE user_id=u.id AND request_id=$2)
+			AND EXISTS(SELECT 1 FROM auth.mfa_security_outbox WHERE user_id=u.id AND request_id=$2)
 			AND EXISTS(SELECT 1 FROM auth.mfa_audit WHERE user_id=u.id AND event='recovery_completed'
 				AND auth_version=3 AND operator_name='auth_mfa_completion_operator' AND notification_queued)
 			AND EXISTS(SELECT 1 FROM auth.password_credentials WHERE user_id=u.id AND password_hash='old-hash')

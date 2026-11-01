@@ -18,12 +18,12 @@ func (*telegramFactorRepoStub) ReadTelegramFactor(context.Context, Proof) (*doma
 	return &domain.TelegramFactor{}, nil
 }
 
-func (r *telegramFactorRepoStub) EnableTelegramFactor(context.Context, Proof, domain.TelegramBotBinding) error {
+func (r *telegramFactorRepoStub) EnableTelegramFactor(context.Context, FactorMutation, domain.TelegramBotBinding) error {
 	r.writes++
 	return nil
 }
 
-func (r *telegramFactorRepoStub) DisableTelegramFactor(context.Context, Proof) error {
+func (r *telegramFactorRepoStub) DisableTelegramFactor(context.Context, FactorMutation) error {
 	r.writes++
 	return nil
 }

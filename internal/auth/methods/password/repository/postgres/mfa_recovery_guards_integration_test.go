@@ -125,7 +125,7 @@ func checkMFARecoveryCompletionGuards(t *testing.T, db *pgxpool.Pool, ctx contex
 		var correct bool
 		if err := db.QueryRow(ctx, `SELECT NOT EXISTS(SELECT 1 FROM auth.password_credentials WHERE user_id=$1)
 			AND NOT EXISTS(SELECT 1 FROM auth.user_emails WHERE user_id=$1 AND verified_at IS NOT NULL)
-			AND NOT EXISTS(SELECT 1 FROM auth.mfa_recovery_outbox WHERE user_id=$1)
+			AND NOT EXISTS(SELECT 1 FROM auth.mfa_security_outbox WHERE user_id=$1)
 			AND EXISTS(SELECT 1 FROM auth.mfa_audit WHERE user_id=$1 AND event='recovery_completed' AND NOT notification_queued)`, f.user).Scan(&correct); err != nil || !correct {
 			t.Fatal("unverified notification/password provisioned", err)
 		}

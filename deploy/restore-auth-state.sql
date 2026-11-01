@@ -22,7 +22,7 @@ $$;
 LOCK TABLE auth.users, auth.sessions, auth.refresh_families, auth.refresh_tokens,
   auth.email_verifications, auth.email_verification_outbox, auth.password_resets, auth.password_reset_outbox,
   auth.mfa_totp, auth.mfa_recovery_codes, auth.mfa_enrollments, auth.mfa_login_challenges,
-  auth.mfa_recovery_requests, auth.mfa_recovery_outbox, auth.email_bindings,
+  auth.mfa_recovery_requests, auth.mfa_security_outbox, auth.email_bindings,
   auth.email_login_challenges, auth.email_login_outbox, auth.email_changes, auth.email_change_outbox,
   auth.account_invitations, auth.invitation_outbox, auth.temporary_password_credentials,
   auth.temporary_password_tokens, auth.restore_audit IN ACCESS EXCLUSIVE MODE;
@@ -37,7 +37,7 @@ DELETE FROM auth.mfa_login_challenges; -- Also removes pending/approved recovery
 DELETE FROM auth.mfa_recovery_codes;
 -- TOTP accepts a +/-1 step window: never replay a code from the restored/current window.
 UPDATE auth.mfa_totp SET last_step=GREATEST(last_step,floor(extract(epoch FROM clock_timestamp())/30)::bigint+1);
-UPDATE auth.mfa_recovery_outbox SET attempts=5,failed_at=clock_timestamp(),lease=NULL,lease_until=NULL
+UPDATE auth.mfa_security_outbox SET attempts=5,failed_at=clock_timestamp(),lease=NULL,lease_until=NULL
   WHERE failed_at IS NULL;
 DELETE FROM auth.email_bindings;
 DELETE FROM auth.email_login_challenges;

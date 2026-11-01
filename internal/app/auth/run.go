@@ -57,7 +57,7 @@ type deliveryWorker interface {
 	RunDelivery(context.Context, func(error))
 }
 
-func realmDeliveryWorkers(recovery *passwordservice.RecoveryService, account *accountservice.Service, mfa *mfaservice.RecoveryDelivery, email *otpservice.Delivery, projects ...*ProjectDelivery) []deliveryWorker {
+func realmDeliveryWorkers(recovery *passwordservice.RecoveryService, account *accountservice.Service, mfa *mfaservice.SecurityDelivery, email *otpservice.Delivery, projects ...*ProjectDelivery) []deliveryWorker {
 	var workers []deliveryWorker
 	// Check concrete pointers before conversion: a typed nil is a non-nil interface.
 	if recovery != nil {
@@ -84,7 +84,7 @@ func startDelivery(ctx context.Context, service deliveryWorker, log *zap.Logger,
 ) func() {
 	return startBackground(ctx, func(ctx context.Context) {
 		service.RunDelivery(ctx, func(err error) {
-			if errors.Is(err, mfadomain.ErrRecoveryDelivery) {
+			if errors.Is(err, mfadomain.ErrSecurityDelivery) {
 				log.Error("MFA security notification delivery failed; inspect durable queue")
 				return
 			}

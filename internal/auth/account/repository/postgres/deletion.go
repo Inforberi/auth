@@ -80,6 +80,8 @@ func deleteAccount(ctx context.Context, tx pgx.Tx, deletion domain.AccountDeleti
 		`DELETE FROM auth.mfa_totp WHERE user_id=$1`,
 		`DELETE FROM auth.mfa_email WHERE user_id=$1`,
 		`DELETE FROM auth.mfa_telegram WHERE user_id=$1`,
+		`DELETE FROM auth.mfa_preferences WHERE user_id=$1`,
+		`DELETE FROM auth.mfa_security_outbox WHERE user_id=$1`,
 		`DELETE FROM auth.temporary_password_credentials WHERE user_id=$1`,
 		`DELETE FROM auth.account_invitations WHERE user_id=$1`,
 		`DELETE FROM auth.email_verifications v USING auth.user_emails e WHERE v.email_id=e.id AND e.user_id=$1`,

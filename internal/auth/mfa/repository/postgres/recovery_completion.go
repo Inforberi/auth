@@ -109,6 +109,9 @@ func commitRecoveredFactor(ctx context.Context, tx pgx.Tx, proof service.Primary
 		return domain.ErrInvalidCode
 	}
 	if assistedRecovery {
+		if err := clearFactorPreference(ctx, tx, proof.UserID, domain.EmailCode); err != nil {
+			return err
+		}
 		for _, factor := range []struct{ query, event string }{
 			{`DELETE FROM auth.mfa_email WHERE user_id=$1`, "email_factor_disabled"},
 			{`DELETE FROM auth.mfa_telegram WHERE user_id=$1`, "telegram_factor_disabled"},
@@ -166,6 +169,6 @@ func queueRecoveryNotice(ctx context.Context, tx pgx.Tx, user accountdomain.User
 	if err != nil {
 		return false, err
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO auth.mfa_recovery_outbox(user_id,request_id,payload) VALUES($1,$2,$3)`, user, input.RequestID, payload)
+	_, err = tx.Exec(ctx, `INSERT INTO auth.mfa_security_outbox(user_id,request_id,payload) VALUES($1,$2,$3)`, user, input.RequestID, payload)
 	return err == nil, err
 }

@@ -171,7 +171,7 @@ func TestDisabledDeliveryIsNotScheduled(t *testing.T) {
 	if workers := realmDeliveryWorkers(nil, nil, nil, nil); len(workers) != 0 {
 		t.Fatal("nil delivery pointers became active interfaces")
 	}
-	recovery, account, mfa := &passwordservice.RecoveryService{}, &accountservice.Service{}, &mfaservice.RecoveryDelivery{}
+	recovery, account, mfa := &passwordservice.RecoveryService{}, &accountservice.Service{}, &mfaservice.SecurityDelivery{}
 	workers := realmDeliveryWorkers(recovery, account, mfa, nil)
 	if len(workers) != 3 || workers[0] != recovery || workers[1] != account || workers[2] != mfa {
 		t.Fatal("disabled email OTP delivery was scheduled or durable delivery was omitted")

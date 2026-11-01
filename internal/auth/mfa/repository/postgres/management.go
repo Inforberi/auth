@@ -83,6 +83,9 @@ func (r *Repository) Disable(ctx context.Context, proof service.Proof) error {
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_totp WHERE user_id=$1`, proof.UserID); err != nil {
 			return err
 		}
+		if err := clearFactorPreference(ctx, tx, proof.UserID, domain.TOTP); err != nil {
+			return err
+		}
 		if err := invalidateFactors(ctx, tx, proof.UserID); err != nil {
 			return err
 		}

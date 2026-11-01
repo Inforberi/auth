@@ -93,7 +93,7 @@ func testSecondaryFactorRecovery(t *testing.T, telegram bool) {
 	require.False(t, email)
 	require.True(t, totp)
 	var notices, activeSessions int
-	require.NoError(t, db.QueryRow(ctx, `SELECT count(*) FROM auth.mfa_recovery_outbox WHERE user_id=$1`, f.user).Scan(&notices))
+	require.NoError(t, db.QueryRow(ctx, `SELECT count(*) FROM auth.mfa_security_outbox WHERE user_id=$1`, f.user).Scan(&notices))
 	require.Equal(t, 1, notices)
 	require.NoError(t, db.QueryRow(ctx, `SELECT count(*) FROM auth.sessions WHERE user_id=$1 AND revoked_at IS NULL`, f.user).Scan(&activeSessions))
 	require.Zero(t, activeSessions, "factor recovery must not automatically authenticate")

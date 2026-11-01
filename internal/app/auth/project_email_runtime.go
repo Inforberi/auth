@@ -119,7 +119,7 @@ func (p *projectEmailRuntime) deliverEmailOTP(ctx context.Context) error {
 
 func (p *projectEmailRuntime) deliverMFARecovery(ctx context.Context) error {
 	return p.use(ctx, func(ctx context.Context, pool *pgxpool.Pool, mail *mailer.Mailer) error {
-		worker, err := mfaservice.NewRecoveryDelivery(mfapostgres.New(pool), p.mfaCipher, mail)
+		worker, err := mfaservice.NewSecurityDelivery(mfapostgres.New(pool), p.mfaCipher, mail)
 		if err != nil {
 			return err
 		}

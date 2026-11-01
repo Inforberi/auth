@@ -100,6 +100,14 @@ func (r *Repository) PurgeRetention(ctx context.Context, cfg service.RetentionCo
 			}
 			removed += result.RowsAffected()
 		}
+		result, err := tx.Exec(ctx, `WITH due AS MATERIALIZED (
+ SELECT id FROM auth.mfa_security_outbox WHERE failed_at<=statement_timestamp()-$1::double precision*interval '24 hours'
+ ORDER BY failed_at,id LIMIT $2 FOR UPDATE SKIP LOCKED)
+ DELETE FROM auth.mfa_security_outbox o USING due WHERE o.id=due.id`, cfg.SecurityAuditDays, batch)
+		if err != nil {
+			return err
+		}
+		removed += result.RowsAffected()
 		return nil
 	})
 	if err != nil {

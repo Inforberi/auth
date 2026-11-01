@@ -22,10 +22,10 @@ type mfaApp struct {
 	sessions *sessionservice.Login
 	login    *mfaservice.Login
 	handler  *mfahttp.Handler
-	delivery *mfaservice.RecoveryDelivery
+	delivery *mfaservice.SecurityDelivery
 }
 
-func (s realmSecurity) assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, sessions *sessionservice.SessionService, tokens *tokengenerate.TokenManager, mail mfaservice.RecoveryMailer, cfg *config.Config, log *zap.Logger) (*mfaApp, error) {
+func (s realmSecurity) assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, sessions *sessionservice.SessionService, tokens *tokengenerate.TokenManager, mail mfaservice.SecurityMailer, cfg *config.Config, log *zap.Logger) (*mfaApp, error) {
 	repo := mfapostgres.NewWithEmailProof(pool, cfg.EmailOTP.ReauthenticationEnabled)
 	if cfg.Platform.Enabled {
 		repo = mfapostgres.NewPlatform(pool)
@@ -34,7 +34,7 @@ func (s realmSecurity) assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb 
 	if err != nil {
 		return nil, err
 	}
-	worker, err := mfaservice.NewRecoveryDelivery(repo, cipher, mail)
+	worker, err := mfaservice.NewSecurityDelivery(repo, cipher, mail)
 	if err != nil {
 		return nil, err
 	}

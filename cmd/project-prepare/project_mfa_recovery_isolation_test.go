@@ -25,7 +25,7 @@ func TestTwoProjectMFARecoverySQL(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.WithoutCancel(t.Context()), 5*time.Second)
 		defer cancel()
 		for _, db := range f.databases {
-			_, err := db.Exec(ctx, `DELETE FROM auth.mfa_recovery_outbox WHERE user_id=$1`, httpIsolationUser)
+			_, err := db.Exec(ctx, `DELETE FROM auth.mfa_security_outbox WHERE user_id=$1`, httpIsolationUser)
 			require.NoError(t, err)
 		}
 	})
@@ -110,7 +110,7 @@ func TestTwoProjectMFARecoverySQL(t *testing.T) {
 	replay := webs[0].call(t, t.Context(), "POST", path, f.origins[0], cookie, complete)
 	require.Equal(t, 400, replay.status)
 	var payload []byte
-	require.NoError(t, f.databases[0].QueryRow(t.Context(), `SELECT payload FROM auth.mfa_recovery_outbox WHERE user_id=$1`, httpIsolationUser).Scan(&payload))
+	require.NoError(t, f.databases[0].QueryRow(t.Context(), `SELECT payload FROM auth.mfa_security_outbox WHERE user_id=$1`, httpIsolationUser).Scan(&payload))
 	plain, err := ciphers[0].Open(payload)
 	require.NoError(t, err)
 	require.Contains(t, string(plain), httpIsolationEmail)

@@ -9,8 +9,8 @@ import (
 
 type TelegramFactorRepository interface {
 	ReadTelegramFactor(context.Context, Proof) (*domain.TelegramFactor, error)
-	EnableTelegramFactor(context.Context, Proof, domain.TelegramBotBinding) error
-	DisableTelegramFactor(context.Context, Proof) error
+	EnableTelegramFactor(context.Context, FactorMutation, domain.TelegramBotBinding) error
+	DisableTelegramFactor(context.Context, FactorMutation) error
 }
 
 type TelegramFactorConfig struct {
@@ -43,8 +43,8 @@ func (s *TelegramFactors) Status(ctx context.Context, proof Proof) (*domain.Tele
 }
 
 func (s *TelegramFactors) Enable(ctx context.Context, proof Proof) error {
-	return s.change(ctx, proof, func(ctx context.Context, proof Proof) error {
-		return s.repo.EnableTelegramFactor(ctx, proof, s.cfg.Bot)
+	return s.change(ctx, proof, func(ctx context.Context, input FactorMutation) error {
+		return s.repo.EnableTelegramFactor(ctx, input, s.cfg.Bot)
 	})
 }
 
@@ -52,7 +52,7 @@ func (s *TelegramFactors) Disable(ctx context.Context, proof Proof) error {
 	return s.change(ctx, proof, s.repo.DisableTelegramFactor)
 }
 
-func (s *TelegramFactors) change(ctx context.Context, proof Proof, write func(context.Context, Proof) error) error {
+func (s *TelegramFactors) change(ctx context.Context, proof Proof, write func(context.Context, FactorMutation) error) error {
 	if err := proof.Validate(); err != nil {
 		return err
 	}
@@ -64,5 +64,11 @@ func (s *TelegramFactors) change(ctx context.Context, proof Proof, write func(co
 	}); err != nil {
 		return err
 	}
-	return write(ctx, proof)
+	return write(ctx, FactorMutation{Proof: proof, PrepareNotice: func(email, event string, at time.Time) ([]byte, error) {
+		payload, err := sealSecurityNotice(s.cipher, email, event, "", at)
+		if err != nil {
+			return nil, domain.ErrUnavailable
+		}
+		return payload, nil
+	}})
 }

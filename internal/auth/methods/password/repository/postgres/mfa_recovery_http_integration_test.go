@@ -79,7 +79,7 @@ func checkMFARecoveryHTTP(t *testing.T, owner, runtime *pgxpool.Pool, ctx contex
 			t.Fatal("disabled route", disabled.Code)
 		}
 		mail := &recoveryMailer{}
-		worker, err := mfaservice.NewRecoveryDelivery(repo, recoveryCipher(t), mail)
+		worker, err := mfaservice.NewSecurityDelivery(repo, recoveryCipher(t), mail)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -12,7 +12,8 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func (r *Repository) EnableTelegramFactor(ctx context.Context, proof service.Proof, bot domain.TelegramBotBinding) error {
+func (r *Repository) EnableTelegramFactor(ctx context.Context, input service.FactorMutation, bot domain.TelegramBotBinding) error {
+	proof := input.Proof
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		deadline, err := r.lockTelegramManagement(ctx, tx, proof, bot)
 		if err != nil {
@@ -62,7 +63,7 @@ func (r *Repository) EnableTelegramFactor(ctx context.Context, proof service.Pro
 		if configured {
 			event = "telegram_factor_replaced"
 		}
-		if err := audit(ctx, tx, proof.UserID, event); err != nil {
+		if err := telegramFactorNotice(ctx, tx, input, event); err != nil {
 			return err
 		}
 		return factorManagementDeadline(ctx, tx, deadline)

@@ -26,7 +26,7 @@ func seedRestoreProofs(t *testing.T, db *pgxpool.Pool, ctx context.Context, user
 		SELECT id,repeat('1',64),auth_version,repeat('2',64),decode(repeat('00',64),'hex'),statement_timestamp()+interval '5 minutes' FROM auth.users WHERE id=$1`, mfa)
 	accessExec(t, db, ctx, `INSERT INTO auth.mfa_recovery_requests(user_id,challenge_digest,auth_version,secret,expires_at)
 		SELECT user_id,digest,auth_version,decode(repeat('00',64),'hex'),expires_at FROM auth.mfa_login_challenges WHERE user_id=$1`, mfa)
-	accessExec(t, db, ctx, `INSERT INTO auth.mfa_recovery_outbox(user_id,request_id,payload) SELECT user_id,request_id,decode(repeat('00',32),'hex') FROM auth.mfa_recovery_requests WHERE user_id=$1`, mfa)
+	accessExec(t, db, ctx, `INSERT INTO auth.mfa_security_outbox(user_id,request_id,payload) SELECT user_id,request_id,decode(repeat('00',32),'hex') FROM auth.mfa_recovery_requests WHERE user_id=$1`, mfa)
 	accessExec(t, db, ctx, `INSERT INTO auth.account_invitations(digest,user_id,email_id,auth_version,expires_at)
 		SELECT repeat('3',64),u.id,p.invitation_email_id,u.auth_version,now()+interval '1 day' FROM auth.users u JOIN auth.account_provisions p ON p.user_id=u.id WHERE u.id=$1`, pending)
 	accessExec(t, db, ctx, `INSERT INTO auth.invitation_outbox(digest,payload,expires_at) SELECT digest,decode(repeat('00',32),'hex'),expires_at FROM auth.account_invitations WHERE user_id=$1`, pending)
@@ -71,7 +71,7 @@ func assertRestoreInvalidated(t *testing.T, db *pgxpool.Pool, ctx context.Contex
 		NOT EXISTS(SELECT 1 FROM auth.sessions WHERE revoked_at IS NULL)
 		AND NOT EXISTS(SELECT 1 FROM auth.refresh_families WHERE revoked_at IS NULL)
 		AND NOT EXISTS(SELECT 1 FROM auth.email_changes WHERE state IN('pending','completed','reported'))
-		AND EXISTS(SELECT 1 FROM auth.mfa_recovery_outbox WHERE failed_at IS NOT NULL AND attempts=5 AND lease IS NULL)
+		AND EXISTS(SELECT 1 FROM auth.mfa_security_outbox WHERE failed_at IS NOT NULL AND attempts=5 AND lease IS NULL)
 		AND NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE last_step<floor(extract(epoch FROM statement_timestamp())/30)::bigint)
 		AND (SELECT count(*) FROM auth.restore_audit)=$1
 		AND NOT EXISTS(SELECT 1 FROM auth.restore_audit WHERE operator_name<>session_user OR database_name<>current_database() OR users_invalidated<>(SELECT count(*) FROM auth.users))`, operations).Scan(&safe); err != nil || !safe {

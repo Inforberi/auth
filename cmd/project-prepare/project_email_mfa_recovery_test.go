@@ -24,7 +24,7 @@ func TestTwoProjectEmailMFARecoveryHTTP(t *testing.T) {
 	t.Cleanup(func() {
 		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
-		_, err := db.Exec(cleanup, `DELETE FROM auth.mfa_recovery_outbox WHERE user_id=$1`, httpIsolationUser)
+		_, err := db.Exec(cleanup, `DELETE FROM auth.mfa_security_outbox WHERE user_id=$1`, httpIsolationUser)
 		require.NoError(t, err)
 	})
 	// Activation is covered separately; seed the lost-mail state without a TOTP fallback.
