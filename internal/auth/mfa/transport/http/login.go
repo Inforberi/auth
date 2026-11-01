@@ -12,14 +12,22 @@ import (
 const LoginCookie = "__Host-mfa-login"
 
 type ChallengeResponse struct {
+	Method    string    `json:"method,omitempty"`
 	Status    string    `json:"status"`
 	Challenge string    `json:"challenge"`
 	ExpiresAt time.Time `json:"expiresAt"`
 } // @name mfa_http.ChallengeResponse
 
 func RespondChallenge(w http.ResponseWriter, challenge *service.LoginChallenge) {
+	RespondChallengeWithCookie(w, challenge, LoginCookie)
+}
+
+func RespondChallengeWithCookie(w http.ResponseWriter, challenge *service.LoginChallenge, cookieName string) {
+	if cookieName == "" {
+		cookieName = LoginCookie
+	}
 	sessionhttp.ClearSessionCookie(w)
-	http.SetCookie(w, &http.Cookie{Name: LoginCookie, Value: challenge.Binding, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: challenge.ExpiresAt})
+	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: challenge.Binding, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: challenge.ExpiresAt})
 	status := "mfa_required"
 	if challenge.EnrollmentRequired {
 		status = "mfa_enrollment_required"
@@ -27,7 +35,7 @@ func RespondChallenge(w http.ResponseWriter, challenge *service.LoginChallenge) 
 	if challenge.RecoveryRequired {
 		status = "mfa_recovery_required"
 	}
-	httpx.JSON(w, 202, ChallengeResponse{Status: status, Challenge: challenge.Token, ExpiresAt: challenge.ExpiresAt})
+	httpx.JSON(w, 202, ChallengeResponse{Method: string(challenge.Method), Status: status, Challenge: challenge.Token, ExpiresAt: challenge.ExpiresAt})
 }
 
 type CompleteLoginRequest struct {
@@ -37,7 +45,7 @@ type CompleteLoginRequest struct {
 } // @name mfa_http.CompleteLoginRequest
 
 // @Summary Complete login with a second factor
-// @Description Requires the same browser binding cookie and allowed Origin. Consumes TOTP/recovery and challenge atomically with SQL session issuance. No client UUID, auth version or MFA timestamp is accepted.
+// @Description Requires the same browser binding cookie and allowed Origin. Consumes the selected TOTP/recovery or Telegram code and challenge atomically with SQL session issuance. No client UUID, auth version or MFA timestamp is accepted.
 // @Tags MFA
 // @Accept json
 // @Produce json

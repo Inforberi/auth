@@ -40,6 +40,8 @@ func TestTwoProjectEmailMFARecoveryHTTP(t *testing.T) {
 	require.NoError(t, f.projects.databases[1].QueryRow(ctx, `SELECT auth_version FROM auth.users WHERE id=$1`, httpIsolationUser).Scan(&neighborVersion))
 	credentials := map[string]string{"email": httpIsolationEmail, "password": httpIsolationPassword}
 	response := web.call(t, ctx, "POST", "/api/v1/auth/login/email", web.origin, "", credentials)
+	require.Equal(t, 503, response.status, "unavailable selected factor must not silently switch to recovery")
+	response = web.call(t, ctx, "POST", "/api/v1/auth/mfa/recovery/login", web.origin, "", credentials)
 	require.Equal(t, 202, response.status, string(response.body))
 	var login mfahttp.ChallengeResponse
 	require.NoError(t, json.Unmarshal(response.body, &login))

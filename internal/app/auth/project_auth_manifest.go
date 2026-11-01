@@ -33,6 +33,7 @@ type projectMethodDeployment struct {
 	UserDirectory     bool                     `json:"userDirectory"`
 	EmailOTP          bool                     `json:"emailOTP"`
 	EmailMFA          bool                     `json:"emailMFA"`
+	TelegramMFA       bool                     `json:"telegramMFA"`
 	Reauthentication  bool                     `json:"reauthentication"`
 	EmailBinding      bool                     `json:"emailBinding"`
 	EmailChange       bool                     `json:"emailChange"`
@@ -110,7 +111,7 @@ type projectAccessDeployment struct {
 }
 
 func (entry projectMethodDeployment) requiresBrowser() bool {
-	return entry.EmailMFA || entry.Reauthentication || entry.Google || entry.Telegram ||
+	return entry.TelegramMFA || entry.EmailMFA || entry.Reauthentication || entry.Google || entry.Telegram ||
 		entry.EmailBinding || entry.EmailChange || entry.AuthSettings || entry.SMTPSettings || entry.ProviderSettings || entry.RetentionSettings || entry.MFASettings ||
 		entry.Access != nil || entry.UserDirectory || entry.UserLifecycle ||
 		entry.Invitations || entry.TemporaryPassword

@@ -30,6 +30,7 @@ type ProjectProfileConfig struct {
 	Password                 *ProjectPasswordConfig
 	EmailOTP                 *ProjectEmailOTPConfig
 	EmailMFA                 *ProjectEmailMFAConfig
+	TelegramMFA              bool
 	Google, Telegram         *ProjectOIDCConfig
 	Verification             *accountservice.Config
 	Recovery                 *passwordservice.Config
@@ -41,6 +42,7 @@ type ProjectProfileConfig struct {
 type ProjectProfileDependencies struct {
 	ProjectTokenDependencies
 	OIDCClients *ProjectOIDCClients
+	BotAPI      ProjectTelegramClient
 	Delivery    *ProjectDelivery
 	SMTPTests   *settingsservice.SMTPTestGate
 }
@@ -65,6 +67,7 @@ type ProjectProfile struct {
 	mfaManagement            *projectMFA
 	mfaRecovery              *projectMFARecovery
 	emailMFA                 *projectEmailMFA
+	telegramMFA              *projectTelegramMFA
 	userDirectory            *projectUserDirectory
 	userLifecycle            *projectUserLifecycle
 	access                   *projectAccess
@@ -109,6 +112,8 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	p.buildProfileMFAManagement(cfg, configuration.EncryptionKey(), redisReady)
 	p.buildProfileMFARecovery(ctx, cfg, configuration.EncryptionKey(), redisReady)
 	p.buildProfileEmailMFA(cfg)
+	p.buildProfileTelegramMFA(cfg, configuration.EncryptionKey())
+	p.bindFactorSelection()
 	p.buildProfileEmailManagement(ctx, cfg, redisReady)
 	p.finishProfileRegistration(cfg)
 	p.buildProfileProvisioning(ctx, cfg, redisReady)

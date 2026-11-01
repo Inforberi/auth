@@ -476,6 +476,324 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/admin/auth/settings/mfa/telegram": {
+            "get": {
+                "description": "Requires current auth.settings.manage. Mutations require fresh password/strong MFA and expectedVersion. Secrets are never returned.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth settings"
+                ],
+                "summary": "Read Telegram MFA policy",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.TelegramPolicyResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Requires current auth.settings.manage. Mutations require fresh password/strong MFA and expectedVersion. Secrets are never returned.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth settings"
+                ],
+                "summary": "Update Telegram MFA policy",
+                "parameters": [
+                    {
+                        "description": "settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.TelegramPolicyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.TelegramPolicyResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/auth/settings/mfa/telegram/bot": {
+            "get": {
+                "description": "Requires current auth.settings.manage. Mutations require fresh password/strong MFA and expectedVersion. Secrets are never returned.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth settings"
+                ],
+                "summary": "Read masked Telegram bot settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.TelegramBotResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Requires current auth.settings.manage. Mutations require fresh password/strong MFA and expectedVersion. Secrets are never returned.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth settings"
+                ],
+                "summary": "Verify and update Telegram bot secrets",
+                "parameters": [
+                    {
+                        "description": "settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.TelegramBotUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.TelegramBotResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/auth/settings/mfa/telegram/webhook": {
+            "post": {
+                "description": "Requires current auth.settings.manage. Mutations require fresh password/strong MFA and expectedVersion. Secrets are never returned.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth settings"
+                ],
+                "summary": "Register the project-owned HTTPS Telegram webhook",
+                "parameters": [
+                    {
+                        "description": "settings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.WebhookActivationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.TelegramBotResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/auth/settings/providers/{provider}": {
             "get": {
                 "description": "Live session, HTTPS Origin and auth.settings.manage; no fresh proof for reading. Presence is not a live provider test. Redirect URI and fixed issuer/endpoints remain deployment configuration.",
@@ -4162,7 +4480,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/mfa/login/complete": {
             "post": {
-                "description": "Requires the same browser binding cookie and allowed Origin. Consumes TOTP/recovery and challenge atomically with SQL session issuance. No client UUID, auth version or MFA timestamp is accepted.",
+                "description": "Requires the same browser binding cookie and allowed Origin. Consumes the selected TOTP/recovery or Telegram code and challenge atomically with SQL session issuance. No client UUID, auth version or MFA timestamp is accepted.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4373,6 +4691,87 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/auth/mfa/preference": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Read the user's preferred MFA method",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfahttp.PreferenceResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Empty method selects auto. Fresh proofs and expectedVersion required. Strong administrative policy takes precedence.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Select an enrolled, allowed MFA method",
+                "parameters": [
+                    {
+                        "description": "version and method",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/mfahttp.PreferenceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfahttp.PreferenceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/mfa/recovery-codes/regenerate": {
             "post": {
                 "description": "Requires fresh primary and MFA proofs. Primary is password, or opt-in verified-email proof for an external-only account. Replaces all recovery codes, returns ten new codes once and revokes sessions/pending challenges atomically. TOTP remains enabled.",
@@ -4490,6 +4889,58 @@ const docTemplate = `{
                     },
                     "503": {
                         "description": "code: temporarily_unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/mfa/recovery/login": {
+            "post": {
+                "description": "Does not authenticate or bypass a factor. Creates a primary-bound challenge for the existing independently approved recovery process; no delivery fallback.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Explicitly request MFA recovery after password verification",
+                "parameters": [
+                    {
+                        "description": "primary credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/mfa_http.EmailLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/mfa_http.ChallengeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -4679,6 +5130,185 @@ const docTemplate = `{
                     },
                     "503": {
                         "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/mfa/telegram": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Read the current user's Telegram factor",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfahttp.TelegramFactorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Requires the same fresh source proofs and confirmed channel. Revokes existing credentials; no session issued.",
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Enable or replace the confirmed Telegram factor",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfa_http.StatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Requires fresh current proofs; cannot remove the final policy-required factor.",
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Disable the Telegram factor",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfa_http.StatusResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/mfa/telegram/preparation": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Begin private Telegram factor preparation",
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/mfahttp.TelegramPreparationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/mfa/telegram/preparation/confirm": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MFA"
+                ],
+                "summary": "Confirm Telegram possession in the original browser",
+                "parameters": [
+                    {
+                        "description": "binding and code",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/mfahttp.TelegramConfirmRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/mfa_http.StatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -9665,6 +10295,21 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.Method": {
+            "type": "string",
+            "enum": [
+                "totp",
+                "recovery",
+                "email",
+                "telegram"
+            ],
+            "x-enum-varnames": [
+                "TOTP",
+                "RecoveryCode",
+                "EmailCode",
+                "TelegramCode"
+            ]
+        },
         "emailotp_http.ConfirmCodeRequest": {
             "type": "object",
             "properties": {
@@ -9866,6 +10511,70 @@ const docTemplate = `{
                 }
             }
         },
+        "http.TelegramBotResponse": {
+            "type": "object",
+            "properties": {
+                "botId": {
+                    "type": "integer"
+                },
+                "botTokenSet": {
+                    "type": "boolean"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                },
+                "webhookSecretSet": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "http.TelegramBotUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "botToken": {
+                    "type": "string"
+                },
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "rotateWebhookSecret": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "http.TelegramPolicyRequest": {
+            "type": "object",
+            "properties": {
+                "allowed": {
+                    "type": "boolean"
+                },
+                "expectedVersion": {
+                    "type": "integer"
+                }
+            }
+        },
+        "http.TelegramPolicyResponse": {
+            "type": "object",
+            "properties": {
+                "allowed": {
+                    "type": "boolean"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "http.WebhookActivationRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                }
+            }
+        },
         "httpx.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -9894,6 +10603,9 @@ const docTemplate = `{
                 "expiresAt": {
                     "type": "string"
                 },
+                "method": {
+                    "type": "string"
+                },
                 "status": {
                     "type": "string"
                 }
@@ -9916,6 +10628,9 @@ const docTemplate = `{
                 "expiresAt": {
                     "type": "string"
                 },
+                "method": {
+                    "type": "string"
+                },
                 "status": {
                     "type": "string"
                 }
@@ -9936,6 +10651,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "expiresAt": {
+                    "type": "string"
+                },
+                "method": {
                     "type": "string"
                 },
                 "status": {
@@ -10257,6 +10975,73 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "challenge": {
+                    "type": "string"
+                }
+            }
+        },
+        "mfahttp.PreferenceRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "method": {
+                    "$ref": "#/definitions/domain.Method"
+                }
+            }
+        },
+        "mfahttp.PreferenceResponse": {
+            "type": "object",
+            "properties": {
+                "method": {
+                    "$ref": "#/definitions/domain.Method"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "mfahttp.TelegramConfirmRequest": {
+            "type": "object",
+            "properties": {
+                "binding": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string"
+                }
+            }
+        },
+        "mfahttp.TelegramFactorResponse": {
+            "type": "object",
+            "properties": {
+                "allowed": {
+                    "type": "boolean"
+                },
+                "botId": {
+                    "type": "integer"
+                },
+                "configured": {
+                    "type": "boolean"
+                },
+                "enabledAt": {
+                    "type": "string"
+                },
+                "telegramId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "mfahttp.TelegramPreparationResponse": {
+            "type": "object",
+            "properties": {
+                "binding": {
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "type": "string"
+                },
+                "url": {
                     "type": "string"
                 }
             }
@@ -11232,6 +12017,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "expiresAt": {
+                    "type": "string"
+                },
+                "method": {
                     "type": "string"
                 },
                 "nextStep": {

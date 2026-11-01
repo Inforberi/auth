@@ -114,18 +114,20 @@ func checkMFALogin(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 				session.PrimaryVerifiedAt.After(*session.MFAVerifiedAt) || !session.MFAVerifiedAt.Equal(winner.MFAVerified) {
 				t.Fatal("session authentication context", err)
 			}
-			for _, method := range []string{"telegram", "unknown"} {
+			for _, method := range []string{"sms", "unknown"} {
 				_, err := db.Exec(ctx, `UPDATE auth.sessions SET mfa_method=$2 WHERE token_hash=$1`, hash, method)
 				var constraint *pgconn.PgError
 				if !errors.As(err, &constraint) || constraint.Code != "23514" {
 					t.Fatal("unsupported factor accepted by SQL", method, err)
 				}
 			}
-			if _, err = db.Exec(ctx, `UPDATE auth.sessions SET mfa_method='email' WHERE token_hash=$1`, hash); err != nil {
-				t.Fatal("known email method rejected", err)
-			}
-			if _, err = f.sessions.FindSession(ctx, hash); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
-				t.Fatal("email label without an enrolled channel granted session authority", err)
+			for _, method := range []string{"email", "telegram"} {
+				if _, err = db.Exec(ctx, `UPDATE auth.sessions SET mfa_method=$2 WHERE token_hash=$1`, hash, method); err != nil {
+					t.Fatal("known method rejected", method, err)
+				}
+				if _, err = f.sessions.FindSession(ctx, hash); !errors.Is(err, sessiondomain.ErrSessionNotFound) {
+					t.Fatal("method label without an enrolled channel granted session authority", method, err)
+				}
 			}
 			if _, err = db.Exec(ctx, `UPDATE auth.sessions SET mfa_method=$2 WHERE token_hash=$1`, hash, session.MFAMethod); err != nil {
 				t.Fatal(err)

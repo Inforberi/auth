@@ -26,6 +26,7 @@ func TestStrongMFARoute(t *testing.T) {
 		{"legacy", "mfa", now.Add(-time.Minute), 403},
 		{"email", "email", now.Add(-time.Minute), 403},
 		{"email code", "email_otp", now.Add(-time.Minute), 403},
+		{"Telegram code", "telegram_otp", now.Add(-time.Minute), 403},
 		{"telegram", "telegram", now.Add(-time.Minute), 403},
 		{"missing", "otp", time.Time{}, 403},
 		{"stale", "otp", now.Add(-6 * time.Minute), 403},

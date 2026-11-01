@@ -10,5 +10,5 @@ type Preference struct {
 }
 
 func ValidPreference(method Method) bool {
-	return method == "" || method == TOTP || method == EmailCode
+	return method == "" || method == TOTP || method == EmailCode || method == TelegramCode
 }

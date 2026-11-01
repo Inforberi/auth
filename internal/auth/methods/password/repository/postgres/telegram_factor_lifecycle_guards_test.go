@@ -92,7 +92,7 @@ func checkTelegramLifecycleGuards(t *testing.T, db *pgxpool.Pool, ctx context.Co
 		var required, usable bool
 		require.NoError(t, db.QueryRow(ctx, `SELECT auth.mfa_login_required($1),auth.mfa_proof_usable($1,'password','telegram')`, f.user).Scan(&required, &usable))
 		require.True(t, required)
-		require.False(t, usable, "Telegram proof validation is not published in this private stage")
+		require.True(t, usable, "configured Telegram now participates in method-aware proof validation")
 		login := mfaservice.PrimaryProof{UserID: f.user, AuthVersion: f.proof.AuthVersion + 1, Method: "password", Reference: "old-hash"}
 		login.VerifiedAt = time.Now().UTC()
 		tokens := tokengenerate.New()

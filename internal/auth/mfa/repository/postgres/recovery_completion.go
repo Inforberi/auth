@@ -109,8 +109,10 @@ func commitRecoveredFactor(ctx context.Context, tx pgx.Tx, proof service.Primary
 		return domain.ErrInvalidCode
 	}
 	if assistedRecovery {
-		if err := clearFactorPreference(ctx, tx, proof.UserID, domain.EmailCode); err != nil {
-			return err
+		for _, method := range []domain.Method{domain.EmailCode, domain.TelegramCode} {
+			if err := clearFactorPreference(ctx, tx, proof.UserID, method); err != nil {
+				return err
+			}
 		}
 		for _, factor := range []struct{ query, event string }{
 			{`DELETE FROM auth.mfa_email WHERE user_id=$1`, "email_factor_disabled"},

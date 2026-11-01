@@ -14,7 +14,16 @@ import (
 
 const assistedRecoveryFactor domain.Method = "assisted_recovery"
 
-func consumeLoginFactor(ctx context.Context, tx pgx.Tx, proof lockedLoginChallenge, factor service.LoginFactor, email *service.EmailCodeProof) (domain.Verification, error) {
+func consumeLoginFactor(ctx context.Context, tx pgx.Tx, proof lockedLoginChallenge, factor service.LoginFactor, email *service.EmailCodeProof, telegram *service.TelegramCodeProof) (domain.Verification, error) {
+	if proof.FactorMethod == domain.TelegramCode {
+		if telegram == nil || email != nil || factor != nil || proof.Method != "password" || proof.Administrative {
+			return domain.Verification{}, domain.ErrInvalidCode
+		}
+		return consumeTelegramLoginCode(ctx, tx, proof, *telegram)
+	}
+	if telegram != nil {
+		return domain.Verification{}, domain.ErrInvalidCode
+	}
 	if proof.FactorMethod == domain.EmailCode {
 		if email == nil || factor != nil || proof.Method != "password" || proof.Administrative {
 			return domain.Verification{}, domain.ErrInvalidCode

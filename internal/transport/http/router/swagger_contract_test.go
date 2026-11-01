@@ -53,9 +53,9 @@ func TestSwaggerMatchesRoutes(t *testing.T) {
 			for path, methods := range doc.Paths {
 				for method := range methods {
 					present := routes[method+" "+path]
-					if projectEmailMFAPath(path) {
+					if projectOnlyMFAPath(path) {
 						if present {
-							t.Fatal("standalone exposes project-only email MFA")
+							t.Fatal("standalone exposes project-only MFA")
 						}
 						continue // ProjectProfile route parity is checked in app/auth; SQL tests cover mounting/protection.
 					}
@@ -80,9 +80,12 @@ func TestSwaggerMatchesRoutes(t *testing.T) {
 	}
 }
 
-func projectEmailMFAPath(path string) bool {
+func projectOnlyMFAPath(path string) bool {
 	return path == "/api/v1/auth/mfa/email" || strings.HasPrefix(path, "/api/v1/auth/mfa/email/") ||
-		strings.HasPrefix(path, "/api/v1/auth/native/mfa/email/") || path == "/api/v1/admin/auth/settings/mfa/email"
+		strings.HasPrefix(path, "/api/v1/auth/native/mfa/email/") || path == "/api/v1/admin/auth/settings/mfa/email" ||
+		path == "/api/v1/auth/mfa/preference" || path == "/api/v1/auth/mfa/recovery/login" ||
+		path == "/api/v1/auth/mfa/telegram" || strings.HasPrefix(path, "/api/v1/auth/mfa/telegram/") ||
+		path == "/api/v1/admin/auth/settings/mfa/telegram" || strings.HasPrefix(path, "/api/v1/admin/auth/settings/mfa/telegram/")
 }
 
 func TestSwaggerMatchesPlatformRoutes(t *testing.T) {
@@ -117,7 +120,7 @@ func TestSwaggerMatchesPlatformRoutes(t *testing.T) {
 		if method == http.MethodOptions {
 			return nil
 		}
-		if projectEmailMFAPath(path) {
+		if projectOnlyMFAPath(path) {
 			t.Fatal("operator exposes project-only email MFA")
 		}
 		routes[strings.ToLower(method)+" "+path] = true
@@ -164,7 +167,7 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 		{"token_http.NativeEnrollmentConfirmRequest", tokenhttp.NativeEnrollmentConfirmRequest{}},
 		{"token_http.NativeEnrollmentResponse", tokenhttp.NativeEnrollmentResponse{}},
 		{"token_http.NativeRecoveryCodesResponse", tokenhttp.NativeRecoveryCodesResponse{Codes: []string{}}},
-		{"token_http.NativeChallengeResponse", tokenhttp.NativeChallengeResponse{}},
+		{"token_http.NativeChallengeResponse", tokenhttp.NativeChallengeResponse{Method: "totp"}},
 		{"token_http.RefreshRequest", tokenhttp.RefreshRequest{}},
 		{"token_http.JWKSResponse", tokenhttp.JWKSResponse{Keys: []tokenhttp.PublicKey{}}},
 		{"token_http.PublicKey", tokenhttp.PublicKey{Operations: []string{"verify"}}},

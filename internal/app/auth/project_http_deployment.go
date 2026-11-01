@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/Inforberi/financial-intelligence/internal/config"
+	telegrambot "github.com/Inforberi/financial-intelligence/internal/integrations/telegram/bot"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
@@ -28,6 +29,15 @@ func openProjectHTTP(ctx context.Context, cfg *config.Config, runtime *projectRu
 		return nil, nil, err
 	}
 	dependencies := ProjectProfileDependencies{ProjectTokenDependencies: ProjectTokenDependencies{Registry: runtime.registry, Reader: runtime.reader, Redis: deps.redis, Hash: deps.hash}, Delivery: delivery}
+	if deployment.botAPI {
+		botClient, openErr := telegrambot.New(ctx, 8)
+		err = openErr
+		dependencies.BotAPI = botClient
+		if err != nil {
+			return nil, nil, err
+		}
+		owned.add(botClient.Close)
+	}
 	if deployment.oidc {
 		dependencies.OIDCClients = NewProjectOIDCClients(ctx)
 		owned.add(dependencies.OIDCClients.Close)

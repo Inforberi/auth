@@ -12,7 +12,7 @@ import (
 )
 
 func (c *Client) call(ctx context.Context, credentials Credentials, method string, input any) (result json.RawMessage, err error) {
-	if ctx == nil || credentials.id == 0 || credentials.token == "" || method != "getMe" && method != "sendMessage" {
+	if ctx == nil || credentials.id == 0 || credentials.token == "" || method != "getMe" && method != "sendMessage" && method != "setWebhook" {
 		return nil, ErrInvalidInput
 	}
 	if ctx.Err() != nil || c.lifetime.Err() != nil {

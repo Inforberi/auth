@@ -182,3 +182,26 @@ MP5-directory-identity-http принят Luna V1/V2: actual двухпроект
 
 Стенд оставлен работающим; команды — [sandbox](local-sandbox.md), [load/cleanup с таблицами](load-baseline.md). Load cleanup восстановил API без GODEBUG/original flags/key/TTL/7 readonly mounts; cleanup-drain API не перезапускал и не менял профиль, readiness200 подтверждён. Новый blocked SQL fixture UUID удалён вместе с остатками, реальные users/roles/volumes сохранены; обычные sessions/audit/лимиты/worker checkpoints обновились штатно. Предыдущие fixtures: lifecycle3 tombstone/1 active roleless; security2 roleless (у диагностического enrolled factor, secret/codes не сохранялись). Детали — [history cleanup](../planning/history.md#результат-pre-ui-cleanup-drain-local--18-октября-2026), [history load](../planning/history.md#результат-pre-ui-load-baseline-local--18-октября-2026), [history security](../planning/history.md#результат-pre-ui-freshness-mfa-local--18-октября-2026), security gates — [матрица S1–S10](jwt-security-acceptance.md). Коммит в этом блоке не выполнялся.
 
+
+
+## Telegram MFA: завершающий блок — 1 ноября 2026
+
+Единый функциональный блок .6d.4: password primary → выбранный TOTP/email/Telegram factor, browser/native issuance, фактический method/AMR/refresh, bounded shared Bot client, подготовка/активация/удаление канала, настройки бота/policy/webhook и own preference. Явный recovery/login доступен при потере preferred канала, но не даёт session/approval. Telegram proof не strong/admin; метка метода без enrolled channel не даёт SQL authority.
+
+Проверки выполнял только отдельный чат Luna на immutable snapshots от0463018. Main выполнял formatter, Swagger generation и source review. Итоговый код — V4 `/private/tmp/auth-telegram-final-v4.46bnalb6` (manifest92/92,0 hash mismatches); Luna подтвердил локальные Markdown links и cleanup своих fixtures/копий, snapshot/manifest/patch сохранены. После снимка меняются только Markdown статусы.
+
+| Проверка | Результат / снимок |
+| --- | --- |
+| `task check`, Go tests + lint | V4 clean command environment PASS, lint0 |
+| `task check:api` | V2 PASS; annotations/generated V3/V4 без изменений |
+| Race затронутых8 пакетов | V3 PASS; V4 lint-only эквивалентные правки отдельно проверены целевыми SQL race |
+| `TestTelegramMFALoginSchema` | V4 PASS: binding/method, no partial issuance, delivery/stale version,6 subtests включая guessing/expiry/replacement/native JWT refresh |
+| `TestPostgresSchema/MFA_login` | V4 PASS: regression race/guards, known Telegram label без enrolled factor не выдаёт authority; остальные subtree V2 сохранены |
+| Telegram preparation/lifecycle/recovery/settings/preferences и email SQL regression roots | V2 результаты с неизменными schema/contracts, отдельные успешные logs; не запускались повторно формально |
+| `TestTwoProjectTelegramMFAHTTP` | V3 PASS: реальные PostgreSQL/Redis/TLS HTTP, controlled Bot API port, browser/native, настройки/привязка/preference/replay/изоляция |
+| `TestTwoProjectEmailMFAHTTP` | V3 PASS: native email использует свою factory/config |
+| `TestTwoProjectEmailMFARecoveryHTTP` | V4 PASS: обычный unavailable login503, explicit recovery202, независимое approval, отзыв/no-auto-login и соседний проект |
+
+Предварительные failures исправлены: V1 unused imports; V2 setWebhook allowlist, старые contract/native permission/cleanup assertions; V3 lint5 issues; старые unknown-telegram и implicit recovery expectations актуализированы без ослабления authority. Первый V4 task check ошибочно унаследовал opt-in SQL fixture ENV и запустил несвязанные SQL/OIDC suites; результат отклонён как некорректный стенд. Повтор в чистом env успешен, actual roots отдельно на disposable fixtures. Не выдавать этот ошибочный прогон за успешно пройденный весь SQL suite. Подробные команды/exit/status/cleanup — внешние логи Luna с префиксом `/private/tmp/auth-telegram-final-v{2,3,4}-`.
+
+Реальный Telegram/getMe/sendMessage/setWebhook/HTTPS ingress NOT RUN: внешних credentials нет. Локальный Bot adapter проверен отдельными TLS tests, HTTP acceptance использует controlled port. Real SMTP, controlled MP6 upgrade, fleet/security итоговая приёмка и RPS/память/GC этим блоком не закрываются. Рабочие БД, ENV/secrets не менялись, новых зависимостей/workers нет. Следующий этап — MP6R смысловой рефакторинг/security review. UI только после отдельного согласования.

@@ -69,7 +69,11 @@ func (h *PublicPasswordHandler) login(w http.ResponseWriter, r *http.Request, au
 	}
 
 	if login.Challenge != nil {
-		mfahttp.RespondChallenge(w, login.Challenge)
+		if login.Challenge.Method == "email" {
+			mfahttp.RespondChallengeWithCookie(w, login.Challenge, h.emailMFACookie)
+		} else {
+			mfahttp.RespondChallenge(w, login.Challenge)
+		}
 		return
 	}
 	sessionhttp.SetSessionCookie(w, login.Token, login.ExpiresAt)

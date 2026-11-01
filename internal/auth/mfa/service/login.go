@@ -8,6 +8,7 @@ import (
 	"time"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 )
 
 // PrimaryProof comes from a verified method adapter, never from an HTTP request.
@@ -82,12 +83,14 @@ func (c LoginConfig) Validate() error {
 }
 
 type LoginChallengeState struct {
+	Method             domain.Method
 	RecoveryRequired   bool
 	ExpiresAt          time.Time
 	EnrollmentRequired bool
 }
 
 type LoginChallenge struct {
+	Method             domain.Method
 	RecoveryRequired   bool
 	Token              string `json:"-"`
 	Binding            string `json:"-"`

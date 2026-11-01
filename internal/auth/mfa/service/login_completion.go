@@ -15,6 +15,7 @@ type CompleteLoginInput struct {
 }
 
 type LoginCompletion struct {
+	Telegram                         *TelegramCodeProof
 	Email                            *EmailCodeProof
 	AllowPrimary                     func(method, issuer string) bool
 	Digest, BindingHash, SessionHash string
@@ -24,6 +25,8 @@ type LoginCompletion struct {
 	AdminAbsoluteTTL                 time.Duration
 	AdminActivityInterval            time.Duration
 }
+
+type TelegramCodeProof struct{ Verifier string }
 
 // EmailCodeProof contains scoped verifiers, not an assertion that a factor passed.
 type EmailCodeProof struct {
@@ -68,7 +71,14 @@ func (s *Login) Complete(ctx context.Context, input CompleteLoginInput) (*LoginS
 		return nil, err
 	}
 	// The repository owns the challenge's user, not a caller-supplied UUID.
+	factor := s.loginFactor(input.Code, input.Recovery)
+	var telegram *TelegramCodeProof
+	if !input.Recovery && domain.ValidTelegramCode(input.Code) {
+		telegram = &TelegramCodeProof{Verifier: telegramLoginVerifier(s.cipher, string(user), digest, input.Code)}
+		factor = nil
+	}
 	result, err := s.repo.CompleteLogin(ctx, LoginCompletion{
+		Telegram:     telegram,
 		AllowPrimary: s.cfg.AllowPrimary,
 		Digest:       digest, BindingHash: binding,
 		SessionHash: s.tokens.Hash(raw), UserAgent: input.UserAgent, IP: input.IP,
@@ -76,7 +86,7 @@ func (s *Login) Complete(ctx context.Context, input CompleteLoginInput) (*LoginS
 		AdminIdleTimeout:      s.cfg.AdminIdleTimeout,
 		AdminAbsoluteTTL:      s.cfg.AdminAbsoluteTTL,
 		AdminActivityInterval: s.cfg.AdminActivityInterval,
-	}, s.loginFactor(input.Code, input.Recovery))
+	}, factor)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +95,7 @@ func (s *Login) Complete(ctx context.Context, input CompleteLoginInput) (*LoginS
 
 func validCompletion(input CompleteLoginInput) bool {
 	return validLoginToken(input.Token) && validLoginToken(input.Binding) &&
-		((input.Recovery && domain.ValidRecoveryCode(input.Code)) || (!input.Recovery && domain.ValidCode(input.Code))) &&
+		((input.Recovery && domain.ValidRecoveryCode(input.Code)) || (!input.Recovery && (domain.ValidCode(input.Code) || domain.ValidTelegramCode(input.Code)))) &&
 		len(input.UserAgent) <= 512 && len(input.IP) <= 64
 }
 

@@ -74,7 +74,11 @@ func (p *ProjectTokens) nativeLogin(pool *pgxpool.Pool, service *tokenservice.Se
 	if err != nil {
 		return nil, nil, err
 	}
-	login, err := tokenservice.NewNativeLogin(service, mfa)
+	selected, err := p.native.mfa.newSelectedLogin(pool)
+	if err != nil {
+		return nil, nil, err
+	}
+	login, err := tokenservice.NewNativeLogin(service, selected)
 	return login, mfa, err
 }
 

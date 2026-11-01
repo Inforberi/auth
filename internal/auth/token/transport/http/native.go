@@ -62,6 +62,7 @@ type NativeResponse struct {
 } // @name token_http.NativeResponse
 
 type NativeChallengeResponse struct {
+	Method    string    `json:"method,omitempty"`
 	Challenge string    `json:"challenge"`
 	Binding   string    `json:"binding"`
 	ExpiresAt time.Time `json:"expiresAt"`
@@ -82,7 +83,7 @@ func (h *NativeHandler) writeLogin(w http.ResponseWriter, r *http.Request, resul
 			step = "recovery"
 		}
 		c := result.Challenge
-		httpx.JSON(w, 202, NativeChallengeResponse{Challenge: c.Token, Binding: c.Binding, ExpiresAt: c.ExpiresAt, NextStep: step})
+		httpx.JSON(w, 202, NativeChallengeResponse{Method: string(c.Method), Challenge: c.Token, Binding: c.Binding, ExpiresAt: c.ExpiresAt, NextStep: step})
 		return
 	}
 	h.writeTokens(w, r, result.Tokens)

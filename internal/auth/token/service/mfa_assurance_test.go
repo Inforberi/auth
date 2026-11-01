@@ -15,7 +15,7 @@ func TestSigningPreservesMFAMethod(t *testing.T) {
 	for _, tc := range []struct {
 		method mfadomain.Method
 		want   string
-	}{{"", "mfa"}, {mfadomain.TOTP, "otp"}, {mfadomain.RecoveryCode, "recovery"}, {mfadomain.EmailCode, "email_otp"}, {"unknown", ""}, {"telegram", ""}} {
+	}{{"", "mfa"}, {mfadomain.TOTP, "otp"}, {mfadomain.RecoveryCode, "recovery"}, {mfadomain.EmailCode, "email_otp"}, {"unknown", ""}, {mfadomain.TelegramCode, "telegram_otp"}} {
 		signer := new(exchangeSigner)
 		svc := Service{signer: signer, ttl: time.Minute}
 		proof := SessionProof{Method: "password", VerifiedAt: now.Add(-time.Minute), MFAVerifiedAt: &now, MFAMethod: tc.method, Now: now, Deadline: now.Add(time.Minute)}

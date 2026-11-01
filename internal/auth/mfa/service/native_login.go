@@ -54,6 +54,7 @@ func (s *Login) StartNative(ctx context.Context, proof PrimaryProof, target Nati
 // NativeAttempt is server-owned admission/check material, not proof of completed MFA.
 // The repository rechecks the owner and consumes the factor under the final transaction.
 type NativeAttempt struct {
+	Telegram            *TelegramCodeProof
 	Email               *EmailCodeProof
 	UserID              accountdomain.UserID
 	Digest, BindingHash string
@@ -80,5 +81,9 @@ func (s *Login) PrepareNativeCompletion(ctx context.Context, input CompleteLogin
 		return attempt, err
 	}
 	attempt.UserID, attempt.Factor, attempt.AllowPrimary = user, s.loginFactor(input.Code, input.Recovery), s.cfg.AllowPrimary
+	if !input.Recovery && domain.ValidTelegramCode(input.Code) {
+		attempt.Factor = nil
+		attempt.Telegram = &TelegramCodeProof{Verifier: telegramLoginVerifier(s.cipher, string(user), attempt.Digest, input.Code)}
+	}
 	return attempt, nil
 }

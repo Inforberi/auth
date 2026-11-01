@@ -22,6 +22,7 @@ type projectMFALogin struct {
 	limits           *mfaredis.Limiter
 	config           mfaservice.LoginConfig
 	managementConfig mfaservice.Config
+	email, telegram  func(*pgxpool.Pool) (mfaservice.FactorStarter, error)
 }
 
 func newProjectMFALogin(scope realmscope.Scope, root string, cfg mfaservice.Config, session sessionservice.Config, rdb *redis.Client, primary string) (*projectMFALogin, error) {
@@ -53,4 +54,25 @@ func (m *projectMFALogin) newLogin(pool *pgxpool.Pool) (*mfaservice.Login, error
 
 func validateProjectMFA(cfg mfaservice.Config) error {
 	return cfg.Validate()
+}
+
+func (m *projectMFALogin) newSelectedLogin(pool *pgxpool.Pool) (*mfaservice.Selector, error) {
+	login, err := m.newLogin(pool)
+	if err != nil {
+		return nil, err
+	}
+	var email, telegram mfaservice.FactorStarter
+	if m.email != nil {
+		email, err = m.email(pool)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if m.telegram != nil {
+		telegram, err = m.telegram(pool)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return mfaservice.NewSelector(login, mfapostgres.New(pool), email, telegram), nil
 }

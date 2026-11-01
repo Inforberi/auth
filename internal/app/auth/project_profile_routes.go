@@ -39,6 +39,22 @@ func (p *ProjectProfile) RoutePlan() []ProjectRoute {
 	add("email_mfa", "session_no_refresh", "DELETE", "/api/v1/auth/mfa/email")
 	add("mfa_settings", "session_no_refresh", "GET", "/api/v1/admin/auth/settings/mfa/email")
 	add("mfa_settings", "session_no_refresh", "POST", "/api/v1/admin/auth/settings/mfa/email")
+
+	if p.mfaManagement != nil {
+		add("mfa_management", "session_no_refresh", "GET", "/api/v1/auth/mfa/preference")
+		add("mfa_management", "session_no_refresh", "POST", "/api/v1/auth/mfa/preference")
+	}
+	if p.password != nil {
+		add("mfa_recovery", "browser", "POST", "/api/v1/auth/mfa/recovery/login")
+	}
+	add("telegram_mfa", "session_no_refresh", "GET", "/api/v1/auth/mfa/telegram")
+	add("telegram_mfa", "session_no_refresh", "POST", "/api/v1/auth/mfa/telegram/preparation", "/api/v1/auth/mfa/telegram/preparation/confirm", "/api/v1/auth/mfa/telegram")
+	add("telegram_mfa", "session_no_refresh", "DELETE", "/api/v1/auth/mfa/telegram")
+	add("telegram_mfa", "service", "POST", "/api/v1/auth/mfa/telegram/webhook")
+	if p.telegramMFA != nil && p.mfaSettings != nil {
+		add("mfa_settings", "session_no_refresh", "GET", "/api/v1/admin/auth/settings/mfa/telegram/bot", "/api/v1/admin/auth/settings/mfa/telegram")
+		add("mfa_settings", "session_no_refresh", "POST", "/api/v1/admin/auth/settings/mfa/telegram/bot", "/api/v1/admin/auth/settings/mfa/telegram", "/api/v1/admin/auth/settings/mfa/telegram/webhook")
+	}
 	add("mfa_management", "session_no_refresh", "GET", "/api/v1/auth/mfa/status")
 	add("mfa_management", "session_no_refresh", "POST", "/api/v1/auth/mfa/totp/enrollment", "/api/v1/auth/mfa/totp/enrollment/confirm", "/api/v1/auth/mfa/step-up", "/api/v1/auth/mfa/recovery-codes/regenerate", "/api/v1/auth/mfa/totp/replacement", "/api/v1/auth/mfa/totp/replacement/confirm")
 	add("mfa_management", "session_no_refresh", "DELETE", "/api/v1/auth/mfa/totp")

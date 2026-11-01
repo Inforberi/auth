@@ -42,7 +42,8 @@ func (r *Repository) UpdateMFAPreference(ctx context.Context, input service.Pref
 		}
 		var allowed bool
 		if err := tx.QueryRow(ctx, `SELECT $2='' OR $2='totp' AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1)
- OR $2='email' AND auth.email_factor_usable($1) AND NOT auth.has_administrative_access($1)`, input.UserID, input.Method).Scan(&allowed); err != nil {
+ OR $2='email' AND auth.email_factor_usable($1) AND NOT auth.has_administrative_access($1)
+ OR $2='telegram' AND auth.telegram_factor_usable($1) AND NOT auth.has_administrative_access($1)`, input.UserID, input.Method).Scan(&allowed); err != nil {
 			return err
 		}
 		if !allowed {

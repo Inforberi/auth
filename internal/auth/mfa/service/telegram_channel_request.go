@@ -14,6 +14,7 @@ type TelegramIntent struct {
 }
 
 type TelegramStarted struct {
+	URL       string
 	Binding   string
 	ExpiresAt time.Time
 }

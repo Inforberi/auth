@@ -32,7 +32,13 @@ func (d *ProjectAuthDeployment) applyEmailMFA(profile *ProjectProfileConfig, ena
 	}
 	settings := d.emailMFA
 	profile.EmailMFA = &settings
-	profile.Password.MFA.RecoveryEnabled = true
+	enableProjectMFARecovery(profile)
+}
+
+func enableProjectMFARecovery(profile *ProjectProfileConfig) {
+	if profile.Password != nil {
+		profile.Password.MFA.RecoveryEnabled = true
+	}
 	if profile.EmailOTP != nil {
 		profile.EmailOTP.MFA.RecoveryEnabled = true
 	}

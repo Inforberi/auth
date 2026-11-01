@@ -31,7 +31,7 @@ func (r *Repository) SaveEmailLoginChallenge(ctx context.Context, input otpservi
 	if input.Proof.Administrative || input.Proof.Method != "password" {
 		return nil, domain.ErrProofRequired
 	}
-	return r.saveLoginChallenge(ctx, input.Proof, input.Target, input.Digest, input.BindingHash, ttl, &input)
+	return r.saveLoginChallenge(ctx, input.Proof, input.Target, input.Digest, input.BindingHash, ttl, &input, nil)
 }
 
 func lockEmailLoginChannel(ctx context.Context, tx pgx.Tx, proof service.PrimaryProof, channel otpservice.EmailLoginChannel) (string, error) {

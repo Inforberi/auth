@@ -1,0 +1,101 @@
+package auth
+
+import (
+	"context"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
+	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
+	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
+	telegrambot "github.com/Inforberi/financial-intelligence/internal/integrations/telegram/bot"
+)
+
+type ProjectTelegramClient interface {
+	VerifyTelegramBot(context.Context, settingsdomain.TelegramBotToken) (settingsdomain.TelegramBotIdentity, error)
+	SendCode(context.Context, telegrambot.Credentials, int64, string) error
+	SetWebhook(context.Context, telegrambot.Credentials, string, string) error
+}
+
+type projectTelegramMFA struct {
+	profile                 *ProjectProfile
+	manager                 *projectMFA
+	client                  ProjectTelegramClient
+	token, webhook, channel *secretbox.Cipher
+}
+
+func (p *projectTelegramMFA) settings(pool *pgxpool.Pool) (*settingsservice.TelegramBotSettings, error) {
+	cfg := p.manager.factory.managementConfig
+	return settingsservice.NewTelegramBotSettings(settingspostgres.New(pool), p.token, p.webhook, p.client, p.manager.factory.limits, tokengenerate.New(), settingsservice.TelegramBotLimits{
+		UserUpdatesPerMinute: cfg.UserLimitPerMinute, ProjectUpdatesPerMinute: cfg.GlobalLimitPerMinute,
+	})
+}
+
+func (p *projectTelegramMFA) credentials(ctx context.Context, pool *pgxpool.Pool) (settingsservice.TelegramBotCredentials, error) {
+	settings, err := p.settings(pool)
+	if err != nil {
+		return settingsservice.TelegramBotCredentials{}, err
+	}
+	return settings.Credentials(ctx)
+}
+
+func (p *projectTelegramMFA) preparation(ctx context.Context, pool *pgxpool.Pool) (*mfaservice.TelegramPreparation, settingsservice.TelegramBotCredentials, error) {
+	credentials, err := p.credentials(ctx, pool)
+	if err != nil {
+		return nil, credentials, err
+	}
+	cfg := p.manager.factory.managementConfig
+	service, err := mfaservice.NewTelegramPreparation(mfapostgres.New(pool), p.channel, p.manager.factory.limits, tokengenerate.New(), mfaservice.TelegramPreparationConfig{
+		Bot: mfadomain.TelegramBotBinding{ID: credentials.Snapshot.BotID, PolicyVersion: credentials.Snapshot.Version},
+		TTL: cfg.ChallengeTTL, RequestsPerMinute: cfg.GlobalLimitPerMinute, UpdatesPerMinute: cfg.GlobalLimitPerMinute, ConfirmationsPerMinute: cfg.GlobalLimitPerMinute, UserLimitPerMinute: cfg.UserLimitPerMinute, IPLimitPerMinute: cfg.IPLimitPerMinute,
+	})
+	return service, credentials, err
+}
+
+func (p *projectTelegramMFA) factors(ctx context.Context, pool *pgxpool.Pool) (*mfaservice.TelegramFactors, error) {
+	credentials, err := p.credentials(ctx, pool)
+	if err != nil {
+		return nil, err
+	}
+	cfg := p.manager.factory.managementConfig
+	return mfaservice.NewTelegramFactors(mfapostgres.New(pool), p.manager.factory.cipher, p.manager.factory.limits, mfaservice.TelegramFactorConfig{
+		Bot:                    mfadomain.TelegramBotBinding{ID: credentials.Snapshot.BotID, PolicyVersion: credentials.Snapshot.Version},
+		UserMutationsPerMinute: cfg.UserLimitPerMinute, ProjectMutationsPerMinute: cfg.GlobalLimitPerMinute,
+	})
+}
+
+func (p *projectTelegramMFA) login(pool *pgxpool.Pool, factory *projectMFALogin) (*mfaservice.TelegramLogin, error) {
+	return mfaservice.NewTelegramLogin(mfapostgres.New(pool), factory.cipher, factory.limits, tokengenerate.New(), projectTelegramSender{owner: p, pool: pool}, factory.config)
+}
+
+type projectTelegramSender struct {
+	owner *projectTelegramMFA
+	pool  *pgxpool.Pool
+}
+
+func (s projectTelegramSender) SendLoginCode(ctx context.Context, channel mfaservice.TelegramLoginChannel, code string) error {
+	credentials, err := s.owner.credentials(ctx, s.pool)
+	if err != nil {
+		return err
+	}
+	if credentials.Snapshot.BotID != channel.Bot.ID || credentials.Snapshot.Version != channel.Bot.PolicyVersion {
+		return mfadomain.ErrUnavailable
+	}
+	token, err := telegrambot.NewCredentials(credentials.Token.Value())
+	if err != nil {
+		return mfadomain.ErrUnavailable
+	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	return s.owner.client.SendCode(ctx, token, channel.TelegramID, code)
+}
+
+func botIdentity(snapshot settingsdomain.TelegramBotSnapshot) settingsdomain.TelegramBotIdentity {
+	return settingsdomain.TelegramBotIdentity{ID: snapshot.BotID, Username: snapshot.Username}
+}

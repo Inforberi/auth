@@ -19,6 +19,7 @@ func (p *ProjectProfile) httpRoutes(fallback *sessionservice.Config, log *zap.Lo
 	if err := p.emailMFAHandlers(handlers, log); err != nil {
 		return nil, err
 	}
+	p.telegramMFAHandlers(handlers, log)
 	native := p.tokenHandlers(handlers, log)
 	var protection router.ProjectRouteProtection
 	if native != nil {

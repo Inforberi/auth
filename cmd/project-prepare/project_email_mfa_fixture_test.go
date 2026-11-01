@@ -15,6 +15,7 @@ import (
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
@@ -25,18 +26,28 @@ type emailMFAHTTPFixture struct {
 	webs     [2]isolationHTTP
 	mail     [2]*secretbox.Cipher
 	mfa      [2]*secretbox.Cipher
+	channel  [2]*secretbox.Cipher
 	prefix   [2]string
 	config   appauth.ProjectEmailMFAConfig
 }
 
-func prepareEmailMFAHTTP(t *testing.T) emailMFAHTTPFixture {
+func prepareEmailMFAHTTP(t *testing.T) emailMFAHTTPFixture { return prepareMFAHTTP(t, nil) }
+
+func prepareMFAHTTP(t *testing.T, bot appauth.ProjectTelegramClient) emailMFAHTTPFixture {
 	t.Helper()
 	pair := prepareHTTPProjects(t)
 	projects := newProjectIsolationHTTP(t, pair.admin, pair.reader, pair.a, pair.b, pair.target)
 	email := prepareEmailIsolation(t, projects)
 	projects.deps.Delivery = runEmailHTTPDelivery(t, email)
+	projects.deps.BotAPI = bot
 	grantProjectRecoveryOperator(t, pair.admin, projects.databases)
 	projects.password.MFA.RecoveryEnabled = true
+	if bot != nil {
+		projects.password.MFA.UserLimitPerMinute = 100
+		projects.password.MFA.IPLimitPerMinute = 100
+		projects.password.MFA.GlobalLimitPerMinute = 1000
+	}
+
 	tokens := prepareTokenIsolation(t, projects)
 	projects = tokens.projects
 	f := emailMFAHTTPFixture{projects: projects, tokens: tokens}
@@ -49,7 +60,7 @@ func prepareEmailMFAHTTP(t *testing.T) emailMFAHTTPFixture {
 		require.NoError(t, err)
 		scope, err := realmscope.New("project", string(key.Binding.ProjectID))
 		require.NoError(t, err)
-		for purpose, target := range map[string]**secretbox.Cipher{"email-login:v1": &f.mail[i], "mfa:v1": &f.mfa[i]} {
+		for purpose, target := range map[string]**secretbox.Cipher{"email-login:v1": &f.mail[i], "mfa:v1": &f.mfa[i], "telegram-channel:v1": &f.channel[i]} {
 			name, err := scope.Purpose(purpose)
 			require.NoError(t, err)
 			*target, err = secretbox.NewScoped(configuration.EncryptionKey(), name)
@@ -62,10 +73,19 @@ func prepareEmailMFAHTTP(t *testing.T) emailMFAHTTPFixture {
 	config := appauth.ProjectEmailMFAConfig{Preparation: otpservice.EmailPreparationConfig{TTL: 3 * time.Minute, ResendInterval: time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 100}, Factors: mfaservice.EmailFactorConfig{UserMutationsPerMinute: 5, ProjectMutationsPerMinute: 500}}
 	f.config = config
 	deployment := loadEmailMFADeployment(t, f, []string{email.listeners[0].Addr().String(), email.listeners[1].Addr().String()})
+	source := deployment.Profile
+	if bot != nil {
+		source = func(ctx context.Context, key projectruntime.Key, origin string) (appauth.ProjectProfileConfig, error) {
+			config, err := deployment.Profile(ctx, key, origin)
+			config.TelegramMFA = true
+			config.MFASettingsEnabled = true
+			return config, err
+		}
+	}
 	handler, err := appauth.NewProjectHTTP(appauth.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute},
 		Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &projects.password.Session,
-	}, projects.deps, deployment.Profile, nil)
+	}, projects.deps, source, nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)
 	t.Cleanup(func() {
@@ -74,6 +94,25 @@ func prepareEmailMFAHTTP(t *testing.T) emailMFAHTTPFixture {
 		defer cancel()
 		require.NoError(t, handler.Close(ctx))
 		for _, db := range projects.databases {
+			if bot != nil {
+				for _, query := range []string{
+					`DELETE FROM auth.mfa_telegram_preparations WHERE user_id=$1`,
+					`DELETE FROM auth.mfa_login_challenges WHERE user_id=$1`,
+					`DELETE FROM auth.mfa_telegram WHERE user_id=$1`,
+					`DELETE FROM auth.mfa_preferences WHERE user_id=$1`,
+					`DELETE FROM auth.mfa_security_outbox WHERE user_id=$1`,
+				} {
+					_, err := db.Exec(ctx, query, httpIsolationUser)
+					require.NoError(t, err)
+				}
+				_, err := db.Exec(ctx, `DELETE FROM auth.telegram_bot_settings_audit WHERE actor_id=$1`, httpOwnerID)
+				require.NoError(t, err)
+				_, err = db.Exec(ctx, `DELETE FROM auth.mfa_audit WHERE user_id=$1`, httpOwnerID)
+				require.NoError(t, err)
+				_, err = db.Exec(ctx, `DELETE FROM auth.telegram_bot_settings; UPDATE auth.mfa_settings SET telegram_factor_allowed=false,telegram_bot_id=NULL`)
+				require.NoError(t, err)
+			}
+
 			_, err := db.Exec(ctx, `DELETE FROM auth.mfa_settings_audit WHERE actor_id=$1`, httpOwnerID)
 			require.NoError(t, err)
 			_, err = db.Exec(ctx, `DELETE FROM auth.mfa_audit WHERE user_id=$1`, httpIsolationUser)

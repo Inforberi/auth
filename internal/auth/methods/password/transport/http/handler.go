@@ -33,8 +33,9 @@ type PasswordService interface {
 }
 
 type PublicPasswordHandler struct {
-	service PublicPasswordService
-	log     *zap.Logger
+	emailMFACookie string
+	service        PublicPasswordService
+	log            *zap.Logger
 }
 
 type PasswordHandler struct {
@@ -67,3 +68,8 @@ func NewRecovery(service RecoveryService, log *zap.Logger) *RecoveryHandler {
 type RecoveryResponse struct {
 	Status string `json:"status" example:"ok"`
 } // @name password_http.RecoveryResponse
+
+func (h *PublicPasswordHandler) WithEmailMFACookie(name string) *PublicPasswordHandler {
+	h.emailMFACookie = name
+	return h
+}

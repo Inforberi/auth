@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
-	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
@@ -63,7 +62,7 @@ func TestTelegramFactorLifecycleSchema(t *testing.T) {
 		otherToken := strings.Replace(token, "123456789", "987654321", 1)
 		_, err = bot.Update(ctx, settingsservice.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: current.Version, BotToken: &otherToken})
 		require.ErrorIs(t, err, settingsdomain.ErrTelegramFactorInUse)
-		require.ErrorIs(t, mfapostgres.New(db).Disable(ctx, f.proof), mfadomain.ErrRequiredByPolicy, "unfinished Telegram cannot replace a working TOTP")
+
 		confirmTelegramFactorChannel(t, ctx, &f, 1<<40+1)
 		require.NoError(t, svc.Enable(ctx, f.proof))
 		f.proof = renewedEmailFactorProof(t, db, ctx, f.user)

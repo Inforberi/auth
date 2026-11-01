@@ -25,7 +25,7 @@ func (r *Repository) DisableEmailFactor(ctx context.Context, proof service.Proof
 func (r *Repository) DisableTelegramFactor(ctx context.Context, input service.FactorMutation) error {
 	return r.disablePasswordFactor(ctx, input.Proof, factorRemoval{
 		query: `DELETE FROM auth.mfa_telegram WHERE user_id=$1`, event: "telegram_factor_disabled", emailFallback: true,
-		notice: input.PrepareNotice,
+		notice: input.PrepareNotice, method: domain.TelegramCode,
 	})
 }
 

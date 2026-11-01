@@ -31,7 +31,7 @@ func (r *Repository) CompleteLogin(ctx context.Context, input service.LoginCompl
 			}
 			return err
 		}
-		verified, err := consumeLoginFactor(ctx, tx, *proof, factor, input.Email)
+		verified, err := consumeLoginFactor(ctx, tx, *proof, factor, input.Email, input.Telegram)
 		if errors.Is(err, domain.ErrInvalidCode) {
 			rejected = true
 			_, err := tx.Exec(ctx, `UPDATE auth.mfa_login_challenges SET attempts=attempts+1 WHERE user_id=$1`, proof.UserID)

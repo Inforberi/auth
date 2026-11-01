@@ -26,6 +26,7 @@ type ProjectAuthDeployment struct {
 	otp              otpservice.Config
 	emailMFA         ProjectEmailMFAConfig
 	oidc, jwt        bool
+	botAPI           bool
 }
 
 func LoadProjectAuthDeployment(cfg *config.Config) (*ProjectAuthDeployment, error) {
@@ -47,6 +48,12 @@ func LoadProjectAuthDeployment(cfg *config.Config) (*ProjectAuthDeployment, erro
 	d.google.MFA.RecoveryEnabled, d.telegram.MFA.RecoveryEnabled = false, false
 	consumerHashes := make(map[string]projectdomain.ID)
 	for _, entry := range manifest.Projects {
+		if entry.TelegramMFA {
+			if err := validateTelegramMFADeployment(cfg); err != nil {
+				return nil, errProjectAuthManifest
+			}
+			d.botAPI = true
+		}
 		if entry.EmailMFA {
 			d.emailMFA, err = compileProjectEmailMFA(cfg)
 			if err != nil {
@@ -119,6 +126,10 @@ func (d *ProjectAuthDeployment) Profile(ctx context.Context, key projectruntime.
 		}
 	}
 	d.applyEmailMFA(&profile, entry.methods.EmailMFA)
+	if entry.methods.TelegramMFA {
+		enableProjectMFARecovery(&profile)
+	}
+	profile.TelegramMFA = entry.methods.TelegramMFA
 	return profile, nil
 }
 
@@ -155,4 +166,11 @@ func compileProjectAccess(deployment *projectAccessDeployment) (*accesssettings.
 		return nil, errProjectAuthManifest
 	}
 	return &catalog, nil
+}
+
+func validateTelegramMFADeployment(cfg *config.Config) error {
+	if !cfg.MFA.Enabled || cfg.MFA.Validate() != nil || !cfg.Platform.Delivery.Enabled || cfg.Platform.Delivery.ValidateTargets() != nil {
+		return errProjectAuthManifest
+	}
+	return nil
 }

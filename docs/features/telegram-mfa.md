@@ -1,5 +1,75 @@
 # Telegram как дополнительный фактор
 
+## Итоговое подключение — A6.3m.6d.4
+
+Завершающий функциональный блок подключён и прошёл локальные исполняемые проверки Luna (V4). Этот раздел описывает текущий контракт; следующие разделы сохраняют историю внутренних подэтапов и их прежних ограничений. Указания ниже «ещё не подключено» относятся к соответствующему прошлому подэтапу.
+
+### Включение проекта
+
+В manifest используется отдельное `telegramMFA: true`, не флаг primary Telegram OIDC. Нужны browser/password, собранные MFA management/recovery и delivery с разрешёнными SMTP targets для уведомлений и восстановления. Метод по умолчанию запрещён политикой. Bot API token хранится отдельно от OIDC client secret, в зашифрованных настройках проектной БД. Чтение возвращает только masked metadata. Реальные секреты не добавлялись.
+
+Один ограниченный Bot API client принадлежит deployment и закрывается при shutdown. Максимум8 одновременных вызовов, deadline5s, без бесконечной очереди и автоматических повторов. SQL locks не удерживаются во время getMe/setWebhook/sendMessage. Новых workers, зависимостей и ENV нет. Ограничения берутся из существующей MFA-конфигурации; webhook budget общий для проекта, не на общий IP Telegram.
+
+Проектный администратор с текущим `auth.settings.manage` настраивает бота, регистрирует webhook и разрешает метод. Изменения требуют свежих proofs и `expectedVersion`; проверки разрешений/версии повторяются в транзакции. Адрес webhook выводится из доверенного origin проекта, не принимается от браузера. setWebhook использует только message updates и отдельный secret; старые updates не сбрасываются. Ротация секрета требует повторной регистрации webhook. Ответ Telegram об успешной регистрации не доказывает доступность ingress.
+
+Это проектные административные API. Они не подменяют отдельную платформенную сессию локальной сессией проекта; UI и согласованный платформенный интерфейс управления подключаются отдельно.
+
+### Подключение пользователем
+
+1. В своей действующей browser session пользователь повторно подтверждает пароль и уже требуемый фактор.
+2. POST preparation возвращает `binding`, короткоживущую ссылку `url` и `expiresAt`.
+3. Пользователь открывает бота и отправляет start. Webhook принимает только authenticated private message; ссылка сама ничего не активирует.
+4. Бот отправляет8-значный код. Пользователь вводит его вместе с binding в исходном браузере. Confirm ротирует session token, не повышая assurance.
+5. Отдельный POST включения потребляет подтверждённую preparation. Enable/replace/disable атомарно меняют фактор, повышают auth_version, отзывают сессии, пишут audit и ставят security notice на ранее подтверждённый email, если он есть.
+
+Один канал одного бота нельзя привязать к двум пользователям одной проектной БД. Одинаковые числовые user/Telegram ID в разных проектах не объединяют пользователей. Project-scoped шифрование, Redis и отдельные БД сохраняют изоляцию.
+
+### Вход и предпочтение
+
+Обычный password login browser/native сам выбирает метод по текущей SQL policy. Административному пользователю и непарольному primary нужен TOTP-путь. Telegram разрешён только после password primary: Telegram primary + Telegram factor не считается независимой MFA.
+
+Явное предпочтение `totp`, `email` или `telegram` применяется только к подключённому и пригодному фактору. Пустая строка означает auto: TOTP → email → Telegram. Policy имеет приоритет. Недоступный выбранный фактор закрывает вход; скрытого fallback или снятия MFA нет. Обновление предпочтения требует свежих proofs и CAS version. При удалении выбранного фактора или соответствующем recovery предпочтение сбрасывается в auto транзакционно.
+
+Для Telegram SQL сохраняет primary/browser/native binding, текущие bot/channel/settings version и keyed verifier. Plaintext login code не сохраняется. Сначала intent фиксируется в SQL, затем выполняется отправка. Только успешная отправка и повторная проверка актуальности разрешают consumption через delivered marker. Ошибка доставки не создаёт сессию/JWT. TTL,5 попыток и существующие Redis budgets ограничивают guessing; неверный binding не потребляет чужую попытку.
+
+Ответ202 содержит `method`, challenge, срок и browser binding cookie либо native binding. Browser завершает Telegram через существующий `/api/v1/auth/mfa/login/complete`, native — `/api/v1/auth/native/mfa/complete`. Для email сохраняются отдельные completion endpoints/cookies. Код другого метода/проекта/профиля не подходит. Проверка фактора, audit, удаление challenge и выдача credentials атомарны; повторный код не выдаёт новые credentials.
+
+Выданная сессия хранит `mfa_method=telegram`, JWT/refresh — `amr` с `pwd` и `telegram_otp`. Это дополнительная проверка меньшей надёжности, не strong TOTP/recovery proof. Она не открывает строгие административные операции. SQL проверяет актуальный статус, auth_version, фактор и policy; кеш/JWT не заменяют немедленный отзыв там, где требуется online authority.
+
+### Потеря канала
+
+POST `/api/v1/auth/mfa/recovery/login` проверяет пароль и явно создаёт challenge существующего recovery процесса, независимо от недоступной доставки предпочитаемого фактора. Это не вход и не разрешение без MFA. Далее требуется независимое approval recovery operator; runtime не может одобрить себя. Завершение устанавливает TOTP/recovery codes, отзывает credentials и удаляет потерянный фактор в одной транзакции, без автоматического входа. Последний обязательный фактор нельзя удалить обычным API.
+
+### API
+
+Все пути ниже относительно origin выбранного проекта. Защищённые browser mutations сохраняют общие session/Origin/CSRF guards. Webhook вместо browser session проверяет единственный secret header до разбора тела; body ограничен16KiB. Ответы с секретами/кодами не кешируются.
+
+| Метод | Путь | Назначение |
+| --- | --- | --- |
+| GET | `/api/v1/auth/mfa/preference` | Свой метод и version |
+| POST | `/api/v1/auth/mfa/preference` | `{ "expectedVersion": 0, "method": "telegram" }`; `""` для auto |
+| POST | `/api/v1/auth/mfa/telegram/preparation` | Начать подготовку канала |
+| POST | `/api/v1/auth/mfa/telegram/preparation/confirm` | `{ "binding": "…", "code": "12345678" }` в исходной сессии |
+| GET | `/api/v1/auth/mfa/telegram` | Собственный статус канала/фактора |
+| POST | `/api/v1/auth/mfa/telegram` | Включить/заменить из confirmed preparation |
+| DELETE | `/api/v1/auth/mfa/telegram` | Отключить с proof/last-factor guards |
+| POST | `/api/v1/auth/mfa/telegram/webhook` | Только аутентифицированные сообщения бота |
+| POST | `/api/v1/auth/mfa/recovery/login` | `{ "email": "…", "password": "…" }`, начало отдельного recovery |
+| GET, POST | `/api/v1/admin/auth/settings/mfa/telegram/bot` | Masked read / update Bot API credentials |
+| GET, POST | `/api/v1/admin/auth/settings/mfa/telegram` | Read / update разрешения метода |
+| POST | `/api/v1/admin/auth/settings/mfa/telegram/webhook` | Регистрация доверенного project webhook |
+
+Точные DTO, ответы и ошибки — [Swagger](../api/generated/swagger.yaml). Недоступность зависимости не означает успешную операцию. Bot secrets, коды и binding не должны попадать в логи.
+
+### Приёмка и следующий этап
+
+Локальная приёмка Luna: V4 чистый `task check` (tests + lint0), actual SQL login/authority/Telegram и explicit recovery HTTP с race PASS; V3 оба two-project HTTP roots и affected race8 пакетов PASS; неизменённые roots/Swagger сохранены по source equivalence. Проверены browser/native, preference, delivery failure, expiry/attempts/replay, административный запрет, recovery и два проекта. [Evidence и границы](../operations/acceptance-summary.md#telegram-mfa-завершающий-блок--1-ноября-2026).
+
+Реальных Telegram credentials нет: внешний бот, доставка и HTTPS ingress остаются NOT RUN до подключения. Это не новый функциональный подэтап. После локальной приёмки этого блока — смысловой рефакторинг/security review, затем итоговые проверки и замеры; UI начинается только после отдельного согласования.
+
+## История внутренних подэтапов
+
+
 ## Граница текущего подэтапа — A6.3m.6d.1
 
 Реализован внутренний Bot API adapter в `internal/integrations/telegram/bot`, отдельно от существующего OIDC-входа. Принят после Luna V3: task check/lint0 и package race/count1 PASS, manifest10/10 и cleanup подтверждены. Private SQL-подготовка канала принята после Luna V4 в .6d.2a; public binding, активация фактора, вход, webhook и настройки пока не подключены. Приём `/start` адаптером не создаёт пользователя, identity, MFA binding или сессию.

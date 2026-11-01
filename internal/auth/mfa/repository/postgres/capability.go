@@ -20,9 +20,13 @@ func (r *Repository) CheckCapability(ctx context.Context, enabled bool) error {
 
 // Email readiness belongs to a complete project profile, never to saved user settings.
 func (r *Repository) CheckEmailCapability(ctx context.Context, enabled, emailReady bool) error {
+	return r.CheckFactorCapability(ctx, enabled, emailReady, false)
+}
+
+func (r *Repository) CheckFactorCapability(ctx context.Context, enabled, emailReady, telegramReady bool) error {
 	var policy settingsdomain.MFAPolicy
 	var compatible bool
-	err := r.db.QueryRow(ctx, `SELECT p.mode,NOT p.telegram_factor_allowed AND NOT EXISTS(SELECT 1 FROM auth.mfa_telegram)
+	err := r.db.QueryRow(ctx, `SELECT p.mode,($3::boolean OR NOT p.telegram_factor_allowed AND NOT EXISTS(SELECT 1 FROM auth.mfa_telegram))
  AND ($2::boolean OR NOT p.email_factor_allowed AND NOT EXISTS(SELECT 1 FROM auth.mfa_email))
  AND NOT EXISTS(SELECT 1 FROM auth.mfa_email e WHERE auth.has_administrative_access(e.user_id)
   AND NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=e.user_id)) AND ($1::boolean OR NOT (
@@ -32,7 +36,7 @@ func (r *Repository) CheckEmailCapability(ctx context.Context, enabled, emailRea
   AND ((r.system AND r.key='super_admin') OR EXISTS(SELECT 1 FROM auth.role_permissions rp WHERE rp.role_id=r.id
    AND rp.permission_key IN ('access.roles.manage','access.assignments.manage','accounts.email.bind','accounts.users.manage',
     'accounts.users.status.manage','accounts.users.delete','auth.settings.manage')))))
-  ) FROM auth.mfa_settings p WHERE singleton AND version>0`, enabled, emailReady && enabled).Scan(&policy.Mode, &compatible)
+  ) FROM auth.mfa_settings p WHERE singleton AND version>0`, enabled, emailReady && enabled, telegramReady && enabled).Scan(&policy.Mode, &compatible)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return settingsdomain.ErrNotInitialized
 	}

@@ -38,7 +38,7 @@ func CompleteNativeFactor(ctx context.Context, tx pgx.Tx, attempt service.Native
 		}
 		return result, err
 	}
-	verified, err := consumeLoginFactor(ctx, tx, *proof, attempt.Factor, attempt.Email)
+	verified, err := consumeLoginFactor(ctx, tx, *proof, attempt.Factor, attempt.Email, attempt.Telegram)
 	if errors.Is(err, domain.ErrInvalidCode) {
 		_, err = tx.Exec(ctx, `UPDATE auth.mfa_login_challenges SET attempts=attempts+1 WHERE user_id=$1`, proof.UserID)
 		result.Rejected = true

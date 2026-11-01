@@ -69,15 +69,15 @@ func (r *Repository) Disable(ctx context.Context, proof service.Proof) error {
 		if err := requireFreshMFA(ctx, tx, proof); err != nil {
 			return err
 		}
-		var required, email, usableEmail, administrative, telegram bool
-		err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1,$2),EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1),auth.email_factor_usable($1),$2 OR auth.has_administrative_access($1),EXISTS(SELECT 1 FROM auth.mfa_telegram WHERE user_id=$1)`, proof.UserID, r.administrative).Scan(&required, &email, &usableEmail, &administrative, &telegram)
+		var required, email, usableEmail, administrative, telegram, usableTelegram bool
+		err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1,$2),EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1),auth.email_factor_usable($1),$2 OR auth.has_administrative_access($1),EXISTS(SELECT 1 FROM auth.mfa_telegram WHERE user_id=$1),auth.telegram_factor_usable($1)`, proof.UserID, r.administrative).Scan(&required, &email, &usableEmail, &administrative, &telegram, &usableTelegram)
 		if err != nil {
 			return err
 		}
-		if telegram || required && !usableEmail || email && administrative {
+		if required && !usableEmail && !usableTelegram || (email || telegram) && administrative {
 			return domain.ErrRequiredByPolicy
 		}
-		if email && !usableEmail {
+		if email && !usableEmail || telegram && !usableTelegram {
 			return domain.ErrRequiredByPolicy
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_totp WHERE user_id=$1`, proof.UserID); err != nil {

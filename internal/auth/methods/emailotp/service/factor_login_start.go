@@ -67,5 +67,5 @@ func (s *EmailLogin) start(ctx context.Context, proof mfaservice.PrimaryProof, t
 	if err != nil {
 		return nil, err
 	}
-	return &mfaservice.LoginChallenge{Token: requested.Binding, Binding: binding, ExpiresAt: state.ExpiresAt}, nil
+	return &mfaservice.LoginChallenge{Method: mfadomain.EmailCode, Token: requested.Binding, Binding: binding, ExpiresAt: state.ExpiresAt}, nil
 }

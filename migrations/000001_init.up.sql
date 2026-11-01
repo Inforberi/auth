@@ -436,7 +436,7 @@ CREATE TABLE auth.mfa_telegram (
 CREATE TABLE auth.mfa_preferences (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   version BIGINT NOT NULL DEFAULT 1 CHECK(version>0),
-  preferred_method TEXT CHECK(preferred_method IN ('totp','email'))
+  preferred_method TEXT CHECK(preferred_method IN ('totp','email','telegram'))
 );
 
 CREATE TABLE auth.mfa_enrollments (
@@ -463,7 +463,7 @@ CREATE TABLE auth.mfa_login_challenges (
   binding_hash TEXT NOT NULL CHECK (binding_hash ~ '^[a-f0-9]{64}$'),
   auth_version BIGINT NOT NULL CHECK (auth_version>0),
   primary_method TEXT NOT NULL CHECK (primary_method IN ('password','oidc','emailotp')),
-  factor_method TEXT NOT NULL DEFAULT 'totp' CHECK(factor_method IN ('totp','email','assisted_recovery')),
+  factor_method TEXT NOT NULL DEFAULT 'totp' CHECK(factor_method IN ('totp','email','telegram','assisted_recovery')),
   factor_email_id UUID,
   FOREIGN KEY(user_id,factor_email_id) REFERENCES auth.user_emails(user_id,id),
   CHECK((factor_method='email')=(factor_email_id IS NOT NULL)),
@@ -478,7 +478,7 @@ CREATE TABLE auth.mfa_login_challenges (
   expires_at TIMESTAMPTZ NOT NULL,
   CHECK (expires_at>created_at AND expires_at<=created_at+interval '5 minutes'),
   CHECK (primary_verified_at<=created_at),
-  CHECK (factor_method NOT IN ('email','assisted_recovery') OR (primary_method='password' AND NOT administrative AND NOT enrollment_required)),
+  CHECK (factor_method NOT IN ('email','telegram','assisted_recovery') OR (primary_method='password' AND NOT administrative AND NOT enrollment_required)),
   CHECK ((credential_profile='browser' AND native_audience IS NULL AND native_scope IS NULL)
     OR (credential_profile='api' AND NOT administrative AND primary_method IN ('password','emailotp')
       AND native_audience IS NOT NULL AND octet_length(native_audience) BETWEEN 1 AND 128 AND native_audience ~ '^[!-~]+$'
@@ -486,6 +486,25 @@ CREATE TABLE auth.mfa_login_challenges (
       AND array_position(native_scope,NULL) IS NULL AND octet_length(array_to_string(native_scope,' '))<=2048))
 );
 CREATE INDEX mfa_login_challenges_expiry ON auth.mfa_login_challenges(expires_at,user_id);
+
+CREATE TABLE auth.mfa_telegram_login_codes (
+ digest TEXT PRIMARY KEY REFERENCES auth.mfa_login_challenges(digest) ON DELETE CASCADE,
+ bot_id BIGINT NOT NULL CHECK(bot_id>0 AND bot_id<4503599627370496),
+ telegram_user_id BIGINT NOT NULL CHECK(telegram_user_id>0 AND telegram_user_id<4503599627370496),
+ policy_version BIGINT NOT NULL CHECK(policy_version>0),
+ verifier TEXT NOT NULL CHECK(verifier ~ '^[a-f0-9]{64}$'),
+ delivered_at TIMESTAMPTZ
+);
+CREATE FUNCTION auth.protect_telegram_login_code() RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+ IF ROW(NEW.digest,NEW.bot_id,NEW.telegram_user_id,NEW.policy_version,NEW.verifier)
+ IS DISTINCT FROM ROW(OLD.digest,OLD.bot_id,OLD.telegram_user_id,OLD.policy_version,OLD.verifier) THEN
+ RAISE EXCEPTION 'telegram challenge target is immutable'; END IF;
+ RETURN NEW;
+END;
+$$;
+CREATE TRIGGER telegram_login_target BEFORE UPDATE ON auth.mfa_telegram_login_codes
+ FOR EACH ROW EXECUTE FUNCTION auth.protect_telegram_login_code();
 
 CREATE FUNCTION auth.protect_login_target() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
@@ -535,7 +554,7 @@ CREATE TABLE auth.mfa_recovery_codes (
 CREATE TABLE auth.mfa_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
-  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated','recovery_requested','recovery_approved','recovery_cancelled','recovery_completed','email_factor_enabled','email_factor_disabled','email_factor_suspended','telegram_channel_requested','telegram_channel_received','telegram_channel_confirmed','telegram_factor_enabled','telegram_factor_replaced','telegram_factor_disabled','factor_preference_changed')),
+  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated','recovery_requested','recovery_approved','recovery_cancelled','recovery_completed','email_factor_enabled','email_factor_disabled','email_factor_suspended','telegram_channel_requested','telegram_channel_received','telegram_channel_confirmed','telegram_factor_enabled','telegram_factor_replaced','telegram_factor_disabled','factor_preference_changed','telegram_webhook_registered')),
   request_id UUID,
   auth_version BIGINT CHECK (auth_version>0),
   operator_oid OID,
@@ -644,7 +663,7 @@ CREATE TABLE auth.sessions (
   primary_method TEXT CHECK (primary_method IN ('password','oidc','emailotp')),
   primary_verified_at TIMESTAMPTZ,
   mfa_verified_at TIMESTAMPTZ,
-  mfa_method TEXT CHECK (mfa_method IN ('totp','recovery','email')),
+  mfa_method TEXT CHECK (mfa_method IN ('totp','recovery','email','telegram')),
   user_agent TEXT NOT NULL,
   ip_address TEXT NOT NULL,
   CHECK (created_at<expires_at AND expires_at<=absolute_expires_at),
@@ -692,9 +711,18 @@ RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
       AND u.status='active' AND u.deleted_at IS NULL AND p.singleton AND p.email_factor_allowed);
 $$;
 
+CREATE FUNCTION auth.telegram_factor_usable(owner_id UUID)
+RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
+ SELECT EXISTS(SELECT 1 FROM auth.mfa_telegram f JOIN auth.users u ON u.id=f.user_id
+ CROSS JOIN auth.mfa_settings p JOIN auth.telegram_bot_settings b ON b.bot_id=p.telegram_bot_id
+ WHERE f.user_id=owner_id AND p.singleton AND p.telegram_factor_allowed AND f.bot_id=p.telegram_bot_id
+ AND u.status='active' AND u.deleted_at IS NULL);
+$$;
+
 CREATE FUNCTION auth.mfa_proof_usable(owner_id UUID,primary_method TEXT,factor_method TEXT)
 RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
-  SELECT CASE WHEN factor_method='email' THEN primary_method='password' AND auth.email_factor_usable(owner_id)
+  SELECT CASE WHEN factor_method='telegram' THEN primary_method='password' AND auth.telegram_factor_usable(owner_id) AND NOT auth.has_administrative_access(owner_id)
+    WHEN factor_method='email' THEN primary_method='password' AND auth.email_factor_usable(owner_id)
     WHEN factor_method IS NULL OR factor_method IN ('totp','recovery')
       THEN EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=owner_id)
     ELSE false END;
@@ -705,7 +733,9 @@ CREATE FUNCTION auth.email_mfa_management_time(owner_id UUID,factor_method TEXT,
 RETURNS TIMESTAMPTZ LANGUAGE SQL STABLE AS $$
   SELECT CASE WHEN factor_method IN ('totp','recovery') AND EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=owner_id)
     OR factor_method='email' AND NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=owner_id)
-      AND auth.email_factor_usable(owner_id) THEN verified_at END;
+      AND auth.email_factor_usable(owner_id)
+    OR factor_method='telegram' AND NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=owner_id)
+      AND auth.telegram_factor_usable(owner_id) THEN verified_at END;
 $$;
 
 CREATE FUNCTION auth.bind_session_roles() RETURNS TRIGGER
@@ -767,7 +797,7 @@ CREATE VIEW auth.role_bound_sessions WITH (security_invoker=true) AS
   SELECT s.*,CASE WHEN s.mfa_method IN ('totp','recovery')
     THEN s.mfa_verified_at END AS strong_mfa_verified_at FROM auth.sessions s
   WHERE EXISTS(SELECT 1 FROM auth.mfa_settings WHERE singleton AND session_revision=s.mfa_policy_revision)
-  AND (s.mfa_method IS NULL OR s.mfa_method IN ('totp','recovery','email'))
+  AND (s.mfa_method IS NULL OR s.mfa_method IN ('totp','recovery','email','telegram'))
   AND ((s.mfa_verified_at IS NULL AND NOT auth.mfa_login_required(s.user_id)) OR
     (s.mfa_verified_at<=statement_timestamp() AND auth.mfa_proof_usable(s.user_id,s.primary_method,s.mfa_method)))
   AND NOT EXISTS (

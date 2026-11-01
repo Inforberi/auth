@@ -47,11 +47,11 @@ func (c Claims) validProof() bool {
 		switch method {
 		case "pwd", "emailotp", "oidc":
 			primary++
-		case "mfa", "otp", "recovery", "email_otp":
+		case "mfa", "otp", "recovery", "email_otp", "telegram_otp":
 			factors++
 		default:
 			return false
 		}
 	}
-	return primary == 1 && (factors == 1) == (c.MFATime != nil) && (!seen["email_otp"] || seen["pwd"])
+	return primary == 1 && (factors == 1) == (c.MFATime != nil) && (!seen["email_otp"] && !seen["telegram_otp"] || seen["pwd"])
 }

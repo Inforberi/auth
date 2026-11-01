@@ -111,7 +111,7 @@ func (p *ProjectPassword) passwordService(pool *pgxpool.Pool, repo *passwordpost
 	sessions := sessionservice.New(clock.UTCClock{}, sessionpostgres.New(pool), tokengenerate.New(), p.cfg.Session)
 	login := sessionservice.NewLogin(sessions, nil)
 	if p.projectMFA != nil {
-		loginMFA, err := p.factory.newLogin(pool)
+		loginMFA, err := p.factory.newSelectedLogin(pool)
 		if err != nil {
 			return nil, err
 		}

@@ -23,7 +23,7 @@ import (
 func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.HandlerFunc {
 	handlers := make(map[string]http.HandlerFunc)
 	if p.password != nil {
-		h := passwordhttp.NewPublic(p.password, log)
+		h := passwordhttp.NewPublic(p.password, log).WithEmailMFACookie(mfahttp.EmailLoginCookie + "-" + string(p.key.Binding.ProjectID))
 		handlers["/api/v1/auth/login/email"], handlers["/api/v1/auth/register/email"] = h.LoginByEmail, h.Register
 		handlers["/api/v1/auth/change-password"] = passwordhttp.NewChangePassword(p.password, p.password.limits, log).ChangePassword
 		handlers["/api/v1/auth/reauthenticate/password"] = passwordhttp.NewReauthentication(projectPasswordReauthenticationHTTP{p.password}, log).Confirm

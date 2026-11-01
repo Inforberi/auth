@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
@@ -14,14 +15,14 @@ import (
 )
 
 func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.PrimaryProof, digest, binding string, ttl time.Duration) (*service.LoginChallengeState, error) {
-	return r.saveLoginChallenge(ctx, proof, nil, digest, binding, ttl, nil)
+	return r.saveLoginChallenge(ctx, proof, nil, digest, binding, ttl, nil, nil)
 }
 
 func (r *Repository) SaveNativeLoginChallenge(ctx context.Context, proof service.PrimaryProof, target service.NativeTarget, digest, binding string, ttl time.Duration) (*service.LoginChallengeState, error) {
-	return r.saveLoginChallenge(ctx, proof, &target, digest, binding, ttl, nil)
+	return r.saveLoginChallenge(ctx, proof, &target, digest, binding, ttl, nil, nil)
 }
 
-func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.PrimaryProof, target *service.NativeTarget, digest, binding string, ttl time.Duration, mail *otpservice.EmailLoginIntent) (*service.LoginChallengeState, error) {
+func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.PrimaryProof, target *service.NativeTarget, digest, binding string, ttl time.Duration, mail *otpservice.EmailLoginIntent, telegramIntent *service.TelegramLoginIntent) (*service.LoginChallengeState, error) {
 	profile := "browser"
 	var bound service.NativeTarget
 	var audience *string
@@ -42,13 +43,19 @@ func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.Prima
 		factor := domain.TOTP
 		var emailID *string
 		var emailExpiry *time.Time
-		if mail != nil {
+		switch {
+		case telegramIntent != nil:
+			if err := lockTelegramLoginChannel(ctx, tx, proof, telegramIntent.Channel); err != nil {
+				return err
+			}
+			factor, enabled = domain.TelegramCode, true
+		case mail != nil:
 			id, err := lockEmailLoginChannel(ctx, tx, proof, mail.Channel)
 			if err != nil {
 				return err
 			}
 			factor, emailID, emailExpiry, enabled = domain.EmailCode, &id, &mail.Code.ExpiresAt, true
-		} else if (email || telegram) && !enabled {
+		case (email || telegram) && !enabled:
 			if proof.Method != "password" || proof.Administrative {
 				return domain.ErrProofRequired
 			}
@@ -59,11 +66,13 @@ func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.Prima
 			return domain.ErrConflict
 		}
 		result.EnrollmentRequired = !enabled
+		result.Method = factor
+
 		// A new primary challenge never inherits approval for an older candidate/browser.
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_recovery_requests WHERE user_id=$1`, proof.UserID); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `DELETE FROM auth.email_login_challenges WHERE user_id=$1 AND purpose='mfa_email_login'`, proof.UserID); err != nil {
+		if _, err := tx.Exec(ctx, `WITH discarded AS(DELETE FROM auth.mfa_telegram_login_codes WHERE digest IN(SELECT digest FROM auth.mfa_login_challenges WHERE user_id=$1)) DELETE FROM auth.email_login_challenges WHERE user_id=$1 AND purpose='mfa_email_login'`, proof.UserID); err != nil {
 			return err
 		}
 		err := tx.QueryRow(ctx, `INSERT INTO auth.mfa_login_challenges
@@ -78,10 +87,8 @@ func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.Prima
 		if err != nil {
 			return err
 		}
-		if mail != nil {
-			if err := saveEmailLoginCode(ctx, tx, *mail, profile, audience, bound.Scope, result.ExpiresAt); err != nil {
-				return err
-			}
+		if err := saveLoginCodes(ctx, tx, mail, telegramIntent, profile, audience, bound.Scope, result.ExpiresAt); err != nil {
+			return err
 		}
 		return audit(ctx, tx, proof.UserID, "login_challenge_started")
 	})
@@ -109,4 +116,15 @@ func (r *Repository) findLoginOwner(ctx context.Context, digest, binding, profil
 		return "", domain.ErrInvalidCode
 	}
 	return user, err
+}
+
+func saveLoginCodes(ctx context.Context, tx pgx.Tx, mail *otpservice.EmailLoginIntent, telegram *service.TelegramLoginIntent, profile string, audience *string, scope []accessdomain.PermissionKey, expiresAt time.Time) error {
+	if mail != nil {
+		return saveEmailLoginCode(ctx, tx, *mail, profile, audience, scope, expiresAt)
+	}
+	if telegram != nil {
+		_, err := tx.Exec(ctx, `INSERT INTO auth.mfa_telegram_login_codes(digest,bot_id,telegram_user_id,policy_version,verifier) VALUES($1,$2,$3,$4,$5)`, telegram.Digest, telegram.Channel.Bot.ID, telegram.Channel.TelegramID, telegram.Channel.Bot.PolicyVersion, telegram.Verifier)
+		return err
+	}
+	return nil
 }

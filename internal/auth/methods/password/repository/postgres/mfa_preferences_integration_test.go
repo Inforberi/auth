@@ -24,7 +24,7 @@ func TestMFAPreferencesSchema(t *testing.T) {
 	_, err = prefs.Read(ctx, mfaservice.Proof{})
 	require.ErrorIs(t, err, mfadomain.ErrProofRequired)
 	_, err = prefs.Update(ctx, mfaservice.PreferenceUpdate{Proof: f.proof, Method: "telegram"})
-	require.ErrorIs(t, err, mfadomain.ErrInvalidPreference)
+	require.ErrorIs(t, err, mfadomain.ErrUnavailable)
 	_, err = prefs.Update(ctx, mfaservice.PreferenceUpdate{Proof: f.proof, Method: mfadomain.EmailCode})
 	require.ErrorIs(t, err, mfadomain.ErrUnavailable)
 	selectTOTP := func() error {
