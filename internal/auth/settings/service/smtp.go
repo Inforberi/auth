@@ -37,7 +37,7 @@ type SMTPCipher interface {
 
 type SMTPProbe func(context.Context, domain.SMTPConfig, string) error
 
-type SMTPLimiter interface {
+type SettingsLimiter interface {
 	Allow(context.Context, string, int, time.Duration) (bool, error)
 }
 
@@ -49,16 +49,16 @@ type SMTP struct {
 	repo   SMTPRepository
 	cipher SMTPCipher
 	probe  SMTPProbe
-	limits SMTPLimiter
+	limits SettingsLimiter
 	policy smtpPolicy
 	tests  chan struct{}
 }
 
-func NewSMTP(repo SMTPRepository, cipher SMTPCipher, probe SMTPProbe, limits SMTPLimiter, allowed []string, requireTLS bool) (*SMTP, error) {
+func NewSMTP(repo SMTPRepository, cipher SMTPCipher, probe SMTPProbe, limits SettingsLimiter, allowed []string, requireTLS bool) (*SMTP, error) {
 	return NewSMTPWithTestGate(repo, cipher, probe, limits, allowed, requireTLS, NewSMTPTestGate())
 }
 
-func NewSMTPWithTestGate(repo SMTPRepository, cipher SMTPCipher, probe SMTPProbe, limits SMTPLimiter, allowed []string, requireTLS bool, gate *SMTPTestGate) (*SMTP, error) {
+func NewSMTPWithTestGate(repo SMTPRepository, cipher SMTPCipher, probe SMTPProbe, limits SettingsLimiter, allowed []string, requireTLS bool, gate *SMTPTestGate) (*SMTP, error) {
 	if repo == nil || cipher == nil || probe == nil || limits == nil || gate == nil || gate.slots == nil {
 		return nil, domain.ErrInvalidSMTP
 	}

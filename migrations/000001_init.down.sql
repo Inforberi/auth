@@ -14,6 +14,8 @@ DROP TABLE IF EXISTS auth.retention_checkpoints;
 DROP TABLE IF EXISTS auth.retention_settings;
 DROP TABLE IF EXISTS auth.provider_settings_audit;
 DROP TABLE IF EXISTS auth.provider_settings;
+DROP TABLE IF EXISTS auth.telegram_bot_settings_audit;
+DROP TABLE IF EXISTS auth.telegram_bot_settings;
 DROP TABLE IF EXISTS auth.smtp_settings_audit;
 DROP TABLE IF EXISTS auth.smtp_settings;
 DROP TABLE IF EXISTS auth.mfa_settings_audit;

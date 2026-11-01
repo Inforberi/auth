@@ -31,7 +31,7 @@ type projectSMTP struct {
 	registry *projectruntime.Registry
 	reader   *projectpostgres.RuntimeCredentialReader
 	cipher   settingsservice.SMTPCipher
-	limits   settingsservice.SMTPLimiter
+	limits   settingsservice.SettingsLimiter
 	allowed  []string
 }
 

@@ -170,6 +170,22 @@ CREATE TABLE auth.provider_settings (
   secret_set BOOLEAN NOT NULL,
   CHECK(NOT secret_set OR client_id<>'')
 );
+CREATE TABLE auth.telegram_bot_settings (
+  singleton BOOLEAN PRIMARY KEY CHECK(singleton),
+  bot_id BIGINT NOT NULL CHECK(bot_id>0 AND bot_id<4503599627370496),
+  username TEXT NOT NULL CHECK(username ~ '^[A-Za-z0-9_]{5,32}$'),
+  token BYTEA NOT NULL CHECK(octet_length(token) BETWEEN 28 AND 512),
+  webhook_secret BYTEA NOT NULL CHECK(octet_length(webhook_secret) BETWEEN 28 AND 256)
+);
+CREATE TABLE auth.telegram_bot_settings_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id UUID NOT NULL REFERENCES auth.users(id),
+  version BIGINT NOT NULL UNIQUE CHECK(version>1),
+  previous_configuration JSONB NOT NULL CHECK(jsonb_typeof(previous_configuration)='object' AND octet_length(previous_configuration::text)<=4096),
+  next_configuration JSONB NOT NULL CHECK(jsonb_typeof(next_configuration)='object' AND octet_length(next_configuration::text)<=4096),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+CREATE INDEX telegram_bot_settings_audit_retention ON auth.telegram_bot_settings_audit(created_at,id);
 CREATE TABLE auth.provider_settings_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id UUID NOT NULL REFERENCES auth.users(id),

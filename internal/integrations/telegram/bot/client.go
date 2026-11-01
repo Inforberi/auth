@@ -7,9 +7,10 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
+
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
 var (
@@ -26,18 +27,11 @@ type Credentials struct {
 }
 
 func NewCredentials(token string) (Credentials, error) {
-	if len(token) < 32 || len(token) > 160 {
+	value, err := settingsdomain.NewTelegramBotToken(token)
+	if err != nil {
 		return Credentials{}, ErrCredentials
 	}
-	id, secret, found := strings.Cut(token, ":")
-	value, err := strconv.ParseInt(id, 10, 64)
-	if !found || err != nil || !validID(value) || strconv.FormatInt(value, 10) != id ||
-		len(secret) < 20 || len(secret) > 128 || strings.IndexFunc(secret, func(r rune) bool {
-		return r != '-' && !wordRune(r)
-	}) >= 0 {
-		return Credentials{}, ErrCredentials
-	}
-	return Credentials{token: token, id: value}, nil
+	return Credentials{token: value.Value(), id: value.ID()}, nil
 }
 
 func (Credentials) String() string   { return "[Telegram bot credentials]" }
