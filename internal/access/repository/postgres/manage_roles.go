@@ -110,7 +110,7 @@ func updateRolePermissions(ctx context.Context, tx pgx.Tx, current, updated doma
 	if err := replacePermissions(ctx, tx, updated); err != nil {
 		return err
 	}
-	return requireRoleEmailAdministrativeFactor(ctx, tx, updated.ID)
+	return requireRoleNonTOTPAdministrativeFactor(ctx, tx, updated.ID)
 }
 
 func replacePermissions(ctx context.Context, tx pgx.Tx, role domain.Role) error {

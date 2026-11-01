@@ -69,12 +69,12 @@ func (r *Repository) Disable(ctx context.Context, proof service.Proof) error {
 		if err := requireFreshMFA(ctx, tx, proof); err != nil {
 			return err
 		}
-		var required, email, usableEmail, administrative bool
-		err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1,$2),EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1),auth.email_factor_usable($1),$2 OR auth.has_administrative_access($1)`, proof.UserID, r.administrative).Scan(&required, &email, &usableEmail, &administrative)
+		var required, email, usableEmail, administrative, telegram bool
+		err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1,$2),EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1),auth.email_factor_usable($1),$2 OR auth.has_administrative_access($1),EXISTS(SELECT 1 FROM auth.mfa_telegram WHERE user_id=$1)`, proof.UserID, r.administrative).Scan(&required, &email, &usableEmail, &administrative, &telegram)
 		if err != nil {
 			return err
 		}
-		if required && !usableEmail || email && administrative {
+		if telegram || required && !usableEmail || email && administrative {
 			return domain.ErrRequiredByPolicy
 		}
 		if email && !usableEmail {
@@ -116,6 +116,7 @@ func invalidateFactors(ctx context.Context, tx pgx.Tx, user accountdomain.UserID
 		`UPDATE auth.users SET auth_version=auth_version+1 WHERE id=$1`,
 		`UPDATE auth.sessions SET revoked_at=clock_timestamp() WHERE user_id=$1 AND revoked_at IS NULL`,
 		`DELETE FROM auth.mfa_enrollments WHERE user_id=$1`,
+		`DELETE FROM auth.mfa_telegram_preparations WHERE user_id=$1`,
 		`DELETE FROM auth.mfa_login_challenges WHERE user_id=$1`,
 		`DELETE FROM auth.email_login_challenges WHERE user_id=$1`,
 	} {

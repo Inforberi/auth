@@ -35,8 +35,8 @@ func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.Prima
 		if err := lockLoginPrimary(ctx, tx, proof); err != nil {
 			return err
 		}
-		var enabled, required, email bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1),auth.mfa_required($1,$2),EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1)`, proof.UserID, proof.Administrative).Scan(&enabled, &required, &email); err != nil {
+		var enabled, required, email, telegram bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1),auth.mfa_required($1,$2),EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1),EXISTS(SELECT 1 FROM auth.mfa_telegram WHERE user_id=$1)`, proof.UserID, proof.Administrative).Scan(&enabled, &required, &email, &telegram); err != nil {
 			return err
 		}
 		factor := domain.TOTP
@@ -48,7 +48,7 @@ func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.Prima
 				return err
 			}
 			factor, emailID, emailExpiry, enabled = domain.EmailCode, &id, &mail.Code.ExpiresAt, true
-		} else if email && !enabled {
+		} else if (email || telegram) && !enabled {
 			if proof.Method != "password" || proof.Administrative {
 				return domain.ErrProofRequired
 			}

@@ -30,7 +30,7 @@ func (r *Repository) saveEnrollment(ctx context.Context, proof service.Proof, di
 			if err := requireFreshMFA(ctx, tx, proof); err != nil {
 				return err
 			}
-		} else if err := requireEmailEnrollmentProof(ctx, tx, proof); err != nil {
+		} else if err := requireConfiguredFactorEnrollmentProof(ctx, tx, proof); err != nil {
 			return err
 		}
 		var enabled bool
@@ -71,7 +71,7 @@ func (r *Repository) confirmEnrollment(ctx context.Context, proof service.Proof,
 			if err := requireFreshMFA(ctx, tx, proof); err != nil {
 				return err
 			}
-		} else if err := requireEmailEnrollmentProof(ctx, tx, proof); err != nil {
+		} else if err := requireConfiguredFactorEnrollmentProof(ctx, tx, proof); err != nil {
 			return err
 		}
 		var secret []byte

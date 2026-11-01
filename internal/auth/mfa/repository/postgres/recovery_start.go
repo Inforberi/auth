@@ -34,7 +34,8 @@ func (r *Repository) SaveRecoveryRequest(ctx context.Context, input service.Reco
 			SELECT $1,$2,$3,$4,c.expires_at FROM auth.mfa_login_challenges c
 			WHERE c.user_id=$1 AND c.digest=$2 AND c.expires_at>clock_timestamp()
 			AND (EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1)
-              OR c.factor_method='assisted_recovery' AND EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1))
+              OR c.factor_method='assisted_recovery' AND (EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1)
+               OR EXISTS(SELECT 1 FROM auth.mfa_telegram WHERE user_id=$1)))
 			ON CONFLICT(user_id) DO UPDATE SET request_id=gen_random_uuid(),challenge_digest=EXCLUDED.challenge_digest,
 			auth_version=EXCLUDED.auth_version,secret=EXCLUDED.secret,state='pending',attempts=0,
 			operator_oid=NULL,operator_name=NULL,approved_at=NULL,environment=NULL,reason=NULL,

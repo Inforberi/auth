@@ -61,6 +61,7 @@ DROP TABLE IF EXISTS auth.mfa_enrollments;
 DROP TABLE IF EXISTS auth.mfa_recovery_requests;
 DROP TABLE IF EXISTS auth.mfa_login_challenges;
 DROP FUNCTION IF EXISTS auth.protect_login_target();
+DROP TABLE IF EXISTS auth.mfa_telegram;
 DROP TABLE IF EXISTS auth.mfa_email;
 DROP TABLE IF EXISTS auth.mfa_totp;
 

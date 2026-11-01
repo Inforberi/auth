@@ -30,7 +30,7 @@ func requireLoginEnrollment(ctx context.Context, tx pgx.Tx, input service.LoginE
 		return nil, err
 	}
 	var allowed bool
-	if err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1,$2) AND NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1) AND NOT EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1)`, proof.UserID, proof.Administrative).Scan(&allowed); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1,$2) AND NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1) AND NOT EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1) AND NOT EXISTS(SELECT 1 FROM auth.mfa_telegram WHERE user_id=$1)`, proof.UserID, proof.Administrative).Scan(&allowed); err != nil {
 		return nil, err
 	}
 	if !allowed {

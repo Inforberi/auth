@@ -93,11 +93,12 @@ func (r *Repository) CompleteRecovery(ctx context.Context, input service.Recover
 	return nil
 }
 
-func commitRecoveredFactor(ctx context.Context, tx pgx.Tx, proof service.PrimaryProof, input service.RecoveryCompletion, intent recoveryIntent, step int64, emailRecovery bool) error {
+func commitRecoveredFactor(ctx context.Context, tx pgx.Tx, proof service.PrimaryProof, input service.RecoveryCompletion, intent recoveryIntent, step int64, assistedRecovery bool) error {
 	query := `UPDATE auth.mfa_totp SET secret=$2,last_step=$3,enabled_at=clock_timestamp() WHERE user_id=$1`
-	if emailRecovery {
+	if assistedRecovery {
 		query = `INSERT INTO auth.mfa_totp(user_id,secret,last_step)
- SELECT $1,$2,$3 WHERE EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1)
+ SELECT $1,$2,$3 WHERE (EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1)
+ OR EXISTS(SELECT 1 FROM auth.mfa_telegram WHERE user_id=$1))
  AND NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1)`
 	}
 	changed, err := tx.Exec(ctx, query, proof.UserID, intent.secret, step)
@@ -107,12 +108,20 @@ func commitRecoveredFactor(ctx context.Context, tx pgx.Tx, proof service.Primary
 	if changed.RowsAffected() != 1 {
 		return domain.ErrInvalidCode
 	}
-	if emailRecovery {
-		if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_email WHERE user_id=$1`, proof.UserID); err != nil {
-			return err
-		}
-		if err := audit(ctx, tx, proof.UserID, "email_factor_disabled"); err != nil {
-			return err
+	if assistedRecovery {
+		for _, factor := range []struct{ query, event string }{
+			{`DELETE FROM auth.mfa_email WHERE user_id=$1`, "email_factor_disabled"},
+			{`DELETE FROM auth.mfa_telegram WHERE user_id=$1`, "telegram_factor_disabled"},
+		} {
+			changed, err := tx.Exec(ctx, factor.query, proof.UserID)
+			if err != nil {
+				return err
+			}
+			if changed.RowsAffected() > 0 {
+				if err := audit(ctx, tx, proof.UserID, factor.event); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_recovery_codes WHERE user_id=$1`, proof.UserID); err != nil {

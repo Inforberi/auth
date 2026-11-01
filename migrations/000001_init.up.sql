@@ -105,6 +105,7 @@ CREATE TABLE auth.mfa_settings (
   session_revision BIGINT NOT NULL DEFAULT 1 CHECK(session_revision>0),
   mode TEXT NOT NULL CHECK(mode IN ('optional','administrators','required')),
   email_factor_allowed BOOLEAN NOT NULL DEFAULT false,
+  telegram_factor_allowed BOOLEAN NOT NULL DEFAULT false,
   telegram_bot_id BIGINT CHECK(telegram_bot_id>0 AND telegram_bot_id<4503599627370496)
 );
 INSERT INTO auth.mfa_settings(singleton,mode) VALUES(true,'administrators');
@@ -424,6 +425,14 @@ CREATE TABLE auth.mfa_email (
   CHECK(suspended_at IS NULL OR suspended_at>=enabled_at)
 );
 
+CREATE TABLE auth.mfa_telegram (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  bot_id BIGINT NOT NULL CHECK(bot_id>0 AND bot_id<4503599627370496),
+  telegram_user_id BIGINT NOT NULL CHECK(telegram_user_id>0 AND telegram_user_id<4503599627370496),
+  enabled_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  UNIQUE(bot_id,telegram_user_id)
+);
+
 CREATE TABLE auth.mfa_enrollments (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   digest TEXT NOT NULL UNIQUE CHECK (digest ~ '^[a-f0-9]{64}$'),
@@ -520,7 +529,7 @@ CREATE TABLE auth.mfa_recovery_codes (
 CREATE TABLE auth.mfa_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
-  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated','recovery_requested','recovery_approved','recovery_cancelled','recovery_completed','email_factor_enabled','email_factor_disabled','email_factor_suspended','telegram_channel_requested','telegram_channel_received','telegram_channel_confirmed')),
+  event TEXT NOT NULL CHECK (event IN ('enrollment_started','totp_enabled','totp_verified','recovery_used','login_challenge_started','mfa_login_completed','mfa_step_up','totp_disabled','totp_replaced','recovery_regenerated','recovery_requested','recovery_approved','recovery_cancelled','recovery_completed','email_factor_enabled','email_factor_disabled','email_factor_suspended','telegram_channel_requested','telegram_channel_received','telegram_channel_confirmed','telegram_factor_enabled','telegram_factor_replaced','telegram_factor_disabled')),
   request_id UUID,
   auth_version BIGINT CHECK (auth_version>0),
   operator_oid OID,
@@ -587,7 +596,8 @@ BEGIN
     AND attempts<5 AND expires_at>clock_timestamp() FOR UPDATE;
   IF NOT FOUND OR pending.state='cancelled' OR (approve AND pending.state<>'pending')
     OR NOT (EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=target) OR (
-      EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=target) AND EXISTS(
+      (EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=target)
+       OR EXISTS(SELECT 1 FROM auth.mfa_telegram WHERE user_id=target)) AND EXISTS(
         SELECT 1 FROM auth.mfa_login_challenges WHERE digest=challenge AND factor_method='assisted_recovery'))) THEN RETURN false; END IF;
   UPDATE auth.mfa_recovery_requests SET state=CASE WHEN approve THEN 'approved' ELSE 'cancelled' END,
     operator_oid=CASE WHEN approve THEN actor END,
@@ -658,7 +668,8 @@ CREATE FUNCTION auth.mfa_login_required(owner_id UUID, administrative BOOLEAN DE
 RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
   SELECT auth.mfa_required(owner_id,administrative)
     OR EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=owner_id)
-    OR EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=owner_id);
+    OR EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=owner_id)
+    OR EXISTS(SELECT 1 FROM auth.mfa_telegram WHERE user_id=owner_id);
 $$;
 
 -- Email proves the second factor; strict administrative guards use strong_mfa_verified_at.

@@ -22,7 +22,8 @@ func (r *Repository) CheckCapability(ctx context.Context, enabled bool) error {
 func (r *Repository) CheckEmailCapability(ctx context.Context, enabled, emailReady bool) error {
 	var policy settingsdomain.MFAPolicy
 	var compatible bool
-	err := r.db.QueryRow(ctx, `SELECT p.mode,($2::boolean OR NOT p.email_factor_allowed AND NOT EXISTS(SELECT 1 FROM auth.mfa_email))
+	err := r.db.QueryRow(ctx, `SELECT p.mode,NOT p.telegram_factor_allowed AND NOT EXISTS(SELECT 1 FROM auth.mfa_telegram)
+ AND ($2::boolean OR NOT p.email_factor_allowed AND NOT EXISTS(SELECT 1 FROM auth.mfa_email))
  AND NOT EXISTS(SELECT 1 FROM auth.mfa_email e WHERE auth.has_administrative_access(e.user_id)
   AND NOT EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=e.user_id)) AND ($1::boolean OR NOT (
  EXISTS(SELECT 1 FROM auth.mfa_totp) OR EXISTS(SELECT 1 FROM auth.roles WHERE mfa_required)

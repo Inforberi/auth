@@ -30,7 +30,7 @@ func (r *Repository) AuthorizeTelegramBotUpdate(ctx context.Context, actor acces
 		if stored.Version != version {
 			return domain.ErrPolicyConflict
 		}
-		return checkTelegramBotDeadline(ctx, tx, deadline)
+		return checkTelegramSettingsDeadline(ctx, tx, deadline)
 	})
 	return stored, err
 }
@@ -51,6 +51,15 @@ func (r *Repository) UpdateTelegramBot(ctx context.Context, input service.Telegr
 		if before.Version != input.ExpectedVersion {
 			return domain.ErrPolicyConflict
 		}
+		if before.BotID != input.Identity.ID {
+			var inUse bool
+			if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.mfa_telegram)`).Scan(&inUse); err != nil {
+				return err
+			}
+			if inUse {
+				return domain.ErrTelegramFactorInUse
+			}
+		}
 		if err := tx.QueryRow(ctx, `UPDATE auth.mfa_settings SET telegram_bot_id=$1,version=version+1
  WHERE singleton RETURNING version`, input.Identity.ID).Scan(&result.Version); err != nil {
 			return err
@@ -66,12 +75,12 @@ func (r *Repository) UpdateTelegramBot(ctx context.Context, input service.Telegr
  VALUES($1,$2,$3,$4)`, input.Actor.UserID, result.Version, before.TelegramBotSnapshot, result); err != nil {
 			return err
 		}
-		return checkTelegramBotDeadline(ctx, tx, deadline)
+		return checkTelegramSettingsDeadline(ctx, tx, deadline)
 	})
 	return result, err
 }
 
-func checkTelegramBotDeadline(ctx context.Context, tx pgx.Tx, deadline time.Time) error {
+func checkTelegramSettingsDeadline(ctx context.Context, tx pgx.Tx, deadline time.Time) error {
 	var fresh bool
 	if err := tx.QueryRow(ctx, `SELECT clock_timestamp()<$1`, deadline).Scan(&fresh); err != nil {
 		return err

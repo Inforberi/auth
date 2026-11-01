@@ -39,7 +39,7 @@ func ApplyAssignmentInTransaction(ctx context.Context, tx pgx.Tx, user accountdo
 		return version, false, nil
 	}
 	if grant {
-		if err := requireEmailAdministrativeFactor(ctx, tx, user); err != nil {
+		if err := requireNonTOTPAdministrativeFactor(ctx, tx, user); err != nil {
 			return 0, false, err
 		}
 	}
