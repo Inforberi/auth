@@ -11,3 +11,6 @@ docs/reference
 secrets
 **/*.pem
 **/*.key
+
+# Локальный стенд и его проверки не нужны для сборки production image.
+sandbox

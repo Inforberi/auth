@@ -8,7 +8,7 @@ vars:
     CONFIRM: ''
     DEV_COMPOSE: 'APP_ENV_FILE={{.DEV_ENV | shellQuote}} docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file {{.DEV_ENV | shellQuote}} -f deploy/compose.base.yml -f deploy/compose.dev.yml'
     PROD_COMPOSE: 'APP_ENV_FILE={{.PROD_ENV | shellQuote}} docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file {{.PROD_ENV | shellQuote}} -f deploy/compose.base.yml -f deploy/compose.prod.yml'
-    SANDBOX_COMPOSE: 'SANDBOX_UID=$(id -u) SANDBOX_GID=$(id -g) docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file .env.example -p auth-sandbox -f deploy/compose.base.yml -f deploy/compose.sandbox.yml'
+    SANDBOX_COMPOSE: 'SANDBOX_UID=$(id -u) SANDBOX_GID=$(id -g) docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file .env.example -p auth-sandbox -f deploy/compose.base.yml -f sandbox/compose.yml'
 
 tasks:
     default:
@@ -26,7 +26,7 @@ tasks:
         cmds:
             - '{{.SANDBOX_COMPOSE}} up -d --wait postgres redis mailpit'
             - '{{.SANDBOX_COMPOSE}} run --rm migrate up'
-            - '{{.SANDBOX_COMPOSE}} exec -T postgres psql -X -v ON_ERROR_STOP=1 -U auth -d auth < deploy/sandbox-runtime.sql'
+            - '{{.SANDBOX_COMPOSE}} exec -T postgres psql -X -v ON_ERROR_STOP=1 -U auth -d auth < sandbox/config/runtime.sql'
             - '{{.SANDBOX_COMPOSE}} exec -T postgres psql -X -v ON_ERROR_STOP=1 -U auth -d auth < deploy/runtime-grants.sql'
             - '{{.SANDBOX_COMPOSE}} up -d --build --no-deps api'
             - >-
@@ -58,13 +58,13 @@ tasks:
             - sh: test -f tmp/sandbox/admin-setup.json -a -f tmp/sandbox/tls.crt
               msg: Сначала подготовьте sandbox и тестового администратора по docs/operations/local-sandbox.md
         cmds:
-            - AUTH_SANDBOX_PREPARE=1 go test ./deploy/sandbox -run '^TestPrepareJWT$' -count=1
-            - '{{.SANDBOX_COMPOSE}} exec -T postgres psql -X -v ON_ERROR_STOP=1 -U auth -d auth < deploy/sandbox/jwt-fixture.sql'
-            - '{{.SANDBOX_COMPOSE}} -f deploy/compose.sandbox-jwt.yml up -d --no-deps api'
+            - AUTH_SANDBOX_PREPARE=1 go test ./sandbox/tests/token -run '^TestPrepareJWT$' -count=1
+            - '{{.SANDBOX_COMPOSE}} exec -T postgres psql -X -v ON_ERROR_STOP=1 -U auth -d auth < sandbox/config/jwt-fixture.sql'
+            - '{{.SANDBOX_COMPOSE}} -f sandbox/config/jwt.yml up -d --no-deps api'
             - >-
                 curl --silent --show-error --fail --retry 20 --retry-all-errors --retry-connrefused --retry-delay 1
                 --retry-max-time 45 --max-time 3 --cacert tmp/sandbox/tls.crt https://localhost:18443/health/ready
-            - AUTH_SANDBOX_ACCEPTANCE=1 go test ./deploy/sandbox -run '^TestJWTAcceptance$' -count=1 -v -timeout=3m
+            - AUTH_SANDBOX_ACCEPTANCE=1 go test ./sandbox/tests/token -run '^TestJWTAcceptance$' -count=1 -v -timeout=3m
 
     sandbox:jwt:rotation:
         desc: Проверить ротацию JWT, срок доверия к JWKS и восстановление sandbox API
@@ -72,7 +72,7 @@ tasks:
             - sh: test -f tmp/sandbox/jwt/private.pem -a -f tmp/sandbox/jwt/jwks.json
               msg: Сначала подготовьте работающий JWT sandbox командой task sandbox:jwt
         cmds:
-            - AUTH_SANDBOX_ROTATION=1 go test ./deploy/sandbox -run '^TestJWTRotation$' -count=1 -v -timeout=5m
+            - AUTH_SANDBOX_ROTATION=1 go test ./sandbox/tests/token -run '^TestJWTRotation$' -count=1 -v -timeout=5m
 
     sandbox:admin:
         desc: Проверить через HTTPS пользователей, приглашения, временные пароли и роли sandbox
@@ -80,7 +80,7 @@ tasks:
             - sh: test -f tmp/sandbox/admin-setup.json -a -f tmp/sandbox/jwt/private.pem
               msg: Нужен подготовленный JWT sandbox и тестовый администратор
         cmds:
-            - AUTH_SANDBOX_ADMIN=1 go test -race ./deploy/sandbox -run '^TestAdminAcceptance$' -count=1 -v -timeout=5m
+            - AUTH_SANDBOX_ADMIN=1 go test -race ./sandbox/tests/access -run '^TestAdminAcceptance$' -count=1 -v -timeout=5m
 
     sandbox:lifecycle:
         desc: Проверить перевыдачу приглашений и временных паролей, удаление и отзыв доступа
@@ -88,7 +88,7 @@ tasks:
             - sh: test -f tmp/sandbox/admin-setup.json -a -f tmp/sandbox/jwt/private.pem
               msg: Нужен подготовленный JWT sandbox и тестовый администратор
         cmds:
-            - AUTH_SANDBOX_LIFECYCLE=1 go test -race ./deploy/sandbox -run '^TestLifecycleAcceptance$' -count=1 -v -timeout=5m
+            - AUTH_SANDBOX_LIFECYCLE=1 go test -race ./sandbox/tests/session -run '^TestLifecycleAcceptance$' -count=1 -v -timeout=5m
 
     sandbox:security:
         desc: Проверить реальное истечение fresh-auth и обязательный MFA по роли
@@ -96,7 +96,7 @@ tasks:
             - sh: test -f tmp/sandbox/admin-setup.json -a -f tmp/sandbox/jwt/private.pem
               msg: Нужен подготовленный JWT sandbox и тестовый администратор
         cmds:
-            - AUTH_SANDBOX_SECURITY=1 go test -race ./deploy/sandbox -run '^TestSecurityAcceptance$' -count=1 -v -timeout=10m
+            - AUTH_SANDBOX_SECURITY=1 go test -race ./sandbox/tests/security -run '^TestSecurityAcceptance$' -count=1 -v -timeout=10m
 
     sandbox:load:
         desc: Замерить ограниченный HTTP baseline sandbox без ослабления лимитов
@@ -104,7 +104,7 @@ tasks:
             - sh: test -f tmp/sandbox/admin-setup.json -a -f tmp/sandbox/jwt/private.pem
               msg: Нужен подготовленный JWT sandbox и тестовый администратор
         cmds:
-            - AUTH_SANDBOX_LOAD=1 go test ./deploy/sandbox -run '^TestLoadAcceptance$' -count=1 -v -timeout=8m
+            - AUTH_SANDBOX_LOAD=1 go test ./sandbox/tests/load -run '^TestLoadAcceptance$' -count=1 -v -timeout=8m
 
     sandbox:load:rest:
         desc: Проверить повторные циклы нагрузки и отдыха с RSS и диагностикой Go runtime
@@ -112,7 +112,7 @@ tasks:
             - sh: test -f tmp/sandbox/admin-setup.json -a -f tmp/sandbox/jwt/private.pem
               msg: Нужен подготовленный JWT sandbox и тестовый администратор
         cmds:
-            - AUTH_SANDBOX_LOAD_REST=1 go test ./deploy/sandbox -run '^TestLoadRestAcceptance$' -count=1 -v -timeout=14m
+            - AUTH_SANDBOX_LOAD_REST=1 go test ./sandbox/tests/load -run '^TestLoadRestAcceptance$' -count=1 -v -timeout=14m
 
     sandbox:cleanup:
         desc: Проверить штатную очистку тестового backlog под HTTP нагрузкой
@@ -120,7 +120,7 @@ tasks:
             - sh: test -f tmp/sandbox/admin-setup.json -a -f tmp/sandbox/jwt/private.pem
               msg: Нужен подготовленный JWT sandbox и тестовый администратор
         cmds:
-            - AUTH_SANDBOX_CLEANUP=1 go test ./deploy/sandbox -run '^TestCleanupAcceptance$' -count=1 -v -timeout=8m
+            - AUTH_SANDBOX_CLEANUP=1 go test ./sandbox/tests/cleanup -run '^TestCleanupAcceptance$' -count=1 -v -timeout=8m
 
     # Разработка — API с Air, PostgreSQL, Redis и Mailpit
     dev:up:
@@ -184,7 +184,7 @@ tasks:
         desc: Отформатировать Go-код
         aliases: [fmt]
         cmds:
-            - go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 fmt ./cmd/... ./internal/... ./pkg/...
+            - go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 fmt ./cmd/... ./internal/... ./pkg/... ./sandbox/...
 
     go:build:
         desc: Собрать Auth локально в bin

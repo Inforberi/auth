@@ -4,6 +4,10 @@
 
 Пути к исходникам относительно корня репозитория; Auth = `internal/auth`, Project = `internal/platform/project`.
 
+Согласованное целевое дерево MP6R — в [архитектуре](../architecture.md), карта предстоящих переносов — в [плане рефакторинга](../planning/readability-refactor.md). Backend-пакеты ещё не перенесены; sandbox переносится в R2. Таблицы ниже показывают фактические пути, целевые admin/app каталоги пока не существуют.
+
+Конкретные владельцы и границы переноса зафиксированы в [карте R1 от2 ноября](../planning/readability-refactor.md#r1-карта-переносов-и-контрактов--2-ноября-2026); её завершение не означает, что целевые пакеты уже существуют или проверены исполнением.
+
 ## Проекты и сборка
 
 | Задача | Первичный документ | Код |
@@ -70,7 +74,7 @@
 | Организация разработки и перенос правил | [AI workflow: исполнители, фоновые проверки, ошибки, выбор инструментов](development-workflow.md) | [AGENTS.md](../../AGENTS.md), существующие runner/CI |
 | Текущий scope и выполнение | [implementation](../planning/implementation.md), [roadmap](../planning/roadmap.md) | [history](../planning/history.md): искать нужный заголовок, не читать весь архив |
 | Security и восстановление | [угрозы](../threat-model.md), [JWT security matrix](../operations/jwt-security-acceptance.md), [restore gates](../operations/jwt-recovery.md) | `deploy/restore-auth-state.sql`, `scripts/postgres-restore.sh`, фичевые SQL/security tests |
-| Приёмка и производительность | [сводка и открытые gates](../operations/acceptance-summary.md), [performance](../operations/performance.md), [baseline](../operations/load-baseline.md), [load/rest](../operations/load-rest.md) | `deploy/sandbox`, `Auth/account` retention/delivery, shared hasher/limits |
-| Команды и стенд | [режим проверок](../planning/implementation.md#режим-проверок-после-уточнения-пользователя), [sandbox](../operations/local-sandbox.md) | `Taskfile.yml`, `.github/workflows/ci.yml`, `deploy/compose.sandbox*.yml` |
+| Приёмка и производительность | [сводка и открытые gates](../operations/acceptance-summary.md), [performance](../operations/performance.md), [baseline](../operations/load-baseline.md), [load/rest](../operations/load-rest.md) | `sandbox/tests`, `Auth/account` retention/delivery, shared hasher/limits |
+| Команды и стенд | [режим проверок](../planning/implementation.md#режим-проверок-после-уточнения-пользователя), [sandbox](../operations/local-sandbox.md) | `Taskfile.yml`, `.github/workflows/ci.yml`, `sandbox/compose.yml`, `sandbox/config/jwt.yml` |
 
 Шаблоны путей — ориентир поиска, не обещание отдельного пакета. Подробности фичи и тесты искать через её документ/Serena, а не расширять эту карту до списка файлов.

@@ -1,5 +1,7 @@
 # Локальный HTTPS-стенд
 
+Конфигурация и проверки находятся в [sandbox](../../sandbox/README.md). После переноса R2 используются `sandbox/compose.yml`, `sandbox/config/jwt.yml` и прежние команды Taskfile; данные/volumes и `tmp/sandbox` не переименованы.
+
 J7.3-local, 17 октября 2026. Это постоянный **локальный synthetic sandbox**, не production и не эквивалент внешней/fleet/load приёмки. Реальные `.env`, `.env.prod`, SMTP/provider secrets и рабочая `auth-db` не используются.
 
 ## Запуск и адреса
@@ -40,7 +42,7 @@ curl --cacert tmp/sandbox/tls.crt https://localhost:18443/health/ready
 | `petr@sandbox.example` | `Sandbox-Petr-2026!` | Обычный пользователь; созданная при проверке сессия отозвана, можно войти заново |
 | `admin@sandbox.example` | `Sandbox-Admin-2026!` | System super_admin, verified email, enrolled TOTP; парольный вход требует MFA |
 
-Пользователи созданы через реальные HTTPS register/setup endpoints, не SQL fixtures и не seed на каждом запуске. После добровольного удаления sandbox volumes up создаст пустую БД: таблица выше не означает auto-provisioning. Пользователей можно снова зарегистрировать через Swagger/API. Для нового super-admin действуют штатные setup/start → код из Mailpit + TOTP → setup/complete; synthetic X-Setup-Token задан в `deploy/compose.sandbox.yml`, только до durable initialized marker.
+Пользователи созданы через реальные HTTPS register/setup endpoints, не SQL fixtures и не seed на каждом запуске. После добровольного удаления sandbox volumes up создаст пустую БД: таблица выше не означает auto-provisioning. Пользователей можно снова зарегистрировать через Swagger/API. Для нового super-admin действуют штатные setup/start → код из Mailpit + TOTP → setup/complete; synthetic X-Setup-Token задан в `sandbox/compose.yml`, только до durable initialized marker.
 
 Локальные ответы setup/TOTP URI находятся в `tmp/sandbox/admin-setup.json`, набор recovery codes — в `admin-recovery.json`. Это чувствительные **тестовые** артефакты в игнорируемом каталоге, файлы600; не коммитить/не пересылать их. Код с индексом0 уже использован для MFA-входа при проверке. Остальные setup/JSON/cookie jars там же — не production secrets и не механизм хранения credentials для будущего UI. Можно добавить setup URI/secret в тестовый authenticator; не вставлять его в реальный аккаунт.
 
@@ -73,7 +75,7 @@ task sandbox:jwt
 
 Команда создаёт в ignored `tmp/sandbox/jwt` отдельный от TLS ES256 PKCS#8 key/public JWKS, resource manifest и service-secret/hash manifest; каталог700/файлы600. Полный существующий bundle переиспользуется, частичный не перезаписывается. Ни private key, ни raw secret/token/коды не печатаются и не коммитятся. Изменение готовых ключей/manifest требует отдельного controlled restart, это не автоматическая ротация.
 
-`deploy/sandbox/access-catalog.json` подключён ко всем вариантам sandbox. Owner fixture `deploy/sandbox/jwt-fixture.sql` в одной Access-locked транзакции создаёт **только тестовую** роль `sandbox_reader` с `sandbox.records.read` и назначает существующему Ивану. Первое назначение увеличивает auth/access versions и делает старые сессии Ивана неактуальными; повтор ничего не меняет. Это explicit SQL test seed, не проверка административного API назначения и не скрипт для рабочих пользователей. Права администратора/аккаунты/password/TOTP не сбрасываются. `sandbox.records.write` объявлен, но Ивану не выдан.
+`sandbox/config/access-catalog.json` подключён ко всем вариантам sandbox. Owner fixture `sandbox/config/jwt-fixture.sql` в одной Access-locked транзакции создаёт **только тестовую** роль `sandbox_reader` с `sandbox.records.read` и назначает существующему Ивану. Первое назначение увеличивает auth/access versions и делает старые сессии Ивана неактуальными; повтор ничего не меняет. Это explicit SQL test seed, не проверка административного API назначения и не скрипт для рабочих пользователей. Права администратора/аккаунты/password/TOTP не сбрасываются. `sandbox.records.write` объявлен, но Ивану не выдан.
 
 JWT override включает только sandbox API: issuer `https://localhost:18443`, kid `sandbox-1`, access TTL1m. Native budget P60/min, retention B200/I1m: `2×60×65s ≤ 200×60s`. Это допустимая startup-арифметика для малой тестовой нагрузки, **не** измеренная скорость очистки или production tuning. Defaults `.env.example/.env.prod.example` не меняются.
 
@@ -86,7 +88,7 @@ JWT override включает только sandbox API: issuer `https://localhos
 
 Service client `sandbox-consumer` имеет только strict audience. Его raw secret хранится в `tmp/sandbox/jwt/consumer-secret`, Auth получает SHA-256 verifier, не raw credential. В API монтируются отдельные необходимые readonly-файлы: TLS cert/key и JWT key/JWKS/resources/client manifest, не весь `tmp/sandbox` с admin TOTP, cookie jars и raw consumer secret. Existing saved policy включается через HTTPS admin settings с fresh password/MFA, а не SQL UPDATE или ENV-подменой.
 
-Live тесты в `deploy/sandbox/*_test.go` используют текущий production binary и настоящий TLS/SQL/Redis. Consumer запускается как `net/http` middleware в тестовом handler, но JWKS/introspection обращаются по сети к работающему Auth; отдельный внешний data-backend listener/ingress этим не проверен. Fault cases останавливают только Redis/PostgreSQL с точными именами **и** проверкой Compose label `auth-sandbox`, затем восстанавливают их в cleanup. Readiness ждут с учётом существующего кеша1s. Нужен доступ к Docker; тест не предназначен для одновременного запуска несколькими операторами.
+Live тесты в `sandbox/tests/{token,access,session,security,cleanup,load}` используют текущий production binary и настоящий TLS/SQL/Redis. Consumer запускается как `net/http` middleware в тестовом handler, но JWKS/introspection обращаются по сети к работающему Auth; отдельный внешний data-backend listener/ingress этим не проверен. Fault cases останавливают только Redis/PostgreSQL с точными именами **и** проверкой Compose label `auth-sandbox`, затем восстанавливают их в cleanup. Readiness ждут с учётом существующего кеша1s. Нужен доступ к Docker; тест не предназначен для одновременного запуска несколькими операторами.
 
 После успешной проверки оба issuance switch оставляются включёнными для дальнейшей работы; данные сохраняются. Повторный `sandbox:up` запускает базовый профиль без JWT override: deployment capability выключится, сохранённая policy не перезапишется. Для повторного включения/проверки — `sandbox:jwt`; `sandbox:down` сохраняет volumes и для JWT-варианта.
 
