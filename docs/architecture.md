@@ -1,6 +1,186 @@
 # Архитектура универсального Auth
 
-Решения этапа 0 приняты 6 октября 2026. Это целевая архитектура, а не описание уже реализованных возможностей. Текущее состояние и порядок изменений — в [плане](planning/roadmap.md) и [пошаговой реализации](planning/implementation.md).
+Целевая структура согласована 1 ноября 2026 для планируемого MP6R. Сейчас меняется только документация; перенос исходников не начат. Карта конкретных переносов и интерфейсов уточняется в R1 [плана рефакторинга](planning/readability-refactor.md). Фактические пути — в [карте проекта](ai/index.md), текущее состояние — в [текущем шаге](ai/current-task.md).
+
+## Структура кода и правила пакетов
+
+Фича владеет своими domain/service/repository/transport. Глубокое дерево допустимо, когда каждая папка обозначает самостоятельную понятную обязанность. Таблица БД или отдельная функция сами по себе не образуют фичу. Пустые пакеты и одинаковые слои ради симметрии не создаём.
+
+```text
+cmd/
+├── auth/                         # HTTP backend
+├── access-catalog/               # проверка и preview permissions
+├── admin-recovery/               # аварийное восстановление
+└── project-prepare/               # privileged подготовка проектных БД
+internal/
+├── app/
+│   ├── app.go                    # общие ресурсы и сборка приложения
+│   ├── run.go                    # запуск, остановка и cleanup
+│   ├── auth/                     # сборка Auth-сервисов
+│   ├── admin/                    # сборка общей панели управления
+│   └── projects/                 # подключение Auth выбранного проекта
+├── config/                       # конфигурация запуска
+├── server/http/                  # HTTP server, timeouts, graceful shutdown
+├── auth/
+│   ├── account/                  # пользователь, email, привязки аккаунтов
+│   ├── methods/
+│   │   ├── password/
+│   │   ├── emailotp/
+│   │   ├── google/
+│   │   └── telegram/
+│   ├── session/
+│   ├── token/                    # JWT и связанные сценарии
+│   ├── mfa/
+│   ├── settings/                 # настройки Auth и уведомлений
+│   └── delivery/                 # существующая доставка уведомлений
+├── admin/
+│   ├── administrators/           # владельцы и администраторы всей системы
+│   └── projects/                 # каталог и управление проектами
+│       ├── domain/
+│       ├── service/
+│       ├── repository/postgres/
+│       ├── transport/http/
+│       ├── runtime/              # bounded pools/leases проектов
+│       ├── credentials/          # защита технических credentials
+│       └── storage/postgres/     # подготовка БД и технических ролей
+├── access/                       # роли, permissions и назначения
+├── audit/
+├── integrations/                 # протокольные клиенты
+├── infra/                        # подключения, mailer, logger
+└── transport/http/               # router, общие middleware и httpx
+pkg/authjwt/                      # публичный verifier для внешних сервисов
+migrations/
+├── auth/                         # базовая схема Auth и её embed loader
+├── admin/                        # дополнение только общей управляющей БД
+└── tests/                        # проверки применения/отката схем
+deploy/                           # развёртывание приложения
+sandbox/
+├── README.md
+├── compose.yml
+├── config/
+├── internal/testsupport/          # общие helpers только проверочного стенда
+└── tests/
+    ├── token/
+    ├── security/
+    ├── cleanup/
+    ├── session/
+    ├── mfa/
+    ├── projects/
+    ├── access/
+    └── load/
+docs/
+tmp/sandbox/                      # временные артефакты, ignored
+Taskfile.yml
+```
+
+Это целевые границы, а не текущее дерево и не обязательный набор новых папок. Существующие feature adapters, hasher, signing и templates сохраняются у своих владельцев. Общий OIDC-код выделяется по реальным потребителям; существующие Google/Telegram adapters не удаляются и не переписываются ради общего framework. Оплата, entitlements и SSO отложены и не входят в этот рефакторинг.
+
+### Сборка и запуск
+
+`internal/app` владеет общими ресурсами и жизненным циклом. `app/auth` собирает сервисы авторизации; `app/admin` подключает общую панель; `app/projects` связывает обычные Auth-сервисы с доверенным контекстом выбранного проекта, настройками и ограниченными подключениями. Это один backend. Полный App не создаётся на каждый запрос, глобального current project нет.
+
+`internal/admin` содержит поведение общей системы управления. `admin/administrators` — администраторы всей системы, а не роли пользователей одного проекта. `admin/projects` — каталог, состояния и административные операции проектов. Проектные пользователи принадлежат account, роли — access; административный bridge не копирует их бизнес-логику и не заменяет проектную сессию сессией владельца системы.
+
+Пакеты app не импортируют корневой App обратно. Узкие зависимости передаются явно; не экспортировать весь внутренний граф ради нового дерева. Разделение app на пакеты не создаёт дополнительные pools, clients или workers. Сохраняются порядок startup/cleanup/shutdown и lifetime leases.
+
+`internal/config` загружает конфигурацию запуска. `internal/server/http` получает готовый handler и отвечает за Listen/Serve, timeouts и Shutdown с deadline. Приложение завершает обслуживание запросов и фоновые процессы до закрытия их ресурсов. Config и server не содержат бизнес-правил или сборки repositories.
+
+В cmd остаются arguments/env, stdio/signals, подтверждения и коды завершения. Связный application workflow извлекается только по необходимости. Project-prepare сохраняет отдельные credentials/privileges; обычный HTTP backend не получает DDL-доступ.
+
+### Владельцы ответственности
+
+| Слой | Ответственность |
+| --- | --- |
+| domain | Предметные состояния, правила и допустимые переходы |
+| service | Сценарий, применение правил и координация зависимостей |
+| repository | Чтение/сохранение, storage errors, атомарность и конкурентная целостность |
+| transport/http | Форма запроса, JSON DTO, вызов сервиса и HTTP-ответ |
+| app | Сборка, ресурсы и lifecycle |
+| integrations | Протокол внешней системы, без ролей и пользовательских сценариев |
+| infra | Технические подключения и общая инфраструктура |
+
+Account владеет UUID, профилем, email и привязками внешних аккаунтов. Методы входа проверяют свои доказательства, session общая для всех методов, MFA выполняется до выдачи требуемой сессии. JWT сохраняет разделение authority/signing/public verification по [ADR004](adr/004-jwt-access-profiles.md). Совпадение email не объединяет внешние личности автоматически.
+
+### Когда разделять большой пакет
+
+Много файлов — повод проверить границы пакета, а не только размер каждого файла. Если внутри есть несколько самостоятельных групп сценариев с различными зависимостями, правилами и тестами, выделяем логические подфичи. Недостаточно просто раскидать файлы внутри того же широкого пакета или переименовать префиксы.
+
+Сначала определить владельцев данных, публичные контракты, imports и транзакции. Для развитой подфичи допустимы собственные domain/service/repository/transport; небольшая подфича получает только нужные части. Тесты переходят вместе с владельцем. Общее остаётся у понятного владельца, без common/utils и циклов. Единую security-транзакцию не разрываем ради пакетов.
+
+Числового лимита файлов нет. Не выделяем пакет на каждую ручку или маленький helper. Признак удачного разделения: разработчик находит весь сценарий, его зависимости и проверки в понятной области, а публичный API пакетов не разрастается ради доступа к внутренностям.
+
+### Слои развитой фичи
+
+```text
+internal/auth/methods/password/
+├── domain/
+│   ├── credential.go
+│   ├── password.go
+│   ├── errors.go
+│   └── tests/password_test.go
+├── service/
+│   ├── service.go
+│   ├── ports.go
+│   ├── login.go                  # сценарий, input/result
+│   ├── register.go
+│   ├── change_password.go
+│   ├── forgot_password.go
+│   ├── reset_password.go
+│   └── tests/                    # публичные сценарии и свои mocks
+├── repository/
+│   ├── postgres/
+│   │   ├── repository.go
+│   │   ├── credentials.go
+│   │   ├── password_change.go
+│   │   └── tests/                # repository tests и testdata
+│   └── redis/                    # только существующие нужные операции
+├── transport/http/
+│   ├── handler.go
+│   ├── errors.go
+│   ├── login.go                  # ручка, JSON DTO, Swagger
+│   ├── register.go
+│   └── tests/
+├── hasher/
+└── templates/
+```
+
+Самостоятельная HTTP-ручка — файл сценария с DTO/Swagger. Input/result находятся рядом со сценарием service, предметные модели — в domain. Constructor и действительно общие error mappings остаются у фичи. Не складывать различные контракты в results.go и не создавать глобальный каталог business errors.
+
+### Зависимости, транзакции и файлы
+
+Transport → service → domain. Repository реализует узкие интерфейсы потребителя; service не импортирует конкретные repositories/transport, domain не знает SQL/Redis/HTTP. Межфичевые связи — через явные контракты; app соединяет реализации.
+
+Чистое решение бизнес-политики принадлежит domain/service. Repository загружает актуальные данные и обеспечивает сохранение, locks, constraints, CAS/version guards. Проверка до транзакции не заменяет проверку актуального состояния при изменении. Для межфичевого сценария сохраняется один владелец commit/rollback; service работает через узкий persistence port без зависимости от pgx.Tx. Redis и SMTP не становятся частью SQL-транзакции; audit/outbox — по [ADR002](adr/002-sessions-and-transactions.md). Универсальный CRUD/UoW framework не вводим.
+
+HTTP проверяет форму запроса; service один раз применяет предметные правила. Не дублировать одинаковую валидацию между слоями. Resource bounds, транзакционная актуальность и fail-closed guards оцениваются отдельно и не удаляются как дубли.
+
+Около 150 строк — смысловой ориентир рукописного Go. Связную операцию не разрывать и не уплотнять ради размера. Большой файл разделяем по обязанностям, широкий пакет — по подфичам. Tests/generated не ограничены этим ориентиром. Комментарии объясняют причины и гарантии; очевидные doc.go, part1/part2 и пустые слои не нужны.
+
+### Тесты и sandbox
+
+Миграции R3: auth-набор нужен каждой проектной БД и входу администраторов в общей БД; admin-набор устанавливается дополнительно только в общую управляющую БД. Go-загрузчик migrations/auth/schema.go встраивает единственный исходный SQL для privileged подготовки проектов. В migrations нет бизнес-сценариев; их tests находятся у фич, прямые schema up/down tests — migrations/tests. Файловые пути/loader обновляются вместе с callers и Compose/migrate commands; имена SQL-схем, версии, checksum и permissions сохраняются. Это планируемое размещение, исходники пока по прежним путям. Подробности — [R3](planning/readability-refactor.md#миграции-и-подготовка-бд).
+
+Публичные tests фичи находятся в её локальном tests. Подпапка — отдельный Go-пакет даже при одинаковом package name. Обоснованные private tests остаются рядом с кодом; не экспортировать детали и не добавлять wrappers ради переноса. Repository tests могут использовать собственную настоящую тестовую БД без запуска всего Auth. Fixtures — в testdata своего suite; helpers общие только по реальному повторному использованию. Отдельный go.mod не создаётся.
+
+Sandbox запускает тот же Auth с отдельными настоящими PostgreSQL/Redis и Mailpit. Тесты вызывают обычные API, отдельной реализации backend или бизнес-ручек стенда нет. Здесь ручные и сквозные проверки работающего сервиса; локальные unit tests не переносятся сюда только ради единой папки. Load/длительные проверки запускаются отдельно, окружение не обязано работать постоянно.
+
+Сохраняются local-only ports, собственные сети/volumes, synthetic credentials и guarded cleanup. Реальные env/secrets и рабочие данные стенд не использует. Source schema/grants и Dockerfile не копируются ради нового дерева; final image содержит приложение без тестовых артефактов. Временные ключи/сертификаты/отчёты — tmp/sandbox вне Git.
+
+При переносе обновить Taskfile/CI/Luna commands, relative fixture paths, opt-in conditions и coverage packages. go test ./... обходит обычные tests-подпакеты; команда одного пакета сама их не включает. Отсутствие ошибок при потерянном suite не считается успешной проверкой. Перенос файлов сам по себе не ускоряет runtime и не доказывает экономию токенов.
+
+### Документация при рефакторинге
+
+До переноса в R1 записать «старый путь → новый владелец → контракт → транзакции/ресурсы → проверки». Для крупного пакета описать выделяемые подфичи. В каждом рабочем блоке обновлять соответствующий раздел этой архитектуры, карту реальных путей, feature/API контракты и operational commands. Не оставлять это на конец всей переделки.
+
+Для cmd документировать назначение, обязательные условия, privileges и подтверждения. Для sandbox — запуск/остановку, настройки, тестовые данные, группы проверок и безопасную очистку. Значимые гарантии, ограничения и объяснения границ хранить в существующих docs, не создавать README/doc.go у каждого файла. Статусы выполнения — в implementation/current-task, evidence — в history/acceptance, а не в архитектурном дереве.
+
+## Исторические сведения до MP6R
+
+Ниже сохранены ранее записанные детали реализации и исторические карты. Их формулировки «ещё не реализовано» относятся к датам соответствующих этапов, не к текущему статусу. Структуру задают разделы выше; актуальное поведение — код и feature-контракты, статус — current-task/implementation. Старые пути не означают, что запланированный перенос уже выполнен.
+
+## Согласованное решение — 7 октября 2026
+
+Фичевая архитектура была принята 7 октября и переносилась в этапе 4.5. Уточнение 1 ноября сохраняет направления зависимостей и заменяет прежнее целевое дерево правилами выше.
 
 ## Профиль и границы
 
@@ -49,253 +229,6 @@ J4a storage добавляет immutable browser/api profile в общем sessi
 Текущая реализация: один независимый backend на проект, собственные PostgreSQL, Redis, SMTP и secrets. Согласовано 18 октября, пока не реализовано: следующий функциональный этап до UI — один сервис/панель с каталогом независимых проектов и отдельной PostgreSQL-БД каждого проекта; SQL/Redis/settings/session/JWT границы проверяются по подэтапам [MP1–MP8](planning/multi-project.md), итоговая нагрузка и ресурсы — в MP8. Браузер работает через cookie/BFF и HTTPS; native/API access требует отдельного контракта, не переиспользования browser cookie. Общий SSO, организации, multi-app и Telegram commerce — отдельные расширения. Не строим свой OAuth server или универсальный plugin framework.
 
 Physical cleanup принадлежит существующему account retention worker. J4b.2c.2 сохраняет две SQL keyset checkpoint rows для sessions/families: progress/deletes атомарны, no per-process authority state, bounded candidate page до eligibility/locks. Это не новая очередь или Auth settings; reuse window и текущая session authority не зависят от cursor. [Алгоритм/storage gates](features/refresh-storage.md#ограниченный-обход--j4b2c2-local).
-
-## Согласованное решение — 7 октября 2026
-
-Целевая архитектура утверждена 7 октября; перенос существующего кода 4.5 выполнен 8 октября 2026. Реализованы app/auth, config, server/http, account/domain, methods/password, session и audit contract. Остальные модули в дереве — будущие, не пустые пакеты в checkout. API/SQL/dependencies сохранены; выполненные 4.0/4.1 остаются в истории, их правила структуры заменены этим решением. Legacy module rename остаётся задачей 14.4.
-
-## Структура кода и правила пакетов
-
-Глубина дерева допустима, когда каждый каталог обозначает понятную ответственность. Auth разделён по фичам и методам входа; роли, тарифные возможности, оплата и audit — отдельные модули. У каждой развитой фичи свои domain/service/repository/transport. Не создавать общие хранилища всех фич или плоскую смесь правил, SQL и HTTP.
-
-```text
-cmd/
-├── auth/
-│   └── main.go
-├── admin-recovery/
-│   └── main.go
-└── access-catalog/
-    └── main.go
-
-internal/
-├── app/
-│   ├── auth/
-│   │   ├── app.go
-│   │   ├── account.go
-│   │   └── run.go
-│   └── access/
-│       └── app.go
-├── config/
-│   ├── config.go
-│   └── validation.go
-├── server/
-│   └── http/
-│       ├── config.go
-│       ├── server.go
-│       └── shutdown.go
-├── auth/
-│   ├── delivery/                # общий paced цикл почтовых очередей Auth
-│   ├── account/
-│   │   ├── domain/
-│   │   ├── service/
-│   │   ├── repository/
-│   │   │   ├── postgres/
-│   │   │   └── redis/
-│   │   └── transport/http/
-│   ├── methods/
-│   │   ├── password/
-│   │   │   ├── domain/
-│   │   │   ├── service/
-│   │   │   ├── repository/
-│   │   │   │   ├── postgres/
-│   │   │   │   └── redis/
-│   │   │   ├── transport/http/
-│   │   │   ├── hasher/
-│   │   │   └── templates/
-│   │   ├── emailotp/
-│   │   │   ├── domain/
-│   │   │   ├── service/
-│   │   │   ├── repository/postgres/
-│   │   │   ├── transport/http/
-│   │   │   └── templates/
-│   │   ├── oidc/
-│   │   │   ├── domain/
-│   │   │   ├── service/
-│   │   │   ├── repository/redis/
-│   │   │   └── transport/http/
-│   │   ├── google/
-│   │   │   ├── domain/
-│   │   │   ├── service/
-│   │   │   └── transport/http/
-│   │   └── telegram/
-│   │       ├── domain/
-│   │       ├── service/
-│   │       └── transport/http/
-│   ├── session/
-│   │   ├── domain/
-│   │   ├── service/
-│   │   ├── repository/
-│   │   │   ├── postgres/
-│   │   │   └── redis/
-│   │   └── transport/http/
-│   ├── settings/                # Auth policy, SMTP settings и commit guards
-│   │   ├── domain/
-│   │   ├── service/
-│   │   ├── repository/
-│   │   │   ├── postgres/
-│   │   │   └── redis/
-│   │   └── transport/http/      # protected settings API и локальное преобразование ошибок
-│   └── mfa/
-│       ├── domain/
-│       ├── service/
-│       ├── totp/
-│       ├── repository/
-│       │   ├── postgres/
-│       │   └── redis/
-│       └── transport/http/
-├── access/
-│   ├── domain/
-│   ├── service/
-│   ├── settings/
-│   ├── repository/postgres/
-│   └── transport/http/
-├── entitlement/
-│   ├── domain/
-│   ├── service/
-│   ├── settings/
-│   ├── repository/postgres/
-│   └── transport/http/
-├── billing/
-│   ├── domain/
-│   ├── service/
-│   ├── settings/
-│   ├── repository/postgres/
-│   └── transport/http/
-├── audit/
-│   ├── domain/
-│   ├── service/
-│   └── repository/postgres/
-├── integrations/
-│   ├── oidc/
-│   ├── telegram/
-│   └── payment/
-│       └── provider/
-├── infra/
-│   ├── postgres/
-│   ├── redis/
-│   ├── mailer/
-│   └── logger/
-└── transport/
-    └── http/
-        ├── router.go
-        ├── health.go
-        ├── middleware/
-        └── httpx/
-
-migrations/
-deploy/
-docs/
-├── api/
-│   ├── contract.md
-│   └── generated/
-├── features/
-├── planning/
-│   ├── roadmap.md
-│   ├── implementation.md
-│   └── history.md
-├── ai/
-│   ├── index.md
-│   └── current-task.md
-├── adr/
-├── architecture.md
-├── schema.md
-└── threat-model.md
-.air.toml
-.env.example
-.env.prod.example
-Taskfile.yml
-go.mod
-go.sum
-README.md
-```
-
-`repository/postgres` и `transport/http` в дереве — сокращение вложенных каталогов. Будущие методы, repositories и остальные модули появляются только вместе с реализацией. Provider — placeholder названия конкретного платёжного адаптера, не обязательный пустой пакет. Не создавать workers/seeds/scripts ради симметрии. Air — только dev, production не использует.
-
-### Сборка и запуск
-
-JWT по [ADR 004](adr/004-jwt-access-profiles.md): `internal/auth/token/signing` владеет private key/loader/signing; `pkg/authjwt` — strict public-key crypto verifier без internal/DB/private key imports. Token service/domain, собственные PostgreSQL/Redis repositories и transport/http реализуют transaction-owned session exchange/JWKS; settings хранит deployment config/strict resource loader, app/auth/token.go — сборку, router/token.go — регистрацию. Выключен по умолчанию; отдельный bounded Redis owner только для issuance, lifecycle в existing run.go. Это не primary method и не перенос session/access/MFA ownership; старый cookie API сохраняется. [Ключи](features/jwt-keys.md), [выдача и ограничения](features/jwt-exchange.md).
-
-`cmd/auth/main.go` — точка входа и передача signal context приложению. `internal/app/auth/app.go` — App, constructor и явная сборка зависимостей; `run.go` — lifecycle и порядок освобождения ресурсов. Для другого самостоятельного процесса при необходимости создаётся свой пакет `app/<process>`. Не вводить `bootstrap` или `app/wiring`; конфигурация находится отдельно в `internal/config`.
-
-`internal/server/http` получает готовый handler и отвечает за Listen/Serve, timeouts и Shutdown с deadline; не знает о бизнес-фичах и DB repositories. Приложение контролирует завершение сервера, затем закрывает PostgreSQL/Redis и остальные ресурсы. Обработать ошибки запуска, частично созданные ресурсы, deadline shutdown и завершение активных запросов без зависания. Сборка обязательна, но не становится бизнес-логикой или auto-discovery framework.
-
-### Владельцы ответственности
-
-- `account`: внутренний UUID, профиль, email/verification/change, status/deletion; привязки внешних аккаунтов также здесь (`linked_identity`, linking/unlinking). Отдельные `contact`, `identity` и `authentication` модули сейчас не вводим.
-- `methods/password`: парольные credentials, email + пароль, смена/reset. Не владелец всех способов входа или профиля.
-- `methods/emailotp`: доказательство владения адресом через одноразовый код.
-- `methods/oidc`: OIDC identity verification; OAuth-only providers требуют отдельной проверки личности через официальный API. Не объединять аккаунты автоматически по совпадению email.
-- `methods/telegram`: подтверждение личности Telegram, не Telegram commerce.
-- `session`: общие сессии независимо от метода; `mfa`: второй фактор/recovery.
-- `access`: роли/permissions/назначения; `entitlement`: функции/grants/квоты; `billing`: оплаты/подписки; `audit`: значимые действия. Оплата не обязательна для Auth или manual/trial grants.
-
-Метод проверяет своё доказательство, account разрешает пользователя и его состояние, MFA выполняет второй фактор при необходимости, session выдаётся только после нужных проверок. Общую координацию выделять позже лишь при реальном дублировании сценариев.
-
-A3.1 реализует account identity resolution в существующих domain/service/repository/postgres. IdentityKey — точные issuer/subject, не email; user и identity создаются атомарно. A3.2 подключает проверку provider proof и создание сессии для Telegram; A3.3 добавляет явный linking/unlinking с fresh password proof. MFA остаётся отдельной задачей. [Текущий контракт](features/external-identities.md).
-
-A3.2 подключает optional Telegram OIDC: методы/service/repository/transport находятся в `auth/methods/telegram`, протокольный клиент — `integrations/telegram`, сборка — `app/auth/telegram.go`. Общего provider framework и пустого oidc-пакета нет: выделение общего кода допускается при втором adapter. Session переиспользуется. A3.3: method хранит purpose/owner/session-bound flow и проверяет proof; account IdentityManagement владеет SQL linking/unlinking/last-method policy и audit. Общий session proof переиспользован с email change; не появляется второй password Compare или provider-specific SQL в integrations. External-only step-up/MFA ещё впереди. [Текущий flow](features/telegram-login.md).
-
-`settings` принадлежит access/entitlement/billing, не глобальному модулю: продуктовые каталоги/политики отдельно от secret provisioning и runtime подключения. `integrations` — протокольные клиенты, не linking, роли или payment state machine. `infra/postgres`/`infra/redis` — подключения; feature repository — операции хранения. Название Redis обозначает технологию, не ограничивает назначение адаптера кешем или временными данными. Источник истины определяется гарантиями конкретного сценария и ADR.
-
-### Слои развитой фичи
-
-```text
-internal/auth/methods/password/
-  domain/
-    credential.go
-    password.go
-    errors.go
-  service/
-    service.go
-    ports.go
-    register.go
-    register_test.go
-    login.go
-    login_test.go
-    change_password.go
-    change_password_test.go
-    reset_password.go
-    reset_password_test.go
-  repository/
-    postgres/
-      repository.go
-      credentials.go
-      errors.go
-      credentials_test.go
-    redis/
-      repository.go
-      limits.go
-      limits_test.go
-  transport/http/
-    handler.go
-    register.go
-    register_test.go
-    login.go
-    login_test.go
-    change_password.go
-    reset_password.go
-    errors.go
-  hasher/
-  templates/
-```
-
-Это ориентир, не обязательный набор файлов. Domain содержит сущности/инварианты/предметные ошибки, не service results, HTTP DTO, SQL rows или operational configuration. Input/result принадлежат service и располагаются рядом со сценарием; JSON DTO — transport; локальные storage representations — repository. Не создавать копии одинаковых типов без причины.
-
-### Зависимости, транзакции и файлы
-
-Transport → service → domain. Repository реализует малые consumer-owned interfaces service и использует нужные domain types. Service не импортирует конкретный repository/transport/provider; domain не зависит от SQL/Redis/HTTP/SDK; infra не импортирует бизнес-фичи. App собирает реализации. Межфичевые связи — через явные контракты, не чужие concrete repositories; циклы запрещены.
-
-Repository локален фиче; таблица не равна фиче. Определить владельца каждой операции, особенно существующего `PasswordRepo.CreateUser`, который создаёт account/contact/profile/credential. Регистрация и security-критические межфичевые изменения требуют одной согласованной SQL-транзакции: service не получает `pgx.Tx`, repositories не коммитят части независимо. Не считать Redis/SMTP частью SQL-транзакции; audit/outbox и частичные сбои обрабатываются по ADR 002. Ownership/transaction contract сначала проектируется, затем реализуется в lifecycle/security этапах, без универсального CRUD/UoW framework заранее.
-
-150 физических строк — целевой ориентир для рукописного Go-кода, а не жёсткий лимит. Если код можно осмысленно разделить на файлы до 150 строк с самостоятельной ответственностью — разделяем. Если разделение разрывает связную операцию или создаёт искусственные файлы/пакеты — оставляем больше; фиксированного верхнего порога нет. Не уплотнять код, не сокращать полезные комментарии и не вводить part1/part2 ради числа строк. Тесты и generated-файлы не ограничиваем по длине: tests группируются по операции с именованными сценариями, большой suite делится только по смыслу. HTML и SQL сохраняем смыслово цельными. Generated файлы не редактировать вручную. В 4.5 автоматический отказ по числу строк убран; TestPackageBoundaries в internal/app/auth/layout_test.go сохраняет проверки направления imports; ориентир применять при разработке и review, без нового скрипта или числового release gate.
-
-Не вводить `core/common/utils`, глобальный склад domain types, пустые слои или interfaces на каждую функцию. Не экспортировать детали ради tests. Пакеты с одинаковыми именами импортировать с понятными aliases. Комментарии объясняют неочевидные ограничения, безопасность и причины решений, а не пересказывают названия пакетов или шаги кода. Отдельные doc.go с очевидным описанием не создаём; навигация и границы ответственности описаны здесь.
-
-
-
-Предметные правила не проверяются повторно в HTTP и service: HTTP декодирует запрос, service один раз создаёт/проверяет domain value, локальный mapper формирует HTTP-ошибку. Проверки актуальности внутри транзакции — отдельная гарантия, не такое дублирование. В resend email валидируется в service до Redis, как раньше на HTTP-пути; ErrEmailRequired/ErrEmailInvalid дают прежний 400 invalid_email.
-
-Register/login используют service/credentials.go для однократного разбора email и обязательности password с сохранением приоритета публичных ошибок. Новую password policy применяет только регистрация, не login. Resource bound токена confirm/reset находится в service до limiter, canonical format — после него; HTTP не повторяет эти проверки. Forgot missing/whitespace email и login whitespace email корректно сопоставляются с documented 400, вместо ошибочного dependency/internal fallback.
 
 ### Текущая карта кода — 10 октября 2026
 
