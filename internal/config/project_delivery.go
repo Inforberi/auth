@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type ProjectDeliveryConfig struct {

@@ -1,7 +1,9 @@
 # Текущий шаг
 
-2 ноября 2026. R1 карта переносов подготовлена; R2 sandbox локально принят Luna на `/private/tmp/auth-r2-sandbox-v2-d95ul626`: manifest78,13 roots/skip gates/assertions сохранены, чистый task check/lint0 и sandbox race PASS, formatter без изменений. V1 Compose config/образ приняты по эквивалентности. [Итоги](../operations/acceptance-summary.md#mp6r-r2-перенос-sandbox--2-ноября-2026). Live readiness и TestPrepareJWT NOT RUN: существующий auth-sandbox чужой, не изменять его контейнеры/данные. Это отдельный открытый live gate, не доказательство production capacity.
+2 ноября 2026. R3 принят Luna на неизменяемом снимке `/private/tmp/auth-r3-full-v7-j90m_67o`: manifest749 без расхождений, `task check` (tests/lint0), затронутые race, `check:api` и все семь запрошенных SQL roots — PASS. Main сверил исходники со снимком; executable checks не повторял. Evidence: `/private/tmp/auth-r3-full-v7-results-summary.log`, [приёмка](../operations/acceptance-summary.md#r3-итоговая-приёмка--2-ноября-2026).
 
-Следующий рабочий блок R3 — общая панель/проекты/cmd, включая [миграции Auth/admin](../planning/readability-refactor.md#миграции-и-подготовка-бд). Действовать по карте R1: фича/tests/callers/docs вместе, сохранять SQL names/версии/checksum/permissions/crypto scopes и транзакции. Новые функции и зависимости не добавлять. Source backend до R3 не менялся. Все исполняемые проверки — отдельному чату Luna на неизменяемом снимке. UI только после отдельного предупреждения и согласования.
+Упорядочены admin/administrators/projects, подфичи roles/directory/policy/preparation/runtime, сборка app/admin и app/projects/preparation, тонкий cmd/project-prepare, миграции auth/admin и tests у владельцев. API, SQL-схема platform, permission strings, crypto scopes и шесть SQL-файлов сохранены. Новых зависимостей и функций нет.
 
-План/архитектура:43e0a38; Telegram final:58714c1. Source initial migration prerelease, без новой миграции ради рефакторинга; controlled upgrade и внешние Telegram/SMTP/ingress gates отдельно. Коммиты/staging сверять через Git.
+Следующий шаг — R4 MFA по [плану рефакторинга](../planning/readability-refactor.md). UI не начинать. R2 закоммичен:6429cde; его live readiness/TestPrepareJWT остаются NOT RUN: чужой auth-sandbox не трогать. R3 не закрывает внешние, MP7/MP8, capacity/GC и остальные gates.
+
+Рабочие env/БД/secrets не менять. Все executable checks — отдельному Luna; новые dependencies требуют разрешения. Коммиты/staging сверять через Git.

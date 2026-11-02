@@ -13,14 +13,14 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/credentials"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	tokensettings "github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/credentials"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 func projectDeploymentKey(id projectdomain.ID) projectruntime.Key {

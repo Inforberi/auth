@@ -6,17 +6,17 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
-	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type projectMFA struct {
 	factory    *projectMFALogin
 	key        projectruntime.Key
 	registry   *projectruntime.Registry
-	reader     *projectpostgres.RuntimeCredentialReader
+	reader     *runtimepostgres.RuntimeCredentialReader
 	timeout    time.Duration
 	emailProof bool
 }

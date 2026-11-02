@@ -6,11 +6,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
 type projectHTTPSessions struct {

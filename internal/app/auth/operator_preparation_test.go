@@ -11,8 +11,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	preparationpostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/preparation/repository/postgres"
+	projectpostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/repository/postgres"
 )
 
 func operatorPreparationDrill(t *testing.T, admin, api *pgxpool.Pool, realm string) {
@@ -53,7 +54,7 @@ func operatorPreparationDrill(t *testing.T, admin, api *pgxpool.Pool, realm stri
 		t.Fatal(err)
 	}
 	t.Cleanup(db.Close)
-	repo, err := projectpostgres.NewPreparation(db, domain.ID(realm), "primary")
+	repo, err := preparationpostgres.NewPreparation(db, domain.ID(realm), "primary")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +62,7 @@ func operatorPreparationDrill(t *testing.T, admin, api *pgxpool.Pool, realm stri
 		t.Fatal("restricted preparation rejected", err)
 	}
 	for _, pool := range []*pgxpool.Pool{admin, api} {
-		wrong, err := projectpostgres.NewPreparation(pool, domain.ID(realm), "primary")
+		wrong, err := preparationpostgres.NewPreparation(pool, domain.ID(realm), "primary")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -91,7 +92,7 @@ func operatorPreparationDrill(t *testing.T, admin, api *pgxpool.Pool, realm stri
 		}
 	}
 	input := domain.PreparationRequest{ProjectID: project, OperationID: "91000000-0000-4000-8000-000000000001", ExpectedVersion: 1, ExpectedGeneration: 1}
-	wrongTarget, err := projectpostgres.NewPreparation(db, domain.ID(realm), "secondary")
+	wrongTarget, err := preparationpostgres.NewPreparation(db, domain.ID(realm), "secondary")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +151,7 @@ func operatorPreparationDrill(t *testing.T, admin, api *pgxpool.Pool, realm stri
 	operatorPreparationEpoch(t, admin, repo, input, first)
 }
 
-func operatorPreparationRollback(t *testing.T, admin *pgxpool.Pool, repo *projectpostgres.PreparationRepository, id domain.ID) {
+func operatorPreparationRollback(t *testing.T, admin *pgxpool.Pool, repo *preparationpostgres.PreparationRepository, id domain.ID) {
 	t.Helper()
 	ctx := t.Context()
 	if _, err := admin.Exec(ctx, `ALTER TABLE platform.project_preparations ADD CONSTRAINT fixture_reservation_failure CHECK(project_id<>'90000000-0000-4000-8000-000000000003') NOT VALID`); err != nil {
@@ -169,7 +170,7 @@ func operatorPreparationRollback(t *testing.T, admin *pgxpool.Pool, repo *projec
 	}
 }
 
-func operatorPreparationEpoch(t *testing.T, admin *pgxpool.Pool, repo *projectpostgres.PreparationRepository, input domain.PreparationRequest, first domain.PreparationReservation) {
+func operatorPreparationEpoch(t *testing.T, admin *pgxpool.Pool, repo *preparationpostgres.PreparationRepository, input domain.PreparationRequest, first domain.PreparationReservation) {
 	t.Helper()
 	ctx := t.Context()
 	transition := func(action domain.Action, version int64, op domain.ID) {

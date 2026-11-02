@@ -7,9 +7,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
+	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/admin/administrators/repository/postgres"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
-	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/platform/operator/repository/postgres"
 )
 
 func checkRecoveryRealm(ctx context.Context, pool *pgxpool.Pool, realm string, user accountdomain.UserID, mfa bool) error {

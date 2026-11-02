@@ -6,6 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountredis "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/redis"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
@@ -20,7 +21,6 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type projectEmailRuntime struct {

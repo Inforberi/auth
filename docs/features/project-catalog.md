@@ -10,9 +10,9 @@ MP2.2: добавлены [внутренние lifecycle transitions](project-l
 
 ## Владельцы
 
-- `internal/platform/project/domain`: идентификатор, slug/display name/canonical origin, desired state/phase и admission predicate. Нет новых внешних зависимостей.
-- `internal/platform/project/repository/postgres`: внутреннее чтение/resolve/список, caller-owned pool. Не создаёт соединения на каждый запрос и не управляет lifecycle платформы.
-- `migrations/platform/000001_catalog.{up,down}.sql`: отдельный набор для будущей платформенной БД, не изменение применённой Auth000001. Текущие migration команды/ENV не менялись; migration нигде не применена в этом блоке. Не запускать platform down на рабочей БД.
+- `internal/admin/projects/domain`: идентификатор, slug/display name/canonical origin, desired state/phase и admission predicate. Нет новых внешних зависимостей.
+- `internal/admin/projects/repository/postgres`: внутреннее чтение/resolve/список, caller-owned pool. Не создаёт соединения на каждый запрос и не управляет lifecycle платформы.
+- `migrations/admin/000001_catalog.{up,down}.sql`: отдельный набор для будущей платформенной БД, не изменение применённой Auth000001. Текущие migration команды/ENV не менялись; migration нигде не применена в этом блоке. Не запускать platform down на рабочей БД.
 
 ## Данные и состояния
 
@@ -46,7 +46,7 @@ Read/List не содержат platform authorization: это внутренн�
 
 - Gofmt, domain/repository unit tests и финальный `task check`: PASS/lint0. Unit cases: UUID/slug/name/origin bounds, closed-by-default state combinations, page/cursor bounds до SQL, no-row/unavailable mapping без secret leak и сохранение cancellation. Лог `/private/tmp/auth-platform-catalog-check-final.log`.
 - Первый lint выявил complexity и форматирование, исправлено без отключения правил. Исходный task check log — `/private/tmp/auth-platform-catalog-check.log`.
-- `migrations/platform/catalog_test.go` содержит opt-in PostgreSQL test для отдельной disposable `auth_platform_test`, user auth, localhost или `/var/run/postgresql`. Защита требует отсутствия schemas auth/platform перед migration; teardown удаляет только созданную platform schema. Проверяет up/down, ready binding constraints/unique origin, pending/failed/suspended/unknown denial, immediate uncached update, keyset ties/filter/empty page, selective indexes на2048 synthetic catalog rows, PUBLIC ACL и cancellation/pool release.
+- `migrations/admin/catalog_test.go` содержит opt-in PostgreSQL test для отдельной disposable `auth_platform_test`, user auth, localhost или `/var/run/postgresql`. Защита требует отсутствия schemas auth/platform перед migration; teardown удаляет только созданную platform schema. Проверяет up/down, ready binding constraints/unique origin, pending/failed/suspended/unknown denial, immediate uncached update, keyset ties/filter/empty page, selective indexes на2048 synthetic catalog rows, PUBLIC ACL и cancellation/pool release.
 - **SQL integration PASS0.12s, 18 октября.** После запуска Docker пользователем запущен только существующий sandbox PostgreSQL18.6, изначально остановленный. Текущий Linux/arm64 test binary выполнен через unix socket в новой disposable `auth_platform_test`: up/down, constraints/unique origin, admission, keyset ties/filter/empty page, selective indexes2048 synthetic rows, PUBLIC ACL и cancellation/pool release — PASS. Лог `/private/tmp/auth-platform-catalog-sql.log`. Старый NOT RUN описывает предыдущую попытку, не актуальный SQL gate.
 - После teardown отдельный SQL подтвердил отсутствие auth/platform schemas в fixture, затем новая БД удалена без FORCE. Отсутствие `auth_platform_test` и наличие исходной `auth` проверены. Удалены только три скопированных scratch-файла и их пустой каталог. PostgreSQL возвращён в исходное stopped состояние; другие контейнеры не запускались. Рабочие Auth schema/данные/Redis/ENV не изменялись.
 - Не запускались live HTTP/operator authority/race/load/fleet/provider checks: SQL read foundation не закрывает MP2 целиком. Source/runtime не менялись, Go/lint повторно ради документации не запускались; прежний task check PASS относится к той же версии исходников. Обычный task check без explicit fixture по-прежнему пропускает SQL test.

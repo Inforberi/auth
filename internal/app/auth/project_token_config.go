@@ -6,14 +6,14 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	tokenredis "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/redis"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
-	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
@@ -43,7 +43,7 @@ type ProjectTokenConfig struct {
 
 type ProjectTokenDependencies struct {
 	Registry      *projectruntime.Registry
-	Reader        *projectpostgres.RuntimeCredentialReader
+	Reader        *runtimepostgres.RuntimeCredentialReader
 	Redis         *redis.Client
 	IssuanceRedis *redis.Client
 	Hash          *hasher.Bounded

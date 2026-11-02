@@ -5,6 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	otppostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/repository/postgres"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
@@ -17,7 +18,6 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type projectNative struct {

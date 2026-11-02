@@ -5,12 +5,12 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
 func (p *ProjectEmail) useEmailChange(ctx context.Context, operation func(context.Context, *accountservice.EmailChangeService) error) error {

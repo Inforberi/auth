@@ -168,6 +168,14 @@ Sandbox запускает тот же Auth с отдельными настоя
 
 При переносе обновить Taskfile/CI/Luna commands, relative fixture paths, opt-in conditions и coverage packages. go test ./... обходит обычные tests-подпакеты; команда одного пакета сама их не включает. Отсутствие ошибок при потерянном suite не считается успешной проверкой. Перенос файлов сам по себе не ускоряет runtime и не доказывает экономию токенов.
 
+Общий код project identity/checksum принадлежит `internal/admin/projects/schema`, которым пользуются storage и repository. В storage его не помещаем: существующий onboarding storage уже зависит от repository, обратный импорт создаёт цикл. Это технический контракт установленной схемы, без бизнес-правил.
+
+### Реализация разделения R3
+
+Проектные roles/directory/policy имеют собственные service, repository adapters и HTTP. В projects/repository/postgres остаётся единый владелец catalog authority/admission/receipt транзакций; адаптеры не создают независимые commits. Общие bounded ReadDirectory/ReadDirectoryWithRuntime операции сохраняют прежние authority locks и target-current checks. Это узкий контракт существующей SQL-операции, без экспорта pool/полей repository и без универсального UoW.
+
+Preparer workflow находится в app/projects/preparation; флаги/env/stdio/JSON — preparation/transport/cli, cmd/project-prepare только управляет сигналами/exit. Два private CLI tests остаются рядом с parser, self-managed SQL/HTTP suites перенесены целиком в app/projects/tests, сохранив общие fixtures. В service нет JSON DTO; результат сериализует CLI. App/admin собирает административные handlers, финальная root/Auth assembly и lifecycle — R7. Существующий admin-recovery уже разделяет CLI подтверждения и вызовы password/MFA services; новый framework команд не добавляется.
+
 ### Документация при рефакторинге
 
 До переноса в R1 записать «старый путь → новый владелец → контракт → транзакции/ресурсы → проверки». Для крупного пакета описать выделяемые подфичи. В каждом рабочем блоке обновлять соответствующий раздел этой архитектуры, карту реальных путей, feature/API контракты и operational commands. Не оставлять это на конец всей переделки.
@@ -363,3 +371,5 @@ UI также позволит вводить/заменять SMTP/provider sec
 5.5d: policy/hash сценарий защищённого восстановления находится в password `service/protected_recovery.go`, его DTO/HTTP mapper — в password `transport/http/protected_recovery.go`. Узкий порт связывается с account `repository/postgres/protected_recovery.go`, который владеет атомарным восстановлением user/contact/credential/version/challenges/audit. Password service не импортирует repository; app только собирает dependencies. ProtectedRecoveryService использует существующий RecoveryService для общего Redis/hash budget, не вводит второй worker или lifecycle. Mail intent подготавливает account email-change service; при report SQL выдаёт version-bound authority и помещает отдельный encrypted payload старому contact в тот же outbox. Future MFA/non-password recovery требует собственного доказательства и не наследует mailbox-only unblock.
 
 До 12.1 пользователь выбирает merchant profile: страна/юридический статус продавца, валюты, товары, разовая/recurring оплата, refund/cancel требования. Затем выбирается и проверяется один hosted-checkout provider; конкретный поставщик сейчас не объявлен поддержанным. Native/SSO/organizations/Telegram commerce требуют отдельного подтверждения scope перед своими подэтапами.
+
+Уточнение executor assembly: app/projects/preparation создаёт и закрывает concrete SQL/storage adapters для отдельного privileged процесса. Это инфраструктурная сборка, поэтому она не находится в service. Preparation CLI читает flags/env и вызывает этот application workflow; domain/service фич не импортируют concrete adapters. Правила архитектурного теста не ослаблялись.

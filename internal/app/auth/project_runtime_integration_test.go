@@ -12,10 +12,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/credentials"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/credentials"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 func TestProjectRuntimeAssemblySQL(t *testing.T) {
@@ -40,7 +40,7 @@ func TestProjectRuntimeAssemblySQL(t *testing.T) {
 	if root == "" {
 		root = "../../.."
 	}
-	for _, name := range []string{"000001_init.up.sql", "platform/000001_catalog.up.sql", "platform/000002_operators.up.sql"} {
+	for _, name := range []string{"auth/000001_init.up.sql", "admin/000001_catalog.up.sql", "admin/000002_operators.up.sql"} {
 		source, err := os.ReadFile(filepath.Join(root, "migrations", name))
 		require.NoError(t, err)
 		_, err = admin.Exec(ctx, string(source))

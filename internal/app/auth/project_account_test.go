@@ -6,12 +6,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
 func TestProjectAccountFeaturesDisabledBeforeDependencies(t *testing.T) {

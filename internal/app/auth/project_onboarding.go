@@ -10,17 +10,18 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
+	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
+	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/admin/administrators/repository/postgres"
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/credentials"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	preparationpostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/preparation/repository/postgres"
+	schemapostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/schema/postgres"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
-	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
-	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/platform/operator/repository/postgres"
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/credentials"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
 	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/router"
 )
@@ -47,7 +48,7 @@ func NewProjectOnboarding(ctx context.Context, cfg ProjectOnboardingConfig, deps
 	if err := cfg.validate(); err != nil {
 		return nil, err
 	}
-	admission, err := projectpostgres.NewOnboardingAdmission(deps.Catalog, cfg.Project, cfg.Reservation, cfg.Keys.Binding())
+	admission, err := preparationpostgres.NewOnboardingAdmission(deps.Catalog, cfg.Project, cfg.Reservation, cfg.Keys.Binding())
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +80,7 @@ func NewProjectOnboarding(ctx context.Context, cfg ProjectOnboardingConfig, deps
 	if err := admit(ctx); err != nil {
 		return nil, err
 	}
-	if err := projectpostgres.CheckOnboardingRuntime(ctx, deps.Pool, cfg.Keys.Proof()); err != nil {
+	if err := schemapostgres.CheckOnboardingRuntime(ctx, deps.Pool, cfg.Keys.Proof()); err != nil {
 		return nil, err
 	}
 	security := realmSecurity{scope: scope}

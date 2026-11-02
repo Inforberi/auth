@@ -10,10 +10,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
+	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
-	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
 )
 
 func operatorMFASettingsDrill(t *testing.T, admin *pgxpool.Pool, h *operatorHTTPS, actor operatordomain.Principal) {

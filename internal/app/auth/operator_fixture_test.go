@@ -13,6 +13,9 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
+	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
+	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/admin/administrators/repository/postgres"
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/admission"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
@@ -20,9 +23,6 @@ import (
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
-	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
-	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/platform/operator/repository/postgres"
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
 	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
@@ -90,7 +90,7 @@ func operatorFixture(t *testing.T) (*pgxpool.Pool, realmDependencies, *config.Co
 		}
 		return string(source)
 	}
-	for _, migration := range []string{"000001_init", "platform/000001_catalog", "platform/000002_operators"} {
+	for _, migration := range []string{"auth/000001_init", "admin/000001_catalog", "admin/000002_operators"} {
 		if _, err := admin.Exec(ctx, "BEGIN;"+read("migrations/"+migration+".up.sql")+"COMMIT;"); err != nil {
 			t.Fatal("fixture migration", err)
 		}

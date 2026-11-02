@@ -7,10 +7,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
 type projectAuthSettings struct {

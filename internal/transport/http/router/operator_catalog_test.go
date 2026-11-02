@@ -7,16 +7,16 @@ import (
 	"strings"
 	"testing"
 
+	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/admission"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	projectservice "github.com/Inforberi/financial-intelligence/internal/admin/projects/service"
+	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projectservice "github.com/Inforberi/financial-intelligence/internal/platform/project/service"
-	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 )
 
 type operatorReadSession struct{ refresh, noRefresh int }

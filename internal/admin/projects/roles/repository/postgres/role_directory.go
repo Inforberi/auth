@@ -1,0 +1,44 @@
+package postgres
+
+import (
+	"context"
+	"errors"
+
+	"github.com/jackc/pgx/v5"
+
+	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
+	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
+	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/internal/sqlerrors"
+	roleservice "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/service"
+)
+
+func (r *RuntimeRoles) ListProjectRoles(ctx context.Context, actor operatordomain.Principal, query roleservice.ProjectRoleQuery) ([]accessdomain.Role, error) {
+	var roles []accessdomain.Role
+	err := r.ReadDirectory(ctx, actor, query.Target, r.registry, []operatordomain.Permission{operatordomain.AccessManage}, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		roles, err = accesspostgres.ListRolesInTransaction(ctx, tx, query.AfterKey, query.Limit+1)
+		return sqlerrors.Catalog(ctx, err)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return roles, nil
+}
+
+func (r *RuntimeRoles) ReadProjectRole(ctx context.Context, actor operatordomain.Principal, target domain.DirectoryTarget, id accessdomain.RoleID) (accessdomain.Role, error) {
+	var role accessdomain.Role
+	err := r.ReadDirectory(ctx, actor, target, r.registry, []operatordomain.Permission{operatordomain.AccessManage}, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		role, err = accesspostgres.ReadRoleInTransaction(ctx, tx, id)
+		if errors.Is(err, accessdomain.ErrRoleNotFound) {
+			return err
+		}
+		return sqlerrors.Catalog(ctx, err)
+	})
+	if err != nil {
+		return accessdomain.Role{}, err
+	}
+	return role, nil
+}

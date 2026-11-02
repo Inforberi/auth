@@ -6,9 +6,9 @@ import (
 	"os"
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/jsonconfig"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
 var errProjectAuthManifest = errors.New("invalid project auth deployment manifest")

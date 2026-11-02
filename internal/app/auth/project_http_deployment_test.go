@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 func TestProjectHTTPDisabledDoesNotCreateOwners(t *testing.T) {

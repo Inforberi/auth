@@ -215,3 +215,25 @@ MP5-directory-identity-http принят Luna V1/V2: actual двухпроект
 R2 V1: manifest81/81,13 test roots/skip gates и последовательности assertions сохранены; Compose config корректен. Task check/race/lint выявили compile failure пяти helpers access→session/security. Исправлено в V2 переносом общих helpers в testsupport, форматирование Luna применено. Повторная проверка ожидается. Runtime smoke/opt-in preparation NOT RUN из-за чужого занятого auth-sandbox; существующие containers/volumes не трогать.
 
 R2 V2 локально PASS: manifest78 (47 hashes,31 удалений),13 test roots и skip/assertion contracts сохранены; clean task check/lint0 и sandbox race exit0; formatter exit0 без изменений. Evidence: `/private/tmp/auth-r2-sandbox-v2-results-summary.log`. Compose config/mounts и сборка/содержимое обычного Auth image сохранены с V1 по эквивалентности. Источники сверены со снимком перед коммитом. Live readiness и TestPrepareJWT остаются NOT RUN; этот live gate не закрыт локальными тестами.
+
+## MP6R R3: общая панель, проекты и команды — 2 ноября 2026
+
+Реализован перенос всего R3 scope (admin namespaces, feature services/repository adapters/HTTP, preparation workflow/CLI, shared attestation, миграции и связанные tests/callers). SQL bytes, версия и checksum исходной схемы сохранены. Новые маршруты/бизнес-функции не добавлялись. Gate приёмки ещё открыт.
+
+V1 migrations: task check после formatter на validation, affected race, четыре schema/authority roots и Compose config PASS. Первоначальный TestPrepareCommandSQL FAIL был связан с HBA hostssl trust (wrong password принимался) и конфигурацией локального runtime helper; на base6429cde это воспроизводилось. На свежем собственном стенде с Unix socket для control и SCRAM TCP/TLS для runtime плюс отдельный Redis весь root PASS. Evidence `/private/tmp/auth-r3-fixture-auth-v1-final.log` и `auth-r3-fixture-auth-diagnosis.log`. Assertions и проверки password не ослаблялись.
+
+V2/V3 полного переноса: manifest PASS, compile gate нашёл четыре ссылки/импорта, затем оставшийся errors import. Исправлено в основном дереве, требуется новый task check/race/API/SQL на финальном source snapshot. Исторический V1 PASS не подтверждает новый code layout. Внешние provider/SMTP/ingress/load и занятый auth-sandbox по-прежнему не проверяются этой задачей.
+
+R3 V4: compile gate обнаружил оставшийся app/auth/project_roles_test.go, ссылающийся на перенесённую функцию. Исправлено в V5: тест перенесён в app/admin/tests и использует public constructor, assertions сохранены. Formatter PASS. Snapshot `/private/tmp/auth-r3-full-v5-tueuy7hk` передан Luna, task/race/API/SQL результаты ожидаются; commit gate открыт.
+
+R3 V5 compile PASS, TestPackageBoundaries выявил прямые infrastructure/repository imports у executor workflow в service. В V6 workflow и trusted connection config перенесены в app/projects/preparation; CLI и tests используют этот application owner. Архитектурный тест не менялся; formatter PASS, полная приёмка V6 ожидается. Snapshot `/private/tmp/auth-r3-full-v6-y9_m4551`.
+
+R3 V6 Go tests и package boundaries PASS; lint выявил cyclop22 в assembleOperator при лимите20. V7 выделяет существующий связный шаг доверенной authority в administrationAuthority без изменения порядка проверок, ошибок и resource ownership. Лимит lint не менялся. Formatter PASS, snapshot `/private/tmp/auth-r3-full-v7-j90m_67o` передан Luna на полную оставшуюся приёмку; commit gate открыт.
+
+## R3: итоговая приёмка — 2 ноября 2026
+
+Luna приняла `/private/tmp/auth-r3-full-v7-j90m_67o` (base6429cde, manifest749 без расхождений). `task check` (Go tests и lint0), affected race и `check:api` — PASS; generated API совпадает побайтно. SQL roots PASS: TestPlatformCatalogPostgres, TestProjectTransitionsPostgres, TestPlatformOperatorsPostgres, TestPlatformSetupMFAPolicy, TestPrepareCommandSQL, TestTwoProjectHTTPIsolationSQL, TestTwoProjectAccessIsolationSQL. Изоляционные проверки использовали свежие disposable БД, TLS/SCRAM-only TCP. Шесть перенесённых SQL-файлов и schema identity/checksum сохранены.
+
+Ранние ошибки переноса и fixture исправлены без ослабления гарантий, assertions и architecture rules. Собственные PostgreSQL/Redis ресурсы и validation copy удалены; рабочие БД и чужой sandbox не затронуты. Main подтвердил совпадение исходников со снимком, после приёмки обновлялись только Markdown статусы.
+
+Evidence: `/private/tmp/auth-r3-full-v7-results-summary.log`, `/private/tmp/auth-r3-full-v7-fixture-auth.log`; отдельные task-check/race/API/schema/preparation/isolation logs перечислены в summary. Полный backend SQL suite, live sandbox, внешние провайдеры и нагрузка этим блоком не проверялись. R2 live gate, R4–R8 и MP7/MP8 остаются открытыми. Следующий блок — R4 MFA, UI отдельно.

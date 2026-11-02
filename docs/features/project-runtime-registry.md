@@ -1,6 +1,6 @@
 # Реестр подключений к проектам
 
-MP2.7 / часть MP4,24 октября 2026. `internal/platform/project/runtime` переиспользует ограниченное число SQL-пулов. `AdmittedRoleCreation.ExecuteWithRuntime` выполняет существующий role protocol через арендованное соединение. HTTP/server/полная Auth-сборка проектов пока не подключены.
+MP2.7 / часть MP4,24 октября 2026. `internal/admin/projects/runtime` переиспользует ограниченное число SQL-пулов. `AdmittedRoleCreation.ExecuteWithRuntime` выполняет существующий role protocol через арендованное соединение. HTTP/server/полная Auth-сборка проектов пока не подключены.
 
 ## Доверенный источник подключения
 

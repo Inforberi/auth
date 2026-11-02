@@ -13,6 +13,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
+	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/admission"
+	directoryhttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/directory/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	policyhttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/policy/transport/http"
+	roleservice "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/service"
+	roleshttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/transport/http"
+	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
@@ -20,11 +28,6 @@ import (
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projectservice "github.com/Inforberi/financial-intelligence/internal/platform/project/service"
-	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 )
 
 type operatorRoles struct{ calls int }
@@ -41,9 +44,9 @@ func (s *operatorUsers) ReadProjectUser(context.Context, operatordomain.Principa
 	return accountservice.UserDetail{}, nil
 }
 
-func (s *operatorRoles) ListProjectRoles(context.Context, operatordomain.Principal, projectservice.ProjectRoleQuery) (projectservice.ProjectRolePage, error) {
+func (s *operatorRoles) ListProjectRoles(context.Context, operatordomain.Principal, roleservice.ProjectRoleQuery) (roleservice.ProjectRolePage, error) {
 	s.calls++
-	return projectservice.ProjectRolePage{}, nil
+	return roleservice.ProjectRolePage{}, nil
 }
 
 func (s *operatorRoles) ReadProjectRole(context.Context, operatordomain.Principal, domain.DirectoryTarget, accessdomain.RoleID) (accessdomain.Role, error) {
@@ -110,7 +113,7 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 	users := &operatorUsers{}
 	policy := &operatorPolicy{}
 	h := Handlers{
-		Config: cfg, Projects: projecthttp.New(&operatorReadCatalog{}, nil), ProjectRoles: projecthttp.NewRoles(roles, nil), ProjectUsers: projecthttp.NewUsers(users, nil), ProjectAuthPolicy: projecthttp.NewAuthPolicy(policy, settingsdomain.PublicMethods{}, nil), PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfahttp.Handler{}, Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(&operatorReadSession{}, nil), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
+		Config: cfg, Projects: projecthttp.New(&operatorReadCatalog{}, nil), ProjectRoles: roleshttp.NewRoles(roles, nil), ProjectUsers: directoryhttp.NewUsers(users, nil), ProjectAuthPolicy: policyhttp.NewAuthPolicy(policy, settingsdomain.PublicMethods{}, nil), PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfahttp.Handler{}, Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(&operatorReadSession{}, nil), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
 		ProjectCapacity: func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				capacityCalls++

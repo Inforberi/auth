@@ -10,7 +10,7 @@ services:
     environment:
       REDIS_PASSWORD: local-redis-only
   migrate:
-    entrypoint: [migrate, '-path=/migrations', '-database=postgres://auth:local-auth-only@postgres:5432/auth?sslmode=disable&search_path=public']
+    entrypoint: [migrate, '-path=/migrations/auth', '-database=postgres://auth:local-auth-only@postgres:5432/auth?sslmode=disable&search_path=public']
   api:
     image: ${AUTH_TEST_IMAGE:-auth:stage1}
     env_file: [.env.example]

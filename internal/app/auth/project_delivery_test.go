@@ -11,9 +11,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 func TestProjectEmailTrustedURLs(t *testing.T) {

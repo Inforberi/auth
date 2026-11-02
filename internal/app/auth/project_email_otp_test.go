@@ -9,13 +9,13 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	otpdomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/domain"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 func TestProjectEmailOTPDisabled(t *testing.T) {

@@ -10,10 +10,10 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type ProjectDeliveryConfig struct {
@@ -43,7 +43,7 @@ func (d *ProjectDelivery) Run(ctx context.Context, report func(error)) error {
 		return errors.New("project delivery already running or reporter missing")
 	}
 	defer d.running.Store(false)
-	var cursor projectpostgres.RuntimeCursor
+	var cursor runtimepostgres.RuntimeCursor
 	var accountTurn uint8
 	for ctx.Err() == nil {
 		keys, next, err := d.deps.Reader.PageRuntimes(ctx, cursor, d.cfg.PageSize)

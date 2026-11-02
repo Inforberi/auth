@@ -8,13 +8,13 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type ProjectProfileConfig struct {

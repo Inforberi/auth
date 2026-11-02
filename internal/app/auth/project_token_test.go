@@ -7,11 +7,11 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	tokendomain "github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
-	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
@@ -44,7 +44,7 @@ func TestProjectTokenRedisRejectsRetryingClient(t *testing.T) {
 	require.Zero(t, owner.Options().MaxRetries)
 	require.Equal(t, 3, base.Options().MaxRetries)
 	cfg := ProjectTokenConfig{Enabled: true, Issuer: "https://project.example.test", Timeout: time.Second}
-	deps := ProjectTokenDependencies{Registry: &projectruntime.Registry{}, Reader: &projectpostgres.RuntimeCredentialReader{}, IssuanceRedis: owner}
+	deps := ProjectTokenDependencies{Registry: &projectruntime.Registry{}, Reader: &runtimepostgres.RuntimeCredentialReader{}, IssuanceRedis: owner}
 	require.NoError(t, cfg.validate(deps))
 	deps.IssuanceRedis = base
 	require.ErrorIs(t, cfg.validate(deps), authjwt.ErrConfiguration)

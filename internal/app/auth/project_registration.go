@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountredis "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/redis"
@@ -14,7 +15,6 @@ import (
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
 type ProjectRegistrationVerification struct {

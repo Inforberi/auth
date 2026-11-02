@@ -5,13 +5,13 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	tokenpostgres "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/postgres"
 	tokenredis "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/redis"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/signing"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 

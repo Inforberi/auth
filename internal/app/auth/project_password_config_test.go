@@ -8,18 +8,18 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
-	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 func TestProjectPasswordConfiguration(t *testing.T) {
 	cfg := ProjectPasswordConfig{Timeout: 5 * time.Second, Capacity: passwordservice.CapacityConfig{HashConcurrency: 1, LoginIPLimit: 30, LoginEmailLimit: 10, LoginGlobalLimit: 100}, Session: sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, SessionRefreshThreshold: time.Minute, FreshAuthTTL: 5 * time.Minute, AdminIdleTimeout: 30 * time.Minute, AdminAbsoluteTTL: 12 * time.Hour, AdminActivityInterval: time.Minute}}
-	deps := ProjectPasswordDependencies{Registry: &projectruntime.Registry{}, Reader: &projectpostgres.RuntimeCredentialReader{}, Redis: &redis.Client{}, Hash: &hasher.Bounded{}}
+	deps := ProjectPasswordDependencies{Registry: &projectruntime.Registry{}, Reader: &runtimepostgres.RuntimeCredentialReader{}, Redis: &redis.Client{}, Hash: &hasher.Bounded{}}
 	require.NoError(t, cfg.validate(deps))
 	for _, change := range []func(*ProjectPasswordConfig){
 		func(c *ProjectPasswordConfig) { c.MFA.Enabled = true },

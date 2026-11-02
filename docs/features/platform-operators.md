@@ -8,7 +8,7 @@
 
 Платформенная БД использует существующую schema `auth` для операторов и `platform` для каталога и полномочий. В каждой проектной БД будет независимая `auth`; общих пользователей/SSO нет.
 
-`internal/platform/operator/domain` задаёт realm ID, principal и шесть точных permissions:
+`internal/admin/administrators/domain` задаёт realm ID, principal и шесть точных permissions:
 
 | Permission | Назначение |
 | --- | --- |
@@ -25,7 +25,7 @@ Repository принимает caller-owned pool и ожидаемый realm UUID
 
 ## Первый владелец
 
-Порядок в **новой платформенной БД**: Auth `migrations/000001_init.up.sql` → `platform/000001_catalog.up.sql` → `platform/000002_operators.up.sql`. Последняя отвергает используемый Auth realm: существующих пользователей, начатый setup или системный super-admin. Автоматического повышения администратора существующего проекта нет. Текущие migration-команды не переключены на этот набор.
+Порядок в **новой платформенной БД**: Auth `migrations/auth/000001_init.up.sql` → `platform/000001_catalog.up.sql` → `platform/000002_operators.up.sql`. Последняя отвергает используемый Auth realm: существующих пользователей, начатый setup или системный super-admin. Автоматического повышения администратора существующего проекта нет. Текущие migration-команды не переключены на этот набор.
 
 Существующий `account/service.SetupService` получает операторский repository. Сохраняются bootstrap secret, limiter contract, Argon2id, подтверждение почты, TOTP, шифрование pending payload и десять recovery-кодов. Второй стек аутентификации не добавлен.
 

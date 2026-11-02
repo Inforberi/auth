@@ -332,12 +332,12 @@ R1 выполнен как статическая карта: исполняем
 
 ### R3. Общая панель, проекты и эксплуатационные команды
 
-- [ ] Упорядочить migrations по разделу «Миграции и подготовка БД» ниже: auth/admin SQL, понятный embed loader, тесты по владельцам и все пути загрузки. Это часть R3, не новый функциональный этап.
-- [ ] Перенести существующие operator-сценарии в admin/administrators, project-сценарии — в admin/projects; сборку общей панели связать через app/admin.
-- [ ] Разделить подтверждённые самостоятельные группы каталога/состояний, подготовки БД/credentials и административных операций. Не воспроизводить один широкий project-пакет под новым именем.
-- [ ] Сохранить runtime registry/pools/leases, SQL authority, admission/receipts и межбазовую изоляцию. Минимально обновить затронутую сборку/callers без переписывания протоколов.
-- [ ] Оставить четыре понятные cmd. Извлечь только необходимый workflow project-prepare/admin-recovery по карте R1; сохранить CLI flags/exit/output/подтверждения и отдельные credentials/privileges.
-- [ ] Перенести принадлежащие этим сценариям tests/fixtures, включая ошибочно расположенные в cmd и password repository. Обновить actual package patterns, coverage и operations docs.
+- [x] Упорядочить migrations по разделу «Миграции и подготовка БД» ниже: auth/admin SQL, понятный embed loader, тесты по владельцам и все пути загрузки. Это часть R3, не новый функциональный этап.
+- [x] Перенести существующие operator-сценарии в admin/administrators, project-сценарии — в admin/projects; сборку общей панели связать через app/admin.
+- [x] Разделить подтверждённые самостоятельные группы каталога/состояний, подготовки БД/credentials и административных операций. Не воспроизводить один широкий project-пакет под новым именем.
+- [x] Сохранить runtime registry/pools/leases, SQL authority, admission/receipts и межбазовую изоляцию. Минимально обновить затронутую сборку/callers без переписывания протоколов.
+- [x] Оставить четыре понятные cmd. Извлечь только необходимый workflow project-prepare/admin-recovery по карте R1; сохранить CLI flags/exit/output/подтверждения и отдельные credentials/privileges.
+- [x] Перенести принадлежащие этим сценариям tests/fixtures, включая ошибочно расположенные в cmd и password repository. Обновить actual package patterns, coverage и operations docs.
 
 Результат: понятное управление системой/проектами, отдельная privileged подготовка БД и проверки у окончательных владельцев. Это единый блок фич с последовательными проверяемыми шагами, а не один массовый непроверенный diff.
 
@@ -369,7 +369,9 @@ migrations/
 - Обновить go:embed/imports, migrate CLI paths и Compose mounts, schema loader/checksum callers, SQL fixtures и относительные пути, Taskfile/CI/Luna selections, operations и карту проекта. Обычный migrate после переноса должен читать auth-набор, подготовка общей БД — отдельный admin-набор. Не применять оба набора к каждой проектной БД.
 - Сравнить исходный SQL/версии/checksum до и после: перемещение файлов само по себе не должно менять устанавливаемую схему. Luna проверяет task check, прямые up/down и существующие authority/setup/preparation/project identity suites на своём disposable стенде. Рабочие БД не переименовывать и не сбрасывать.
 
-Сейчас зафиксирован только план; migrations, загрузчики и их tests не переносились. Этот подпункт не меняет снимок R2, который проверяет Luna.
+2 ноября: реализация R3 охватила весь согласованный scope и принята Luna на V7: task check, race, API и семь SQL roots PASS. Namespaces platform/operator/project перенесены в admin/administrators/projects. Roles/directory/policy имеют свои service/repository adapters/HTTP, preparation — собственный workflow и CLI transport, runtime reader — отдельный repository, SQL attestation — schema/postgres. Корневой repository сохраняет shared authority/admission/receipt transaction closure; новая абстракция UoW не добавлена. App/admin собирает handlers; окончательная root/Auth assembly остаётся R7. Cmd/project-prepare — signal/exit entrypoint, его общий SQL/HTTP fixture suite перенесён в app/projects/tests. Public role/directory/domain tests — локальные tests; private policy response/cursor tests остаются рядом без экспорта деталей. SQL auth/admin и loader перенесены без изменения содержимого. Новых функций Auth, endpoints, зависимостей и workers нет.
+
+Причина прежних V1 ошибок — HBA hostssl trust и схема подключения проверочного runtime, подтверждено на base6429cde. На исправленном disposable SCRAM TCP+Unix socket/Redis стенде весь TestPrepareCommandSQL PASS без изменения assertions. Последующие compile/lint diagnostics исправлены без ослабления architecture tests и assertions. Workflow подготовки с concrete adapters находится в app/projects/preparation; общий identity/checksum — admin/projects/schema, чтобы не создавать цикл imports. Итоговая приёмка V7 и оставшиеся gates записаны в acceptance-summary.
 
 ### R4. MFA целиком
 

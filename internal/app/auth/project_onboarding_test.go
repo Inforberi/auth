@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/credentials"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/credentials"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 

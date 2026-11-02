@@ -15,6 +15,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pquerna/otp/totp"
 
+	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
+	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/admin/administrators/repository/postgres"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
@@ -25,8 +27,6 @@ import (
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
-	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
-	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/platform/operator/repository/postgres"
 )
 
 func operatorRecoveryPools(t *testing.T, admin *pgxpool.Pool) (*pgxpool.Pool, *pgxpool.Pool) {

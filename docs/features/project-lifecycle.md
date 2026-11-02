@@ -22,7 +22,7 @@ Generation растёт на каждом принятом lifecycle change и �
 
 ## Схема и границы
 
-Новая audit table добавлена в исходную [catalog migration](../../migrations/platform/000001_catalog.up.sql); [down](../../migrations/platform/000001_catalog.down.sql) сначала удаляет её, затем projects. Рабочая Auth БД и реальные ENV/secrets не менялись. На старой установленной platform schema одного обновления исходного SQL недостаточно: нужен отдельно согласованный forward upgrade. Не запускать down/reset рабочей БД.
+Новая audit table добавлена в исходную [catalog migration](../../migrations/admin/000001_catalog.up.sql); [down](../../migrations/admin/000001_catalog.down.sql) сначала удаляет её, затем projects. Рабочая Auth БД и реальные ENV/secrets не менялись. На старой установленной platform schema одного обновления исходного SQL недостаточно: нужен отдельно согласованный forward upgrade. Не запускать down/reset рабочей БД.
 
 `project_events` не имеет FK на Auth пользователя: catalog migration остаётся независимо применимой до Auth/operator schema, а executor не является выдуманным project user. Future service получает actor из проверенной platform identity; прямые writers/DBA остаются доверенными. Audit rows/receipts пока не очищаются; retention/horizon и append-only management grants — отдельные задачи перед эксплуатацией. Существующий Auth audit cleanup эту таблицу не затрагивает.
 

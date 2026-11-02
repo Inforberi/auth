@@ -29,7 +29,7 @@ services:
     image: migrate/migrate:v4.19.1
     volumes:
       - ./migrations:/migrations:ro
-    entrypoint: [migrate, '-path=/migrations', '-database=${MIGRATION_DATABASE_URL:-${DATABASE_URL}}']
+    entrypoint: [migrate, '-path=/migrations/auth', '-database=${MIGRATION_DATABASE_URL:-${DATABASE_URL}}']
     command: [up]
     depends_on:
       postgres:

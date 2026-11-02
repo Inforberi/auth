@@ -5,6 +5,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/redis"
@@ -16,8 +18,6 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
-	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 // ProjectPassword borrows process dependencies; each operation holds its own lease.
@@ -28,7 +28,7 @@ type ProjectPassword struct {
 	key          projectruntime.Key
 	cfg          ProjectPasswordConfig
 	registry     *projectruntime.Registry
-	reader       *projectpostgres.RuntimeCredentialReader
+	reader       *runtimepostgres.RuntimeCredentialReader
 	hash         *hasher.Bounded
 	limits       *passwordservice.LoginLimit
 }

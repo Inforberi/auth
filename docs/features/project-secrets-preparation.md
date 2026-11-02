@@ -11,7 +11,7 @@
 | Initial setup secret | Ещё32 random bytes, raw base64url; не равен project encryption key, не включает setup автоматически |
 | Signing key + kid | ES256/P-256, PKCS8 PRIVATE KEY PEM и random kid; JWT не включается и ключ/JWKS не публикуются |
 
-Генерация bootstrap-набора — crypto/rand/ecdsa/x509. Google/Telegram/SMTP credentials не выдумываются. Package `internal/platform/project/credentials` генерирует/проверяет encrypted payload и открывает ограниченный тип DatabaseCredential для доверенного provisioning reader. Plaintext не сериализуется в CLI response и не передаётся PostgreSQL. Для отдельной установки SCRAM password с разрешения пользователя добавлена xdg-go/scram v1.2.0; активация ещё впереди.
+Генерация bootstrap-набора — crypto/rand/ecdsa/x509. Google/Telegram/SMTP credentials не выдумываются. Package `internal/admin/projects/credentials` генерирует/проверяет encrypted payload и открывает ограниченный тип DatabaseCredential для доверенного provisioning reader. Plaintext не сериализуется в CLI response и не передаётся PostgreSQL. Для отдельной установки SCRAM password с разрешения пользователя добавлена xdg-go/scram v1.2.0; активация ещё впереди.
 
 ## Operational master key
 

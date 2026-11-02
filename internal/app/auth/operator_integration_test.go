@@ -12,11 +12,11 @@ import (
 
 	"github.com/pquerna/otp/totp"
 
+	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
+	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/admin/administrators/repository/postgres"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
-	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
-	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/platform/operator/repository/postgres"
 )
 
 func TestOperatorProfileSQLHTTPS(t *testing.T) {

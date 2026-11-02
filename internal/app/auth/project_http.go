@@ -7,11 +7,11 @@ import (
 
 	"go.uber.org/zap"
 
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
-	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/router"

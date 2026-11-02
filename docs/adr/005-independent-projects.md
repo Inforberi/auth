@@ -78,7 +78,7 @@ Platform management — отдельный доверенный сценарий
 | Key/payload isolation | После MP2.3-realm-scope: infra/realmscope + app/auth/realm_security.go → secretbox.NewScoped | Scoped AAD/HMAC включает kind/UUID/purpose/version; explicit Legacy сохраняет прежний context. Независимые project keys и controlled migration/cutover остаются необходимыми, автоматического re-encryption/fallback нет |
 | OIDC clients/письма/MFA | `internal/app/auth/{oidc,mfa,email_otp,smtp}.go` | Project credentials/cipher/URLs, context cancel и transport ownership; без fallback на соседа |
 | Background и shutdown | После MP2.3-runtime-split: run.go: realm.run/startBackground/runWithDelivery | Realm lifecycle без listener, server drain → worker cancel/join → clients cleanup; fair bounded fleet scheduling ещё впереди, outbox живёт и без HTTP traffic |
-| Схема | `migrations/000001_init.up.sql` | Существующие таблицы schema auth; каталог — отдельные миграции, project schema versions/grants отдельно |
+| Схема | `migrations/auth/000001_init.up.sql` | Существующие таблицы schema auth; каталог — отдельные миграции, project schema versions/grants отдельно |
 
 Это targeted source audit, не нагрузочная/SQL/fleet проверка. Redis session legacy files не подключать ради симметрии; сначала определить их реальных consumers при затронутом рефакторинге. В токен-лимитах есть literal `project` key и статические hash tags: tenant ID требуется в полном ключе/hash-tag контракте, а не только в digest client ID. Автоматическую Redis Cluster поддержку этим ADR не объявлять.
 

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/credentials"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/credentials"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type ProjectRuntimeConfig struct {

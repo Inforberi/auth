@@ -6,6 +6,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	oidcdomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
@@ -20,13 +22,11 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
-	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type ProjectOIDCDependencies struct {
 	Registry *projectruntime.Registry
-	Reader   *projectpostgres.RuntimeCredentialReader
+	Reader   *runtimepostgres.RuntimeCredentialReader
 	Redis    *redis.Client
 	Clients  *ProjectOIDCClients
 }

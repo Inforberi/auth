@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/url"
 
-	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
+	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/admission"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 )
 
 type PlatformConfig struct {

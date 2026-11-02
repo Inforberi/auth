@@ -7,9 +7,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
+	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/admin/administrators/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
-	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
-	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/platform/operator/repository/postgres"
 )
 
 func operatorCatalogWriteDrill(t *testing.T, admin, runtime *pgxpool.Pool, authority *operatorpostgres.Repository, h *operatorHTTPS, actor operatordomain.Principal, session *http.Cookie) {

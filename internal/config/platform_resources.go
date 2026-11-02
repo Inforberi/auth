@@ -3,7 +3,7 @@ package config
 import (
 	"errors"
 
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 )
 
 type PlatformResources struct {

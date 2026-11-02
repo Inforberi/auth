@@ -5,10 +5,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	tokensettings "github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 func (p *ProjectProfile) selectAssessmentPolicy(cfg ProjectProfileConfig) {

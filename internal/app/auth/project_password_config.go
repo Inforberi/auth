@@ -6,12 +6,12 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
-	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type ProjectPasswordConfig struct {
@@ -25,7 +25,7 @@ type ProjectPasswordConfig struct {
 
 type ProjectPasswordDependencies struct {
 	Registry *projectruntime.Registry
-	Reader   *projectpostgres.RuntimeCredentialReader
+	Reader   *runtimepostgres.RuntimeCredentialReader
 	Redis    *redis.Client
 	Hash     *hasher.Bounded
 }

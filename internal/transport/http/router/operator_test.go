@@ -6,11 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/admission"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
 )
 
 func TestOperatorHTTPAllowlist(t *testing.T) {

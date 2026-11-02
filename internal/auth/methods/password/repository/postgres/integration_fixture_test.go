@@ -49,7 +49,7 @@ func schemaFixtureDSN(t *testing.T, dsn string, timeout time.Duration) (*pgxpool
 
 func migrateFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, direction string) {
 	t.Helper()
-	path := filepath.Join("..", "..", "..", "..", "..", "..", "migrations", "000001_init."+direction+".sql")
+	path := filepath.Join("..", "..", "..", "..", "..", "..", "migrations", "auth", "000001_init."+direction+".sql")
 	sql, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)

@@ -7,9 +7,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 

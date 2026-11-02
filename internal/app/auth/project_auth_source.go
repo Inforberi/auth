@@ -5,10 +5,10 @@ import (
 	"slices"
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type compiledProjectDeployment struct {

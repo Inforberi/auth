@@ -12,6 +12,11 @@ import (
 	"go.uber.org/zap"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/admission"
+	directoryhttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/directory/transport/http"
+	policyhttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/policy/transport/http"
+	roleshttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/transport/http"
+	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	oidchttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/transport/http"
@@ -20,8 +25,6 @@ import (
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
-	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
@@ -103,9 +106,9 @@ func TestSwaggerMatchesPlatformRoutes(t *testing.T) {
 	h.Config.Password.ResetURL = h.Config.Platform.Origin + "/reset"
 	h.Projects = projecthttp.New(&operatorReadCatalog{}, zap.NewNop())
 	h.Config.Platform.Runtime = roleRouteRuntime()
-	h.ProjectRoles = projecthttp.NewRoles(&operatorRoles{}, zap.NewNop())
-	h.ProjectUsers = projecthttp.NewUsers(&operatorUsers{}, zap.NewNop())
-	h.ProjectAuthPolicy = projecthttp.NewAuthPolicy(&operatorPolicy{}, settingsdomain.PublicMethods{}, zap.NewNop())
+	h.ProjectRoles = roleshttp.NewRoles(&operatorRoles{}, zap.NewNop())
+	h.ProjectUsers = directoryhttp.NewUsers(&operatorUsers{}, zap.NewNop())
+	h.ProjectAuthPolicy = policyhttp.NewAuthPolicy(&operatorPolicy{}, settingsdomain.PublicMethods{}, zap.NewNop())
 	h.ProjectCapacity = func(next http.Handler) http.Handler { return next }
 	handler, err := NewOperator(h)
 	if err != nil {

@@ -9,27 +9,27 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsredis "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/redis"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type ProjectSMTPDependencies struct {
 	Registry *projectruntime.Registry
-	Reader   *projectpostgres.RuntimeCredentialReader
+	Reader   *runtimepostgres.RuntimeCredentialReader
 	Redis    *redis.Client
 }
 
 type projectSMTP struct {
 	key      projectruntime.Key
 	registry *projectruntime.Registry
-	reader   *projectpostgres.RuntimeCredentialReader
+	reader   *runtimepostgres.RuntimeCredentialReader
 	cipher   settingsservice.SMTPCipher
 	limits   settingsservice.SettingsLimiter
 	allowed  []string

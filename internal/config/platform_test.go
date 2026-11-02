@@ -3,7 +3,7 @@ package config
 import (
 	"testing"
 
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/admission"
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/admission"
 )
 
 func TestPlatformProfile(t *testing.T) {

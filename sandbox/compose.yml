@@ -10,7 +10,7 @@ services:
     environment:
       REDIS_PASSWORD: sandbox-redis-only
   migrate:
-    entrypoint: [migrate, '-path=/migrations', '-database=postgres://auth:sandbox-owner-only@postgres:5432/auth?sslmode=disable&search_path=public']
+    entrypoint: [migrate, '-path=/migrations/auth', '-database=postgres://auth:sandbox-owner-only@postgres:5432/auth?sslmode=disable&search_path=public']
   api:
     image: auth:sandbox
     build:

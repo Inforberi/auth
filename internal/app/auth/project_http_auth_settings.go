@@ -4,10 +4,10 @@ import (
 	"context"
 
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
 func (s *projectAuthSettings) ReadWithReadiness(ctx context.Context, actor accessservice.Principal) (settingshttp.SettingsResponse, error) {

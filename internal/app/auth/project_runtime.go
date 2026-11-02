@@ -11,17 +11,18 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Inforberi/financial-intelligence/internal/admin/projects/credentials"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
+	schemapostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/schema/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
-	"github.com/Inforberi/financial-intelligence/internal/platform/project/credentials"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type projectRuntime struct {
 	registry *projectruntime.Registry
-	reader   *projectpostgres.RuntimeCredentialReader
+	reader   *runtimepostgres.RuntimeCredentialReader
 	realm    projectdomain.ID
 }
 
@@ -59,14 +60,14 @@ func openProjectRuntime(ctx context.Context, cfg config.PlatformConfig, owned *r
 		return nil, errors.New("project runtime reader unavailable")
 	}
 	owned.add(private.Close)
-	reader, err := projectpostgres.NewRuntimeCredentialReader(private, projectdomain.ID(cfg.RealmID), codec)
+	reader, err := runtimepostgres.NewRuntimeCredentialReader(private, projectdomain.ID(cfg.RealmID), codec)
 	if err != nil {
 		return nil, err
 	}
 	if err := reader.CheckRuntime(ctx); err != nil {
 		return nil, err
 	}
-	registry, err := projectruntime.New(c.Registry(), map[string]projectruntime.Target{cfg.StorageTarget: target}, reader, projectpostgres.CheckRuntimeConnection)
+	registry, err := projectruntime.New(c.Registry(), map[string]projectruntime.Target{cfg.StorageTarget: target}, reader, schemapostgres.CheckRuntimeConnection)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +103,7 @@ func projectStorageTarget(c config.ProjectRuntimeConfig) (projectruntime.Target,
 	return projectruntime.NewTarget(c.StorageHost, c.StoragePort, transport)
 }
 
-func requireProjectCurrent(ctx context.Context, reader *projectpostgres.RuntimeCredentialReader, key projectruntime.Key) error {
+func requireProjectCurrent(ctx context.Context, reader *runtimepostgres.RuntimeCredentialReader, key projectruntime.Key) error {
 	current, err := reader.CurrentRuntimes(ctx, []projectruntime.Key{key})
 	if err != nil {
 		return err

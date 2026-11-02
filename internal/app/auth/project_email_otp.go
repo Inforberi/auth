@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	otpdomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/domain"
 	otppostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/repository/postgres"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
@@ -20,7 +21,6 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 type ProjectEmailOTPConfig struct {

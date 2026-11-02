@@ -9,6 +9,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	oidcdomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 	oidcservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
@@ -16,8 +18,6 @@ import (
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
-	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
 )
 
 func TestProjectOIDCDisabled(t *testing.T) {
@@ -47,7 +47,7 @@ func TestProjectOIDCConfigAndMFABinding(t *testing.T) {
 	t.Cleanup(owners.Close)
 	rdb := redis.NewClient(&redis.Options{Addr: "127.0.0.1:1", MaxRetries: -1})
 	t.Cleanup(func() { require.NoError(t, rdb.Close()) })
-	deps := ProjectOIDCDependencies{Registry: &projectruntime.Registry{}, Reader: &projectpostgres.RuntimeCredentialReader{}, Redis: rdb, Clients: owners}
+	deps := ProjectOIDCDependencies{Registry: &projectruntime.Registry{}, Reader: &runtimepostgres.RuntimeCredentialReader{}, Redis: rdb, Clients: owners}
 	session := sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, SessionRefreshThreshold: time.Minute, FreshAuthTTL: 5 * time.Minute, AdminIdleTimeout: 30 * time.Minute, AdminAbsoluteTTL: 12 * time.Hour, AdminActivityInterval: time.Minute}
 	mfa := mfaservice.Config{Enabled: true, Issuer: "Project OIDC", ChallengeTTL: time.Minute, UserLimitPerMinute: 100, IPLimitPerMinute: 100, GlobalLimitPerMinute: 100}
 	scope, err := realmscope.New("project", "a9500000-0000-4000-8000-000000000001")

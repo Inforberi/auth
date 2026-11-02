@@ -6,10 +6,10 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
 type ProjectSMTPSettingsConfig struct{ AllowedTargets []string }

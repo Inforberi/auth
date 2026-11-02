@@ -9,9 +9,9 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 )
 
 func emailMFADeploymentConfig(t *testing.T) *config.Config {

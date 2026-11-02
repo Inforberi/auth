@@ -15,7 +15,7 @@ go run ./cmd/project-prepare \
 
 UUID — пример. Повтор после потерянного ответа использует те же flags. Без `-schema` прежний `database_sealed` flow не меняется. Успех нового этапа возвращает `stage: schema_prepared`, `schemaVersion: 1`; это не readiness проекта.
 
-Bootstrap использует **те же SQL sources**, не копии: [initial Auth SQL](../../migrations/000001_init.up.sql) встроен через `migrations/auth.go`, [runtime grants](../../deploy/runtime-grants.sql) — через `deploy/runtime.go`. Рендерятся только generated database/runtime identifiers с `pgx.Identifier.Sanitize`; SQL/DSN/имена из HTTP не принимаются. Auth SQL не изменён, новых migration-файлов нет. Это bootstrap версии1, не общий migration runner для уже работающих проектов.
+Bootstrap использует **те же SQL sources**, не копии: [initial Auth SQL](../../migrations/auth/000001_init.up.sql) встроен через `migrations/auth.go`, [runtime grants](../../deploy/runtime-grants.sql) — через `deploy/runtime.go`. Рендерятся только generated database/runtime identifiers с `pgx.Identifier.Sanitize`; SQL/DSN/имена из HTTP не принимаются. Auth SQL не изменён, новых migration-файлов нет. Это bootstrap версии1, не общий migration runner для уже работающих проектов.
 
 Runtime SQL role — `authr_<32 hex project UUID>`, отдельно от владельца `autho_…`. До создания проверяется отсутствие совпадающей роли: существующая роль без matching project marker не принимается по имени. LOGIN, CONNECT и password не выдаются, пока нет защищённого хранения credentials и готовности следующего этапа. Пароль не генерируется «на потом» в открытом виде.
 

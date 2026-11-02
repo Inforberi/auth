@@ -5,10 +5,10 @@ import (
 	"errors"
 	"net/http"
 
+	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	telegrambot "github.com/Inforberi/financial-intelligence/internal/integrations/telegram/bot"
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/platform/project/runtime"
-	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 

@@ -11,6 +11,10 @@ import (
 	"go.uber.org/zap"
 
 	accesshttp "github.com/Inforberi/financial-intelligence/internal/access/transport/http"
+	directoryhttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/directory/transport/http"
+	policyhttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/policy/transport/http"
+	roleshttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/transport/http"
+	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
@@ -21,15 +25,14 @@ import (
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	projecthttp "github.com/Inforberi/financial-intelligence/internal/platform/project/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
 type Handlers struct {
-	ProjectRoles      *projecthttp.RoleHandler
-	ProjectUsers      *projecthttp.UserHandler
-	ProjectAuthPolicy *projecthttp.AuthPolicyHandler
+	ProjectRoles      *roleshttp.RoleHandler
+	ProjectUsers      *directoryhttp.UserHandler
+	ProjectAuthPolicy *policyhttp.AuthPolicyHandler
 	ProjectCapacity   func(http.Handler) http.Handler
 	Projects          *projecthttp.Handler
 	Introspection     *tokenhttp.IntrospectionHandler

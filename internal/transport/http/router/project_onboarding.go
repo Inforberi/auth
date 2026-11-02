@@ -8,9 +8,9 @@ import (
 
 	"go.uber.org/zap"
 
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )

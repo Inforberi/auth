@@ -9,10 +9,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	operatordomain "github.com/Inforberi/financial-intelligence/internal/platform/operator/domain"
-	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/platform/operator/repository/postgres"
-	projectdomain "github.com/Inforberi/financial-intelligence/internal/platform/project/domain"
-	projectpostgres "github.com/Inforberi/financial-intelligence/internal/platform/project/repository/postgres"
+	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
+	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/admin/administrators/repository/postgres"
+	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	projectpostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/repository/postgres"
 )
 
 func operatorMutationLocksDrill(t *testing.T, admin, runtime *pgxpool.Pool, authority *operatorpostgres.Repository, actor operatordomain.Principal) {
