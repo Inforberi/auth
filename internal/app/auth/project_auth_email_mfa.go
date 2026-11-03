@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfamanagement "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
@@ -18,7 +18,7 @@ func compileProjectEmailMFA(cfg *config.Config) (ProjectEmailMFAConfig, error) {
 	c := cfg.Platform.HTTP.EmailMFA
 	result := ProjectEmailMFAConfig{
 		Preparation: otpservice.EmailPreparationConfig{TTL: c.PreparationTTL, ResendInterval: c.PreparationResendInterval, RequestsPerMinute: c.PreparationRequestsPerProjectMinute, ConfirmationsPerMinute: c.PreparationConfirmsPerProjectMinute},
-		Factors:     mfaservice.EmailFactorConfig{UserMutationsPerMinute: c.UserChangesPerMinute, ProjectMutationsPerMinute: c.ProjectChangesPerMinute},
+		Factors:     mfamanagement.EmailFactorConfig{UserMutationsPerMinute: c.UserChangesPerMinute, ProjectMutationsPerMinute: c.ProjectChangesPerMinute},
 	}
 	if err := result.Validate(); err != nil {
 		return ProjectEmailMFAConfig{}, fmt.Errorf("%w: invalid PLATFORM_PROJECT_EMAIL_MFA preparation or change budgets", errProjectAuthManifest)

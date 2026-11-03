@@ -5,13 +5,13 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfatelegram "github.com/Inforberi/financial-intelligence/internal/auth/mfa/telegram/service"
 )
 
-func telegramFactorNotice(ctx context.Context, tx pgx.Tx, input service.FactorMutation, event string) error {
+func telegramFactorNotice(ctx context.Context, tx pgx.Tx, input mfatelegram.FactorMutation, event string) error {
 	if input.PrepareNotice == nil {
 		return domain.ErrUnavailable
 	}

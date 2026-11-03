@@ -5,21 +5,21 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
 type lockedLoginChallenge struct {
-	service.PrimaryProof
+	mfaservice.PrimaryProof
 	Digest             string
 	Profile            string
 	FactorMethod       domain.Method
 	FactorEmailID      string
-	Target             service.NativeTarget
+	Target             mfaservice.NativeTarget
 	EnrollmentRequired bool
 	ExpiresAt          time.Time
 }
@@ -58,7 +58,7 @@ func lockLoginChallengeProfile(ctx context.Context, tx pgx.Tx, digest, binding s
 	if err != nil {
 		return nil, err
 	}
-	proof := lockedLoginChallenge{PrimaryProof: service.PrimaryProof{UserID: user, AuthVersion: version, Administrative: administrative}, Digest: digest, Profile: profile}
+	proof := lockedLoginChallenge{PrimaryProof: mfaservice.PrimaryProof{UserID: user, AuthVersion: version, Administrative: administrative}, Digest: digest, Profile: profile}
 	err = tx.QueryRow(ctx, `SELECT primary_method,primary_reference,primary_issuer,primary_verified_at,enrollment_required,expires_at,provider_version,COALESCE(native_audience,''),native_scope,factor_method,COALESCE(factor_email_id::text,'')
 		FROM auth.mfa_login_challenges WHERE user_id=$1 AND digest=$2 AND binding_hash=$3 AND auth_version=$4
 		AND mfa_policy_revision=(SELECT session_revision FROM auth.mfa_settings WHERE singleton)

@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfamanagement "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
 const freshManagementPrimary = `(s.password_verified_at<=clock_timestamp()
@@ -21,8 +22,8 @@ const freshManagementPrimary = `(s.password_verified_at<=clock_timestamp()
 		AND EXISTS(SELECT 1 FROM auth.user_emails e WHERE e.user_id=$1
 			AND e.id=s.email_reauthenticated_id AND e.verified_at IS NOT NULL))`
 
-func (r *Repository) Status(ctx context.Context, proof service.Proof) (*service.SecurityStatus, error) {
-	var result service.SecurityStatus
+func (r *Repository) Status(ctx context.Context, proof mfaservice.Proof) (*mfamanagement.SecurityStatus, error) {
+	var result mfamanagement.SecurityStatus
 	err := r.db.QueryRow(ctx, `SELECT
 		EXISTS(SELECT 1 FROM auth.mfa_totp WHERE user_id=$1),auth.realm_requires_mfa($1,$5),auth.role_requires_mfa($1),
 		($5 OR auth.administrative_mfa_required($1)) AND (SELECT mode FROM auth.mfa_settings WHERE singleton)<>'optional',

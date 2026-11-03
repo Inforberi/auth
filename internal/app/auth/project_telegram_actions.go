@@ -5,14 +5,15 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfatelegram "github.com/Inforberi/financial-intelligence/internal/auth/mfa/telegram/service"
 	telegrambot "github.com/Inforberi/financial-intelligence/internal/integrations/telegram/bot"
 )
 
-func (p *projectTelegramMFA) Request(ctx context.Context, proof mfaservice.Proof, ip string) (*mfaservice.TelegramStarted, error) {
-	var result *mfaservice.TelegramStarted
+func (p *projectTelegramMFA) Request(ctx context.Context, proof mfaservice.Proof, ip string) (*mfatelegram.TelegramStarted, error) {
+	var result *mfatelegram.TelegramStarted
 	err := p.manager.use(ctx, func(ctx context.Context, pool *pgxpool.Pool) error {
 		preparation, credentials, err := p.preparation(ctx, pool)
 		if err != nil {
@@ -27,14 +28,14 @@ func (p *projectTelegramMFA) Request(ctx context.Context, proof mfaservice.Proof
 			return err
 		}
 		link, err := bot.StartURL(intent.Binding)
-		result = &mfaservice.TelegramStarted{Binding: intent.Binding, URL: link, ExpiresAt: intent.ExpiresAt}
+		result = &mfatelegram.TelegramStarted{Binding: intent.Binding, URL: link, ExpiresAt: intent.ExpiresAt}
 		return err
 	})
 	return result, err
 }
 
-func (p *projectTelegramMFA) Confirm(ctx context.Context, input mfaservice.ConfirmTelegramChannel) (*mfaservice.TelegramPrepared, error) {
-	var result *mfaservice.TelegramPrepared
+func (p *projectTelegramMFA) Confirm(ctx context.Context, input mfatelegram.ConfirmTelegramChannel) (*mfatelegram.TelegramPrepared, error) {
+	var result *mfatelegram.TelegramPrepared
 	err := p.manager.use(ctx, func(ctx context.Context, pool *pgxpool.Pool) error {
 		preparation, _, err := p.preparation(ctx, pool)
 		if err != nil {
@@ -59,8 +60,8 @@ func (p *projectTelegramMFA) change(ctx context.Context, proof mfaservice.Proof,
 	})
 }
 
-func (p *projectTelegramMFA) Status(ctx context.Context, proof mfaservice.Proof) (*mfadomain.TelegramFactor, error) {
-	var result *mfadomain.TelegramFactor
+func (p *projectTelegramMFA) Status(ctx context.Context, proof mfaservice.Proof) (*domain.TelegramFactor, error) {
+	var result *domain.TelegramFactor
 	err := p.manager.use(ctx, func(ctx context.Context, pool *pgxpool.Pool) error {
 		var err error
 		result, err = mfapostgres.New(pool).ReadTelegramFactor(ctx, proof)

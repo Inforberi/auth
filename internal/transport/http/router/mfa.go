@@ -1,6 +1,8 @@
 package router
 
-import "github.com/go-chi/chi/v5"
+import (
+	chi "github.com/go-chi/chi/v5"
+)
 
 func administrativeLoginRoutes(r chi.Router, h Handlers) {
 	if h.Config == nil || !h.Config.MFA.Enabled || h.PasswordHandler == nil || h.MFA == nil {
@@ -13,12 +15,14 @@ func mfaRoutes(r chi.Router, h Handlers) {
 	if h.MFA == nil || h.Config == nil || !h.Config.MFA.Enabled {
 		return
 	}
-	r.Post("/mfa/login/complete", h.MFA.CompleteLogin)
-	r.Post("/mfa/login/enrollment", h.MFA.StartLoginEnrollment)
-	r.Post("/mfa/login/enrollment/confirm", h.MFA.ConfirmLoginEnrollment)
-	if h.Config.MFA.RecoveryEnabled {
-		r.Post("/mfa/recovery/start", h.MFA.StartRecovery)
-		r.Post("/mfa/recovery/complete", h.MFA.CompleteRecovery)
+	if h.MFALogin != nil {
+		r.Post("/mfa/login/complete", h.MFALogin.CompleteLogin)
+		r.Post("/mfa/login/enrollment", h.MFALogin.StartLoginEnrollment)
+		r.Post("/mfa/login/enrollment/confirm", h.MFALogin.ConfirmLoginEnrollment)
+	}
+	if h.Config.MFA.RecoveryEnabled && h.MFARecovery != nil {
+		r.Post("/mfa/recovery/start", h.MFARecovery.StartRecovery)
+		r.Post("/mfa/recovery/complete", h.MFARecovery.CompleteRecovery)
 	}
 	owner := r.With(h.Middleware.NoRefreshAuth)
 	owner.Get("/mfa/status", h.MFA.ReadStatus)

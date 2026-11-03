@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
@@ -131,18 +131,18 @@ func httpIsolationTrace(prefix string, cipher *secretbox.Cipher, keys map[string
 	return func(path, rawCookie string, input any) {
 		var challenge string
 		switch v := input.(type) {
-		case mfahttp.LoginEnrollmentRequest:
+		case mfaloginhttp.LoginEnrollmentRequest:
 			challenge = v.Challenge
-		case mfahttp.ConfirmLoginEnrollmentRequest:
+		case mfaloginhttp.ConfirmLoginEnrollmentRequest:
 			challenge = v.Challenge
-		case mfahttp.CompleteLoginRequest:
+		case mfaloginhttp.CompleteLoginRequest:
 			challenge = v.Challenge
 		default:
 			return
 		}
 		r := &http.Request{Header: http.Header{"Cookie": []string{rawCookie}}}
 		binding := ""
-		if cookie, err := r.Cookie(mfahttp.LoginCookie); err == nil {
+		if cookie, err := r.Cookie(mfaloginhttp.LoginCookie); err == nil {
 			binding = cookie.Value
 		}
 		purpose := "enrollment"

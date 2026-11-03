@@ -13,7 +13,7 @@ import (
 	projectservice "github.com/Inforberi/financial-intelligence/internal/admin/projects/service"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
+	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
@@ -63,7 +63,7 @@ func TestOperatorCatalogRouteBoundary(t *testing.T) {
 	sessions, catalog := &operatorReadSession{}, &operatorReadCatalog{}
 	h := Handlers{
 		ProjectCapacity: func(next http.Handler) http.Handler { return next },
-		Config:          cfg, Projects: projecthttp.New(catalog, nil), PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfahttp.Handler{},
+		Config:          cfg, Projects: projecthttp.New(catalog, nil), PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfamanagementhttp.Handler{},
 		Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(sessions, nil), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
 	}
 	unguarded := h

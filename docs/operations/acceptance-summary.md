@@ -237,3 +237,21 @@ Luna приняла `/private/tmp/auth-r3-full-v7-j90m_67o` (base6429cde, manife
 Ранние ошибки переноса и fixture исправлены без ослабления гарантий, assertions и architecture rules. Собственные PostgreSQL/Redis ресурсы и validation copy удалены; рабочие БД и чужой sandbox не затронуты. Main подтвердил совпадение исходников со снимком, после приёмки обновлялись только Markdown статусы.
 
 Evidence: `/private/tmp/auth-r3-full-v7-results-summary.log`, `/private/tmp/auth-r3-full-v7-fixture-auth.log`; отдельные task-check/race/API/schema/preparation/isolation logs перечислены в summary. Полный backend SQL suite, live sandbox, внешние провайдеры и нагрузка этим блоком не проверялись. R2 live gate, R4–R8 и MP7/MP8 остаются открытыми. Следующий блок — R4 MFA, UI отдельно.
+
+## R4 MFA: приёмка — 3 ноября 2026
+
+R4 принят на неизменяемом `/private/tmp/auth-r4-mfa-v9-20mfgxxw`, base788940b, manifest566 без расхождений. Main сверил исходники со снимком; после него обновлялись только Markdown, включая правило обратной доставки результата. Новых dependencies/ENV/routes/workers/schema нет; шесть SQL migrations и generated API artifacts не менялись.
+
+Подтверждено Luna:
+
+- V7 `go test ./...` PASS. V8 source delta — только keyed Budget literals; pinned lint0 и affected race PASS. Принятые проверки не повторялись формально.
+- V9 targeted MFA/router Go tests и affected pinned lint0 PASS; `check:api` — PASS с побайтным совпадением docs.go/swagger.json/swagger.yaml. V8→V9 меняет только явные Go names четырёх HTTP-пакетов, test package names и Swagger refs/@name; публичные schema IDs сохранены.
+- SQL: четыре platform schema roots, TestInitialSetupServiceSQL, TestMFAProjectIsolationSQL, TestPrepareCommandSQL, TwoProject HTTP/AccessIsolation/MFARecoverySQL — actual PASS.
+- После main-аудита закрыты остальные27 согласованных roots:24 auth-schema (включая TestPostgresSchema и MFA policy/recovery/preferences/email/Telegram) и3 project email/Telegram MFA. У каждого actual RUN/PASS и exit0, root SKIP нет. Exit0 без выполненных tests не принимался.
+- Cleanup PASS: оба собственных disposable стенда удалены, включая containers/volumes/network/host PGDATA/copy/cache. Чужие Docker resources, реальные env/secrets/БД не затронуты; snapshot неизменён.
+
+Evidence: `/private/tmp/auth-r4-mfa-v9-results-summary.log`; V7 default tests `/private/tmp/auth-r4-mfa-v7-task-check.log`; V8 race `/private/tmp/auth-r4-mfa-v8-race.log`; V9 `-targeted-tests.log`, `-lint.log`, `-check-api.log`, `-schema-sql.log`, `-auth-crossfeature-sql.log`, `-mfa-isolation-sql.log`, `-prepare-sql.log`, `-two-project-sql.log`. Остальные27 roots — `/private/tmp/auth-r4-v9-remain-auth-roots/root-results.json` с per-root logs/exits и `/private/tmp/auth-r4-v9-remain-project-sql.log`/`.exit`; ожидаемый список `/private/tmp/auth-r4-v9-required-sql-roots.json`.
+
+Ранние import/namespace/fixture/govet/Swagger diagnostics исправлены без ослабления assertions и policy guards. Первоначальный общий SQL PASS не принят main: в evidence отсутствовали27 roots; полный gate закрыт только после их выполнения. Docker VM disk был заполнен при свободных104GiB host: стенды использовали отдельный0700 host bind PGDATA, PG18.6 TLS/SCRAM и isolated no-persistence Redis. Настройки Desktop и чужие кеши не менялись; этот correctness fixture не является evidence производительности.
+
+R4 завершён. R2 live readiness/TestPrepareJWT, внешний ingress/providers/SMTP и MP7/MP8 capacity/GC остаются отдельными gates. Следующий блок — R5 account/методы входа, UI не начинать без согласования.

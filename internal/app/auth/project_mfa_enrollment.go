@@ -3,12 +3,13 @@ package auth
 import (
 	"context"
 
+	mfamanagement "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
 func (p *projectMFA) StartEnrollment(ctx context.Context, proof mfaservice.Proof) (*mfaservice.Enrollment, error) {
 	var result *mfaservice.Enrollment
-	err := p.withManagement(ctx, func(ctx context.Context, service *mfaservice.Service) error {
+	err := p.withManagement(ctx, func(ctx context.Context, service *mfamanagement.Service) error {
 		var err error
 		result, err = service.StartEnrollment(ctx, proof)
 		return err
@@ -19,9 +20,9 @@ func (p *projectMFA) StartEnrollment(ctx context.Context, proof mfaservice.Proof
 	return result, nil
 }
 
-func (p *projectMFA) ConfirmEnrollment(ctx context.Context, input mfaservice.ConfirmInput) (*mfaservice.RecoveryCodes, error) {
+func (p *projectMFA) ConfirmEnrollment(ctx context.Context, input mfamanagement.ConfirmInput) (*mfaservice.RecoveryCodes, error) {
 	var result *mfaservice.RecoveryCodes
-	err := p.withManagement(ctx, func(ctx context.Context, service *mfaservice.Service) error {
+	err := p.withManagement(ctx, func(ctx context.Context, service *mfamanagement.Service) error {
 		var err error
 		result, err = service.ConfirmEnrollment(ctx, input)
 		return err
@@ -34,7 +35,7 @@ func (p *projectMFA) ConfirmEnrollment(ctx context.Context, input mfaservice.Con
 
 func (p *projectMFA) StartReplacement(ctx context.Context, proof mfaservice.Proof) (*mfaservice.Enrollment, error) {
 	var result *mfaservice.Enrollment
-	err := p.withManagement(ctx, func(ctx context.Context, service *mfaservice.Service) error {
+	err := p.withManagement(ctx, func(ctx context.Context, service *mfamanagement.Service) error {
 		var err error
 		result, err = service.StartReplacement(ctx, proof)
 		return err
@@ -45,9 +46,9 @@ func (p *projectMFA) StartReplacement(ctx context.Context, proof mfaservice.Proo
 	return result, nil
 }
 
-func (p *projectMFA) ConfirmReplacement(ctx context.Context, input mfaservice.ConfirmInput) (*mfaservice.RecoveryCodes, error) {
+func (p *projectMFA) ConfirmReplacement(ctx context.Context, input mfamanagement.ConfirmInput) (*mfaservice.RecoveryCodes, error) {
 	var result *mfaservice.RecoveryCodes
-	err := p.withManagement(ctx, func(ctx context.Context, service *mfaservice.Service) error {
+	err := p.withManagement(ctx, func(ctx context.Context, service *mfamanagement.Service) error {
 		var err error
 		result, err = service.ConfirmReplacement(ctx, input)
 		return err

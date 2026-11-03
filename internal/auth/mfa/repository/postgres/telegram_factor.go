@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func (r *Repository) ReadTelegramFactor(ctx context.Context, proof service.Proof) (*domain.TelegramFactor, error) {
+func (r *Repository) ReadTelegramFactor(ctx context.Context, proof mfaservice.Proof) (*domain.TelegramFactor, error) {
 	var result domain.TelegramFactor
 	err := r.db.QueryRow(ctx, `SELECT p.telegram_factor_allowed,f.user_id IS NOT NULL,
  COALESCE(f.bot_id,0),COALESCE(f.telegram_user_id,0),f.enabled_at

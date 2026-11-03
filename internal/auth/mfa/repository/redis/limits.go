@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	redis "github.com/redis/go-redis/v9"
 
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/redislimit"
 )
@@ -38,7 +38,7 @@ func (l *Limiter) Allow(ctx context.Context, key string, count int, window time.
 	return err == nil && current <= int64(count), err
 }
 
-func (l *Limiter) AllowAll(ctx context.Context, budgets []service.Budget) (bool, error) {
+func (l *Limiter) AllowAll(ctx context.Context, budgets []mfaservice.Budget) (bool, error) {
 	if len(budgets) == 0 || len(budgets) > 3 {
 		return false, errors.New("invalid admission budgets")
 	}

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-chi/chi/v5"
+	chi "github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/require"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
@@ -24,7 +24,7 @@ import (
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
+	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/config"
@@ -113,7 +113,7 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 	users := &operatorUsers{}
 	policy := &operatorPolicy{}
 	h := Handlers{
-		Config: cfg, Projects: projecthttp.New(&operatorReadCatalog{}, nil), ProjectRoles: roleshttp.NewRoles(roles, nil), ProjectUsers: directoryhttp.NewUsers(users, nil), ProjectAuthPolicy: policyhttp.NewAuthPolicy(policy, settingsdomain.PublicMethods{}, nil), PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfahttp.Handler{}, Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(&operatorReadSession{}, nil), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
+		Config: cfg, Projects: projecthttp.New(&operatorReadCatalog{}, nil), ProjectRoles: roleshttp.NewRoles(roles, nil), ProjectUsers: directoryhttp.NewUsers(users, nil), ProjectAuthPolicy: policyhttp.NewAuthPolicy(policy, settingsdomain.PublicMethods{}, nil), PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfamanagementhttp.Handler{}, Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(&operatorReadSession{}, nil), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
 		ProjectCapacity: func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				capacityCalls++

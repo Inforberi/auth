@@ -11,14 +11,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/redis/go-redis/v9"
+	pgx "github.com/jackc/pgx/v5"
+	redis "github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
@@ -133,12 +135,12 @@ DELETE FROM auth.auth_settings; INSERT INTO auth.auth_settings SELECT * FROM mfa
 			return cookieValue(cookies)
 		}
 		require.Equal(t, 202, code)
-		var challenge mfahttp.ChallengeResponse
+		var challenge mfaloginhttp.ChallengeResponse
 		require.NoError(t, json.Unmarshal(data, &challenge))
 		require.NotEmpty(t, challenge.Challenge)
 		binding := ""
 		for _, cookie := range cookies {
-			if cookie.Name == mfahttp.LoginCookie {
+			if cookie.Name == mfaloginhttp.LoginCookie {
 				require.True(t, cookie.HttpOnly && cookie.Secure)
 				require.Empty(t, cookie.Domain)
 				require.Equal(t, "/", cookie.Path)
@@ -147,21 +149,21 @@ DELETE FROM auth.auth_settings; INSERT INTO auth.auth_settings SELECT * FROM mfa
 		}
 		require.Len(t, binding, 43)
 		keys = append(keys, prefix+"login:complete:subject:"+cipher.Digest(challenge.Challenge+":"+binding))
-		payload, err := json.Marshal(mfahttp.CompleteLoginRequest{Challenge: challenge.Challenge, Code: secondFactor, Recovery: recovery})
+		payload, err := json.Marshal(mfaloginhttp.CompleteLoginRequest{Challenge: challenge.Challenge, Code: secondFactor, Recovery: recovery})
 		require.NoError(t, err)
-		code, _, cookies = request("POST", "/mfa/login/complete", origin, mfahttp.LoginCookie+"="+binding, string(payload))
+		code, _, cookies = request("POST", "/mfa/login/complete", origin, mfaloginhttp.LoginCookie+"="+binding, string(payload))
 		require.Equal(t, 200, code)
 		// Ordinary MFA login does not grant the separate sensitive-operation password proof.
 		code, _, cookies = request("POST", "/reauthenticate/password", origin, cookieValue(cookies), `{"password":"`+input.Password+`"}`)
 		require.Equal(t, 200, code)
 		return cookieValue(cookies)
 	}
-	status := func(cookie string) mfahttp.SecurityStatusResponse {
+	status := func(cookie string) mfamanagementhttp.SecurityStatusResponse {
 		t.Helper()
 		code, data, cookies := request("GET", "/mfa/status", "", cookie, "")
 		require.Equal(t, 200, code)
 		require.Empty(t, cookies, "status must not extend the session")
-		var result mfahttp.SecurityStatusResponse
+		var result mfamanagementhttp.SecurityStatusResponse
 		require.NoError(t, json.Unmarshal(data, &result))
 		return result
 	}
@@ -204,7 +206,7 @@ DELETE FROM auth.auth_settings; INSERT INTO auth.auth_settings SELECT * FROM mfa
 	previous := current
 	code, data, cookies := request("POST", "/mfa/step-up", origin, current, `{"code":"`+recovery[1]+`","recovery":true}`)
 	require.Equal(t, 200, code)
-	var stepped mfahttp.StepUpResponse
+	var stepped mfamanagementhttp.StepUpResponse
 	require.NoError(t, json.Unmarshal(data, &stepped))
 	require.False(t, stepped.VerifiedAt.IsZero())
 	current = cookieValue(cookies)

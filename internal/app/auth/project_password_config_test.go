@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	redis "github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
@@ -13,6 +13,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 )
@@ -47,13 +48,13 @@ func TestProjectPasswordConfiguration(t *testing.T) {
 
 func TestProjectMFADisabledFailsClosed(t *testing.T) {
 	runtime := &ProjectPassword{}
-	session, err := runtime.CompleteMFA(context.Background(), mfaservice.CompleteLoginInput{})
+	session, err := runtime.CompleteMFA(context.Background(), mfalogin.CompleteLoginInput{})
 	require.ErrorIs(t, err, mfadomain.ErrUnavailable)
 	require.Nil(t, session)
-	enrollment, err := runtime.StartMFAEnrollment(context.Background(), mfaservice.LoginEnrollmentInput{})
+	enrollment, err := runtime.StartMFAEnrollment(context.Background(), mfalogin.LoginEnrollmentInput{})
 	require.ErrorIs(t, err, mfadomain.ErrUnavailable)
 	require.Nil(t, enrollment)
-	codes, err := runtime.ConfirmMFAEnrollment(context.Background(), mfaservice.ConfirmLoginEnrollmentInput{})
+	codes, err := runtime.ConfirmMFAEnrollment(context.Background(), mfalogin.ConfirmLoginEnrollmentInput{})
 	require.ErrorIs(t, err, mfadomain.ErrUnavailable)
 	require.Nil(t, codes)
 }

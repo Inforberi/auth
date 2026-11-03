@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 	"github.com/pquerna/otp/totp"
-	"github.com/redis/go-redis/v9"
+	redis "github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
@@ -16,6 +16,7 @@ import (
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
@@ -71,7 +72,7 @@ func projectMFADrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key p
 		require.NoError(t, db.QueryRow(ctx, `SELECT count(*) FROM auth.sessions WHERE user_id=$1`, passwordFixtureUser).Scan(&n))
 		return n
 	}
-	start := func() *mfaservice.LoginChallenge {
+	start := func() *mfalogin.LoginChallenge {
 		before := countSessions()
 		result, err := svc.Login(ctx, input)
 		require.NoError(t, err)
@@ -80,9 +81,9 @@ func projectMFADrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key p
 		require.Equal(t, before, countSessions())
 		return result.Challenge
 	}
-	complete := func(challenge *mfaservice.LoginChallenge, code string, recovery bool) (*mfaservice.LoginSession, error) {
+	complete := func(challenge *mfalogin.LoginChallenge, code string, recovery bool) (*mfalogin.LoginSession, error) {
 		track("complete", challenge.Token, challenge.Binding)
-		return svc.CompleteMFA(ctx, mfaservice.CompleteLoginInput{Token: challenge.Token, Binding: challenge.Binding, Code: code, Recovery: recovery, UserAgent: input.UserAgent, IP: input.IP})
+		return svc.CompleteMFA(ctx, mfalogin.CompleteLoginInput{Token: challenge.Token, Binding: challenge.Binding, Code: code, Recovery: recovery, UserAgent: input.UserAgent, IP: input.IP})
 	}
 	codeAt := func(secret string, offset time.Duration) string {
 		return projectMFACode(t, ctx, db, secret, offset)
@@ -94,13 +95,13 @@ func projectMFADrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key p
 	require.ErrorIs(t, err, mfadomain.ErrInvalidCode)
 	require.Nil(t, result)
 	require.Equal(t, before, countSessions())
-	enrollmentInput := mfaservice.LoginEnrollmentInput{Challenge: restricted.Token, Binding: restricted.Binding, IP: input.IP}
+	enrollmentInput := mfalogin.LoginEnrollmentInput{Challenge: restricted.Token, Binding: restricted.Binding, IP: input.IP}
 	track("enrollment", restricted.Token, restricted.Binding)
 	enrollment, err := svc.StartMFAEnrollment(ctx, enrollmentInput)
 	require.NoError(t, err)
 	require.NotEmpty(t, enrollment.Secret)
 	require.NotEmpty(t, enrollment.URI)
-	codes, err := svc.ConfirmMFAEnrollment(ctx, mfaservice.ConfirmLoginEnrollmentInput{LoginEnrollmentInput: enrollmentInput, Token: enrollment.Token, Code: codeAt(enrollment.Secret, 0)})
+	codes, err := svc.ConfirmMFAEnrollment(ctx, mfalogin.ConfirmLoginEnrollmentInput{LoginEnrollmentInput: enrollmentInput, Token: enrollment.Token, Code: codeAt(enrollment.Secret, 0)})
 	require.NoError(t, err)
 	require.Len(t, codes.Codes, 10)
 	require.Equal(t, before, countSessions(), "enrollment never creates a normal session")

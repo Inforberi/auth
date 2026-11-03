@@ -8,6 +8,7 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
@@ -65,14 +66,14 @@ func (s projectNativeEmailHTTP) Confirm(ctx context.Context, input otpservice.Co
 
 type projectNativeMFAHTTP struct{ *ProjectTokens }
 
-func (s projectNativeMFAHTTP) Complete(ctx context.Context, input mfaservice.CompleteLoginInput) (*tokenservice.RefreshResult, error) {
+func (s projectNativeMFAHTTP) Complete(ctx context.Context, input mfalogin.CompleteLoginInput) (*tokenservice.RefreshResult, error) {
 	return s.CompleteNativeMFA(ctx, input)
 }
 
-func (s projectNativeMFAHTTP) StartNativeRequiredEnrollment(ctx context.Context, input mfaservice.LoginEnrollmentInput) (*mfaservice.Enrollment, error) {
+func (s projectNativeMFAHTTP) StartNativeRequiredEnrollment(ctx context.Context, input mfalogin.LoginEnrollmentInput) (*mfaservice.Enrollment, error) {
 	return s.StartNativeEnrollment(ctx, input)
 }
 
-func (s projectNativeMFAHTTP) ConfirmNativeRequiredEnrollment(ctx context.Context, input mfaservice.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error) {
+func (s projectNativeMFAHTTP) ConfirmNativeRequiredEnrollment(ctx context.Context, input mfalogin.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error) {
 	return s.ConfirmNativeEnrollment(ctx, input)
 }

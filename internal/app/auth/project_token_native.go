@@ -11,7 +11,7 @@ import (
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/redis"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
@@ -69,7 +69,7 @@ func newProjectNative(ctx context.Context, key projectruntime.Key, scope realmsc
 	return native, nil
 }
 
-func (p *ProjectTokens) nativeLogin(pool *pgxpool.Pool, service *tokenservice.Service) (*tokenservice.NativeLogin, *mfaservice.Login, error) {
+func (p *ProjectTokens) nativeLogin(pool *pgxpool.Pool, service *tokenservice.Service) (*tokenservice.NativeLogin, *mfalogin.Login, error) {
 	mfa, err := p.native.mfa.newLogin(pool)
 	if err != nil {
 		return nil, nil, err

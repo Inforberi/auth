@@ -20,7 +20,9 @@ import (
 	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
+	mfarecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
@@ -49,7 +51,9 @@ type Handlers struct {
 	RetentionSettings *settingshttp.RetentionHandler
 	MFASettings       *settingshttp.MFAHandler
 	Setup             *accounthttp.SetupHandler
-	MFA               *mfahttp.Handler
+	MFA               *mfamanagementhttp.Handler
+	MFALogin          *mfaloginhttp.Handler
+	MFARecovery       *mfarecoveryhttp.Handler
 	Session           *sessionhttp.Handler
 	Activity          *sessionhttp.ActivityHandler
 	Rotation          *sessionhttp.RotationHandler

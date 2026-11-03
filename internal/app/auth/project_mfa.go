@@ -9,6 +9,7 @@ import (
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
@@ -21,9 +22,9 @@ type projectMFA struct {
 	emailProof bool
 }
 
-func (p *projectMFA) CompleteMFA(ctx context.Context, input mfaservice.CompleteLoginInput) (*mfaservice.LoginSession, error) {
-	var result *mfaservice.LoginSession
-	err := p.withMFA(ctx, func(ctx context.Context, login *mfaservice.Login) error {
+func (p *projectMFA) CompleteMFA(ctx context.Context, input mfalogin.CompleteLoginInput) (*mfalogin.LoginSession, error) {
+	var result *mfalogin.LoginSession
+	err := p.withMFA(ctx, func(ctx context.Context, login *mfalogin.Login) error {
 		var err error
 		result, err = login.Complete(ctx, input)
 		return err
@@ -34,9 +35,9 @@ func (p *projectMFA) CompleteMFA(ctx context.Context, input mfaservice.CompleteL
 	return result, nil
 }
 
-func (p *projectMFA) StartMFAEnrollment(ctx context.Context, input mfaservice.LoginEnrollmentInput) (*mfaservice.Enrollment, error) {
+func (p *projectMFA) StartMFAEnrollment(ctx context.Context, input mfalogin.LoginEnrollmentInput) (*mfaservice.Enrollment, error) {
 	var result *mfaservice.Enrollment
-	err := p.withMFA(ctx, func(ctx context.Context, login *mfaservice.Login) error {
+	err := p.withMFA(ctx, func(ctx context.Context, login *mfalogin.Login) error {
 		var err error
 		result, err = login.StartRequiredEnrollment(ctx, input)
 		return err
@@ -47,9 +48,9 @@ func (p *projectMFA) StartMFAEnrollment(ctx context.Context, input mfaservice.Lo
 	return result, nil
 }
 
-func (p *projectMFA) ConfirmMFAEnrollment(ctx context.Context, input mfaservice.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error) {
+func (p *projectMFA) ConfirmMFAEnrollment(ctx context.Context, input mfalogin.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error) {
 	var result *mfaservice.RecoveryCodes
-	err := p.withMFA(ctx, func(ctx context.Context, login *mfaservice.Login) error {
+	err := p.withMFA(ctx, func(ctx context.Context, login *mfalogin.Login) error {
 		var err error
 		result, err = login.ConfirmRequiredEnrollment(ctx, input)
 		return err
@@ -60,7 +61,7 @@ func (p *projectMFA) ConfirmMFAEnrollment(ctx context.Context, input mfaservice.
 	return result, nil
 }
 
-func (p *projectMFA) withMFA(ctx context.Context, use func(context.Context, *mfaservice.Login) error) error {
+func (p *projectMFA) withMFA(ctx context.Context, use func(context.Context, *mfalogin.Login) error) error {
 	return p.use(ctx, func(ctx context.Context, pool *pgxpool.Pool) error {
 		login, err := p.factory.newLogin(pool)
 		if err != nil {

@@ -3,14 +3,14 @@ package postgres
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
 // First TOTP enrollment cannot bypass an already enrolled second factor.
-func requireConfiguredFactorEnrollmentProof(ctx context.Context, tx pgx.Tx, proof service.Proof) error {
+func requireConfiguredFactorEnrollmentProof(ctx context.Context, tx pgx.Tx, proof mfaservice.Proof) error {
 	var fresh bool
 	err := tx.QueryRow(ctx, `SELECT NOT (EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1)
  OR EXISTS(SELECT 1 FROM auth.mfa_telegram WHERE user_id=$1))

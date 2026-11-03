@@ -7,6 +7,7 @@ import (
 
 	otppostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/repository/postgres"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	mfamanagement "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/service"
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
@@ -14,7 +15,7 @@ import (
 
 type ProjectEmailMFAConfig struct {
 	Preparation otpservice.EmailPreparationConfig
-	Factors     mfaservice.EmailFactorConfig
+	Factors     mfamanagement.EmailFactorConfig
 }
 
 func (c ProjectEmailMFAConfig) Validate() error {
@@ -34,9 +35,9 @@ func (p *projectEmailMFA) preparation(pool *pgxpool.Pool) (*otpservice.EmailPrep
 	return otpservice.NewEmailPreparation(otppostgres.New(pool), p.mail.otpCipher, p.mail.resetLimits, tokengenerate.New(), p.cfg.Preparation)
 }
 
-func (p *projectEmailMFA) factors(pool *pgxpool.Pool) (*mfaservice.EmailFactors, error) {
+func (p *projectEmailMFA) factors(pool *pgxpool.Pool) (*mfamanagement.EmailFactors, error) {
 	factory := p.mfa.factory
-	return mfaservice.NewConfiguredEmailFactors(mfapostgres.New(pool), factory.cipher, factory.limits, p.cfg.Factors)
+	return mfamanagement.NewConfiguredEmailFactors(mfapostgres.New(pool), factory.cipher, factory.limits, p.cfg.Factors)
 }
 
 func (p *projectEmailMFA) login(pool *pgxpool.Pool) (*otpservice.EmailLogin, error) {

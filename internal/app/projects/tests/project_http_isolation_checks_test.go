@@ -7,10 +7,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 )
 
@@ -68,11 +69,11 @@ func checkProjectHTTPIsolation(t *testing.T, ctx context.Context, admin *pgx.Con
 	require.Equal(t, 200, b.call(t, ctx, "GET", mePath, "", cookieB, nil).status)
 	limited := a.call(t, ctx, "POST", loginPath, a.origin, "", login)
 	require.Equal(t, 202, limited.status, "%s", limited.body)
-	var challenge mfahttp.ChallengeResponse
+	var challenge mfaloginhttp.ChallengeResponse
 	require.NoError(t, json.Unmarshal(limited.body, &challenge))
 	require.Equal(t, "mfa_enrollment_required", challenge.Status)
-	binding := limited.cookie(t, mfahttp.LoginCookie)
-	start := mfahttp.LoginEnrollmentRequest{Challenge: challenge.Challenge}
+	binding := limited.cookie(t, mfaloginhttp.LoginCookie)
+	start := mfaloginhttp.LoginEnrollmentRequest{Challenge: challenge.Challenge}
 	require.Equal(t, 401, b.call(t, ctx, "GET", mePath, "", binding, nil).status)
 	require.Equal(t, 400, b.call(t, ctx, "POST", enrollPath, b.origin, binding, start).status)
 	require.Equal(t, 403, a.call(t, ctx, "POST", enrollPath, b.origin, binding, start).status)
@@ -81,7 +82,7 @@ func checkProjectHTTPIsolation(t *testing.T, ctx context.Context, admin *pgx.Con
 	require.Equal(t, 200, enrolled.status, "%s", enrolled.body)
 	var enrollment mfahttp.EnrollmentResponse
 	require.NoError(t, json.Unmarshal(enrolled.body, &enrollment))
-	confirmation := mfahttp.ConfirmLoginEnrollmentRequest{Challenge: challenge.Challenge, Token: enrollment.Token, Code: projectMFACode(t, ctx, databases[0], enrollment.Secret, 0)}
+	confirmation := mfaloginhttp.ConfirmLoginEnrollmentRequest{Challenge: challenge.Challenge, Token: enrollment.Token, Code: projectMFACode(t, ctx, databases[0], enrollment.Secret, 0)}
 	require.Equal(t, 400, b.call(t, ctx, "POST", confirmPath, b.origin, binding, confirmation).status)
 	confirmed := a.call(t, ctx, "POST", confirmPath, a.origin, binding, confirmation)
 	require.Equal(t, 200, confirmed.status, "%s", confirmed.body)
@@ -94,8 +95,8 @@ func checkProjectHTTPIsolation(t *testing.T, ctx context.Context, admin *pgx.Con
 	limited = a.call(t, ctx, "POST", loginPath, a.origin, "", login)
 	require.Equal(t, 202, limited.status)
 	require.NoError(t, json.Unmarshal(limited.body, &challenge))
-	binding = limited.cookie(t, mfahttp.LoginCookie)
-	completion := mfahttp.CompleteLoginRequest{Challenge: challenge.Challenge, Code: codes.Codes[0], Recovery: true}
+	binding = limited.cookie(t, mfaloginhttp.LoginCookie)
+	completion := mfaloginhttp.CompleteLoginRequest{Challenge: challenge.Challenge, Code: codes.Codes[0], Recovery: true}
 	require.Equal(t, 400, b.call(t, ctx, "POST", completePath, b.origin, binding, completion).status)
 	completed := a.call(t, ctx, "POST", completePath, a.origin, binding, completion)
 	require.Equal(t, 200, completed.status, "%s", completed.body)
@@ -106,7 +107,7 @@ func checkProjectHTTPIsolation(t *testing.T, ctx context.Context, admin *pgx.Con
 	limited = a.call(t, ctx, "POST", loginPath, a.origin, "", login)
 	require.Equal(t, 202, limited.status)
 	require.NoError(t, json.Unmarshal(limited.body, &challenge))
-	binding = limited.cookie(t, mfahttp.LoginCookie)
+	binding = limited.cookie(t, mfaloginhttp.LoginCookie)
 	completion.Challenge, completion.Code = challenge.Challenge, codes.Codes[1]
 	t.Cleanup(func() {
 		_, err := admin.Exec(context.WithoutCancel(ctx), `UPDATE platform.projects SET desired_state='enabled' WHERE id=$1`, key.Binding.ProjectID)

@@ -12,19 +12,22 @@ import (
 	"go.uber.org/zap"
 
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
+	mfarecovery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/service"
+	mfarecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 )
 
 type contractMFARecovery struct {
 	calls    int
 	err      error
-	start    mfaservice.StartRecoveryInput
-	complete mfaservice.CompleteRecoveryInput
+	start    mfarecovery.StartRecoveryInput
+	complete mfarecovery.CompleteRecoveryInput
 }
 
-func (s *contractMFARecovery) Start(_ context.Context, input mfaservice.StartRecoveryInput) (*mfaservice.RecoveryCandidate, error) {
+func (s *contractMFARecovery) Start(_ context.Context, input mfarecovery.StartRecoveryInput) (*mfarecovery.RecoveryCandidate, error) {
 	s.calls++
 	s.start = input
 	if s.err != nil {
@@ -33,10 +36,10 @@ func (s *contractMFARecovery) Start(_ context.Context, input mfaservice.StartRec
 	if input.Binding != mfaBrowser {
 		return nil, mfadomain.ErrInvalidCode
 	}
-	return &mfaservice.RecoveryCandidate{RequestID: "22222222-2222-4222-8222-222222222222", Secret: "new-candidate-secret", URI: "otpauth://totp/recovery", ExpiresAt: time.Now().Add(time.Minute)}, nil
+	return &mfarecovery.RecoveryCandidate{RequestID: "22222222-2222-4222-8222-222222222222", Secret: "new-candidate-secret", URI: "otpauth://totp/recovery", ExpiresAt: time.Now().Add(time.Minute)}, nil
 }
 
-func (s *contractMFARecovery) Complete(_ context.Context, input mfaservice.CompleteRecoveryInput) (*mfaservice.RecoveryCodes, error) {
+func (s *contractMFARecovery) Complete(_ context.Context, input mfarecovery.CompleteRecoveryInput) (*mfaservice.RecoveryCodes, error) {
 	s.calls++
 	s.complete = input
 	if s.err != nil {
@@ -54,7 +57,9 @@ func TestMFARecoveryHTTPContract(t *testing.T) {
 			t.Run(action+"-"+mode, func(t *testing.T) {
 				stub := &contractMFARecovery{}
 				h := contractHandlers("prod")
-				h.MFA = mfahttp.NewWithRecovery(&contractMFA{}, &contractMFA{}, stub, zap.NewNop())
+				h.MFA = mfamanagementhttp.New(&contractMFA{}, zap.NewNop())
+				h.MFALogin = mfaloginhttp.New(&contractMFA{}, zap.NewNop())
+				h.MFARecovery = mfarecoveryhttp.New(stub, zap.NewNop())
 				body := `{"challenge":"primary-challenge"}`
 				if action == "complete" {
 					body = `{"requestId":"22222222-2222-4222-8222-222222222222","challenge":"primary-challenge","code":"123456"}`
@@ -76,7 +81,9 @@ func TestMFARecoveryHTTPContract(t *testing.T) {
 					h.Config.MFA.Enabled = false
 					want, call = 404, false
 				case "nil-service":
-					h.MFA = mfahttp.New(&contractMFA{}, &contractMFA{}, zap.NewNop())
+					h.MFA = mfamanagementhttp.New(&contractMFA{}, zap.NewNop())
+					h.MFALogin = mfaloginhttp.New(&contractMFA{}, zap.NewNop())
+					h.MFARecovery = mfarecoveryhttp.New(nil, zap.NewNop())
 					want, call = 503, false
 				case "unknown-field":
 					body = strings.TrimSuffix(body, "}") + `,"approved":true}`
@@ -105,10 +112,10 @@ func TestMFARecoveryHTTPContract(t *testing.T) {
 					if mode == "foreign-cookie" {
 						binding = "foreign"
 					}
-					r.AddCookie(&http.Cookie{Name: mfahttp.LoginCookie, Value: binding})
+					r.AddCookie(&http.Cookie{Name: mfaloginhttp.LoginCookie, Value: binding})
 				}
 				if mode == "duplicate-cookie" {
-					r.AddCookie(&http.Cookie{Name: mfahttp.LoginCookie, Value: mfaBrowser})
+					r.AddCookie(&http.Cookie{Name: mfaloginhttp.LoginCookie, Value: mfaBrowser})
 				}
 				w := httptest.NewRecorder()
 				New(h).ServeHTTP(w, r)
@@ -132,7 +139,7 @@ func TestMFARecoveryHTTPContract(t *testing.T) {
 							t.Fatal("cookies not cleared", cookies)
 						}
 						for _, cookie := range cookies {
-							if (cookie.Name != mfahttp.LoginCookie && cookie.Name != sessionhttp.SessionCookieName) || cookie.MaxAge != -1 || !cookie.Secure || !cookie.HttpOnly || cookie.Path != "/" {
+							if (cookie.Name != mfaloginhttp.LoginCookie && cookie.Name != sessionhttp.SessionCookieName) || cookie.MaxAge != -1 || !cookie.Secure || !cookie.HttpOnly || cookie.Path != "/" {
 								t.Fatal("recovery issued a session", cookie)
 							}
 						}

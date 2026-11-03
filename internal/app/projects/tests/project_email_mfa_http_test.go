@@ -10,7 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
@@ -40,10 +41,10 @@ func TestTwoProjectEmailMFAHTTP(t *testing.T) {
 	require.Equal(t, 403, response.status)
 	response = web.call(t, ctx, "POST", prepare, web.origin, user, map[string]string{"email": httpIsolationEmail})
 	require.Equal(t, 202, response.status, string(response.body))
-	var preparation mfahttp.EmailPreparationResponse
+	var preparation mfamanagementhttp.EmailPreparationResponse
 	require.NoError(t, json.Unmarshal(response.body, &preparation))
 	code := f.code(t, "mfa-email-prepare:", preparation.Binding)
-	response = web.call(t, ctx, "POST", prepare+"/confirm", web.origin, user, mfahttp.EmailPreparationConfirmation{Binding: preparation.Binding, Code: code})
+	response = web.call(t, ctx, "POST", prepare+"/confirm", web.origin, user, mfamanagementhttp.EmailPreparationConfirmation{Binding: preparation.Binding, Code: code})
 	require.Equal(t, 200, response.status, string(response.body))
 	user = response.cookie(t, "__Host-session")
 	response = web.call(t, ctx, "POST", "/api/v1/auth/mfa/email", web.origin, user, nil)
@@ -57,17 +58,17 @@ func TestTwoProjectEmailMFAHTTP(t *testing.T) {
 	response = web.call(t, ctx, "POST", loginPath, web.origin, "", credentials)
 	require.Equal(t, 202, response.status, string(response.body))
 	require.NotContains(t, string(response.body), `"token":`)
-	var challenge mfahttp.ChallengeResponse
+	var challenge mfaloginhttp.ChallengeResponse
 	require.NoError(t, json.Unmarshal(response.body, &challenge))
-	name := mfahttp.EmailLoginCookie + "-" + string(f.projects.projects[0].Binding.ProjectID)
+	name := mfaloginhttp.EmailLoginCookie + "-" + string(f.projects.projects[0].Binding.ProjectID)
 	cookie := response.cookie(t, name)
 	binding := strings.TrimPrefix(cookie, name+"=")
 	f.trackCompletion(challenge.Challenge, binding)
 	code = f.code(t, "mfa-email-login:", challenge.Challenge)
-	completion := mfahttp.CompleteEmailLoginRequest{Challenge: challenge.Challenge, Code: code}
+	completion := mfaloginhttp.CompleteEmailLoginRequest{Challenge: challenge.Challenge, Code: code}
 	foreign = f.webs[1].call(t, ctx, "POST", loginPath+"/complete", f.webs[1].origin, cookie, completion)
 	require.Equal(t, 400, foreign.status)
-	response = web.call(t, ctx, "POST", "/api/v1/auth/mfa/login/complete", web.origin, mfahttp.LoginCookie+"="+binding, mfahttp.CompleteLoginRequest{Challenge: challenge.Challenge, Code: code})
+	response = web.call(t, ctx, "POST", "/api/v1/auth/mfa/login/complete", web.origin, mfaloginhttp.LoginCookie+"="+binding, mfaloginhttp.CompleteLoginRequest{Challenge: challenge.Challenge, Code: code})
 	require.Equal(t, 400, response.status, "email challenge must not be accepted by the TOTP endpoint")
 	response = completeEmailMFAAfterRedisFailure(t, f, loginPath+"/complete", cookie, challenge.Challenge, binding, completion)
 	require.Equal(t, 200, response.status, string(response.body))

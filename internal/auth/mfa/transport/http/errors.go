@@ -30,13 +30,13 @@ func RespondLoginError(w http.ResponseWriter, r *http.Request, log *zap.Logger, 
 	return true
 }
 
-func (h *Handler) respondError(w http.ResponseWriter, r *http.Request, err error) {
-	respondMFAError(w, r, h.log, err, mfaErrors)
-}
-
-func respondMFAError(w http.ResponseWriter, r *http.Request, log *zap.Logger, err error, rules []httpx.ErrorRule) {
+func respondError(w http.ResponseWriter, r *http.Request, log *zap.Logger, err error, rules []httpx.ErrorRule) {
 	if settingshttp.RespondPolicyError(w, r, log, err) {
 		return
 	}
 	httpx.RespondError(w, r, log, "mfa", err, rules, httpx.Failure{Status: 503, Code: "temporarily_unavailable", Message: "temporarily unavailable"})
+}
+
+func RespondError(w http.ResponseWriter, r *http.Request, log *zap.Logger, err error) {
+	respondError(w, r, log, err, mfaErrors)
 }

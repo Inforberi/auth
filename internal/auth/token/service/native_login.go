@@ -6,6 +6,7 @@ import (
 	"net/netip"
 	"time"
 
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
@@ -13,8 +14,8 @@ import (
 )
 
 type NativeMFA interface {
-	StartNative(context.Context, mfaservice.PrimaryProof, mfaservice.NativeTarget, string) (*mfaservice.LoginChallenge, error)
-	PrepareNativeCompletion(context.Context, mfaservice.CompleteLoginInput) (mfaservice.NativeAttempt, error)
+	StartNative(context.Context, mfaservice.PrimaryProof, mfaservice.NativeTarget, string) (*mfalogin.LoginChallenge, error)
+	PrepareNativeCompletion(context.Context, mfalogin.CompleteLoginInput) (mfalogin.NativeAttempt, error)
 }
 
 type NativeLogin struct {
@@ -24,11 +25,11 @@ type NativeLogin struct {
 
 type NativeLoginResult struct {
 	Tokens    *RefreshResult
-	Challenge *mfaservice.LoginChallenge
+	Challenge *mfalogin.LoginChallenge
 }
 
 type NativeMFAParams struct {
-	Attempt                         mfaservice.NativeAttempt
+	Attempt                         mfalogin.NativeAttempt
 	Policy                          NativePolicy
 	LedgerVerifier, RefreshVerifier string `json:"-"`
 	UserAgent, IP                   string
@@ -85,7 +86,7 @@ func (s *NativeLogin) BeginMFA(ctx context.Context, input NativeInput) (*NativeL
 	return &NativeLoginResult{Challenge: challenge}, nil
 }
 
-func (s *NativeLogin) Complete(ctx context.Context, input mfaservice.CompleteLoginInput) (*RefreshResult, error) {
+func (s *NativeLogin) Complete(ctx context.Context, input mfalogin.CompleteLoginInput) (*RefreshResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	if err := ctx.Err(); err != nil {

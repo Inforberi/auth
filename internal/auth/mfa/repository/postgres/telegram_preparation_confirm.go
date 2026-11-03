@@ -4,14 +4,15 @@ import (
 	"context"
 	"crypto/subtle"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfatelegram "github.com/Inforberi/financial-intelligence/internal/auth/mfa/telegram/service"
 )
 
-func (r *Repository) ConfirmTelegramPreparation(ctx context.Context, proof service.Proof, input service.TelegramConfirmation) (*service.TelegramPrepared, error) {
-	var result service.TelegramPrepared
+func (r *Repository) ConfirmTelegramPreparation(ctx context.Context, proof mfaservice.Proof, input mfatelegram.TelegramConfirmation) (*mfatelegram.TelegramPrepared, error) {
+	var result mfatelegram.TelegramPrepared
 	rejected := false
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		deadline, err := r.lockTelegramManagement(ctx, tx, proof, input.Bot)

@@ -8,7 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/Inforberi/financial-intelligence/docs/api/generated"
+	docs "github.com/Inforberi/financial-intelligence/docs/api/generated"
 	accesshttp "github.com/Inforberi/financial-intelligence/internal/access/transport/http"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
@@ -22,8 +22,10 @@ import (
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
+	mfarecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
@@ -91,7 +93,7 @@ func contractHandlers(env string) Handlers {
 		MFASettings:       settingshttp.NewMFA(&contractMFASettings{}, log),
 		Setup:             accounthttp.NewSetup(&contractSetup{}, log),
 		EmailBinding:      accounthttp.NewEmailBinding(&contractEmailBinding{}, log),
-		MFA:               mfahttp.NewWithRecovery(&contractMFA{}, &contractMFA{}, &contractMFARecovery{}, log),
+		MFA:               mfamanagementhttp.New(&contractMFA{}, log), MFALogin: mfaloginhttp.New(&contractMFA{}, log), MFARecovery: mfarecoveryhttp.New(&contractMFARecovery{}, log),
 		Session:           sessionhttp.NewHandler(contractManagement{}, log),
 		Activity:          sessionhttp.NewActivity(contractActivity{}, log),
 		Rotation:          sessionhttp.NewRotation(contractRotation{}, log),
@@ -198,15 +200,19 @@ type contractAccounts struct{}
 
 type contractRecovery struct{}
 
-func (contractRecovery) Forgot(context.Context, string, string) error                { return nil }
+func (contractRecovery) Forgot(context.Context, string, string) error { return nil }
+
 func (contractRecovery) Reset(context.Context, string, string, string, string) error { return nil }
 
 func (contractAccounts) AllowRegistration(context.Context, string) error { return nil }
+
 func (contractAccounts) Resend(_ context.Context, email, _ string) error {
 	_, err := accountdomain.NewEmail(email)
 	return err
 }
-func (contractAccounts) Confirm(context.Context, string, string) error               { return nil }
+
+func (contractAccounts) Confirm(context.Context, string, string) error { return nil }
+
 func (contractAccounts) RequireVerified(context.Context, accountdomain.UserID) error { return nil }
 
 type contractEmailChange struct{}
@@ -220,5 +226,7 @@ func (contractProtectedRecovery) Recover(context.Context, string, string, string
 func (contractEmailChange) Request(context.Context, accountdomain.UserID, string, string, string, string) error {
 	return nil
 }
+
 func (contractEmailChange) Confirm(context.Context, string, string) error { return nil }
-func (contractEmailChange) Report(context.Context, string, string) error  { return nil }
+
+func (contractEmailChange) Report(context.Context, string, string) error { return nil }

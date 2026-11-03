@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 )
 
 func operatorRecoveryCommand(t *testing.T, login string, args []string, confirmation string, password, success bool) {
@@ -54,7 +54,7 @@ func operatorPasswordCLI(t *testing.T, realm string, user accountdomain.UserID, 
 	operatorRecoveryCommand(t, "platform_password_test", args, confirmation, true, true)
 }
 
-func operatorMFACLI(t *testing.T, realm string, decision mfadomain.RecoveryDecision) {
+func operatorMFACLI(t *testing.T, realm string, decision domain.RecoveryDecision) {
 	t.Helper()
 	args := []string{"mfa-approve", "-environment", "test", "-user", string(decision.UserID), "-request", decision.RequestID, "-reason", decision.Reason, "-platform-realm", realm}
 	confirmation := fmt.Sprintf("MFA-APPROVE test 127.0.0.1:5432[platform=%s]/auth_platform_test %s %s v%d", realm, decision.UserID, decision.RequestID, decision.ExpectedVersion)

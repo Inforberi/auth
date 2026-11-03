@@ -5,22 +5,23 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
 type NativeFactorResult struct {
-	Proof      service.PrimaryProof
-	Target     service.NativeTarget
+	Proof      mfaservice.PrimaryProof
+	Target     mfaservice.NativeTarget
 	VerifiedAt time.Time
 	Method     domain.Method
 	Rejected   bool
 }
 
 // The owner holds Access snapshot and commits Rejected attempts, not signing failures.
-func CompleteNativeFactor(ctx context.Context, tx pgx.Tx, attempt service.NativeAttempt) (NativeFactorResult, error) {
+func CompleteNativeFactor(ctx context.Context, tx pgx.Tx, attempt mfalogin.NativeAttempt) (NativeFactorResult, error) {
 	var result NativeFactorResult
 	proof, err := lockLoginChallengeProfile(ctx, tx, attempt.Digest, attempt.BindingHash, true, "api")
 	if err != nil {
@@ -52,7 +53,7 @@ func CompleteNativeFactor(ctx context.Context, tx pgx.Tx, attempt service.Native
 	return result, nil
 }
 
-func FinishNativeLogin(ctx context.Context, tx pgx.Tx, attempt service.NativeAttempt) error {
+func FinishNativeLogin(ctx context.Context, tx pgx.Tx, attempt mfalogin.NativeAttempt) error {
 	var deadline time.Time
 	err := tx.QueryRow(ctx, `DELETE FROM auth.mfa_login_challenges WHERE digest=$1 AND binding_hash=$2 AND user_id=$3
 		AND credential_profile='api' AND expires_at>clock_timestamp() AND attempts<5 RETURNING expires_at`, attempt.Digest, attempt.BindingHash, attempt.UserID).Scan(&deadline)

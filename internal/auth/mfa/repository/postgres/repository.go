@@ -5,12 +5,12 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
 type Repository struct {
@@ -48,7 +48,7 @@ func (r *Repository) transaction(ctx context.Context, fn func(pgx.Tx) error) err
 	return tx.Commit(ctx)
 }
 
-func (r *Repository) requireProof(ctx context.Context, tx pgx.Tx, proof service.Proof) error {
+func (r *Repository) requireProof(ctx context.Context, tx pgx.Tx, proof mfaservice.Proof) error {
 	var version int64
 	err := tx.QueryRow(ctx, `SELECT auth_version FROM auth.users WHERE id=$1
 		AND status='active' AND deleted_at IS NULL FOR UPDATE`, proof.UserID).Scan(&version)

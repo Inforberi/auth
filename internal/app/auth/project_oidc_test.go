@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	redis "github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
@@ -14,6 +14,7 @@ import (
 	oidcdomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 	oidcservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
@@ -34,7 +35,7 @@ func TestProjectOIDCDisabled(t *testing.T) {
 		require.ErrorIs(t, err, oidcdomain.ErrDisabled)
 		require.Nil(t, started)
 		require.ErrorIs(t, svc.Unlink(t.Context(), "", "", ""), oidcdomain.ErrDisabled)
-		mfa, err := svc.CompleteMFA(t.Context(), mfaservice.CompleteLoginInput{})
+		mfa, err := svc.CompleteMFA(t.Context(), mfalogin.CompleteLoginInput{})
 		require.ErrorIs(t, err, mfadomain.ErrUnavailable)
 		require.Nil(t, mfa)
 	}

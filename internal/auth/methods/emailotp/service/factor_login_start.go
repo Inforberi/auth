@@ -7,14 +7,15 @@ import (
 	"time"
 
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func (s *EmailLogin) Start(ctx context.Context, proof mfaservice.PrimaryProof, ip string) (*mfaservice.LoginChallenge, error) {
+func (s *EmailLogin) Start(ctx context.Context, proof mfaservice.PrimaryProof, ip string) (*mfalogin.LoginChallenge, error) {
 	return s.start(ctx, proof, nil, ip)
 }
 
-func (s *EmailLogin) StartNative(ctx context.Context, proof mfaservice.PrimaryProof, target mfaservice.NativeTarget, ip string) (*mfaservice.LoginChallenge, error) {
+func (s *EmailLogin) StartNative(ctx context.Context, proof mfaservice.PrimaryProof, target mfaservice.NativeTarget, ip string) (*mfalogin.LoginChallenge, error) {
 	if len(target.Scope) > 64 {
 		return nil, mfadomain.ErrProofRequired
 	}
@@ -26,7 +27,7 @@ func (s *EmailLogin) StartNative(ctx context.Context, proof mfaservice.PrimaryPr
 	return s.start(ctx, proof, &target, ip)
 }
 
-func (s *EmailLogin) start(ctx context.Context, proof mfaservice.PrimaryProof, target *mfaservice.NativeTarget, ip string) (*mfaservice.LoginChallenge, error) {
+func (s *EmailLogin) start(ctx context.Context, proof mfaservice.PrimaryProof, target *mfaservice.NativeTarget, ip string) (*mfalogin.LoginChallenge, error) {
 	if !mfaservice.ValidPrimary(proof) || proof.Administrative || proof.Method != "password" || len(ip) > 64 {
 		return nil, mfadomain.ErrProofRequired
 	}
@@ -67,5 +68,5 @@ func (s *EmailLogin) start(ctx context.Context, proof mfaservice.PrimaryProof, t
 	if err != nil {
 		return nil, err
 	}
-	return &mfaservice.LoginChallenge{Method: mfadomain.EmailCode, Token: requested.Binding, Binding: binding, ExpiresAt: state.ExpiresAt}, nil
+	return &mfalogin.LoginChallenge{Method: mfadomain.EmailCode, Token: requested.Binding, Binding: binding, ExpiresAt: state.ExpiresAt}, nil
 }

@@ -10,12 +10,12 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfarecovery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/service"
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
 type mfaOperator interface {
-	Preview(context.Context, accountdomain.UserID, string) (*mfaservice.RecoveryTarget, error)
+	Preview(context.Context, accountdomain.UserID, string) (*mfarecovery.RecoveryTarget, error)
 	Decide(context.Context, domain.RecoveryDecision) error
 }
 
@@ -65,7 +65,7 @@ func runMFA(ctx context.Context, args []string) error {
 		return err
 	}
 	destination = recoveryDestination(destination, opts.realm)
-	svc := mfaservice.NewRecoveryOperator(mfapostgres.New(pool))
+	svc := mfarecovery.NewRecoveryOperator(mfapostgres.New(pool))
 	return executeMFA(ctx, opts, destination, svc, os.Stdin, os.Stdout)
 }
 

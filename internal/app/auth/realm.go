@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
@@ -148,7 +148,7 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 		MFASettings:       settingshttp.NewMFA(settingsservice.NewMFA(settingspostgres.New(pool), cfg.MFA.Enabled), log),
 		Setup:             setup,
 		EmailBinding:      emailBinding,
-		MFA:               mfa.handler,
+		MFA:               mfa.handler, MFALogin: mfa.loginHandler, MFARecovery: mfa.recoveryHandler,
 		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
 		Activity:          sessionhttp.NewActivity(sessionservice.NewActivity(sessionRepo), log),
 		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessionRepo, tokenGen), log),

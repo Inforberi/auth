@@ -14,6 +14,7 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	emailservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	tokendomain "github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
@@ -39,7 +40,7 @@ func (s *nativeContract) result() (*tokenservice.NativeLoginResult, error) {
 		return nil, s.err
 	}
 	if s.challenge {
-		return &tokenservice.NativeLoginResult{Challenge: &mfaservice.LoginChallenge{Token: "native-challenge", Binding: "native-binding", ExpiresAt: time.Now().Add(time.Minute), EnrollmentRequired: s.enrollment}}, nil
+		return &tokenservice.NativeLoginResult{Challenge: &mfalogin.LoginChallenge{Token: "native-challenge", Binding: "native-binding", ExpiresAt: time.Now().Add(time.Minute), EnrollmentRequired: s.enrollment}}, nil
 	}
 	return &tokenservice.NativeLoginResult{Tokens: nativeTokensResult()}, nil
 }
@@ -62,19 +63,19 @@ func (s *nativeContract) Confirm(_ context.Context, input emailservice.ConfirmIn
 	return s.result()
 }
 
-func (s *nativeContract) Complete(_ context.Context, input mfaservice.CompleteLoginInput) (*tokenservice.RefreshResult, error) {
+func (s *nativeContract) Complete(_ context.Context, input mfalogin.CompleteLoginInput) (*tokenservice.RefreshResult, error) {
 	s.calls++
 	s.input = input
 	return nativeTokensResult(), s.err
 }
 
-func (s *nativeContract) StartNativeRequiredEnrollment(_ context.Context, input mfaservice.LoginEnrollmentInput) (*mfaservice.Enrollment, error) {
+func (s *nativeContract) StartNativeRequiredEnrollment(_ context.Context, input mfalogin.LoginEnrollmentInput) (*mfaservice.Enrollment, error) {
 	s.calls++
 	s.input = input
 	return &mfaservice.Enrollment{Token: "enrollment", Secret: "synthetic-secret", URI: "otpauth://synthetic", ExpiresAt: time.Now().Add(time.Minute)}, s.err
 }
 
-func (s *nativeContract) ConfirmNativeRequiredEnrollment(_ context.Context, input mfaservice.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error) {
+func (s *nativeContract) ConfirmNativeRequiredEnrollment(_ context.Context, input mfalogin.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error) {
 	s.calls++
 	s.input = input
 	return &mfaservice.RecoveryCodes{Codes: []string{"synthetic-recovery"}}, s.err
@@ -255,7 +256,7 @@ func TestNativeRestrictedOutputAndInputs(t *testing.T) {
 	s := &nativeContract{}
 	body := `{"challenge":"native-challenge","binding":"native-binding","code":"recovery-code","recovery":true}`
 	w := nativeRequest(New(nativeContractHandlers(s)), "POST", "/native/mfa/complete", body, nil)
-	input := s.input.(mfaservice.CompleteLoginInput)
+	input := s.input.(mfalogin.CompleteLoginInput)
 	if w.Code != 200 || !input.Recovery || input.Token != "native-challenge" || input.Binding != "native-binding" || input.IP != "192.0.2.1" {
 		t.Fatal(w.Code, input.Recovery)
 	}

@@ -16,8 +16,8 @@ import (
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/redis"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	mfadelivery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/delivery/service"
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
@@ -119,7 +119,7 @@ func (p *projectEmailRuntime) deliverEmailOTP(ctx context.Context) error {
 
 func (p *projectEmailRuntime) deliverMFARecovery(ctx context.Context) error {
 	return p.use(ctx, func(ctx context.Context, pool *pgxpool.Pool, mail *mailer.Mailer) error {
-		worker, err := mfaservice.NewSecurityDelivery(mfapostgres.New(pool), p.mfaCipher, mail)
+		worker, err := mfadelivery.NewSecurityDelivery(mfapostgres.New(pool), p.mfaCipher, mail)
 		if err != nil {
 			return err
 		}

@@ -3,7 +3,7 @@ package auth
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 )
 
@@ -54,10 +54,10 @@ func (p *ProjectProfile) bindFactorSelection() {
 			email = p.tokens.native.emailMFA
 		}
 		if email != nil {
-			factory.email = func(pool *pgxpool.Pool) (mfaservice.FactorStarter, error) { return email.login(pool) }
+			factory.email = func(pool *pgxpool.Pool) (mfalogin.FactorStarter, error) { return email.login(pool) }
 		}
 		if p.telegramMFA != nil {
-			factory.telegram = func(pool *pgxpool.Pool) (mfaservice.FactorStarter, error) { return p.telegramMFA.login(pool, factory) }
+			factory.telegram = func(pool *pgxpool.Pool) (mfalogin.FactorStarter, error) { return p.telegramMFA.login(pool, factory) }
 		}
 	}
 }

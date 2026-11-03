@@ -6,14 +6,15 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func (r *Repository) TelegramLoginChannel(ctx context.Context, proof service.PrimaryProof) (service.TelegramLoginChannel, error) {
-	var channel service.TelegramLoginChannel
+func (r *Repository) TelegramLoginChannel(ctx context.Context, proof mfaservice.PrimaryProof) (mfalogin.TelegramLoginChannel, error) {
+	var channel mfalogin.TelegramLoginChannel
 	err := r.db.QueryRow(ctx, `SELECT f.bot_id,f.telegram_user_id,p.version
  FROM auth.mfa_telegram f JOIN auth.users u ON u.id=f.user_id
  JOIN auth.password_credentials c ON c.user_id=u.id CROSS JOIN auth.mfa_settings p
@@ -26,7 +27,7 @@ func (r *Repository) TelegramLoginChannel(ctx context.Context, proof service.Pri
 	return channel, err
 }
 
-func lockTelegramLoginChannel(ctx context.Context, tx pgx.Tx, proof service.PrimaryProof, channel service.TelegramLoginChannel) error {
+func lockTelegramLoginChannel(ctx context.Context, tx pgx.Tx, proof mfaservice.PrimaryProof, channel mfalogin.TelegramLoginChannel) error {
 	if proof.Method != "password" || proof.Administrative {
 		return domain.ErrProofRequired
 	}
@@ -41,11 +42,11 @@ func lockTelegramLoginChannel(ctx context.Context, tx pgx.Tx, proof service.Prim
 	return err
 }
 
-func (r *Repository) SaveTelegramLoginChallenge(ctx context.Context, input service.TelegramLoginIntent, ttl time.Duration) (*service.LoginChallengeState, error) {
+func (r *Repository) SaveTelegramLoginChallenge(ctx context.Context, input mfalogin.TelegramLoginIntent, ttl time.Duration) (*mfalogin.LoginChallengeState, error) {
 	return r.saveLoginChallenge(ctx, input.Proof, input.Target, input.Digest, input.BindingHash, ttl, nil, &input)
 }
 
-func (r *Repository) MarkTelegramLoginDelivered(ctx context.Context, input service.TelegramLoginIntent) error {
+func (r *Repository) MarkTelegramLoginDelivered(ctx context.Context, input mfalogin.TelegramLoginIntent) error {
 	return r.transaction(ctx, func(tx pgx.Tx) error {
 		profile := "browser"
 		if input.Target != nil {
@@ -81,7 +82,7 @@ func (r *Repository) MarkTelegramLoginDelivered(ctx context.Context, input servi
 	})
 }
 
-func consumeTelegramLoginCode(ctx context.Context, tx pgx.Tx, proof lockedLoginChallenge, input service.TelegramCodeProof) (domain.Verification, error) {
+func consumeTelegramLoginCode(ctx context.Context, tx pgx.Tx, proof lockedLoginChallenge, input mfalogin.TelegramCodeProof) (domain.Verification, error) {
 	var expected string
 	var now time.Time
 	err := tx.QueryRow(ctx, `SELECT c.verifier,clock_timestamp() FROM auth.mfa_telegram_login_codes c

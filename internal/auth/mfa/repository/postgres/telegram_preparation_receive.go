@@ -3,16 +3,17 @@ package postgres
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfatelegram "github.com/Inforberi/financial-intelligence/internal/auth/mfa/telegram/service"
 )
 
-func (r *Repository) ReceiveTelegramPreparation(ctx context.Context, input service.TelegramCandidate) (*service.TelegramEnvelope, error) {
-	var result service.TelegramEnvelope
+func (r *Repository) ReceiveTelegramPreparation(ctx context.Context, input mfatelegram.TelegramCandidate) (*mfatelegram.TelegramEnvelope, error) {
+	var result mfatelegram.TelegramEnvelope
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
-		var proof service.Proof
+		var proof mfaservice.Proof
 		if err := tx.QueryRow(ctx, `SELECT user_id,session_hash,auth_version FROM auth.mfa_telegram_preparations
  WHERE digest=$1 AND bot_id=$2 AND policy_version=$3 AND confirmed_at IS NULL`, input.Digest,
 			input.Bot.ID, input.Bot.PolicyVersion).Scan(&proof.UserID, &proof.TokenHash, &proof.AuthVersion); err != nil {

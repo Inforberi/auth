@@ -13,8 +13,9 @@ import (
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
@@ -23,7 +24,7 @@ import (
 func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.HandlerFunc {
 	handlers := make(map[string]http.HandlerFunc)
 	if p.password != nil {
-		h := passwordhttp.NewPublic(p.password, log).WithEmailMFACookie(mfahttp.EmailLoginCookie + "-" + string(p.key.Binding.ProjectID))
+		h := passwordhttp.NewPublic(p.password, log).WithEmailMFACookie(mfaloginhttp.EmailLoginCookie + "-" + string(p.key.Binding.ProjectID))
 		handlers["/api/v1/auth/login/email"], handlers["/api/v1/auth/register/email"] = h.LoginByEmail, h.Register
 		handlers["/api/v1/auth/change-password"] = passwordhttp.NewChangePassword(p.password, p.password.limits, log).ChangePassword
 		handlers["/api/v1/auth/reauthenticate/password"] = passwordhttp.NewReauthentication(projectPasswordReauthenticationHTTP{p.password}, log).Confirm
@@ -59,7 +60,7 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 		handlers["POST /api/v1/auth/telegram/link"], handlers["DELETE /api/v1/auth/telegram/link"] = h.StartLink, p.requirePasswordFallback(h.Unlink)
 	}
 	if p.mfa != nil {
-		h := mfahttp.New(nil, projectBrowserMFAHTTP{p.mfa}, log)
+		h := mfaloginhttp.New(projectBrowserMFAHTTP{p.mfa}, log)
 		handlers["/api/v1/auth/mfa/login/complete"] = h.CompleteLogin
 		handlers["/api/v1/auth/mfa/login/enrollment"], handlers["/api/v1/auth/mfa/login/enrollment/confirm"] = h.StartLoginEnrollment, h.ConfirmLoginEnrollment
 	}
@@ -148,15 +149,15 @@ func (s projectRecoveryHTTP) Reset(ctx context.Context, token, password, confirm
 
 type projectBrowserMFAHTTP struct{ *projectMFA }
 
-func (s projectBrowserMFAHTTP) Complete(ctx context.Context, input mfaservice.CompleteLoginInput) (*mfaservice.LoginSession, error) {
+func (s projectBrowserMFAHTTP) Complete(ctx context.Context, input mfalogin.CompleteLoginInput) (*mfalogin.LoginSession, error) {
 	return s.CompleteMFA(ctx, input)
 }
 
-func (s projectBrowserMFAHTTP) StartRequiredEnrollment(ctx context.Context, input mfaservice.LoginEnrollmentInput) (*mfaservice.Enrollment, error) {
+func (s projectBrowserMFAHTTP) StartRequiredEnrollment(ctx context.Context, input mfalogin.LoginEnrollmentInput) (*mfaservice.Enrollment, error) {
 	return s.StartMFAEnrollment(ctx, input)
 }
 
-func (s projectBrowserMFAHTTP) ConfirmRequiredEnrollment(ctx context.Context, input mfaservice.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error) {
+func (s projectBrowserMFAHTTP) ConfirmRequiredEnrollment(ctx context.Context, input mfalogin.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error) {
 	return s.ConfirmMFAEnrollment(ctx, input)
 }
 

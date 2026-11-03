@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
+	redis "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
@@ -17,7 +17,7 @@ import (
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfadelivery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/delivery/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 )
@@ -171,7 +171,7 @@ func TestDisabledDeliveryIsNotScheduled(t *testing.T) {
 	if workers := realmDeliveryWorkers(nil, nil, nil, nil); len(workers) != 0 {
 		t.Fatal("nil delivery pointers became active interfaces")
 	}
-	recovery, account, mfa := &passwordservice.RecoveryService{}, &accountservice.Service{}, &mfaservice.SecurityDelivery{}
+	recovery, account, mfa := &passwordservice.RecoveryService{}, &accountservice.Service{}, &mfadelivery.SecurityDelivery{}
 	workers := realmDeliveryWorkers(recovery, account, mfa, nil)
 	if len(workers) != 3 || workers[0] != recovery || workers[1] != account || workers[2] != mfa {
 		t.Fatal("disabled email OTP delivery was scheduled or durable delivery was omitted")

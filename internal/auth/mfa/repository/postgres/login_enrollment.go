@@ -5,13 +5,14 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func requireLoginEnrollment(ctx context.Context, tx pgx.Tx, input service.LoginEnrollmentParams) (*lockedLoginChallenge, error) {
+func requireLoginEnrollment(ctx context.Context, tx pgx.Tx, input mfalogin.LoginEnrollmentParams) (*lockedLoginChallenge, error) {
 	profile := "browser"
 	if input.Native {
 		profile = "api"
@@ -39,7 +40,7 @@ func requireLoginEnrollment(ctx context.Context, tx pgx.Tx, input service.LoginE
 	return proof, nil
 }
 
-func (r *Repository) SaveLoginEnrollment(ctx context.Context, input service.LoginEnrollmentParams) (time.Time, error) {
+func (r *Repository) SaveLoginEnrollment(ctx context.Context, input mfalogin.LoginEnrollmentParams) (time.Time, error) {
 	var expires time.Time
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		proof, err := requireLoginEnrollment(ctx, tx, input)
@@ -59,7 +60,7 @@ func (r *Repository) SaveLoginEnrollment(ctx context.Context, input service.Logi
 	return expires, err
 }
 
-func (r *Repository) ConfirmLoginEnrollment(ctx context.Context, input service.LoginEnrollmentParams, check service.Check, recovery []string) error {
+func (r *Repository) ConfirmLoginEnrollment(ctx context.Context, input mfalogin.LoginEnrollmentParams, check mfaservice.Check, recovery []string) error {
 	rejected := false
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		proof, err := requireLoginEnrollment(ctx, tx, input)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
@@ -16,14 +17,14 @@ type nativeMFAStub struct {
 	err              error
 }
 
-func (s *nativeMFAStub) StartNative(_ context.Context, _ mfaservice.PrimaryProof, _ mfaservice.NativeTarget, _ string) (*mfaservice.LoginChallenge, error) {
+func (s *nativeMFAStub) StartNative(_ context.Context, _ mfaservice.PrimaryProof, _ mfaservice.NativeTarget, _ string) (*mfalogin.LoginChallenge, error) {
 	s.starts++
-	return &mfaservice.LoginChallenge{}, s.err
+	return &mfalogin.LoginChallenge{}, s.err
 }
 
-func (s *nativeMFAStub) PrepareNativeCompletion(_ context.Context, _ mfaservice.CompleteLoginInput) (mfaservice.NativeAttempt, error) {
+func (s *nativeMFAStub) PrepareNativeCompletion(_ context.Context, _ mfalogin.CompleteLoginInput) (mfalogin.NativeAttempt, error) {
 	s.prepares++
-	return mfaservice.NativeAttempt{}, s.err
+	return mfalogin.NativeAttempt{}, s.err
 }
 
 func TestNativeCoordinatorOutputs(t *testing.T) {
@@ -55,7 +56,7 @@ func TestNativeCoordinatorAdmission(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	input := mfaservice.CompleteLoginInput{IP: "192.0.2.1"}
+	input := mfalogin.CompleteLoginInput{IP: "192.0.2.1"}
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	if _, err := login.Complete(ctx, input); !errors.Is(err, context.Canceled) || factor.prepares != 0 {

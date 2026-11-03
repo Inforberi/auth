@@ -5,33 +5,34 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func (r *Repository) SaveLoginChallenge(ctx context.Context, proof service.PrimaryProof, digest, binding string, ttl time.Duration) (*service.LoginChallengeState, error) {
+func (r *Repository) SaveLoginChallenge(ctx context.Context, proof mfaservice.PrimaryProof, digest, binding string, ttl time.Duration) (*mfalogin.LoginChallengeState, error) {
 	return r.saveLoginChallenge(ctx, proof, nil, digest, binding, ttl, nil, nil)
 }
 
-func (r *Repository) SaveNativeLoginChallenge(ctx context.Context, proof service.PrimaryProof, target service.NativeTarget, digest, binding string, ttl time.Duration) (*service.LoginChallengeState, error) {
+func (r *Repository) SaveNativeLoginChallenge(ctx context.Context, proof mfaservice.PrimaryProof, target mfaservice.NativeTarget, digest, binding string, ttl time.Duration) (*mfalogin.LoginChallengeState, error) {
 	return r.saveLoginChallenge(ctx, proof, &target, digest, binding, ttl, nil, nil)
 }
 
-func (r *Repository) saveLoginChallenge(ctx context.Context, proof service.PrimaryProof, target *service.NativeTarget, digest, binding string, ttl time.Duration, mail *otpservice.EmailLoginIntent, telegramIntent *service.TelegramLoginIntent) (*service.LoginChallengeState, error) {
+func (r *Repository) saveLoginChallenge(ctx context.Context, proof mfaservice.PrimaryProof, target *mfaservice.NativeTarget, digest, binding string, ttl time.Duration, mail *otpservice.EmailLoginIntent, telegramIntent *mfalogin.TelegramLoginIntent) (*mfalogin.LoginChallengeState, error) {
 	profile := "browser"
-	var bound service.NativeTarget
+	var bound mfaservice.NativeTarget
 	var audience *string
 	if target != nil {
 		profile = "api"
 		bound = *target
 		audience = &bound.Audience
 	}
-	var result service.LoginChallengeState
+	var result mfalogin.LoginChallengeState
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		if err := lockLoginPrimary(ctx, tx, proof); err != nil {
 			return err
@@ -118,7 +119,7 @@ func (r *Repository) findLoginOwner(ctx context.Context, digest, binding, profil
 	return user, err
 }
 
-func saveLoginCodes(ctx context.Context, tx pgx.Tx, mail *otpservice.EmailLoginIntent, telegram *service.TelegramLoginIntent, profile string, audience *string, scope []accessdomain.PermissionKey, expiresAt time.Time) error {
+func saveLoginCodes(ctx context.Context, tx pgx.Tx, mail *otpservice.EmailLoginIntent, telegram *mfalogin.TelegramLoginIntent, profile string, audience *string, scope []accessdomain.PermissionKey, expiresAt time.Time) error {
 	if mail != nil {
 		return saveEmailLoginCode(ctx, tx, *mail, profile, audience, scope, expiresAt)
 	}

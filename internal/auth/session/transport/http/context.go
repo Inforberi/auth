@@ -5,7 +5,7 @@ import (
 	"time"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 )
 
 type Auth struct {
@@ -16,7 +16,7 @@ type Auth struct {
 	PrimaryMethod     string
 	PrimaryVerifiedAt *time.Time
 	MFAVerifiedAt     *time.Time
-	MFAMethod         mfadomain.Method
+	MFAMethod         domain.Method
 }
 
 type authContextKey struct{}

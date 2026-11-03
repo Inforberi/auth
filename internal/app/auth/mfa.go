@@ -5,27 +5,35 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
+	redis "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
+	mfadelivery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/delivery/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	mfamanagement "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/service"
+	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
+	mfarecovery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/service"
+	mfarecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
 	mfaredis "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/redis"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
-	mfatotp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
 type mfaApp struct {
-	sessions *sessionservice.Login
-	login    *mfaservice.Login
-	handler  *mfahttp.Handler
-	delivery *mfaservice.SecurityDelivery
+	sessions        *sessionservice.Login
+	login           *mfalogin.Login
+	handler         *mfamanagementhttp.Handler
+	loginHandler    *mfaloginhttp.Handler
+	recoveryHandler *mfarecoveryhttp.Handler
+	delivery        *mfadelivery.SecurityDelivery
 }
 
-func (s realmSecurity) assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, sessions *sessionservice.SessionService, tokens *tokengenerate.TokenManager, mail mfaservice.SecurityMailer, cfg *config.Config, log *zap.Logger) (*mfaApp, error) {
+func (s realmSecurity) assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, sessions *sessionservice.SessionService, tokens *tokengenerate.TokenManager, mail mfadelivery.SecurityMailer, cfg *config.Config, log *zap.Logger) (*mfaApp, error) {
 	repo := mfapostgres.NewWithEmailProof(pool, cfg.EmailOTP.ReauthenticationEnabled)
 	if cfg.Platform.Enabled {
 		repo = mfapostgres.NewPlatform(pool)
@@ -34,7 +42,7 @@ func (s realmSecurity) assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb 
 	if err != nil {
 		return nil, err
 	}
-	worker, err := mfaservice.NewSecurityDelivery(repo, cipher, mail)
+	worker, err := mfadelivery.NewSecurityDelivery(repo, cipher, mail)
 	if err != nil {
 		return nil, err
 	}
@@ -63,12 +71,12 @@ func (s realmSecurity) assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb 
 	if err != nil {
 		return nil, err
 	}
-	management, err := mfaservice.NewConfigured(repo, cipher, mfatotp.Authenticator{}, limits, tokens, cfg.MFA)
+	management, err := mfamanagement.NewConfigured(repo, cipher, totp.Authenticator{}, limits, tokens, cfg.MFA)
 	if err != nil {
 		return nil, err
 	}
 	allowPrimary := mfaPrimaryPolicy(cfg)
-	login, err := mfaservice.NewLogin(repo, cipher, mfatotp.Authenticator{}, limits, tokens, mfaservice.LoginConfig{
+	login, err := mfalogin.NewLogin(repo, cipher, totp.Authenticator{}, limits, tokens, mfaservice.LoginConfig{
 		Issuer:       cfg.MFA.Issuer,
 		AllowPrimary: allowPrimary,
 		ChallengeTTL: cfg.MFA.ChallengeTTL, SessionTTL: cfg.Session.SessionTTL, AbsoluteSessionTTL: cfg.Session.AbsoluteSessionTTL,
@@ -78,11 +86,11 @@ func (s realmSecurity) assembleMFA(ctx context.Context, pool *pgxpool.Pool, rdb 
 	if err != nil {
 		return nil, err
 	}
-	recovery, err := mfaservice.NewRecovery(repo, cipher, mfatotp.Authenticator{}, limits, cfg.MFA, allowPrimary)
+	recovery, err := mfarecovery.NewRecovery(repo, cipher, totp.Authenticator{}, limits, cfg.MFA, allowPrimary)
 	if err != nil {
 		return nil, err
 	}
-	return &mfaApp{sessions: sessionservice.NewLogin(sessions, login), login: login, handler: mfahttp.NewWithRecovery(management, login, recovery, log), delivery: worker}, nil
+	return &mfaApp{sessions: sessionservice.NewLogin(sessions, login), login: login, handler: mfamanagementhttp.New(management, log), loginHandler: mfaloginhttp.New(login, log), recoveryHandler: mfarecoveryhttp.New(recovery, log), delivery: worker}, nil
 }
 
 func mfaPrimaryPolicy(cfg *config.Config) func(string, string) bool {

@@ -10,11 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	redis "github.com/redis/go-redis/v9"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
@@ -22,7 +23,7 @@ import (
 
 func checkAtomicAdmission(t *testing.T, db *redis.Client, limiter *Limiter) {
 	for exhausted := range 3 {
-		budgets := []service.Budget{{Key: fmt.Sprintf("batch-%d-subject", exhausted), Count: 5}, {Key: fmt.Sprintf("batch-%d-ip", exhausted), Count: 10}, {Key: fmt.Sprintf("batch-%d-project", exhausted), Count: 50}}
+		budgets := []mfaservice.Budget{{Key: fmt.Sprintf("batch-%d-subject", exhausted), Count: 5}, {Key: fmt.Sprintf("batch-%d-ip", exhausted), Count: 10}, {Key: fmt.Sprintf("batch-%d-project", exhausted), Count: 50}}
 		key := "auth:mfa:limit:" + budgets[exhausted].Key
 		if err := db.Set(t.Context(), key, budgets[exhausted].Count, 45*time.Second).Err(); err != nil {
 			t.Fatal(err)
@@ -65,7 +66,7 @@ func checkAtomicAdmission(t *testing.T, db *redis.Client, limiter *Limiter) {
 			if i%2 == 1 {
 				worker = replica
 			}
-			allowed, err := worker.AllowAll(t.Context(), []service.Budget{{Key: fmt.Sprintf("concurrent-subject-%d", i), Count: 5}, {Key: "concurrent-ip", Count: 6}, {Key: "concurrent-project", Count: 10}})
+			allowed, err := worker.AllowAll(t.Context(), []mfaservice.Budget{{Key: fmt.Sprintf("concurrent-subject-%d", i), Count: 5}, {Key: "concurrent-ip", Count: 6}, {Key: "concurrent-project", Count: 10}})
 			if err != nil {
 				t.Error(err)
 			}
@@ -88,7 +89,7 @@ func checkAtomicAdmission(t *testing.T, db *redis.Client, limiter *Limiter) {
 	if allowed, err := limiter.Allow(t.Context(), "legacy-admission", 2, time.Minute); err != nil || !allowed {
 		t.Fatal(err)
 	}
-	legacy := []service.Budget{{Key: "legacy-admission", Count: 2}, {Key: "legacy-project", Count: 10}}
+	legacy := []mfaservice.Budget{{Key: "legacy-admission", Count: 2}, {Key: "legacy-project", Count: 10}}
 	if allowed, err := limiter.AllowAll(t.Context(), legacy); err != nil || !allowed {
 		t.Fatal("legacy counter lost", err)
 	}
@@ -108,7 +109,7 @@ func checkAtomicAdmission(t *testing.T, db *redis.Client, limiter *Limiter) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		allowed, err := limiter.AllowAll(t.Context(), []service.Budget{{Key: key + "-first", Count: 5}, {Key: key, Count: 5}})
+		allowed, err := limiter.AllowAll(t.Context(), []mfaservice.Budget{{Key: key + "-first", Count: 5}, {Key: key, Count: 5}})
 		if err == nil || allowed {
 			t.Fatal("malformed counter accepted")
 		}
@@ -120,7 +121,7 @@ func checkAtomicAdmission(t *testing.T, db *redis.Client, limiter *Limiter) {
 	if err := db.Set(t.Context(), "auth:mfa:limit:fixed-window", 1, 20*time.Second).Err(); err != nil {
 		t.Fatal(err)
 	}
-	if allowed, err := limiter.AllowAll(t.Context(), []service.Budget{{Key: "fixed-window", Count: 2}}); err != nil || !allowed {
+	if allowed, err := limiter.AllowAll(t.Context(), []mfaservice.Budget{{Key: "fixed-window", Count: 2}}); err != nil || !allowed {
 		t.Fatal(err)
 	}
 	ttl, err := db.PTTL(t.Context(), "auth:mfa:limit:fixed-window").Result()
@@ -130,7 +131,7 @@ func checkAtomicAdmission(t *testing.T, db *redis.Client, limiter *Limiter) {
 }
 
 type lookupProbe struct {
-	service.LoginRepository
+	mfalogin.LoginRepository
 	calls atomic.Int32
 }
 
@@ -145,7 +146,7 @@ func checkMFAFlood(t *testing.T, db *redis.Client, limiter *Limiter) {
 		t.Fatal(err)
 	}
 	probe := &lookupProbe{}
-	login, err := service.NewLogin(probe, cipher, totp.Authenticator{}, limiter, tokengenerate.New(), service.LoginConfig{ChallengeTTL: 5 * time.Minute, SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, UserLimitPerMinute: 5, IPLimitPerMinute: 10, GlobalLimitPerMinute: 50})
+	login, err := mfalogin.NewLogin(probe, cipher, totp.Authenticator{}, limiter, tokengenerate.New(), mfaservice.LoginConfig{ChallengeTTL: 5 * time.Minute, SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, UserLimitPerMinute: 5, IPLimitPerMinute: 10, GlobalLimitPerMinute: 50})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +165,7 @@ func checkMFAFlood(t *testing.T, db *redis.Client, limiter *Limiter) {
 				t.Error(err)
 				return
 			}
-			_, err = login.Complete(t.Context(), service.CompleteLoginInput{Token: token, Binding: token, Code: "123456", IP: fmt.Sprintf("192.0.2.%d", i)})
+			_, err = login.Complete(t.Context(), mfalogin.CompleteLoginInput{Token: token, Binding: token, Code: "123456", IP: fmt.Sprintf("192.0.2.%d", i)})
 			if !errors.Is(err, domain.ErrLimited) {
 				t.Error("project flood reached owner lookup", err)
 			}
@@ -178,7 +179,7 @@ func checkMFAFlood(t *testing.T, db *redis.Client, limiter *Limiter) {
 }
 
 func TestInvalidMFABatchBeforeRedis(t *testing.T) {
-	for _, budgets := range [][]service.Budget{
+	for _, budgets := range [][]mfaservice.Budget{
 		nil,
 		{{Key: "", Count: 1}},
 		{{Key: "valid", Count: 0}},

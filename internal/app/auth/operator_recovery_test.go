@@ -21,9 +21,9 @@ import (
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfarecovery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/service"
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
@@ -203,12 +203,12 @@ func operatorRecoveryDrill(t *testing.T, admin *pgxpool.Pool, deps realmDependen
 	}
 	complete := map[string]string{"challenge": challenge, "requestId": operatorField(t, candidate, "requestId"), "code": code}
 	h.call("POST", "/api/v1/auth/mfa/recovery/complete", complete, []*http.Cookie{binding}, 400)
-	decisions := mfaservice.NewRecoveryOperator(mfapostgres.New(mfaPool))
+	decisions := mfarecovery.NewRecoveryOperator(mfapostgres.New(mfaPool))
 	preview, err := decisions.Preview(ctx, user, complete["requestId"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	decision := mfadomain.RecoveryDecision{UserID: user, RequestID: complete["requestId"], ExpectedVersion: preview.AuthVersion, Approve: true, Environment: "test", Reason: "independent-fixture-verification"}
+	decision := domain.RecoveryDecision{UserID: user, RequestID: complete["requestId"], ExpectedVersion: preview.AuthVersion, Approve: true, Environment: "test", Reason: "independent-fixture-verification"}
 	if os.Getenv("AUTH_OPERATOR_TEST_CLI") != "" {
 		operatorMFACLI(t, cfg.Platform.RealmID, decision)
 	} else {

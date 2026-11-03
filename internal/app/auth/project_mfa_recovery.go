@@ -6,9 +6,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfarecovery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/service"
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
-	mfatotp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
 )
 
 type projectMFARecovery struct {
@@ -46,7 +47,7 @@ func (p *ProjectProfile) buildProfileMFARecovery(ctx context.Context, cfg Projec
 		return
 	}
 	recovery := &projectMFARecovery{mfa: mfa, mail: mail}
-	if err := recovery.use(ctx, func(context.Context, *mfaservice.Recovery) error { return nil }); err != nil {
+	if err := recovery.use(ctx, func(context.Context, *mfarecovery.Recovery) error { return nil }); err != nil {
 		p.state("mfa_recovery", "recovery_dependencies_unavailable")
 		return
 	}
@@ -54,7 +55,7 @@ func (p *ProjectProfile) buildProfileMFARecovery(ctx context.Context, cfg Projec
 	p.state("mfa_recovery", "")
 }
 
-func (p *projectMFARecovery) use(ctx context.Context, operation func(context.Context, *mfaservice.Recovery) error) error {
+func (p *projectMFARecovery) use(ctx context.Context, operation func(context.Context, *mfarecovery.Recovery) error) error {
 	if p == nil || p.mfa == nil || p.mail == nil {
 		return domain.ErrUnavailable
 	}
@@ -68,7 +69,7 @@ func (p *projectMFARecovery) use(ctx context.Context, operation func(context.Con
 			return domain.ErrUnavailable
 		}
 		factory := p.mfa.factory
-		service, err := mfaservice.NewRecovery(repo, factory.cipher, mfatotp.Authenticator{}, factory.limits, factory.managementConfig, factory.config.AllowPrimary)
+		service, err := mfarecovery.NewRecovery(repo, factory.cipher, totp.Authenticator{}, factory.limits, factory.managementConfig, factory.config.AllowPrimary)
 		if err != nil {
 			return err
 		}
@@ -76,9 +77,9 @@ func (p *projectMFARecovery) use(ctx context.Context, operation func(context.Con
 	})
 }
 
-func (p *projectMFARecovery) Start(ctx context.Context, input mfaservice.StartRecoveryInput) (*mfaservice.RecoveryCandidate, error) {
-	var result *mfaservice.RecoveryCandidate
-	err := p.use(ctx, func(ctx context.Context, service *mfaservice.Recovery) error {
+func (p *projectMFARecovery) Start(ctx context.Context, input mfarecovery.StartRecoveryInput) (*mfarecovery.RecoveryCandidate, error) {
+	var result *mfarecovery.RecoveryCandidate
+	err := p.use(ctx, func(ctx context.Context, service *mfarecovery.Recovery) error {
 		var err error
 		result, err = service.Start(ctx, input)
 		return err
@@ -89,9 +90,9 @@ func (p *projectMFARecovery) Start(ctx context.Context, input mfaservice.StartRe
 	return result, nil
 }
 
-func (p *projectMFARecovery) Complete(ctx context.Context, input mfaservice.CompleteRecoveryInput) (*mfaservice.RecoveryCodes, error) {
+func (p *projectMFARecovery) Complete(ctx context.Context, input mfarecovery.CompleteRecoveryInput) (*mfaservice.RecoveryCodes, error) {
 	var result *mfaservice.RecoveryCodes
-	err := p.use(ctx, func(ctx context.Context, service *mfaservice.Recovery) error {
+	err := p.use(ctx, func(ctx context.Context, service *mfarecovery.Recovery) error {
 		var err error
 		result, err = service.Complete(ctx, input)
 		return err

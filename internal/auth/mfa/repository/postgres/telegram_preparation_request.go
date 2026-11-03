@@ -4,12 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfatelegram "github.com/Inforberi/financial-intelligence/internal/auth/mfa/telegram/service"
 )
 
-func (r *Repository) IssueTelegramPreparation(ctx context.Context, proof service.Proof, input service.TelegramIntent) (time.Time, error) {
+func (r *Repository) IssueTelegramPreparation(ctx context.Context, proof mfaservice.Proof, input mfatelegram.TelegramIntent) (time.Time, error) {
 	var expires time.Time
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		deadline, err := r.lockTelegramManagement(ctx, tx, proof, input.Bot)

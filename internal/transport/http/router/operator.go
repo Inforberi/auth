@@ -46,12 +46,12 @@ func NewOperator(h Handlers) (http.Handler, error) {
 			r.Use(browserProtection(h))
 			r.Post("/forgot-password", h.Recovery.Forgot)
 			r.Post("/reset-password", h.Recovery.Reset)
-			r.Post("/mfa/login/complete", h.MFA.CompleteLogin)
-			r.Post("/mfa/login/enrollment", h.MFA.StartLoginEnrollment)
-			r.Post("/mfa/login/enrollment/confirm", h.MFA.ConfirmLoginEnrollment)
+			r.Post("/mfa/login/complete", h.MFALogin.CompleteLogin)
+			r.Post("/mfa/login/enrollment", h.MFALogin.StartLoginEnrollment)
+			r.Post("/mfa/login/enrollment/confirm", h.MFALogin.ConfirmLoginEnrollment)
 			if h.Config.MFA.RecoveryEnabled {
-				r.Post("/mfa/recovery/start", h.MFA.StartRecovery)
-				r.Post("/mfa/recovery/complete", h.MFA.CompleteRecovery)
+				r.Post("/mfa/recovery/start", h.MFARecovery.StartRecovery)
+				r.Post("/mfa/recovery/complete", h.MFARecovery.CompleteRecovery)
 			}
 			sessionRoutes(r, h)
 			owner := r.With(h.Middleware.NoRefreshAuth)

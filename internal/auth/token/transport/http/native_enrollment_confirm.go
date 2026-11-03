@@ -3,7 +3,7 @@ package http
 import (
 	"net/http"
 
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -37,8 +37,8 @@ func (h *NativeHandler) ConfirmEnrollment(w http.ResponseWriter, r *http.Request
 	if !decodeNative(w, r, &input, []string{"challenge", "binding", "token", "code"}) {
 		return
 	}
-	result, err := h.services.Enrollment.ConfirmNativeRequiredEnrollment(r.Context(), mfaservice.ConfirmLoginEnrollmentInput{
-		LoginEnrollmentInput: mfaservice.LoginEnrollmentInput{Challenge: input.Challenge, Binding: input.Binding, IP: httpx.IP(r)}, Token: input.Token, Code: input.Code,
+	result, err := h.services.Enrollment.ConfirmNativeRequiredEnrollment(r.Context(), mfalogin.ConfirmLoginEnrollmentInput{
+		LoginEnrollmentInput: mfalogin.LoginEnrollmentInput{Challenge: input.Challenge, Binding: input.Binding, IP: httpx.IP(r)}, Token: input.Token, Code: input.Code,
 	})
 	if err != nil {
 		h.respondError(w, r, err)

@@ -31,6 +31,15 @@ internal/
 │   ├── session/
 │   ├── token/                    # JWT и связанные сценарии
 │   ├── mfa/
+│   │   ├── domain/               # модели и чистые правила выбора/отключения
+│   │   ├── service/              # общие proof, crypto и admission контракты
+│   │   ├── login/{service,transport/http}/
+│   │   ├── management/{service,transport/http}/
+│   │   ├── recovery/{service,transport/http}/
+│   │   ├── telegram/{service,transport/http}/
+│   │   ├── delivery/service/
+│   │   ├── repository/{postgres,redis}/
+│   │   └── transport/http/       # общие responses, errors и извлечение proof
 │   ├── settings/                 # настройки Auth и уведомлений
 │   └── delivery/                 # существующая доставка уведомлений
 ├── admin/
@@ -158,7 +167,7 @@ HTTP проверяет форму запроса; service один раз пр�
 
 ### Тесты и sandbox
 
-Миграции R3: auth-набор нужен каждой проектной БД и входу администраторов в общей БД; admin-набор устанавливается дополнительно только в общую управляющую БД. Go-загрузчик migrations/auth/schema.go встраивает единственный исходный SQL для privileged подготовки проектов. В migrations нет бизнес-сценариев; их tests находятся у фич, прямые schema up/down tests — migrations/tests. Файловые пути/loader обновляются вместе с callers и Compose/migrate commands; имена SQL-схем, версии, checksum и permissions сохраняются. Это планируемое размещение, исходники пока по прежним путям. Подробности — [R3](planning/readability-refactor.md#миграции-и-подготовка-бд).
+Миграции R3: auth-набор нужен каждой проектной БД и входу администраторов в общей БД; admin-набор устанавливается дополнительно только в общую управляющую БД. Go-загрузчик migrations/auth/schema.go встраивает единственный исходный SQL для privileged подготовки проектов. В migrations нет бизнес-сценариев; их tests находятся у фич, прямые schema up/down tests — migrations/tests. Файловые пути/loader обновляются вместе с callers и Compose/migrate commands; имена SQL-схем, версии, checksum и permissions сохраняются. Это фактическое размещение после принятого R3. Подробности — [R3](planning/readability-refactor.md#миграции-и-подготовка-бд).
 
 Публичные tests фичи находятся в её локальном tests. Подпапка — отдельный Go-пакет даже при одинаковом package name. Обоснованные private tests остаются рядом с кодом; не экспортировать детали и не добавлять wrappers ради переноса. Repository tests могут использовать собственную настоящую тестовую БД без запуска всего Auth. Fixtures — в testdata своего suite; helpers общие только по реальному повторному использованию. Отдельный go.mod не создаётся.
 
@@ -373,3 +382,15 @@ UI также позволит вводить/заменять SMTP/provider sec
 До 12.1 пользователь выбирает merchant profile: страна/юридический статус продавца, валюты, товары, разовая/recurring оплата, refund/cancel требования. Затем выбирается и проверяется один hosted-checkout provider; конкретный поставщик сейчас не объявлен поддержанным. Native/SSO/organizations/Telegram commerce требуют отдельного подтверждения scope перед своими подэтапами.
 
 Уточнение executor assembly: app/projects/preparation создаёт и закрывает concrete SQL/storage adapters для отдельного privileged процесса. Это инфраструктурная сборка, поэтому она не находится в service. Preparation CLI читает flags/env и вызывает этот application workflow; domain/service фич не импортируют concrete adapters. Правила архитектурного теста не ослаблялись.
+
+### MFA после R4
+
+Login владеет browser/native challenge, завершением и required enrollment; management — TOTP enrollment/replacement, step-up, отключением, recovery codes, email-фактором и предпочтением. Recovery владеет независимо одобряемым восстановлением и операторским решением. Telegram управляет каналом и фактором; доставка security notices находится в delivery/service. TelegramLogin остаётся в login/service. Существующая EmailLogin-реализация использует общий OTP challenge/outbox в methods/emailotp/service; перенос в login с обратным import создал бы цикл, копии механизма не добавляем.
+
+Общий mfa/service содержит только используемые несколькими сценариями proof/ports/configuration, криптографическую проверку, подготовку enrollment/recovery codes и admission. Он не импортирует конкретные MFA-подфичи. Общий mfa/transport/http не импортирует их handlers; app/router подключают management, login и recovery отдельно. Никакого umbrella handler или forwarding facade нет.
+
+Repository возвращает MethodSelection одним прежним SQL-запросом, domain выбирает метод без fallback при недоступном предпочтении. Service передаёт CanDisableTOTP в узкий transaction-scoped порт; repository вызывает его после прежних access/user/session locks и fresh proof на актуальном состоянии, перед delete/preference/invalidate/audit/commit. SQL constraints и current guards сохраняются.
+
+Публичные unit/HTTP tests расположены в локальных tests. Private securityNotice payload tests остаются рядом с delivery implementation. Связный cross-feature SQL suite и общие fixtures перенесены из password/repository/postgres в internal/app/auth/tests одной closure: проверки не становятся частью парольного repository и не копируют fixtures. Private registrationError test остаётся у password repository. Проектные сквозные suites остаются internal/app/projects/tests. Это единый тестовый suite сборки, а не новый production-пакет.
+
+HTTP-пакеты подфич имеют явные Go names mfaloginhttp, mfamanagementhttp, mfarecoveryhttp и mfatelegramhttp; общий остаётся mfahttp. Существующие Swagger schema IDs закреплены @name: перенос не меняет клиентский контракт и не требует новой копии DTO ради генератора.

@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 )
 
 type mfaLogin interface {
-	Start(context.Context, mfaservice.PrimaryProof, string) (*mfaservice.LoginChallenge, error)
+	Start(context.Context, mfaservice.PrimaryProof, string) (*mfalogin.LoginChallenge, error)
 }
 
 type Login struct {

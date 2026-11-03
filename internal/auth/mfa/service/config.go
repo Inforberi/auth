@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -29,6 +30,29 @@ func (c Config) Validate() error {
 	}
 	if c.ChallengeTTL < time.Minute || c.ChallengeTTL > 5*time.Minute || c.UserLimitPerMinute < 2 || c.IPLimitPerMinute < 2 || c.GlobalLimitPerMinute < 2 {
 		return fmt.Errorf("MFA challenge TTL must be 1m..5m and operation budgets at least 2 to allow start and completion")
+	}
+	return nil
+}
+
+type LoginConfig struct {
+	Issuer                string
+	AllowPrimary          func(method, issuer string) bool
+	ChallengeTTL          time.Duration
+	SessionTTL            time.Duration
+	AbsoluteSessionTTL    time.Duration
+	AdminIdleTimeout      time.Duration
+	AdminAbsoluteTTL      time.Duration
+	AdminActivityInterval time.Duration
+	UserLimitPerMinute    int
+	IPLimitPerMinute      int
+	GlobalLimitPerMinute  int
+}
+
+func (c LoginConfig) Validate() error {
+	if c.ChallengeTTL <= 0 || c.ChallengeTTL > 5*time.Minute || c.SessionTTL <= 0 ||
+		c.AbsoluteSessionTTL < c.SessionTTL || c.UserLimitPerMinute < 2 ||
+		c.IPLimitPerMinute < 2 || c.GlobalLimitPerMinute < 2 {
+		return errors.New("invalid MFA login configuration")
 	}
 	return nil
 }

@@ -6,15 +6,15 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 )
 
 const assistedRecoveryFactor domain.Method = "assisted_recovery"
 
-func consumeLoginFactor(ctx context.Context, tx pgx.Tx, proof lockedLoginChallenge, factor service.LoginFactor, email *service.EmailCodeProof, telegram *service.TelegramCodeProof) (domain.Verification, error) {
+func consumeLoginFactor(ctx context.Context, tx pgx.Tx, proof lockedLoginChallenge, factor mfalogin.LoginFactor, email *mfalogin.EmailCodeProof, telegram *mfalogin.TelegramCodeProof) (domain.Verification, error) {
 	if proof.FactorMethod == domain.TelegramCode {
 		if telegram == nil || email != nil || factor != nil || proof.Method != "password" || proof.Administrative {
 			return domain.Verification{}, domain.ErrInvalidCode
@@ -37,7 +37,7 @@ func consumeLoginFactor(ctx context.Context, tx pgx.Tx, proof lockedLoginChallen
 	return consumeFactor(ctx, tx, proof.UserID, check, recovery)
 }
 
-func consumeEmailLoginCode(ctx context.Context, tx pgx.Tx, proof lockedLoginChallenge, input service.EmailCodeProof) (domain.Verification, error) {
+func consumeEmailLoginCode(ctx context.Context, tx pgx.Tx, proof lockedLoginChallenge, input mfalogin.EmailCodeProof) (domain.Verification, error) {
 	var expected string
 	var now time.Time
 	err := tx.QueryRow(ctx, `SELECT c.verifier,clock_timestamp() FROM auth.email_login_challenges c

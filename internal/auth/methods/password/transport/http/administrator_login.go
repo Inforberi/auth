@@ -10,7 +10,7 @@ import "net/http"
 // @Produce json
 // @Param body body LoginByEmailRequest true "credentials"
 // @Success 200 {object} LoginByEmailResponse
-// @Success 202 {object} mfahttp.ChallengeResponse
+// @Success 202 {object} mfaloginhttp.ChallengeResponse
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, email_required, password_required, invalid_email, invalid_credentials"
 // @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"

@@ -5,22 +5,22 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func (r *Repository) SaveEnrollment(ctx context.Context, proof service.Proof, digest string, encrypted []byte) (time.Time, error) {
+func (r *Repository) SaveEnrollment(ctx context.Context, proof mfaservice.Proof, digest string, encrypted []byte) (time.Time, error) {
 	return r.saveEnrollment(ctx, proof, digest, encrypted, "enroll")
 }
 
-func (r *Repository) SaveReplacement(ctx context.Context, proof service.Proof, digest string, encrypted []byte) (time.Time, error) {
+func (r *Repository) SaveReplacement(ctx context.Context, proof mfaservice.Proof, digest string, encrypted []byte) (time.Time, error) {
 	return r.saveEnrollment(ctx, proof, digest, encrypted, "replace")
 }
 
-func (r *Repository) saveEnrollment(ctx context.Context, proof service.Proof, digest string, encrypted []byte, purpose string) (time.Time, error) {
+func (r *Repository) saveEnrollment(ctx context.Context, proof mfaservice.Proof, digest string, encrypted []byte, purpose string) (time.Time, error) {
 	var expires time.Time
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		if err := r.requireProof(ctx, tx, proof); err != nil {
@@ -53,15 +53,15 @@ func (r *Repository) saveEnrollment(ctx context.Context, proof service.Proof, di
 	return expires, err
 }
 
-func (r *Repository) ConfirmEnrollment(ctx context.Context, proof service.Proof, digest string, check service.Check, recovery []string) error {
+func (r *Repository) ConfirmEnrollment(ctx context.Context, proof mfaservice.Proof, digest string, check mfaservice.Check, recovery []string) error {
 	return r.confirmEnrollment(ctx, proof, digest, check, recovery, "enroll")
 }
 
-func (r *Repository) ConfirmReplacement(ctx context.Context, proof service.Proof, digest string, check service.Check, recovery []string) error {
+func (r *Repository) ConfirmReplacement(ctx context.Context, proof mfaservice.Proof, digest string, check mfaservice.Check, recovery []string) error {
 	return r.confirmEnrollment(ctx, proof, digest, check, recovery, "replace")
 }
 
-func (r *Repository) confirmEnrollment(ctx context.Context, proof service.Proof, digest string, check service.Check, recovery []string, purpose string) error {
+func (r *Repository) confirmEnrollment(ctx context.Context, proof mfaservice.Proof, digest string, check mfaservice.Check, recovery []string, purpose string) error {
 	rejected := false
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		if err := r.requireProof(ctx, tx, proof); err != nil {

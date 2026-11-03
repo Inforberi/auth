@@ -7,10 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	mfarecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
@@ -71,11 +73,11 @@ func TestTwoProjectMFARecoverySQL(t *testing.T) {
 	webs[0].trace, webs[1].trace = nil, nil
 	challenge := webs[0].call(t, t.Context(), "POST", "/api/v1/auth/login/email", f.origins[0], "", map[string]string{"email": httpIsolationEmail, "password": httpIsolationPassword})
 	require.Equal(t, 202, challenge.status)
-	var login mfahttp.ChallengeResponse
+	var login mfaloginhttp.ChallengeResponse
 	require.NoError(t, json.Unmarshal(challenge.body, &login))
-	cookie := challenge.cookie(t, mfahttp.LoginCookie)
+	cookie := challenge.cookie(t, mfaloginhttp.LoginCookie)
 	trackProjectRecoveryLimits(t, &f, ciphers, login.Challenge, cookie)
-	start := mfahttp.StartRecoveryRequest{Challenge: login.Challenge}
+	start := mfarecoveryhttp.StartRecoveryRequest{Challenge: login.Challenge}
 	path := "/api/v1/auth/mfa/recovery/start"
 	for _, origin := range []string{"", f.origins[1]} {
 		r := webs[0].call(t, t.Context(), "POST", path, origin, cookie, start)
@@ -85,10 +87,10 @@ func TestTwoProjectMFARecoverySQL(t *testing.T) {
 	require.Equal(t, 400, foreign.status, string(foreign.body))
 	result := webs[0].call(t, t.Context(), "POST", path, f.origins[0], cookie, start)
 	require.Equal(t, 200, result.status, string(result.body))
-	var candidate mfahttp.RecoveryCandidateResponse
+	var candidate mfarecoveryhttp.RecoveryCandidateResponse
 	require.NoError(t, json.Unmarshal(result.body, &candidate))
 	require.Equal(t, "operator_approval_required", candidate.Status)
-	complete := mfahttp.CompleteRecoveryRequest{RequestID: candidate.RequestID, Challenge: login.Challenge, Code: projectMFACode(t, t.Context(), f.databases[0], candidate.Secret, 0)}
+	complete := mfarecoveryhttp.CompleteRecoveryRequest{RequestID: candidate.RequestID, Challenge: login.Challenge, Code: projectMFACode(t, t.Context(), f.databases[0], candidate.Secret, 0)}
 	path = "/api/v1/auth/mfa/recovery/complete"
 	pending := webs[0].call(t, t.Context(), "POST", path, f.origins[0], cookie, complete)
 	require.Equal(t, 400, pending.status, "password and proposed TOTP must not approve recovery")
@@ -152,7 +154,7 @@ GRANT EXECUTE ON FUNCTION auth.decide_mfa_recovery(uuid,uuid,bigint,boolean,text
 
 func trackProjectRecoveryLimits(t *testing.T, f *projectIsolationHTTP, ciphers [2]*secretbox.Cipher, token, cookie string) {
 	t.Helper()
-	binding := strings.TrimPrefix(cookie, mfahttp.LoginCookie+"=")
+	binding := strings.TrimPrefix(cookie, mfaloginhttp.LoginCookie+"=")
 	for i, key := range f.projects {
 		scope, err := realmscope.New("project", string(key.Binding.ProjectID))
 		require.NoError(t, err)

@@ -7,10 +7,11 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/domain"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func (s *EmailLogin) Complete(ctx context.Context, input mfaservice.CompleteLoginInput) (*mfaservice.LoginSession, error) {
+func (s *EmailLogin) Complete(ctx context.Context, input mfalogin.CompleteLoginInput) (*mfalogin.LoginSession, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	attempt, err := s.prepare(ctx, input, false)
@@ -21,7 +22,7 @@ func (s *EmailLogin) Complete(ctx context.Context, input mfaservice.CompleteLogi
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.repo.CompleteLogin(ctx, mfaservice.LoginCompletion{
+	result, err := s.repo.CompleteLogin(ctx, mfalogin.LoginCompletion{
 		Email: attempt.Email, Digest: attempt.Digest, BindingHash: attempt.BindingHash,
 		SessionHash: s.tokens.Hash(raw), UserAgent: input.UserAgent, IP: input.IP,
 		AllowPrimary: s.cfg.AllowPrimary, SessionTTL: s.cfg.SessionTTL, AbsoluteSessionTTL: s.cfg.AbsoluteSessionTTL,
@@ -30,17 +31,17 @@ func (s *EmailLogin) Complete(ctx context.Context, input mfaservice.CompleteLogi
 	if err != nil {
 		return nil, err
 	}
-	return &mfaservice.LoginSession{Token: raw, UserID: result.UserID, ExpiresAt: result.ExpiresAt, MFAVerified: result.MFAVerified}, nil
+	return &mfalogin.LoginSession{Token: raw, UserID: result.UserID, ExpiresAt: result.ExpiresAt, MFAVerified: result.MFAVerified}, nil
 }
 
-func (s *EmailLogin) PrepareNativeCompletion(ctx context.Context, input mfaservice.CompleteLoginInput) (mfaservice.NativeAttempt, error) {
+func (s *EmailLogin) PrepareNativeCompletion(ctx context.Context, input mfalogin.CompleteLoginInput) (mfalogin.NativeAttempt, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	return s.prepare(ctx, input, true)
 }
 
-func (s *EmailLogin) prepare(ctx context.Context, input mfaservice.CompleteLoginInput, native bool) (mfaservice.NativeAttempt, error) {
-	var attempt mfaservice.NativeAttempt
+func (s *EmailLogin) prepare(ctx context.Context, input mfalogin.CompleteLoginInput, native bool) (mfalogin.NativeAttempt, error) {
+	var attempt mfalogin.NativeAttempt
 	if !domain.ValidBinding(input.Token) || !domain.ValidBinding(input.Binding) || !domain.ValidCode(input.Code) || input.Recovery || len(input.UserAgent) > 512 || len(input.IP) > 64 {
 		return attempt, mfadomain.ErrInvalidCode
 	}
@@ -71,7 +72,7 @@ func (s *EmailLogin) prepare(ctx context.Context, input mfaservice.CompleteLogin
 		return attempt, mfadomain.ErrLimited
 	}
 	attempt.UserID, attempt.AllowPrimary = user, s.cfg.AllowPrimary
-	attempt.Email = &mfaservice.EmailCodeProof{
+	attempt.Email = &mfalogin.EmailCodeProof{
 		Digest:   s.mail.Digest(emailLoginPurpose + "binding:" + input.Token),
 		Verifier: s.mail.Digest(emailLoginPurpose + "code:" + input.Token + ":" + input.Code),
 	}

@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfarecovery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/service"
 )
 
 func TestProjectMFARecoveryPrerequisites(t *testing.T) {
@@ -37,10 +37,10 @@ func TestProjectMFARecoveryPrerequisites(t *testing.T) {
 
 func TestProjectMFARecoveryUnavailable(t *testing.T) {
 	for _, service := range []*projectMFARecovery{nil, {}} {
-		candidate, err := service.Start(t.Context(), mfaservice.StartRecoveryInput{})
+		candidate, err := service.Start(t.Context(), mfarecovery.StartRecoveryInput{})
 		require.ErrorIs(t, err, domain.ErrUnavailable)
 		require.Nil(t, candidate)
-		codes, err := service.Complete(t.Context(), mfaservice.CompleteRecoveryInput{})
+		codes, err := service.Complete(t.Context(), mfarecovery.CompleteRecoveryInput{})
 		require.ErrorIs(t, err, domain.ErrUnavailable)
 		require.Nil(t, codes)
 	}

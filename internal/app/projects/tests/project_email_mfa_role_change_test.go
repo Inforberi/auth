@@ -14,7 +14,7 @@ import (
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
@@ -45,9 +45,9 @@ func checkEmailMFAChallengeRoleChange(t *testing.T, f emailMFAHTTPFixture, owner
 	path := "/api/v1/auth/mfa/email/login"
 	response := web.call(t, ctx, "POST", path, web.origin, "", map[string]string{"email": httpIsolationEmail, "password": httpIsolationPassword})
 	require.Equal(t, 202, response.status, string(response.body))
-	var challenge mfahttp.ChallengeResponse
+	var challenge mfaloginhttp.ChallengeResponse
 	require.NoError(t, json.Unmarshal(response.body, &challenge))
-	name := mfahttp.EmailLoginCookie + "-" + string(f.projects.projects[0].Binding.ProjectID)
+	name := mfaloginhttp.EmailLoginCookie + "-" + string(f.projects.projects[0].Binding.ProjectID)
 	cookie := response.cookie(t, name)
 	f.trackCompletion(challenge.Challenge, strings.TrimPrefix(cookie, name+"="))
 	code := f.code(t, "mfa-email-login:", challenge.Challenge)
@@ -57,7 +57,7 @@ func checkEmailMFAChallengeRoleChange(t *testing.T, f emailMFAHTTPFixture, owner
 		return err
 	})
 	require.NoError(t, err, "a TOTP-equipped member may receive administrative permissions")
-	response = web.call(t, ctx, "POST", path+"/complete", web.origin, cookie, mfahttp.CompleteEmailLoginRequest{Challenge: challenge.Challenge, Code: code})
+	response = web.call(t, ctx, "POST", path+"/complete", web.origin, cookie, mfaloginhttp.CompleteEmailLoginRequest{Challenge: challenge.Challenge, Code: code})
 	require.Equal(t, 400, response.status, "a pre-promotion email challenge must not create an administrative session")
 	for _, cookie := range response.cookies {
 		require.Empty(t, cookie.Value)

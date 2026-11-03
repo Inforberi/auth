@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -39,7 +39,7 @@ func (h *NativeHandler) StartEnrollment(w http.ResponseWriter, r *http.Request) 
 	if !decodeNative(w, r, &input, []string{"challenge", "binding"}) {
 		return
 	}
-	result, err := h.services.Enrollment.StartNativeRequiredEnrollment(r.Context(), mfaservice.LoginEnrollmentInput{Challenge: input.Challenge, Binding: input.Binding, IP: httpx.IP(r)})
+	result, err := h.services.Enrollment.StartNativeRequiredEnrollment(r.Context(), mfalogin.LoginEnrollmentInput{Challenge: input.Challenge, Binding: input.Binding, IP: httpx.IP(r)})
 	if err != nil {
 		h.respondError(w, r, err)
 		return

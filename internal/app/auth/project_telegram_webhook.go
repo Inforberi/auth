@@ -10,6 +10,7 @@ import (
 
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfatelegram "github.com/Inforberi/financial-intelligence/internal/auth/mfa/telegram/service"
 	telegrambot "github.com/Inforberi/financial-intelligence/internal/integrations/telegram/bot"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
@@ -50,7 +51,7 @@ func (p *projectTelegramMFA) webhookHTTP(w http.ResponseWriter, r *http.Request)
 		if err != nil {
 			return err
 		}
-		delivery, err := preparation.Receive(ctx, mfaservice.TelegramStart{BotID: start.BotID, TelegramID: start.UserID, UpdateID: start.UpdateID, Binding: start.Binding})
+		delivery, err := preparation.Receive(ctx, mfatelegram.TelegramStart{BotID: start.BotID, TelegramID: start.UserID, UpdateID: start.UpdateID, Binding: start.Binding})
 		if err != nil {
 			return err
 		}

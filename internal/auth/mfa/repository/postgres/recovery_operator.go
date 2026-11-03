@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfarecovery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/service"
 )
 
 func (r *Repository) CheckRecoveryOperator(ctx context.Context) error {
@@ -41,8 +41,8 @@ func (r *Repository) checkRecoveryOperator(ctx context.Context, group string) er
 	return nil
 }
 
-func (r *Repository) RecoveryTarget(ctx context.Context, user accountdomain.UserID, request string) (*service.RecoveryTarget, error) {
-	var result service.RecoveryTarget
+func (r *Repository) RecoveryTarget(ctx context.Context, user accountdomain.UserID, request string) (*mfarecovery.RecoveryTarget, error) {
+	var result mfarecovery.RecoveryTarget
 	err := r.db.QueryRow(ctx, `SELECT current_database(),session_user::text,c.state,c.auth_version,c.expires_at
 		FROM auth.mfa_recovery_requests c JOIN auth.users u ON u.id=c.user_id
 		WHERE c.user_id=$1 AND c.request_id=$2 AND c.auth_version=u.auth_version AND c.state<>'cancelled'

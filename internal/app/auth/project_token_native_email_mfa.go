@@ -7,7 +7,7 @@ import (
 
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	tokendomain "github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
@@ -49,7 +49,7 @@ func (p *ProjectTokens) LoginPasswordEmailMFA(ctx context.Context, input tokense
 	return result, nil
 }
 
-func (p *ProjectTokens) CompleteNativeEmailMFA(ctx context.Context, input mfaservice.CompleteLoginInput) (*tokenservice.RefreshResult, error) {
+func (p *ProjectTokens) CompleteNativeEmailMFA(ctx context.Context, input mfalogin.CompleteLoginInput) (*tokenservice.RefreshResult, error) {
 	if p.native == nil || p.native.emailMFA == nil {
 		return nil, tokendomain.ErrNativeDisabled
 	}

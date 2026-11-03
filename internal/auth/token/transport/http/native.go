@@ -9,6 +9,7 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	emailservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/service"
@@ -25,12 +26,12 @@ type NativeEmail interface {
 }
 
 type NativeMFA interface {
-	Complete(context.Context, mfaservice.CompleteLoginInput) (*service.RefreshResult, error)
+	Complete(context.Context, mfalogin.CompleteLoginInput) (*service.RefreshResult, error)
 }
 
 type NativeEnrollment interface {
-	StartNativeRequiredEnrollment(context.Context, mfaservice.LoginEnrollmentInput) (*mfaservice.Enrollment, error)
-	ConfirmNativeRequiredEnrollment(context.Context, mfaservice.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error)
+	StartNativeRequiredEnrollment(context.Context, mfalogin.LoginEnrollmentInput) (*mfaservice.Enrollment, error)
+	ConfirmNativeRequiredEnrollment(context.Context, mfalogin.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error)
 }
 
 type NativeTokens interface {

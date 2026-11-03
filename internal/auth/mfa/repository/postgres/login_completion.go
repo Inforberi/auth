@@ -5,14 +5,14 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 )
 
-func (r *Repository) CompleteLogin(ctx context.Context, input service.LoginCompletion, factor service.LoginFactor) (*service.LoginCommit, error) {
-	var result service.LoginCommit
+func (r *Repository) CompleteLogin(ctx context.Context, input mfalogin.LoginCompletion, factor mfalogin.LoginFactor) (*mfalogin.LoginCommit, error) {
+	var result mfalogin.LoginCommit
 	rejected := false
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		proof, err := lockLoginChallenge(ctx, tx, input.Digest, input.BindingHash, false)

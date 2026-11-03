@@ -14,7 +14,7 @@ import (
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
@@ -60,7 +60,7 @@ func (f projectTokenFixture) nativeTokenFlows(t *testing.T, ctx context.Context,
 	require.NoError(t, f.db.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&now))
 	code, err := totp.GenerateCode(secret, now)
 	require.NoError(t, err)
-	complete := mfaservice.CompleteLoginInput{Token: challenged.Challenge.Token, Binding: challenged.Challenge.Binding, Code: code, IP: tokenFixtureIP, UserAgent: input.UserAgent}
+	complete := mfalogin.CompleteLoginInput{Token: challenged.Challenge.Token, Binding: challenged.Challenge.Binding, Code: code, IP: tokenFixtureIP, UserAgent: input.UserAgent}
 	browserCfg := projectPasswordFixtureConfig()
 	browserCfg.MFA = cfg.Native.MFA
 	browser, err := appauth.NewProjectPassword(ctx, f.key, browserCfg, appauth.ProjectPasswordDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash})

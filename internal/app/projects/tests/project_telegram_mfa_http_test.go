@@ -10,7 +10,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
+	mfatelegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/telegram/transport/http"
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 )
@@ -43,7 +45,7 @@ func TestTwoProjectTelegramMFAHTTP(t *testing.T) {
 		require.Equal(t, 403, response.status)
 		response = web.call(t, ctx, "POST", "/api/v1/auth/mfa/telegram/preparation", web.origin, users[i], nil)
 		require.Equal(t, 202, response.status, string(response.body))
-		var prepared mfahttp.TelegramPreparationResponse
+		var prepared mfatelegramhttp.TelegramPreparationResponse
 		require.NoError(t, json.Unmarshal(response.body, &prepared))
 		f.trackTelegramLimits(t, prepared.Binding)
 		require.True(t, strings.HasPrefix(prepared.URL, "https://t.me/Security"))
@@ -62,15 +64,15 @@ func TestTwoProjectTelegramMFAHTTP(t *testing.T) {
 		require.Equal(t, 200, response.status, string(response.body))
 	}
 	credentials := map[string]string{"email": httpIsolationEmail, "password": httpIsolationPassword}
-	var challenges [2]mfahttp.ChallengeResponse
+	var challenges [2]mfaloginhttp.ChallengeResponse
 	var cookies, codes [2]string
 	for i, web := range f.webs {
 		response := web.call(t, ctx, "POST", "/api/v1/auth/login/email", web.origin, "", credentials)
 		require.Equal(t, 202, response.status, string(response.body))
 		require.NoError(t, json.Unmarshal(response.body, &challenges[i]))
-		f.trackCompletion(challenges[i].Challenge, strings.TrimPrefix(response.cookie(t, mfahttp.LoginCookie), mfahttp.LoginCookie+"="))
+		f.trackCompletion(challenges[i].Challenge, strings.TrimPrefix(response.cookie(t, mfaloginhttp.LoginCookie), mfaloginhttp.LoginCookie+"="))
 		require.Equal(t, "telegram", challenges[i].Method)
-		cookies[i] = response.cookie(t, mfahttp.LoginCookie)
+		cookies[i] = response.cookie(t, mfaloginhttp.LoginCookie)
 		codes[i] = bot.latest()
 	}
 	foreign := f.webs[1].call(t, ctx, "POST", "/api/v1/auth/mfa/login/complete", f.webs[1].origin, cookies[0], map[string]string{"challenge": challenges[0].Challenge, "code": codes[0]})
@@ -85,7 +87,7 @@ func TestTwoProjectTelegramMFAHTTP(t *testing.T) {
 	web := f.webs[0]
 	response := web.call(t, ctx, "GET", "/api/v1/auth/mfa/preference", "", users[0], nil)
 	require.Equal(t, 200, response.status)
-	var preference mfahttp.PreferenceResponse
+	var preference mfamanagementhttp.PreferenceResponse
 	require.NoError(t, json.Unmarshal(response.body, &preference))
 	reauth := web.call(t, ctx, "POST", "/api/v1/auth/reauthenticate/password", web.origin, users[0], map[string]string{"password": httpIsolationPassword})
 	require.Equal(t, 200, reauth.status, string(reauth.body))

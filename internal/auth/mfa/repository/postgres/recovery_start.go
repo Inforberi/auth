@@ -4,15 +4,15 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfarecovery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/service"
 )
 
-func (r *Repository) SaveRecoveryRequest(ctx context.Context, input service.RecoveryRequest) (*service.RecoveryCandidate, error) {
-	var result service.RecoveryCandidate
+func (r *Repository) SaveRecoveryRequest(ctx context.Context, input mfarecovery.RecoveryRequest) (*mfarecovery.RecoveryCandidate, error) {
+	var result mfarecovery.RecoveryCandidate
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
 			return err

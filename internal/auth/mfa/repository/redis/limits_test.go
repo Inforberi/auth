@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	redis "github.com/redis/go-redis/v9"
 
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
 func TestRedisMFALimits(t *testing.T) {
@@ -60,7 +60,7 @@ func TestRedisMFALimits(t *testing.T) {
 	if _, err := limiter.Allow(t.Context(), "unavailable", 5, time.Minute); err == nil {
 		t.Fatal("Redis error ignored")
 	}
-	if allowed, err := limiter.AllowAll(t.Context(), []service.Budget{{Key: "unavailable", Count: 5}}); err == nil || allowed {
+	if allowed, err := limiter.AllowAll(t.Context(), []mfaservice.Budget{{Key: "unavailable", Count: 5}}); err == nil || allowed {
 		t.Fatal("Redis batch failure opened admission")
 	}
 }

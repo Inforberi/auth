@@ -5,15 +5,16 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func (r *Repository) EmailLoginChannel(ctx context.Context, proof service.PrimaryProof) (otpservice.EmailLoginChannel, error) {
+func (r *Repository) EmailLoginChannel(ctx context.Context, proof mfaservice.PrimaryProof) (otpservice.EmailLoginChannel, error) {
 	var channel otpservice.EmailLoginChannel
 	err := r.db.QueryRow(ctx, `SELECT e.id,e.email::text FROM auth.mfa_email f
  JOIN auth.user_emails e ON e.id=f.email_id AND e.user_id=f.user_id
@@ -27,14 +28,14 @@ func (r *Repository) EmailLoginChannel(ctx context.Context, proof service.Primar
 	return channel, err
 }
 
-func (r *Repository) SaveEmailLoginChallenge(ctx context.Context, input otpservice.EmailLoginIntent, ttl time.Duration) (*service.LoginChallengeState, error) {
+func (r *Repository) SaveEmailLoginChallenge(ctx context.Context, input otpservice.EmailLoginIntent, ttl time.Duration) (*mfalogin.LoginChallengeState, error) {
 	if input.Proof.Administrative || input.Proof.Method != "password" {
 		return nil, domain.ErrProofRequired
 	}
 	return r.saveLoginChallenge(ctx, input.Proof, input.Target, input.Digest, input.BindingHash, ttl, &input, nil)
 }
 
-func lockEmailLoginChannel(ctx context.Context, tx pgx.Tx, proof service.PrimaryProof, channel otpservice.EmailLoginChannel) (string, error) {
+func lockEmailLoginChannel(ctx context.Context, tx pgx.Tx, proof mfaservice.PrimaryProof, channel otpservice.EmailLoginChannel) (string, error) {
 	var id string
 	err := tx.QueryRow(ctx, `SELECT e.id FROM auth.mfa_email f
  JOIN auth.user_emails e ON e.id=f.email_id AND e.user_id=f.user_id CROSS JOIN auth.mfa_settings p

@@ -4,23 +4,23 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 )
 
-func RequireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof) error {
+func RequireLoginPrimary(ctx context.Context, tx pgx.Tx, p mfaservice.PrimaryProof) error {
 	return requireLoginPrimary(ctx, tx, p, false)
 }
 
-func RequireNativeLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof) error {
+func RequireNativeLoginPrimary(ctx context.Context, tx pgx.Tx, p mfaservice.PrimaryProof) error {
 	return requireLoginPrimary(ctx, tx, p, true)
 }
 
-func requireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof, native bool) error {
+func requireLoginPrimary(ctx context.Context, tx pgx.Tx, p mfaservice.PrimaryProof, native bool) error {
 	var valid bool
 	var err error
 	if p.Administrative {
@@ -71,7 +71,7 @@ func requireLoginPrimary(ctx context.Context, tx pgx.Tx, p service.PrimaryProof,
 	return nil
 }
 
-func lockLoginPrimary(ctx context.Context, tx pgx.Tx, proof service.PrimaryProof) error {
+func lockLoginPrimary(ctx context.Context, tx pgx.Tx, proof mfaservice.PrimaryProof) error {
 	if proof.Administrative {
 		if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
 			return err

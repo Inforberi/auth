@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfamanagement "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func requireFreshMFA(ctx context.Context, tx pgx.Tx, proof service.Proof) error {
+func requireFreshMFA(ctx context.Context, tx pgx.Tx, proof mfaservice.Proof) error {
 	var valid bool
 	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.role_bound_sessions s
 		WHERE s.user_id=$1 AND s.token_hash=$2 AND s.auth_version=$3
@@ -27,8 +28,8 @@ func requireFreshMFA(ctx context.Context, tx pgx.Tx, proof service.Proof) error 
 	return nil
 }
 
-func (r *Repository) StepUp(ctx context.Context, proof service.Proof, replacement string, check service.Check, recovery string) (*service.StepUpCommit, error) {
-	var result service.StepUpCommit
+func (r *Repository) StepUp(ctx context.Context, proof mfaservice.Proof, replacement string, check mfaservice.Check, recovery string) (*mfamanagement.StepUpCommit, error) {
+	var result mfamanagement.StepUpCommit
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		if err := r.requireProof(ctx, tx, proof); err != nil {
 			return err
@@ -58,7 +59,7 @@ func (r *Repository) StepUp(ctx context.Context, proof service.Proof, replacemen
 	return &result, nil
 }
 
-func (r *Repository) Disable(ctx context.Context, proof service.Proof) error {
+func (r *Repository) Disable(ctx context.Context, proof mfaservice.Proof, check func(domain.DisableState) error) error {
 	return r.transaction(ctx, func(tx pgx.Tx) error {
 		if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
 			return err
@@ -69,16 +70,16 @@ func (r *Repository) Disable(ctx context.Context, proof service.Proof) error {
 		if err := requireFreshMFA(ctx, tx, proof); err != nil {
 			return err
 		}
-		var required, email, usableEmail, administrative, telegram, usableTelegram bool
-		err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1,$2),EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1),auth.email_factor_usable($1),$2 OR auth.has_administrative_access($1),EXISTS(SELECT 1 FROM auth.mfa_telegram WHERE user_id=$1),auth.telegram_factor_usable($1)`, proof.UserID, r.administrative).Scan(&required, &email, &usableEmail, &administrative, &telegram, &usableTelegram)
+		var state domain.DisableState
+		err := tx.QueryRow(ctx, `SELECT auth.mfa_required($1,$2),EXISTS(SELECT 1 FROM auth.mfa_email WHERE user_id=$1),auth.email_factor_usable($1),$2 OR auth.has_administrative_access($1),EXISTS(SELECT 1 FROM auth.mfa_telegram WHERE user_id=$1),auth.telegram_factor_usable($1)`, proof.UserID, r.administrative).Scan(&state.Required, &state.Email, &state.UsableEmail, &state.Administrative, &state.Telegram, &state.UsableTelegram)
 		if err != nil {
 			return err
 		}
-		if required && !usableEmail && !usableTelegram || (email || telegram) && administrative {
+		if check == nil {
 			return domain.ErrRequiredByPolicy
 		}
-		if email && !usableEmail || telegram && !usableTelegram {
-			return domain.ErrRequiredByPolicy
+		if err := check(state); err != nil {
+			return err
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM auth.mfa_totp WHERE user_id=$1`, proof.UserID); err != nil {
 			return err
@@ -93,7 +94,7 @@ func (r *Repository) Disable(ctx context.Context, proof service.Proof) error {
 	})
 }
 
-func (r *Repository) RegenerateRecovery(ctx context.Context, proof service.Proof, codes []string) error {
+func (r *Repository) RegenerateRecovery(ctx context.Context, proof mfaservice.Proof, codes []string) error {
 	return r.transaction(ctx, func(tx pgx.Tx) error {
 		if err := r.requireProof(ctx, tx, proof); err != nil {
 			return err

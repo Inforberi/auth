@@ -4,12 +4,12 @@ import (
 	"net/http"
 
 	oidchttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/transport/http"
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
 )
 
 type (
 	CallbackResponse     = oidchttp.CallbackResponse
-	MFAChallengeResponse = mfahttp.ChallengeResponse
+	MFAChallengeResponse = mfaloginhttp.ChallengeResponse
 )
 
 // @Summary Complete Telegram OIDC login

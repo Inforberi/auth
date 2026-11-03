@@ -2,7 +2,7 @@ package auth
 
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
+	redis "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
@@ -10,7 +10,7 @@ import (
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
-	mfatotp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
@@ -60,7 +60,7 @@ func (s realmSecurity) assembleSetup(repo accountservice.SetupRepository, rdb *r
 	if err != nil {
 		return nil, err
 	}
-	svc, err := accountservice.NewSetup(repo, limits, cipher, factorCipher, mail, hash, mfatotp.Authenticator{}, cfg.InitialSetup, cfg.MFA.Issuer)
+	svc, err := accountservice.NewSetup(repo, limits, cipher, factorCipher, mail, hash, totp.Authenticator{}, cfg.InitialSetup, cfg.MFA.Issuer)
 	if err != nil {
 		return nil, err
 	}

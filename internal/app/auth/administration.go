@@ -99,7 +99,7 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 		readiness = projectHTTP.Assess
 	}
 	handler, err := router.NewOperator(router.Handlers{
-		Config: cfg, Logger: deps.log, Setup: setup, MFA: mfa.handler,
+		Config: cfg, Logger: deps.log, Setup: setup, MFA: mfa.handler, MFALogin: mfa.loginHandler, MFARecovery: mfa.recoveryHandler,
 		Projects:          projecthttp.New(projectservice.NewWithRuntime(projects, operator, observer), deps.log),
 		ProjectRoles:      roles,
 		ProjectUsers:      adminapp.ProjectUsers(registry, projects, deps.log),

@@ -7,8 +7,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfatelegram "github.com/Inforberi/financial-intelligence/internal/auth/mfa/telegram/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
@@ -45,33 +46,33 @@ func (p *projectTelegramMFA) credentials(ctx context.Context, pool *pgxpool.Pool
 	return settings.Credentials(ctx)
 }
 
-func (p *projectTelegramMFA) preparation(ctx context.Context, pool *pgxpool.Pool) (*mfaservice.TelegramPreparation, settingsservice.TelegramBotCredentials, error) {
+func (p *projectTelegramMFA) preparation(ctx context.Context, pool *pgxpool.Pool) (*mfatelegram.TelegramPreparation, settingsservice.TelegramBotCredentials, error) {
 	credentials, err := p.credentials(ctx, pool)
 	if err != nil {
 		return nil, credentials, err
 	}
 	cfg := p.manager.factory.managementConfig
-	service, err := mfaservice.NewTelegramPreparation(mfapostgres.New(pool), p.channel, p.manager.factory.limits, tokengenerate.New(), mfaservice.TelegramPreparationConfig{
+	service, err := mfatelegram.NewTelegramPreparation(mfapostgres.New(pool), p.channel, p.manager.factory.limits, tokengenerate.New(), mfatelegram.TelegramPreparationConfig{
 		Bot: mfadomain.TelegramBotBinding{ID: credentials.Snapshot.BotID, PolicyVersion: credentials.Snapshot.Version},
 		TTL: cfg.ChallengeTTL, RequestsPerMinute: cfg.GlobalLimitPerMinute, UpdatesPerMinute: cfg.GlobalLimitPerMinute, ConfirmationsPerMinute: cfg.GlobalLimitPerMinute, UserLimitPerMinute: cfg.UserLimitPerMinute, IPLimitPerMinute: cfg.IPLimitPerMinute,
 	})
 	return service, credentials, err
 }
 
-func (p *projectTelegramMFA) factors(ctx context.Context, pool *pgxpool.Pool) (*mfaservice.TelegramFactors, error) {
+func (p *projectTelegramMFA) factors(ctx context.Context, pool *pgxpool.Pool) (*mfatelegram.TelegramFactors, error) {
 	credentials, err := p.credentials(ctx, pool)
 	if err != nil {
 		return nil, err
 	}
 	cfg := p.manager.factory.managementConfig
-	return mfaservice.NewTelegramFactors(mfapostgres.New(pool), p.manager.factory.cipher, p.manager.factory.limits, mfaservice.TelegramFactorConfig{
+	return mfatelegram.NewTelegramFactors(mfapostgres.New(pool), p.manager.factory.cipher, p.manager.factory.limits, mfatelegram.TelegramFactorConfig{
 		Bot:                    mfadomain.TelegramBotBinding{ID: credentials.Snapshot.BotID, PolicyVersion: credentials.Snapshot.Version},
 		UserMutationsPerMinute: cfg.UserLimitPerMinute, ProjectMutationsPerMinute: cfg.GlobalLimitPerMinute,
 	})
 }
 
-func (p *projectTelegramMFA) login(pool *pgxpool.Pool, factory *projectMFALogin) (*mfaservice.TelegramLogin, error) {
-	return mfaservice.NewTelegramLogin(mfapostgres.New(pool), factory.cipher, factory.limits, tokengenerate.New(), projectTelegramSender{owner: p, pool: pool}, factory.config)
+func (p *projectTelegramMFA) login(pool *pgxpool.Pool, factory *projectMFALogin) (*mfalogin.TelegramLogin, error) {
+	return mfalogin.NewTelegramLogin(mfapostgres.New(pool), factory.cipher, factory.limits, tokengenerate.New(), projectTelegramSender{owner: p, pool: pool}, factory.config)
 }
 
 type projectTelegramSender struct {
@@ -79,7 +80,7 @@ type projectTelegramSender struct {
 	pool  *pgxpool.Pool
 }
 
-func (s projectTelegramSender) SendLoginCode(ctx context.Context, channel mfaservice.TelegramLoginChannel, code string) error {
+func (s projectTelegramSender) SendLoginCode(ctx context.Context, channel mfalogin.TelegramLoginChannel, code string) error {
 	credentials, err := s.owner.credentials(ctx, s.pool)
 	if err != nil {
 		return err

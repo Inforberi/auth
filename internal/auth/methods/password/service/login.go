@@ -9,7 +9,7 @@ import (
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 )
 
@@ -24,7 +24,7 @@ type LoginResult struct {
 	UserID    accountdomain.UserID
 	Token     string
 	ExpiresAt time.Time
-	Challenge *mfaservice.LoginChallenge
+	Challenge *mfalogin.LoginChallenge
 }
 
 func (l *PasswordService) Login(ctx context.Context, input LoginInput) (*LoginResult, error) {

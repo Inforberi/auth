@@ -5,14 +5,14 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfatelegram "github.com/Inforberi/financial-intelligence/internal/auth/mfa/telegram/service"
 )
 
-func (r *Repository) EnableTelegramFactor(ctx context.Context, input service.FactorMutation, bot domain.TelegramBotBinding) error {
+func (r *Repository) EnableTelegramFactor(ctx context.Context, input mfatelegram.FactorMutation, bot domain.TelegramBotBinding) error {
 	proof := input.Proof
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		deadline, err := r.lockTelegramManagement(ctx, tx, proof, bot)

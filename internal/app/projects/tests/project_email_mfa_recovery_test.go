@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	mfarecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 )
@@ -43,12 +45,12 @@ func TestTwoProjectEmailMFARecoveryHTTP(t *testing.T) {
 	require.Equal(t, 503, response.status, "unavailable selected factor must not silently switch to recovery")
 	response = web.call(t, ctx, "POST", "/api/v1/auth/mfa/recovery/login", web.origin, "", credentials)
 	require.Equal(t, 202, response.status, string(response.body))
-	var login mfahttp.ChallengeResponse
+	var login mfaloginhttp.ChallengeResponse
 	require.NoError(t, json.Unmarshal(response.body, &login))
 	require.Equal(t, "mfa_recovery_required", login.Status)
-	cookie := response.cookie(t, mfahttp.LoginCookie)
+	cookie := response.cookie(t, mfaloginhttp.LoginCookie)
 	trackProjectRecoveryLimits(t, &f.projects, f.mfa, login.Challenge, cookie)
-	start := mfahttp.StartRecoveryRequest{Challenge: login.Challenge}
+	start := mfarecoveryhttp.StartRecoveryRequest{Challenge: login.Challenge}
 	startPath := "/api/v1/auth/mfa/recovery/start"
 	missingBinding := web.call(t, ctx, "POST", startPath, web.origin, "", start)
 	require.Equal(t, 400, missingBinding.status)
@@ -56,10 +58,10 @@ func TestTwoProjectEmailMFARecoveryHTTP(t *testing.T) {
 	require.Equal(t, 400, foreign.status)
 	response = web.call(t, ctx, "POST", startPath, web.origin, cookie, start)
 	require.Equal(t, 200, response.status, string(response.body))
-	var candidate mfahttp.RecoveryCandidateResponse
+	var candidate mfarecoveryhttp.RecoveryCandidateResponse
 	require.NoError(t, json.Unmarshal(response.body, &candidate))
 	require.Equal(t, "operator_approval_required", candidate.Status)
-	completion := mfahttp.CompleteRecoveryRequest{RequestID: candidate.RequestID, Challenge: login.Challenge, Code: projectMFACode(t, ctx, db, candidate.Secret, 0)}
+	completion := mfarecoveryhttp.CompleteRecoveryRequest{RequestID: candidate.RequestID, Challenge: login.Challenge, Code: projectMFACode(t, ctx, db, candidate.Secret, 0)}
 	completePath := "/api/v1/auth/mfa/recovery/complete"
 	pending := web.call(t, ctx, "POST", completePath, web.origin, cookie, completion)
 	require.Equal(t, 400, pending.status, "password and a proposed new factor must not authorize recovery")
@@ -110,9 +112,9 @@ func TestTwoProjectEmailMFARecoveryHTTP(t *testing.T) {
 	require.Equal(t, 202, response.status, string(response.body))
 	require.NoError(t, json.Unmarshal(response.body, &login))
 	require.Equal(t, "mfa_required", login.Status)
-	cookie = response.cookie(t, mfahttp.LoginCookie)
-	f.trackCompletion(login.Challenge, strings.TrimPrefix(cookie, mfahttp.LoginCookie+"="))
-	proof := mfahttp.CompleteLoginRequest{Challenge: login.Challenge, Code: codes.Codes[0], Recovery: true}
+	cookie = response.cookie(t, mfaloginhttp.LoginCookie)
+	f.trackCompletion(login.Challenge, strings.TrimPrefix(cookie, mfaloginhttp.LoginCookie+"="))
+	proof := mfaloginhttp.CompleteLoginRequest{Challenge: login.Challenge, Code: codes.Codes[0], Recovery: true}
 	response = web.call(t, ctx, "POST", "/api/v1/auth/mfa/login/complete", web.origin, cookie, proof)
 	require.Equal(t, 200, response.status, string(response.body))
 	isolationCommand(t, ctx, web, "GET", "/api/v1/auth/me", response.cookie(t, "__Host-session"), nil, 200, nil)

@@ -124,7 +124,7 @@ V1/V2 lint findings и исправления сохранены в [history](..
 
 ## Private подготовка канала — A6.3m.6d.2a (PASS Luna)
 
-Три внутренних сценария `mfa/service.TelegramPreparation`, без HTTP/ENV/реального бота:
+Три внутренних сценария `mfa/telegram/service.TelegramPreparation`, без HTTP/ENV/реального бота:
 
 - `Request(proof,ip)`: текущая browser/password session, свежий password proof и требуемый текущий MFA proof; временный случайный binding. Возвращаются binding/SQL deadline, не фактор или новый вход.
 - `Receive(TelegramStart)`: только доверенная проекция уже аутентифицированного private update из Bot API adapter. Проверяются ожидаемые bot/user/update ID и binding, admission, текущая source session/config. Сохраняются candidate и verifier; зашифрованный код возвращается только внутреннему sender caller. Сетевого вызова под SQL locks нет. Повтор того же update возвращает прежний payload/code без продления TTL, reset attempts или повторного audit; другой sender/update не перезаписывает candidate.
@@ -160,7 +160,7 @@ Metadata, ciphertext, общий `auth.mfa_settings.version` и masked audit с�
 
 ## Private lifecycle — A6.3m.6d.3a
 
-Private lifecycle принят после Luna V2. `mfa/service.TelegramFactors` предоставляет Status/Enable/Disable; HTTP, app wiring и выбор Telegram при обычном входе ещё не опубликованы. Статус отдельно показывает разрешение метода проектом и наличие привязки, без ложного обещания runtime usability. Preferred method и уведомления об обычной смене фактора остаются .6d.3b; не подменять их audit event или recovery notice.
+Private lifecycle принят после Luna V2. `mfa/telegram/service.TelegramFactors` предоставляет Status/Enable/Disable; HTTP, app wiring и выбор Telegram при обычном входе ещё не опубликованы. Статус отдельно показывает разрешение метода проектом и наличие привязки, без ложного обещания runtime usability. Preferred method и уведомления об обычной смене фактора остаются .6d.3b; не подменять их audit event или recovery notice.
 
 `auth.mfa_telegram` хранит одну привязку на пользователя: bot ID, Telegram user ID, enabled_at. UNIQUE(bot_id,telegram_user_id) не даёт подключить один Telegram-канал к двум пользователям одной проектной БД. Разные проекты по-прежнему имеют отдельные БД. Это не linked identity/OIDC и не временная preparation.
 

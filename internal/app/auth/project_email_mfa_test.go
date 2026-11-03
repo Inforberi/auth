@@ -7,11 +7,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfamanagement "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/service"
 )
 
 func projectEmailMFAFixtureConfig() ProjectEmailMFAConfig {
-	return ProjectEmailMFAConfig{Preparation: otpservice.EmailPreparationConfig{TTL: 3 * time.Minute, ResendInterval: time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 100}, Factors: mfaservice.EmailFactorConfig{UserMutationsPerMinute: 5, ProjectMutationsPerMinute: 500}}
+	return ProjectEmailMFAConfig{Preparation: otpservice.EmailPreparationConfig{TTL: 3 * time.Minute, ResendInterval: time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 100}, Factors: mfamanagement.EmailFactorConfig{UserMutationsPerMinute: 5, ProjectMutationsPerMinute: 500}}
 }
 
 func TestProjectEmailMFAReadiness(t *testing.T) {

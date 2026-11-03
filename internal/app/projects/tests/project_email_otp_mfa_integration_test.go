@@ -12,6 +12,7 @@ import (
 
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
@@ -53,7 +54,7 @@ func (f projectOTPFixture) mfa(t *testing.T, ctx context.Context, listener net.L
 	require.NoError(t, f.db.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&now))
 	code, err := totp.GenerateCode(secret, now)
 	require.NoError(t, err)
-	input := mfaservice.CompleteLoginInput{Token: result.Challenge.Token, Binding: result.Challenge.Binding, Code: code, IP: otpFixtureIP, UserAgent: "project OTP MFA fixture"}
+	input := mfalogin.CompleteLoginInput{Token: result.Challenge.Token, Binding: result.Challenge.Binding, Code: code, IP: otpFixtureIP, UserAgent: "project OTP MFA fixture"}
 	completed, err := svc.CompleteMFA(ctx, input)
 	require.NoError(t, err)
 	require.NotEmpty(t, completed.Token)

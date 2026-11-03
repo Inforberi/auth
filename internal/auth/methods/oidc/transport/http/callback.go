@@ -6,7 +6,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
@@ -44,7 +44,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 	h.setFlowCookie(w, "")
 	if !result.Linked && result.Session.Challenge != nil {
-		mfahttp.RespondChallenge(w, result.Session.Challenge)
+		mfaloginhttp.RespondChallenge(w, result.Session.Challenge)
 		return
 	}
 	if !result.Linked {

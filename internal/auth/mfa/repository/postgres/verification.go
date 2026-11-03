@@ -5,14 +5,14 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func (r *Repository) Consume(ctx context.Context, user accountdomain.UserID, expectedVersion int64, check service.Check, recovery string) (time.Time, error) {
+func (r *Repository) Consume(ctx context.Context, user accountdomain.UserID, expectedVersion int64, check mfaservice.Check, recovery string) (time.Time, error) {
 	var verified time.Time
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		var version int64
@@ -35,7 +35,7 @@ func (r *Repository) Consume(ctx context.Context, user accountdomain.UserID, exp
 }
 
 // The caller locks and validates the user first; challenge completion must share this transaction.
-func consumeFactor(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, check service.Check, recovery string) (domain.Verification, error) {
+func consumeFactor(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, check mfaservice.Check, recovery string) (domain.Verification, error) {
 	var verified time.Time
 	var encrypted []byte
 	var lastStep int64

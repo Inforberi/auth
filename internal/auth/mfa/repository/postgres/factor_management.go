@@ -5,14 +5,14 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func (r *Repository) lockPasswordFactorManagement(ctx context.Context, tx pgx.Tx, proof service.Proof) (time.Time, error) {
+func (r *Repository) lockPasswordFactorManagement(ctx context.Context, tx pgx.Tx, proof mfaservice.Proof) (time.Time, error) {
 	if r.administrative {
 		return time.Time{}, domain.ErrUnavailable
 	}

@@ -10,7 +10,7 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfarecovery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/service"
 )
 
 type mfaOperatorStub struct {
@@ -19,8 +19,8 @@ type mfaOperatorStub struct {
 	calls    int
 }
 
-func (s *mfaOperatorStub) Preview(context.Context, accountdomain.UserID, string) (*mfaservice.RecoveryTarget, error) {
-	return &mfaservice.RecoveryTarget{Database: "auth", Operator: "operator", AuthVersion: 7, State: "pending", ExpiresAt: time.Now().Add(time.Minute)}, nil
+func (s *mfaOperatorStub) Preview(context.Context, accountdomain.UserID, string) (*mfarecovery.RecoveryTarget, error) {
+	return &mfarecovery.RecoveryTarget{Database: "auth", Operator: "operator", AuthVersion: 7, State: "pending", ExpiresAt: time.Now().Add(time.Minute)}, nil
 }
 
 func (s *mfaOperatorStub) Decide(_ context.Context, r domain.RecoveryDecision) error {

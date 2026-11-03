@@ -8,8 +8,8 @@
 | --- | --- |
 | `token/service.NativeLogin.Begin` | Server-owned password/email OTP proof → готовые API credentials либо только restricted challenge |
 | `token/service.NativeLogin.Complete` | Native token/binding + TOTP либо recovery code → credentials после commit |
-| `mfa/service.Login.StartNativeRequiredEnrollment` | Native enrollment-required challenge → TOTP enrollment candidate |
-| `mfa/service.Login.ConfirmNativeRequiredEnrollment` | Подтверждение candidate → recovery codes, version bump/revoke и новый primary login |
+| `mfa/login/service.Login.StartNativeRequiredEnrollment` | Native enrollment-required challenge → TOTP enrollment candidate |
+| `mfa/login/service.Login.ConfirmNativeRequiredEnrollment` | Подтверждение candidate → recovery codes, version bump/revoke и новый primary login |
 | `mfa/repository/postgres.CompleteNativeFactor` | Locked challenge/user/primary recheck и существующий factor consume в transaction внешнего repository owner |
 | `token/repository/postgres.CompleteNativeMFA` | Factor outcome → current resource/session/grants/family/sign/audit/challenge delete/commit |
 

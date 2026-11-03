@@ -5,13 +5,13 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func (r *Repository) EnableEmailFactor(ctx context.Context, proof service.Proof) error {
+func (r *Repository) EnableEmailFactor(ctx context.Context, proof mfaservice.Proof) error {
 	return r.transaction(ctx, func(tx pgx.Tx) error {
 		deadline, err := r.lockPasswordFactorManagement(ctx, tx, proof)
 		if err != nil {

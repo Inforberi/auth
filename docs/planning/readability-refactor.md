@@ -375,12 +375,14 @@ migrations/
 
 ### R4. MFA целиком
 
-- [ ] Разделить подтверждённые группы login, enrollment/management, recovery и delivery по логике и зависимости, с собственными нужными слоями.
-- [ ] Перенести чистое решение выбора метода из repository в domain/service, сохранив SQL snapshot, preference/admin/primary policy, отказ fallback и число запросов.
-- [ ] Отделить правило допустимости отключения фактора от persistence; применять его на актуальном locked state в общей transaction scope. Не ослаблять last-factor/admin/revoke/audit.
-- [ ] Обновить MFA adapters/HTTP bindings вместе с фичей. Перенести её tests один раз к конечным владельцам, сохранив действующие recovery и project isolation suites.
+- [x] Разделить подтверждённые группы login, enrollment/management, recovery и delivery по логике и зависимости, с собственными нужными слоями.
+- [x] Перенести чистое решение выбора метода из repository в domain/service, сохранив SQL snapshot, preference/admin/primary policy, отказ fallback и число запросов.
+- [x] Отделить правило допустимости отключения фактора от persistence; применять его на актуальном locked state в общей transaction scope. Не ослаблять last-factor/admin/revoke/audit.
+- [x] Обновить MFA adapters/HTTP bindings вместе с фичей. Перенести её tests один раз к конечным владельцам, сохранив действующие recovery и project isolation suites.
 
 Результат: правила MFA и работа с данными имеют понятных владельцев, исходные гарантии входа и восстановления сохранены.
+
+3 ноября: R4 реализован и принят Luna на `/private/tmp/auth-r4-mfa-v9-20mfgxxw`, base788940b. Сервисы/HTTP разделены по login/management/recovery/telegram/delivery; общий SQL transaction owner сохранён. Shared contracts/crypto/admission остаются mfa/service без imports подфич. Чистые MethodSelection.Select и CanDisableTOTP находятся в domain; selection использует один прежний SQL lookup, Disable callback вызывается внутри прежних locks/current state. Routes и service contracts подключены явно без umbrella handler. Публичные MFA tests — local tests; private notice payload tests рядом; весь связный cross-feature SQL suite с fixtures из password repository перенесён в app/auth/tests один раз (private registrationError test остаётся). Проектные suites в app/projects/tests сохранены. Конкретный EmailLogin остаётся частью существующего OTP challenge/outbox в methods/emailotp/service: копии или import cycle не добавлены. SQL/schema/API/ENV/dependencies/workers не менялись. Приёмка завершена: V7 full Go tests, V8 lint0/race, V9 targeted tests/lint0/API и все согласованные SQL roots PASS; main сверил source/manifest. Полные evidence и ограничения — в acceptance-summary. Пользователь разрешил main исправлять diagnostics и после явного PASS Luna делать коммит без нового подтверждения.
 
 ### R5. Account и методы входа
 

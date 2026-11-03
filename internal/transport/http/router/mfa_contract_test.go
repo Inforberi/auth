@@ -11,8 +11,11 @@ import (
 	"go.uber.org/zap"
 
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	mfamanagement "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/service"
+	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 )
 
@@ -22,13 +25,13 @@ type contractMFA struct {
 	calls int
 	err   error
 	proof mfaservice.Proof
-	input mfaservice.CompleteLoginInput
+	input mfalogin.CompleteLoginInput
 }
 
-func (f *contractMFA) Status(_ context.Context, p mfaservice.Proof) (*mfaservice.SecurityStatus, error) {
+func (f *contractMFA) Status(_ context.Context, p mfaservice.Proof) (*mfamanagement.SecurityStatus, error) {
 	f.calls++
 	f.proof = p
-	return &mfaservice.SecurityStatus{TOTPEnabled: true, RequiredByRole: true, RecoveryCodesRemaining: 7}, f.err
+	return &mfamanagement.SecurityStatus{TOTPEnabled: true, RequiredByRole: true, RecoveryCodesRemaining: 7}, f.err
 }
 
 func (f *contractMFA) StartEnrollment(_ context.Context, p mfaservice.Proof) (*mfaservice.Enrollment, error) {
@@ -37,7 +40,7 @@ func (f *contractMFA) StartEnrollment(_ context.Context, p mfaservice.Proof) (*m
 	return &mfaservice.Enrollment{Token: "enrollment-token", Secret: "secret", URI: "otpauth://totp/test", ExpiresAt: time.Now().Add(time.Minute)}, f.err
 }
 
-func (f *contractMFA) ConfirmEnrollment(_ context.Context, p mfaservice.ConfirmInput) (*mfaservice.RecoveryCodes, error) {
+func (f *contractMFA) ConfirmEnrollment(_ context.Context, p mfamanagement.ConfirmInput) (*mfaservice.RecoveryCodes, error) {
 	f.calls++
 	f.proof = p.Proof
 	return &mfaservice.RecoveryCodes{Codes: []string{"recovery-secret"}}, f.err
@@ -47,14 +50,14 @@ func (f *contractMFA) StartReplacement(ctx context.Context, p mfaservice.Proof) 
 	return f.StartEnrollment(ctx, p)
 }
 
-func (f *contractMFA) ConfirmReplacement(ctx context.Context, p mfaservice.ConfirmInput) (*mfaservice.RecoveryCodes, error) {
+func (f *contractMFA) ConfirmReplacement(ctx context.Context, p mfamanagement.ConfirmInput) (*mfaservice.RecoveryCodes, error) {
 	return f.ConfirmEnrollment(ctx, p)
 }
 
-func (f *contractMFA) StepUp(_ context.Context, p mfaservice.StepUpInput) (*mfaservice.StepUpResult, error) {
+func (f *contractMFA) StepUp(_ context.Context, p mfamanagement.StepUpInput) (*mfamanagement.StepUpResult, error) {
 	f.calls++
 	f.proof = p.Proof
-	return &mfaservice.StepUpResult{Token: mfaBrowser, VerifiedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}, f.err
+	return &mfamanagement.StepUpResult{Token: mfaBrowser, VerifiedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}, f.err
 }
 
 func (f *contractMFA) Disable(_ context.Context, p mfaservice.Proof) error {
@@ -69,7 +72,7 @@ func (f *contractMFA) RegenerateRecovery(_ context.Context, p mfaservice.Proof) 
 	return &mfaservice.RecoveryCodes{Codes: []string{"recovery-secret"}}, f.err
 }
 
-func (f *contractMFA) Complete(_ context.Context, p mfaservice.CompleteLoginInput) (*mfaservice.LoginSession, error) {
+func (f *contractMFA) Complete(_ context.Context, p mfalogin.CompleteLoginInput) (*mfalogin.LoginSession, error) {
 	f.calls++
 	f.input = p
 	if f.err != nil {
@@ -78,10 +81,10 @@ func (f *contractMFA) Complete(_ context.Context, p mfaservice.CompleteLoginInpu
 	if p.Binding != mfaBrowser {
 		return nil, mfadomain.ErrInvalidCode
 	}
-	return &mfaservice.LoginSession{Token: mfaBrowser, ExpiresAt: time.Now().Add(time.Hour)}, nil
+	return &mfalogin.LoginSession{Token: mfaBrowser, ExpiresAt: time.Now().Add(time.Hour)}, nil
 }
 
-func (f *contractMFA) StartRequiredEnrollment(_ context.Context, p mfaservice.LoginEnrollmentInput) (*mfaservice.Enrollment, error) {
+func (f *contractMFA) StartRequiredEnrollment(_ context.Context, p mfalogin.LoginEnrollmentInput) (*mfaservice.Enrollment, error) {
 	f.calls++
 	if p.Binding != mfaBrowser {
 		return nil, mfadomain.ErrInvalidCode
@@ -89,7 +92,7 @@ func (f *contractMFA) StartRequiredEnrollment(_ context.Context, p mfaservice.Lo
 	return &mfaservice.Enrollment{Token: mfaBrowser, Secret: "enrollment-secret", URI: "otpauth://test", ExpiresAt: time.Now().Add(time.Minute)}, f.err
 }
 
-func (f *contractMFA) ConfirmRequiredEnrollment(_ context.Context, p mfaservice.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error) {
+func (f *contractMFA) ConfirmRequiredEnrollment(_ context.Context, p mfalogin.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error) {
 	f.calls++
 	if p.Binding != mfaBrowser {
 		return nil, mfadomain.ErrInvalidCode
@@ -110,7 +113,8 @@ func TestMFAOwnerRoutesAndOrigin(t *testing.T) {
 			t.Run(path+"-"+mode, func(t *testing.T) {
 				stub := &contractMFA{}
 				h := contractHandlers("prod")
-				h.MFA = mfahttp.New(stub, stub, zap.NewNop())
+				h.MFA = mfamanagementhttp.New(stub, zap.NewNop())
+				h.MFALogin = mfaloginhttp.New(stub, zap.NewNop())
 				if mode == "disabled" {
 					h.Config.MFA.Enabled = false
 				}
@@ -170,7 +174,8 @@ func TestMFACompletionCookiesAndPayload(t *testing.T) {
 				stub.err = mfadomain.ErrUnavailable
 			}
 			h := contractHandlers("prod")
-			h.MFA = mfahttp.New(stub, stub, zap.NewNop())
+			h.MFA = mfamanagementhttp.New(stub, zap.NewNop())
+			h.MFALogin = mfaloginhttp.New(stub, zap.NewNop())
 			body := `{"challenge":"challenge-token","code":"123456"}`
 			if mode == "client-user" {
 				body = `{"challenge":"challenge-token","code":"123456","userId":"attacker"}`
@@ -190,10 +195,10 @@ func TestMFACompletionCookiesAndPayload(t *testing.T) {
 				if mode == "foreign" {
 					value = "foreign"
 				}
-				r.AddCookie(&http.Cookie{Name: mfahttp.LoginCookie, Value: value})
+				r.AddCookie(&http.Cookie{Name: mfaloginhttp.LoginCookie, Value: value})
 			}
 			if mode == "duplicate" {
-				r.AddCookie(&http.Cookie{Name: mfahttp.LoginCookie, Value: mfaBrowser})
+				r.AddCookie(&http.Cookie{Name: mfaloginhttp.LoginCookie, Value: mfaBrowser})
 			}
 			w := httptest.NewRecorder()
 			New(h).ServeHTTP(w, r)
@@ -225,12 +230,12 @@ func TestMFACompletionCookiesAndPayload(t *testing.T) {
 
 func TestMFAChallengeNeverIssuesSession(t *testing.T) {
 	w := httptest.NewRecorder()
-	mfahttp.RespondChallenge(w, &mfaservice.LoginChallenge{Token: "challenge-token", Binding: mfaBrowser, ExpiresAt: time.Now().Add(time.Minute)})
+	mfaloginhttp.RespondChallenge(w, &mfalogin.LoginChallenge{Token: "challenge-token", Binding: mfaBrowser, ExpiresAt: time.Now().Add(time.Minute)})
 	if w.Code != 202 || strings.Contains(w.Body.String(), mfaBrowser) {
 		t.Fatal("challenge leaks browser binding")
 	}
 	cookies := w.Result().Cookies()
-	if len(cookies) != 2 || cookies[0].MaxAge != -1 || cookies[1].Name != mfahttp.LoginCookie || !cookies[1].Secure || !cookies[1].HttpOnly || cookies[1].Path != "/" || cookies[1].Domain != "" {
+	if len(cookies) != 2 || cookies[0].MaxAge != -1 || cookies[1].Name != mfaloginhttp.LoginCookie || !cookies[1].Secure || !cookies[1].HttpOnly || cookies[1].Path != "/" || cookies[1].Domain != "" {
 		t.Fatal("challenge/session cookies", cookies)
 	}
 }

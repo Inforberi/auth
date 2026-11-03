@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfamanagement "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func (r *Repository) ReadMFAPreference(ctx context.Context, proof service.Proof) (domain.Preference, error) {
+func (r *Repository) ReadMFAPreference(ctx context.Context, proof mfaservice.Proof) (domain.Preference, error) {
 	var result domain.Preference
 	err := r.db.QueryRow(ctx, `SELECT COALESCE(p.version,0),COALESCE(p.preferred_method,'')
  FROM auth.role_bound_sessions s JOIN auth.users u ON u.id=s.user_id AND u.auth_version=s.auth_version
@@ -25,7 +26,7 @@ func (r *Repository) ReadMFAPreference(ctx context.Context, proof service.Proof)
 	return result, err
 }
 
-func (r *Repository) UpdateMFAPreference(ctx context.Context, input service.PreferenceUpdate) (domain.Preference, error) {
+func (r *Repository) UpdateMFAPreference(ctx context.Context, input mfamanagement.PreferenceUpdate) (domain.Preference, error) {
 	var result domain.Preference
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		deadline, err := r.lockPasswordFactorManagement(ctx, tx, input.Proof)

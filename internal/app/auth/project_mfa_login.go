@@ -4,12 +4,13 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
+	redis "github.com/redis/go-redis/v9"
 
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
 	mfaredis "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/redis"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
-	mfatotp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
@@ -22,7 +23,7 @@ type projectMFALogin struct {
 	limits           *mfaredis.Limiter
 	config           mfaservice.LoginConfig
 	managementConfig mfaservice.Config
-	email, telegram  func(*pgxpool.Pool) (mfaservice.FactorStarter, error)
+	email, telegram  func(*pgxpool.Pool) (mfalogin.FactorStarter, error)
 }
 
 func newProjectMFALogin(scope realmscope.Scope, root string, cfg mfaservice.Config, session sessionservice.Config, rdb *redis.Client, primary string) (*projectMFALogin, error) {
@@ -48,20 +49,20 @@ func newProjectMFALogin(scope realmscope.Scope, root string, cfg mfaservice.Conf
 	}}, nil
 }
 
-func (m *projectMFALogin) newLogin(pool *pgxpool.Pool) (*mfaservice.Login, error) {
-	return mfaservice.NewLogin(mfapostgres.New(pool), m.cipher, mfatotp.Authenticator{}, m.limits, tokengenerate.New(), m.config)
+func (m *projectMFALogin) newLogin(pool *pgxpool.Pool) (*mfalogin.Login, error) {
+	return mfalogin.NewLogin(mfapostgres.New(pool), m.cipher, totp.Authenticator{}, m.limits, tokengenerate.New(), m.config)
 }
 
 func validateProjectMFA(cfg mfaservice.Config) error {
 	return cfg.Validate()
 }
 
-func (m *projectMFALogin) newSelectedLogin(pool *pgxpool.Pool) (*mfaservice.Selector, error) {
+func (m *projectMFALogin) newSelectedLogin(pool *pgxpool.Pool) (*mfalogin.Selector, error) {
 	login, err := m.newLogin(pool)
 	if err != nil {
 		return nil, err
 	}
-	var email, telegram mfaservice.FactorStarter
+	var email, telegram mfalogin.FactorStarter
 	if m.email != nil {
 		email, err = m.email(pool)
 		if err != nil {
@@ -74,5 +75,5 @@ func (m *projectMFALogin) newSelectedLogin(pool *pgxpool.Pool) (*mfaservice.Sele
 			return nil, err
 		}
 	}
-	return mfaservice.NewSelector(login, mfapostgres.New(pool), email, telegram), nil
+	return mfalogin.NewSelector(login, mfapostgres.New(pool), email, telegram), nil
 }

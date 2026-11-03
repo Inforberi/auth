@@ -3,33 +3,35 @@ package postgres
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
+	mfadelivery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/delivery/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfatelegram "github.com/Inforberi/financial-intelligence/internal/auth/mfa/telegram/service"
 )
 
 type factorRemoval struct {
 	query, event  string
 	emailFallback bool
-	notice        service.PrepareSecurityNotice
+	notice        mfadelivery.PrepareSecurityNotice
 	method        domain.Method
 }
 
-func (r *Repository) DisableEmailFactor(ctx context.Context, proof service.Proof) error {
+func (r *Repository) DisableEmailFactor(ctx context.Context, proof mfaservice.Proof) error {
 	return r.disablePasswordFactor(ctx, proof, factorRemoval{
 		query: `DELETE FROM auth.mfa_email WHERE user_id=$1`, event: "email_factor_disabled", method: domain.EmailCode,
 	})
 }
 
-func (r *Repository) DisableTelegramFactor(ctx context.Context, input service.FactorMutation) error {
+func (r *Repository) DisableTelegramFactor(ctx context.Context, input mfatelegram.FactorMutation) error {
 	return r.disablePasswordFactor(ctx, input.Proof, factorRemoval{
 		query: `DELETE FROM auth.mfa_telegram WHERE user_id=$1`, event: "telegram_factor_disabled", emailFallback: true,
 		notice: input.PrepareNotice, method: domain.TelegramCode,
 	})
 }
 
-func (r *Repository) disablePasswordFactor(ctx context.Context, proof service.Proof, removal factorRemoval) error {
+func (r *Repository) disablePasswordFactor(ctx context.Context, proof mfaservice.Proof, removal factorRemoval) error {
 	return r.transaction(ctx, func(tx pgx.Tx) error {
 		deadline, err := r.lockPasswordFactorManagement(ctx, tx, proof)
 		if err != nil {
@@ -58,7 +60,7 @@ func (r *Repository) disablePasswordFactor(ctx context.Context, proof service.Pr
 			return err
 		}
 		if removal.event == "telegram_factor_disabled" {
-			if err := telegramFactorNotice(ctx, tx, service.FactorMutation{Proof: proof, PrepareNotice: removal.notice}, removal.event); err != nil {
+			if err := telegramFactorNotice(ctx, tx, mfatelegram.FactorMutation{Proof: proof, PrepareNotice: removal.notice}, removal.event); err != nil {
 				return err
 			}
 		} else if err := audit(ctx, tx, proof.UserID, removal.event); err != nil {

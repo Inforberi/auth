@@ -5,12 +5,13 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	tokendomain "github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 )
 
-func (p *ProjectTokens) CompleteNativeMFA(ctx context.Context, input mfaservice.CompleteLoginInput) (*tokenservice.RefreshResult, error) {
+func (p *ProjectTokens) CompleteNativeMFA(ctx context.Context, input mfalogin.CompleteLoginInput) (*tokenservice.RefreshResult, error) {
 	if p.native == nil {
 		return nil, tokendomain.ErrNativeDisabled
 	}
@@ -29,7 +30,7 @@ func (p *ProjectTokens) CompleteNativeMFA(ctx context.Context, input mfaservice.
 	return result, nil
 }
 
-func (p *ProjectTokens) StartNativeEnrollment(ctx context.Context, input mfaservice.LoginEnrollmentInput) (*mfaservice.Enrollment, error) {
+func (p *ProjectTokens) StartNativeEnrollment(ctx context.Context, input mfalogin.LoginEnrollmentInput) (*mfaservice.Enrollment, error) {
 	if p.native == nil {
 		return nil, tokendomain.ErrNativeDisabled
 	}
@@ -48,7 +49,7 @@ func (p *ProjectTokens) StartNativeEnrollment(ctx context.Context, input mfaserv
 	return result, nil
 }
 
-func (p *ProjectTokens) ConfirmNativeEnrollment(ctx context.Context, input mfaservice.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error) {
+func (p *ProjectTokens) ConfirmNativeEnrollment(ctx context.Context, input mfalogin.ConfirmLoginEnrollmentInput) (*mfaservice.RecoveryCodes, error) {
 	if p.native == nil {
 		return nil, tokendomain.ErrNativeDisabled
 	}

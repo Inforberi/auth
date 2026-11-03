@@ -8,6 +8,7 @@ import (
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/domain"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
@@ -28,10 +29,10 @@ type EmailLoginIntent struct {
 
 type emailLoginRepository interface {
 	EmailLoginChannel(context.Context, mfaservice.PrimaryProof) (EmailLoginChannel, error)
-	SaveEmailLoginChallenge(context.Context, EmailLoginIntent, time.Duration) (*mfaservice.LoginChallengeState, error)
+	SaveEmailLoginChallenge(context.Context, EmailLoginIntent, time.Duration) (*mfalogin.LoginChallengeState, error)
 	FindLoginOwner(context.Context, string, string) (accountdomain.UserID, error)
 	FindNativeLoginOwner(context.Context, string, string) (accountdomain.UserID, error)
-	CompleteLogin(context.Context, mfaservice.LoginCompletion, mfaservice.LoginFactor) (*mfaservice.LoginCommit, error)
+	CompleteLogin(context.Context, mfalogin.LoginCompletion, mfalogin.LoginFactor) (*mfalogin.LoginCommit, error)
 }
 
 type EmailLogin struct {

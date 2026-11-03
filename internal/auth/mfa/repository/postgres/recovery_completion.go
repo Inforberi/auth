@@ -5,12 +5,13 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfarecovery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
 const currentRecoveryOperator = `EXISTS(SELECT 1 FROM pg_catalog.pg_roles p
@@ -39,7 +40,7 @@ type recoveryIntent struct {
 	now, created time.Time
 }
 
-func (r *Repository) CompleteRecovery(ctx context.Context, input service.RecoveryCompletion) error {
+func (r *Repository) CompleteRecovery(ctx context.Context, input mfarecovery.RecoveryCompletion) error {
 	rejected := false
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
@@ -93,7 +94,7 @@ func (r *Repository) CompleteRecovery(ctx context.Context, input service.Recover
 	return nil
 }
 
-func commitRecoveredFactor(ctx context.Context, tx pgx.Tx, proof service.PrimaryProof, input service.RecoveryCompletion, intent recoveryIntent, step int64, assistedRecovery bool) error {
+func commitRecoveredFactor(ctx context.Context, tx pgx.Tx, proof mfaservice.PrimaryProof, input mfarecovery.RecoveryCompletion, intent recoveryIntent, step int64, assistedRecovery bool) error {
 	query := `UPDATE auth.mfa_totp SET secret=$2,last_step=$3,enabled_at=clock_timestamp() WHERE user_id=$1`
 	if assistedRecovery {
 		query = `INSERT INTO auth.mfa_totp(user_id,secret,last_step)
@@ -157,7 +158,7 @@ func commitRecoveredFactor(ctx context.Context, tx pgx.Tx, proof service.Primary
 	return invalidateFactors(ctx, tx, proof.UserID)
 }
 
-func queueRecoveryNotice(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, input service.RecoveryCompletion, intent recoveryIntent) (bool, error) {
+func queueRecoveryNotice(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, input mfarecovery.RecoveryCompletion, intent recoveryIntent) (bool, error) {
 	var email string
 	err := tx.QueryRow(ctx, `SELECT email::text FROM auth.user_emails WHERE user_id=$1 AND verified_at<=$2
 		ORDER BY verified_at,id LIMIT 1 FOR UPDATE`, user, intent.created).Scan(&email)

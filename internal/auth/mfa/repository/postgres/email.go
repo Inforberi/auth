@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
-func (r *Repository) ReadEmailFactor(ctx context.Context, proof service.Proof) (*domain.EmailFactor, error) {
+func (r *Repository) ReadEmailFactor(ctx context.Context, proof mfaservice.Proof) (*domain.EmailFactor, error) {
 	var result domain.EmailFactor
 	err := r.db.QueryRow(ctx, `SELECT p.email_factor_allowed,f.user_id IS NOT NULL,
  COALESCE(f.email_id::text,''),f.enabled_at,f.suspended_at,

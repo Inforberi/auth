@@ -5,19 +5,20 @@ import (
 
 	"go.uber.org/zap"
 
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
+	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
+	mfarecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
 )
 
 func (p *ProjectProfile) mfaManagementHandlers(handlers map[string]http.HandlerFunc, log *zap.Logger) {
 	if p.mfaRecovery != nil {
-		h := mfahttp.NewWithRecovery(nil, nil, p.mfaRecovery, log)
+		h := mfarecoveryhttp.New(p.mfaRecovery, log)
 		handlers["/api/v1/auth/mfa/recovery/start"] = p.requireHTTPDelivery(h.StartRecovery)
 		handlers["/api/v1/auth/mfa/recovery/complete"] = p.requireHTTPDelivery(h.CompleteRecovery)
 	}
 	if p.mfaManagement == nil {
 		return
 	}
-	h := mfahttp.New(p.mfaManagement, nil, log)
+	h := mfamanagementhttp.New(p.mfaManagement, log)
 	handlers["/api/v1/auth/mfa/status"] = h.ReadStatus
 	handlers["/api/v1/auth/mfa/totp/enrollment"] = h.StartEnrollment
 	handlers["/api/v1/auth/mfa/totp/enrollment/confirm"] = h.ConfirmEnrollment

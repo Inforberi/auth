@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
 	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
@@ -31,7 +32,7 @@ type LoginByEmailResponse struct {
 // @Failure 404 {object} httpx.ErrorResponse "code: method_disabled"
 // @Param body body LoginByEmailRequest true "login payload"
 // @Success 200 {object} LoginByEmailResponse
-// @Success 202 {object} mfahttp.ChallengeResponse "MFA required; browser binding cookie, no session issued"
+// @Success 202 {object} mfaloginhttp.ChallengeResponse "MFA required; browser binding cookie, no session issued"
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, email_required, password_required, invalid_email, invalid_credentials"
 // @Failure 500 {object} httpx.ErrorResponse "code: internal_error"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited; Retry-After: 60"
@@ -70,9 +71,9 @@ func (h *PublicPasswordHandler) login(w http.ResponseWriter, r *http.Request, au
 
 	if login.Challenge != nil {
 		if login.Challenge.Method == "email" {
-			mfahttp.RespondChallengeWithCookie(w, login.Challenge, h.emailMFACookie)
+			mfaloginhttp.RespondChallengeWithCookie(w, login.Challenge, h.emailMFACookie)
 		} else {
-			mfahttp.RespondChallenge(w, login.Challenge)
+			mfaloginhttp.RespondChallenge(w, login.Challenge)
 		}
 		return
 	}

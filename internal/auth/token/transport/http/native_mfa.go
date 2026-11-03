@@ -3,7 +3,7 @@ package http
 import (
 	"net/http"
 
-	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -33,7 +33,7 @@ func (h *NativeHandler) CompleteMFA(w http.ResponseWriter, r *http.Request) {
 	if !decodeNative(w, r, &input, []string{"challenge", "binding", "code"}, "recovery") {
 		return
 	}
-	result, err := h.services.MFA.Complete(r.Context(), mfaservice.CompleteLoginInput{Token: input.Challenge, Binding: input.Binding, Code: input.Code, Recovery: input.Recovery, IP: httpx.IP(r), UserAgent: r.UserAgent()})
+	result, err := h.services.MFA.Complete(r.Context(), mfalogin.CompleteLoginInput{Token: input.Challenge, Binding: input.Binding, Code: input.Code, Recovery: input.Recovery, IP: httpx.IP(r), UserAgent: r.UserAgent()})
 	if err != nil {
 		h.respondError(w, r, err)
 		return

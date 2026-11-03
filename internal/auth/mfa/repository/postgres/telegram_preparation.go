@@ -5,11 +5,11 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	pgx "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
 type telegramPreparation struct {
@@ -19,7 +19,7 @@ type telegramPreparation struct {
 	expires              time.Time
 }
 
-func (r *Repository) lockTelegramManagement(ctx context.Context, tx pgx.Tx, proof service.Proof, bot domain.TelegramBotBinding) (time.Time, error) {
+func (r *Repository) lockTelegramManagement(ctx context.Context, tx pgx.Tx, proof mfaservice.Proof, bot domain.TelegramBotBinding) (time.Time, error) {
 	deadline, err := r.lockPasswordFactorManagement(ctx, tx, proof)
 	if err != nil {
 		return time.Time{}, err
@@ -33,7 +33,7 @@ func (r *Repository) lockTelegramManagement(ctx context.Context, tx pgx.Tx, proo
 	return deadline, err
 }
 
-func lockTelegramPreparation(ctx context.Context, tx pgx.Tx, proof service.Proof, bot domain.TelegramBotBinding, digest string) (telegramPreparation, error) {
+func lockTelegramPreparation(ctx context.Context, tx pgx.Tx, proof mfaservice.Proof, bot domain.TelegramBotBinding, digest string) (telegramPreparation, error) {
 	var pending telegramPreparation
 	err := tx.QueryRow(ctx, `SELECT telegram_user_id,update_id,verifier,payload,expires_at
  FROM auth.mfa_telegram_preparations WHERE user_id=$1 AND digest=$2 AND session_hash=$3

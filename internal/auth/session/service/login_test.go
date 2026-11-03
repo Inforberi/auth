@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 )
@@ -18,13 +19,13 @@ type mfaStarterStub struct {
 	err   error
 }
 
-func (m *mfaStarterStub) Start(_ context.Context, p mfaservice.PrimaryProof, _ string) (*mfaservice.LoginChallenge, error) {
+func (m *mfaStarterStub) Start(_ context.Context, p mfaservice.PrimaryProof, _ string) (*mfalogin.LoginChallenge, error) {
 	m.proof = p
 	m.calls++
 	if m.err != nil {
 		return nil, m.err
 	}
-	return &mfaservice.LoginChallenge{Token: "challenge", Binding: "browser", ExpiresAt: time.Now().Add(time.Minute)}, nil
+	return &mfalogin.LoginChallenge{Token: "challenge", Binding: "browser", ExpiresAt: time.Now().Add(time.Minute)}, nil
 }
 
 func TestPrimaryLoginDispatch(t *testing.T) {

@@ -2661,3 +2661,9 @@ Main formatter/Swagger/source review; все tests/lint/race/SQL/Redis/API — �
 ## 2 ноября 2026 — R3: администрация, проекты и подготовка БД
 
 Завершён согласованный R3 рефакторинг: admin namespaces и подфичи, app assembly, тонкий project-prepare, auth/admin migrations и tests у владельцев. API/SQL/crypto contracts сохранены, зависимостей не добавлено. Luna V7 manifest749, task check/lint0, affected race, API и семь SQL roots PASS. Main сверил source hashes. [Evidence и ограничения](../operations/acceptance-summary.md#r3-итоговая-приёмка--2-ноября-2026). Следующий блок — R4; live/external/load gates не закрыты.
+
+## 3 ноября 2026 — R4: MFA по сценариям и правилам
+
+Разделены login/management/recovery/telegram/delivery, общие proof/crypto/admission; чистые selection/disable rules вынесены из repository без новых SQL-запросов и разрыва locked transaction. HTTP handlers подключены явно, Swagger IDs сохранены. Публичные unit tests у владельцев; connected cross-feature SQL suite перенесён из password repository в app/auth/tests без экспорта внутренних полей. Зависимостей/schema/routes/ENV не добавлено.
+
+Luna: V7 full Go tests; V8 keyed-literal equivalence, lint0/race; V9 targeted tests/lint0/API и полный согласованный SQL набор PASS, включая27 roots после main-аудита actual evidence. Собственные host-bind fixtures очищены; рабочие данные не затронуты. Main сверил source/manifest. [Итоги/логи/оставшиеся gates](../operations/acceptance-summary.md#r4-mfa-приёмка--3-ноября-2026). Обязательная обратная отправка Luna→main закреплена в AGENTS/workflow. Далее R5; UI отдельно.

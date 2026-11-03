@@ -16,13 +16,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-jose/go-jose/v4"
-	"github.com/redis/go-redis/v9"
+	jose "github.com/go-jose/go-jose/v4"
+	redis "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
@@ -117,7 +118,7 @@ func TestTokenAssemblyRedis(t *testing.T) {
 	}
 	owned := &resources{}
 	t.Cleanup(owned.close)
-	handler, err := (realmSecurity{scope: realmscope.Legacy()}).assembleTokens(t.Context(), nil, base, deployment, nativeLoginDependencies{password: &passwordservice.PasswordService{}, mfa: &mfaApp{login: &mfaservice.Login{}}, email: &emailOTPApp{}}, catalog, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", owned, zap.NewNop())
+	handler, err := (realmSecurity{scope: realmscope.Legacy()}).assembleTokens(t.Context(), nil, base, deployment, nativeLoginDependencies{password: &passwordservice.PasswordService{}, mfa: &mfaApp{login: &mfalogin.Login{}}, email: &emailOTPApp{}}, catalog, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", owned, zap.NewNop())
 	if err != nil || handler.handler == nil || handler.native == nil || handler.introspection == nil || len(owned.closers) != 1 {
 		t.Fatal("JWT assembly failed", err)
 	}
@@ -130,12 +131,12 @@ func TestTokenAssemblyRedis(t *testing.T) {
 		t.Fatal("non-public or malformed JWKS", err)
 	}
 	// Construction only: runtime primary/MFA/SQL behavior is exercised by the disposable SQL suite.
-	native, err := assembleNativeTokens(&handler, &passwordservice.PasswordService{}, &mfaApp{login: &mfaservice.Login{}}, &emailOTPApp{}, deployment, zap.NewNop())
+	native, err := assembleNativeTokens(&handler, &passwordservice.PasswordService{}, &mfaApp{login: &mfalogin.Login{}}, &emailOTPApp{}, deployment, zap.NewNop())
 	if err != nil || native == nil || len(owned.closers) != 1 {
 		t.Fatal("native did not reuse token owner", err)
 	}
 	deployment.EmailOTP.Enabled = true
-	if _, err := assembleNativeTokens(&handler, &passwordservice.PasswordService{}, &mfaApp{login: &mfaservice.Login{}}, &emailOTPApp{}, deployment, zap.NewNop()); err == nil {
+	if _, err := assembleNativeTokens(&handler, &passwordservice.PasswordService{}, &mfaApp{login: &mfalogin.Login{}}, &emailOTPApp{}, deployment, zap.NewNop()); err == nil {
 		t.Fatal("native email enabled without adapter")
 	}
 	owned.close()
