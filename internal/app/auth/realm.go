@@ -4,15 +4,23 @@ import (
 	"context"
 	"fmt"
 
-	pgx "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
 	accesshttp "github.com/Inforberi/financial-intelligence/internal/access/transport/http"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
+	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
+	accountprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
+	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
+	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
@@ -53,10 +61,11 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 	if err != nil {
 		return nil, fmt.Errorf("assemble SMTP settings: %w", err)
 	}
-	accountSvc, accountRepo, err := security.assembleAccount(pool, rdb, mail, cfg.Account, accountpostgres.DeliveryConfig{EmailChanges: cfg.EmailChange.Enabled, Invitations: cfg.Invitation.Enabled, EmailBinding: cfg.EmailBinding.Enabled})
+	accountRuntime, err := security.assembleAccount(pool, rdb, mail, cfg.Account, accountpostgres.DeliveryConfig{EmailChanges: cfg.EmailChange.Enabled, Invitations: cfg.Invitation.Enabled, EmailBinding: cfg.EmailBinding.Enabled})
 	if err != nil {
 		return nil, fmt.Errorf("assemble account: %w", err)
 	}
+	accountSvc, accountRepo := accountRuntime.verification, accountRuntime.repository
 	passwordRepo := assembleRegistration(pool, accountSvc, accountRepo)
 	emailBinding, err := security.assembleEmailBinding(accountRepo, rdb, cfg, log)
 	if err != nil {
@@ -103,29 +112,29 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 		return nil, fmt.Errorf("assemble Google: %w", err)
 	}
 	owned.add(closeGoogle)
-	var emailChange *accounthttp.EmailChangeHandler
-	var protectedRecovery *passwordhttp.ProtectedRecoveryHandler
-	var activation *passwordhttp.ActivationHandler
-	var temporary *passwordservice.TemporaryPasswordService
-	var temporaryHandler *passwordhttp.TemporaryPasswordHandler
-	var temporaryAdmin *passwordhttp.TemporaryAdminHandler
+	var emailChange *accountemailhttp.EmailChangeHandler
+	var protectedRecovery *passwordrecoveryhttp.ProtectedRecoveryHandler
+	var activation *passwordprovisioninghttp.ActivationHandler
+	var temporary *passwordprovisioning.TemporaryPasswordService
+	var temporaryHandler *passwordprovisioninghttp.TemporaryPasswordHandler
+	var temporaryAdmin *passwordprovisioninghttp.TemporaryAdminHandler
 	if cfg.TemporaryPassword.Enabled {
 		temporaryRepo := passwordpostgres.NewTemporaryPassword(pool, accountRepo.ProvisionInTransaction)
-		temporary = passwordservice.NewTemporaryPassword(temporaryRepo, argonHash, password.limits, password.cipher.Digest, password.loginLimit, cfg.TemporaryPassword)
-		temporaryHandler = passwordhttp.NewTemporaryPassword(temporary, log)
-		temporaryAdmin = passwordhttp.NewTemporaryAdmin(temporary, log)
+		temporary = passwordprovisioning.NewTemporaryPassword(temporaryRepo, argonHash, password.limits, password.cipher.Digest, password.loginLimit, cfg.TemporaryPassword)
+		temporaryHandler = passwordprovisioninghttp.NewTemporaryPassword(temporary, log)
+		temporaryAdmin = passwordprovisioninghttp.NewTemporaryAdmin(temporary, log)
 	}
-	var provisioning *accountservice.ProvisionService
-	var provisioningHandler *accounthttp.ProvisioningHandler
+	var provisioning *accountprovisioning.ProvisionService
+	var provisioningHandler *accountprovisioninghttp.ProvisioningHandler
 	if cfg.Invitation.Enabled {
-		provisioning = accountservice.NewProvisioning(accountRepo, accountSvc, cfg.Invitation)
-		provisioningHandler = accounthttp.NewProvisioning(provisioning, log)
-		activation = passwordhttp.NewActivation(passwordservice.NewActivation(accountRepo, password.recovery, cfg.Invitation), log)
+		provisioning = accountprovisioning.NewProvisioning(accountRepo, accountRuntime.limits, accountRuntime.cipher, cfg.Invitation)
+		provisioningHandler = accountprovisioninghttp.NewProvisioning(provisioning, log)
+		activation = passwordprovisioninghttp.NewActivation(passwordprovisioning.NewActivation(accountRepo, argonHash, password.limits, password.cipher.Digest, cfg.Invitation), log)
 	}
 	if cfg.EmailChange.Enabled {
-		changeSvc := accountservice.NewEmailChange(accountRepo, argonHash, accountSvc, cfg.EmailChange, cfg.Session.FreshAuthTTL)
-		emailChange = accounthttp.NewEmailChange(changeSvc, log)
-		protectedRecovery = passwordhttp.NewProtectedRecovery(passwordservice.NewProtectedRecovery(accountRepo, password.recovery), log)
+		changeSvc := accountemail.NewEmailChange(accountRepo, argonHash, accountRuntime.limits, accountRuntime.cipher, cfg.EmailChange, cfg.Session.FreshAuthTTL)
+		emailChange = accountemailhttp.NewEmailChange(changeSvc, log)
+		protectedRecovery = passwordrecoveryhttp.NewProtectedRecovery(passwordrecovery.NewProtectedRecovery(accountRepo, password.recovery), log)
 	}
 
 	var mailTest *dev.MailTestHandler
@@ -153,8 +162,8 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 		Activity:          sessionhttp.NewActivity(sessionservice.NewActivity(sessionRepo), log),
 		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessionRepo, tokenGen), log),
 		Reauthentication:  passwordhttp.NewReauthentication(passwordservice.NewReauthentication(passwordRepo, sessionRepo, argonHash, password.loginLimit, tokenGen, cfg.Session.FreshAuthTTL), log),
-		Recovery:          passwordhttp.NewRecovery(password.recovery, log),
-		Account:           accounthttp.New(accountSvc, log),
+		Recovery:          passwordrecoveryhttp.NewRecovery(password.recovery, log),
+		Account:           accountemailhttp.New(accountSvc, log),
 		EmailChange:       emailChange,
 		ProtectedRecovery: protectedRecovery,
 		Activation:        activation,
@@ -185,7 +194,7 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 	}, nil
 }
 
-func assembleRegistration(pool *pgxpool.Pool, service *accountservice.Service, repo *accountpostgres.Repository) *passwordpostgres.PasswordRepo {
+func assembleRegistration(pool *pgxpool.Pool, service *accountemail.Verification, repo *accountpostgres.Repository) *passwordpostgres.PasswordRepo {
 	return passwordpostgres.NewWithRegistration(pool, func(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, emailID accountdomain.AddressID, email string) error {
 		prepared, err := service.PrepareVerification(email)
 		if err != nil {

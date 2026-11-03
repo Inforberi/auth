@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 )
 
 func checkInvitationReissue(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
@@ -22,7 +22,7 @@ func checkInvitationReissue(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 		}
 		allowInvitationReissue(t, db, ctx, user)
 		var wg sync.WaitGroup
-		results := make(chan *accountservice.ProvisionResult, 16)
+		results := make(chan *accountprovisioning.ProvisionResult, 16)
 		errs := make(chan error, 16)
 		for range 16 {
 			wg.Go(func() {
@@ -135,7 +135,7 @@ func checkInvitationReissue(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 		f := newInvitationFixture(t, db, ctx, "reissue-distinct")
 		user, _, _ := f.create(t, db, ctx)
 		allowInvitationReissue(t, db, ctx, user)
-		inputs := make([]accountservice.InvitationReissueInput, 16)
+		inputs := make([]accountprovisioning.InvitationReissueInput, 16)
 		for i := range inputs {
 			inputs[i] = reissueInput(t, db, ctx, f, user)
 		}
@@ -161,13 +161,13 @@ func checkInvitationReissue(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 	})
 }
 
-func reissueInput(t *testing.T, db *pgxpool.Pool, ctx context.Context, f invitationFixture, user accountdomain.UserID) accountservice.InvitationReissueInput {
+func reissueInput(t *testing.T, db *pgxpool.Pool, ctx context.Context, f invitationFixture, user accountdomain.UserID) accountprovisioning.InvitationReissueInput {
 	t.Helper()
 	var key string
 	if err := db.QueryRow(ctx, `SELECT gen_random_uuid()::text`).Scan(&key); err != nil {
 		t.Fatal(err)
 	}
-	return accountservice.InvitationReissueInput{Actor: f.input.Actor, UserID: user, IdempotencyKey: key}
+	return accountprovisioning.InvitationReissueInput{Actor: f.input.Actor, UserID: user, IdempotencyKey: key}
 }
 
 func allowInvitationReissue(t *testing.T, db *pgxpool.Pool, ctx context.Context, user accountdomain.UserID) {

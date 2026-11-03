@@ -8,9 +8,10 @@ import (
 
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 )
 
@@ -21,14 +22,14 @@ func TestProjectAccountFeaturesDisabledBeforeDependencies(t *testing.T) {
 	require.ErrorIs(t, email.ConfirmVerification(ctx, "", ""), projectdomain.ErrUnavailable)
 	require.ErrorIs(t, email.ForgotPassword(ctx, "", ""), projectdomain.ErrUnavailable)
 	require.ErrorIs(t, email.ResetPassword(ctx, "", "", "", ""), projectdomain.ErrUnavailable)
-	provision, err := email.ProvisionUser(ctx, accountservice.ProvisionInput{})
+	provision, err := email.ProvisionUser(ctx, accountprovisioning.ProvisionInput{})
 	require.ErrorIs(t, err, accountdomain.ErrProvisionDisabled)
 	require.Nil(t, provision)
-	provision, err = email.ReissueInvitation(ctx, accountservice.InvitationReissueInput{})
+	provision, err = email.ReissueInvitation(ctx, accountprovisioning.InvitationReissueInput{})
 	require.ErrorIs(t, err, accountdomain.ErrProvisionDisabled)
 	require.Nil(t, provision)
 	require.ErrorIs(t, email.ActivateInvitation(ctx, "", "", "", ""), accountdomain.ErrProvisionDisabled)
-	expires, err := email.RequestEmailBinding(ctx, accountservice.EmailBindingInput{})
+	expires, err := email.RequestEmailBinding(ctx, accountemail.EmailBindingInput{})
 	require.ErrorIs(t, err, accountdomain.ErrEmailBindingDisabled)
 	require.True(t, expires.IsZero())
 	require.ErrorIs(t, email.ConfirmEmailBinding(ctx, mfaservice.Proof{}, "", ""), accountdomain.ErrEmailBindingDisabled)
@@ -37,10 +38,10 @@ func TestProjectAccountFeaturesDisabledBeforeDependencies(t *testing.T) {
 	require.ErrorIs(t, email.ReportEmailChange(ctx, "", ""), projectdomain.ErrUnavailable)
 	require.ErrorIs(t, email.RecoverEmailChange(ctx, "", "", "", ""), projectdomain.ErrUnavailable)
 	passwords := &ProjectPassword{}
-	temporary, err := passwords.ProvisionTemporaryPassword(ctx, passwordservice.TemporaryProvisionInput{})
+	temporary, err := passwords.ProvisionTemporaryPassword(ctx, passwordprovisioning.TemporaryProvisionInput{})
 	require.ErrorIs(t, err, passworddomain.ErrTemporaryPasswordDisabled)
 	require.Nil(t, temporary)
-	temporary, err = passwords.ReissueTemporaryPassword(ctx, passwordservice.TemporaryReissueInput{})
+	temporary, err = passwords.ReissueTemporaryPassword(ctx, passwordprovisioning.TemporaryReissueInput{})
 	require.ErrorIs(t, err, passworddomain.ErrTemporaryPasswordDisabled)
 	require.Nil(t, temporary)
 	setup, err := passwords.BeginTemporaryPassword(ctx, "", "", "")
@@ -50,7 +51,7 @@ func TestProjectAccountFeaturesDisabledBeforeDependencies(t *testing.T) {
 }
 
 func TestProjectAccountURLScope(t *testing.T) {
-	cfg := ProjectEmailConfig{Origin: "https://project.example.test", Invitations: accountservice.InvitationConfig{Enabled: true, URL: "https://project.example.test/activate", TTL: time.Hour, ActivationGlobalLimit: 100, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100}, Change: accountservice.EmailChangeConfig{Enabled: true, ConfirmURL: "https://project.example.test/confirm", ReportURL: "https://project.example.test/report", RecoveryURL: "https://project.example.test/recover", TTL: 30 * time.Minute, ProtectionTTL: 24 * time.Hour, RecoveryTTL: 30 * time.Minute}, FreshAuthTTL: 5 * time.Minute}
+	cfg := ProjectEmailConfig{Origin: "https://project.example.test", Invitations: accountprovisioning.InvitationConfig{Enabled: true, URL: "https://project.example.test/activate", TTL: time.Hour, ActivationGlobalLimit: 100, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100}, Change: accountemail.EmailChangeConfig{Enabled: true, ConfirmURL: "https://project.example.test/confirm", ReportURL: "https://project.example.test/report", RecoveryURL: "https://project.example.test/recover", TTL: 30 * time.Minute, ProtectionTTL: 24 * time.Hour, RecoveryTTL: 30 * time.Minute}, FreshAuthTTL: 5 * time.Minute}
 	require.NoError(t, cfg.validateAccountFeatures())
 	foreign := cfg
 	foreign.Invitations.URL = "https://platform.example.test/activate"
@@ -84,7 +85,7 @@ func TestProjectAccountDeliveryFairnessAcrossSweeps(t *testing.T) {
 }
 
 func TestProjectBindingOnlyNeedsNoPasswordResetURL(t *testing.T) {
-	cfg := ProjectEmailConfig{Origin: "https://external.example.test", Binding: accountservice.EmailBindingConfig{Enabled: true, TTL: 5 * time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 1000}}
+	cfg := ProjectEmailConfig{Origin: "https://external.example.test", Binding: accountemail.EmailBindingConfig{Enabled: true, TTL: 5 * time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 1000}}
 	require.NoError(t, cfg.validate())
 	cfg.RecoveryEnabled = true
 	require.Error(t, cfg.validate(), "enabling password recovery must require its actual config")

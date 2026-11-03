@@ -17,11 +17,13 @@ import (
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
+	accountprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
+	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
@@ -160,25 +162,25 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 		require.NoError(t, f.rdb.Del(cleanup, keys...).Err())
 	})
 	cfg := f.cfg
-	cfg.Invitations = accountservice.InvitationConfig{Enabled: true, URL: cfg.Origin + "/activate", TTL: time.Hour, ActivationGlobalLimit: 100, ReissueCooldown: time.Second, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100}
-	cfg.Binding = accountservice.EmailBindingConfig{Enabled: true, TTL: 5 * time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 1000}
-	cfg.Change = accountservice.EmailChangeConfig{Enabled: true, ConfirmURL: cfg.Origin + "/change", ReportURL: cfg.Origin + "/report", RecoveryURL: cfg.Origin + "/recover", TTL: 30 * time.Minute, ProtectionTTL: 24 * time.Hour, RecoveryTTL: 30 * time.Minute}
+	cfg.Invitations = accountprovisioning.InvitationConfig{Enabled: true, URL: cfg.Origin + "/activate", TTL: time.Hour, ActivationGlobalLimit: 100, ReissueCooldown: time.Second, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100}
+	cfg.Binding = accountemail.EmailBindingConfig{Enabled: true, TTL: 5 * time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 1000}
+	cfg.Change = accountemail.EmailChangeConfig{Enabled: true, ConfirmURL: cfg.Origin + "/change", ReportURL: cfg.Origin + "/report", RecoveryURL: cfg.Origin + "/recover", TTL: 30 * time.Minute, ProtectionTTL: 24 * time.Hour, RecoveryTTL: 30 * time.Minute}
 	cfg.FreshAuthTTL = 5 * time.Minute
 	service, err := appauth.NewProjectEmail(ctx, f.key, cfg, []string{f.listener.Addr().String()}, appauth.ProjectEmailDependencies{ProjectSMTPDependencies: f.deps, Hash: f.hash})
 	require.NoError(t, err)
 	temporaryCfg := projectPasswordFixtureConfig()
-	temporaryCfg.TemporaryPassword = passwordservice.TemporaryPasswordConfig{Enabled: true, TTL: time.Hour, SetupTTL: 5 * time.Minute, ReissueCooldown: time.Second, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}
+	temporaryCfg.TemporaryPassword = passwordprovisioning.TemporaryPasswordConfig{Enabled: true, TTL: time.Hour, SetupTTL: 5 * time.Minute, ReissueCooldown: time.Second, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}
 	web, origin, stopDelivery := f.httpAccountManagement(t, ctx, cfg, temporaryCfg.TemporaryPassword)
 	t.Run("project SMTP settings HTTP", func(t *testing.T) { f.httpSMTPSettings(t, ctx, web, origin, actorToken, bindingToken) })
 	t.Run("project provider settings HTTP", func(t *testing.T) { f.httpProviderSettings(t, ctx, web, origin, actorToken, bindingToken) })
 	t.Run("project retention settings HTTP", func(t *testing.T) { f.httpRetentionSettings(t, ctx, web, origin, actorToken, bindingToken) })
-	var invited accountservice.ProvisionResult
-	provision := accounthttp.ProvisionRequest{IdempotencyKey: "f8300000-0000-4000-8000-000000000011", Email: inviteEmail, Invite: true}
+	var invited accountprovisioning.ProvisionResult
+	provision := accountprovisioninghttp.ProvisionRequest{IdempotencyKey: "f8300000-0000-4000-8000-000000000011", Email: inviteEmail, Invite: true}
 	web.command(t, "/api/v1/admin/users", origin, "", provision, 401, nil)
 	web.command(t, "/api/v1/admin/users", "https://foreign.example.test", actorToken, provision, 403, nil)
 	web.command(t, "/api/v1/admin/users", origin, actorToken, provision, 201, &invited)
 	users = append(users, string(invited.UserID))
-	var replay accountservice.ProvisionResult
+	var replay accountprovisioning.ProvisionResult
 	web.command(t, "/api/v1/admin/users", origin, actorToken, provision, 200, &replay)
 	require.True(t, replay.Reused)
 	require.Equal(t, invited.UserID, replay.UserID)
@@ -187,11 +189,11 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	oldToken := accountMessageToken(t, f.ciphers[0], payload)
 	_, err = f.db.Exec(ctx, `UPDATE auth.account_provisions SET last_invited_at=clock_timestamp()-interval '2 minutes' WHERE user_id=$1`, invited.UserID)
 	require.NoError(t, err)
-	web.command(t, "/api/v1/admin/users/"+string(invited.UserID)+"/invitation", origin, actorToken, accounthttp.ReissueInvitationRequest{IdempotencyKey: "f8300000-0000-4000-8000-000000000012"}, 200, &replay)
-	web.command(t, "/api/v1/auth/invitations/activate", origin, "", passwordhttp.ActivationRequest{Token: oldToken, Password: f.password, ConfirmPassword: f.password}, 400, nil)
+	web.command(t, "/api/v1/admin/users/"+string(invited.UserID)+"/invitation", origin, actorToken, accountprovisioninghttp.ReissueInvitationRequest{IdempotencyKey: "f8300000-0000-4000-8000-000000000012"}, 200, &replay)
+	web.command(t, "/api/v1/auth/invitations/activate", origin, "", passwordprovisioninghttp.ActivationRequest{Token: oldToken, Password: f.password, ConfirmPassword: f.password}, 400, nil)
 	require.NoError(t, f.db.QueryRow(ctx, `SELECT o.payload FROM auth.invitation_outbox o JOIN auth.account_invitations i USING(digest) WHERE i.user_id=$1`, invited.UserID).Scan(&payload))
 	inviteToken := accountMessageToken(t, f.ciphers[0], payload)
-	web.command(t, "/api/v1/admin/users", origin, bindingToken, accounthttp.ProvisionRequest{IdempotencyKey: "f8300000-0000-4000-8000-000000000013", Email: "forbidden-project-account@example.test", Invite: true}, 403, nil)
+	web.command(t, "/api/v1/admin/users", origin, bindingToken, accountprovisioninghttp.ProvisionRequest{IdempotencyKey: "f8300000-0000-4000-8000-000000000013", Email: "forbidden-project-account@example.test", Invite: true}, 403, nil)
 	path := "/api/v1/admin/users/" + bindID + "/email-binding"
 	status, _, _ := web("POST", path, "", actorToken, `!`)
 	require.Equal(t, 403, status)
@@ -238,8 +240,8 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	require.Equal(t, 404, status, "stale profile is rejected before token consumption")
 	status, _, _ = web("POST", "/api/v1/auth/email/change/report", origin, "", `{"token":"`+reportToken+`"}`)
 	require.Equal(t, 200, status, "protective reporting survives worker and SMTP unavailability")
-	web.command(t, "/api/v1/auth/invitations/activate", origin, "", passwordhttp.ActivationRequest{Token: inviteToken, Password: f.password, ConfirmPassword: f.password}, 200, nil)
-	web.command(t, "/api/v1/auth/invitations/activate", origin, "", passwordhttp.ActivationRequest{Token: inviteToken, Password: f.password, ConfirmPassword: f.password}, 400, nil)
+	web.command(t, "/api/v1/auth/invitations/activate", origin, "", passwordprovisioninghttp.ActivationRequest{Token: inviteToken, Password: f.password, ConfirmPassword: f.password}, 200, nil)
+	web.command(t, "/api/v1/auth/invitations/activate", origin, "", passwordprovisioninghttp.ActivationRequest{Token: inviteToken, Password: f.password, ConfirmPassword: f.password}, 400, nil)
 
 	require.NoError(t, f.db.QueryRow(ctx, `SELECT o.payload FROM auth.email_change_outbox o JOIN auth.email_changes c ON c.id=o.change_id WHERE c.user_id=$1 AND kind='recovery'`, changeID).Scan(&payload))
 	recoveryToken := accountMessageToken(t, f.ciphers[0], payload)
@@ -257,23 +259,23 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	require.NoError(t, f.hash.Compare(ctx, recoveredPassword, restoredHash))
 	passwords, err := appauth.NewProjectPassword(ctx, f.key, temporaryCfg, appauth.ProjectPasswordDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash})
 	require.NoError(t, err)
-	var temporary passwordhttp.TemporaryIssueResponse
-	temporaryRequest := passwordhttp.TemporaryProvisionRequest{IdempotencyKey: "f8300000-0000-4000-8000-000000000021", Email: tempEmail}
+	var temporary passwordprovisioninghttp.TemporaryIssueResponse
+	temporaryRequest := passwordprovisioninghttp.TemporaryProvisionRequest{IdempotencyKey: "f8300000-0000-4000-8000-000000000021", Email: tempEmail}
 	web.command(t, "/api/v1/admin/users/temporary-password", origin, "", temporaryRequest, 401, nil)
 	web.command(t, "/api/v1/admin/users/temporary-password", origin, actorToken, temporaryRequest, 201, &temporary)
 	users = append(users, string(temporary.UserID))
 	require.NotEmpty(t, temporary.Password)
-	var repeated passwordhttp.TemporaryIssueResponse
+	var repeated passwordprovisioninghttp.TemporaryIssueResponse
 	web.command(t, "/api/v1/admin/users/temporary-password", origin, actorToken, temporaryRequest, 200, &repeated)
 	require.True(t, repeated.Reused)
 	require.Empty(t, repeated.Password)
 	_, err = f.db.Exec(ctx, `UPDATE auth.account_provisions SET temporary_password_issued_at=clock_timestamp()-interval '2 minutes' WHERE user_id=$1`, temporary.UserID)
 	require.NoError(t, err)
-	var fresh passwordhttp.TemporaryIssueResponse
-	reissue := passwordhttp.TemporaryReissueRequest{IdempotencyKey: "f8300000-0000-4000-8000-000000000022"}
+	var fresh passwordprovisioninghttp.TemporaryIssueResponse
+	reissue := passwordprovisioninghttp.TemporaryReissueRequest{IdempotencyKey: "f8300000-0000-4000-8000-000000000022"}
 	web.command(t, "/api/v1/admin/users/"+string(temporary.UserID)+"/temporary-password", origin, actorToken, reissue, 200, &fresh)
 	require.NotEmpty(t, fresh.Password)
-	var reissuedReplay passwordhttp.TemporaryIssueResponse
+	var reissuedReplay passwordprovisioninghttp.TemporaryIssueResponse
 	web.command(t, "/api/v1/admin/users/"+string(temporary.UserID)+"/temporary-password", origin, actorToken, reissue, 200, &reissuedReplay)
 	require.True(t, reissuedReplay.Reused)
 	require.Empty(t, reissuedReplay.Password)

@@ -17,12 +17,12 @@ import (
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
-func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.Context, management appauth.ProjectEmailConfig, temporary passwordservice.TemporaryPasswordConfig) (projectAccountRequest, string, func()) {
+func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.Context, management appauth.ProjectEmailConfig, temporary passwordprovisioning.TemporaryPasswordConfig) (projectAccountRequest, string, func()) {
 	t.Helper()
 	var origin string
 	require.NoError(t, f.admin.QueryRow(ctx, `SELECT origin FROM platform.projects WHERE id=$1`, f.key.Binding.ProjectID).Scan(&origin))

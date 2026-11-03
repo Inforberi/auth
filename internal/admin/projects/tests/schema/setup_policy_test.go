@@ -13,7 +13,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
 	operators "github.com/Inforberi/financial-intelligence/internal/admin/administrators/repository/postgres"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountsetup "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	mfatotp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
@@ -52,11 +52,11 @@ func TestPlatformSetupMFAPolicy(t *testing.T) {
 			hash := hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), 1)
 			secret := base64.RawURLEncoding.EncodeToString([]byte(strings.Repeat("o", 32)))
 			mail := &operatorMail{}
-			setup, err := accountservice.NewSetup(repo, operatorLimit{}, cipher, factor, mail, hash, mfatotp.Authenticator{}, accountservice.SetupConfig{Enabled: true, Secret: secret}, "Platform")
+			setup, err := accountsetup.NewSetup(repo, operatorLimit{}, cipher, factor, mail, hash, mfatotp.Authenticator{}, accountsetup.SetupConfig{Enabled: true, Secret: secret}, "Platform")
 			require.NoError(t, err)
-			started, err := setup.Start(ctx, accountservice.SetupStartInput{OperatorSecret: secret, Email: "owner@example.test", Password: "Validpassword1", IP: "192.0.2.1", MFAMode: mode})
+			started, err := setup.Start(ctx, accountsetup.SetupStartInput{OperatorSecret: secret, Email: "owner@example.test", Password: "Validpassword1", IP: "192.0.2.1", MFAMode: mode})
 			require.NoError(t, err)
-			input := accountservice.SetupCompleteInput{OperatorSecret: secret, Token: started.Token, EmailCode: mail.code, IP: "192.0.2.1"}
+			input := accountsetup.SetupCompleteInput{OperatorSecret: secret, Token: started.Token, EmailCode: mail.code, IP: "192.0.2.1"}
 			if mode != settingsdomain.MFAOptional {
 				var now time.Time
 				require.NoError(t, db.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&now))

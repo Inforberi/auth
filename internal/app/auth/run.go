@@ -8,17 +8,19 @@ import (
 	"go.uber.org/zap"
 
 	accessapp "github.com/Inforberi/financial-intelligence/internal/app/access"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	mfadelivery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/delivery/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 )
 
 type App struct {
 	Access             *accessapp.App
-	Provisioning       *accountservice.ProvisionService
-	TemporaryPasswords *passwordservice.TemporaryPasswordService
+	Provisioning       *accountprovisioning.ProvisionService
+	TemporaryPasswords *passwordprovisioning.TemporaryPasswordService
 	serve              func(context.Context) error
 	resources          *resources
 }
@@ -57,7 +59,7 @@ type deliveryWorker interface {
 	RunDelivery(context.Context, func(error))
 }
 
-func realmDeliveryWorkers(recovery *passwordservice.RecoveryService, account *accountservice.Service, mfa *mfadelivery.SecurityDelivery, email *otpservice.Delivery, projects ...*ProjectDelivery) []deliveryWorker {
+func realmDeliveryWorkers(recovery *passwordrecovery.RecoveryService, account *accountemail.Verification, mfa *mfadelivery.SecurityDelivery, email *otpservice.Delivery, projects ...*ProjectDelivery) []deliveryWorker {
 	var workers []deliveryWorker
 	// Check concrete pointers before conversion: a typed nil is a non-nil interface.
 	if recovery != nil {

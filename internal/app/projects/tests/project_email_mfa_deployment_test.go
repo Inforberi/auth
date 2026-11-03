@@ -12,7 +12,7 @@ import (
 
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	tokensettings "github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
@@ -23,7 +23,7 @@ func loadEmailMFADeployment(t *testing.T, f emailMFAHTTPFixture, smtpTargets []s
 	cfg := &config.Config{
 		MFA: projects.password.MFA, Session: projects.password.Session, Capacity: projects.password.Capacity,
 		Account:  accountservice.Config{TTL: 30 * time.Minute, ResendInterval: time.Minute, RegistrationIPLimit: 10, RegistrationGlobalLimit: 100},
-		Password: passwordservice.Config{ResetTokenTTL: time.Hour, ResetGlobalLimit: 100},
+		Password: passwordrecovery.Config{ResetTokenTTL: time.Hour, ResetGlobalLimit: 100},
 	}
 	cfg.MFA.RecoveryEnabled = false
 	cfg.Platform.RealmID = string(projects.projects[0].Binding.RealmID)

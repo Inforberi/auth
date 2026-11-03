@@ -10,7 +10,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountsetup "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/service"
 )
 
 func (r *Repository) CheckSetupOpen(ctx context.Context) error {
@@ -37,7 +37,7 @@ func (r *Repository) SaveSetup(ctx context.Context, operator, request string, pa
 	return expires, setupError(ctx, err)
 }
 
-func (r *Repository) CompleteSetup(ctx context.Context, operator, request string, check accountservice.SetupCheck) error {
+func (r *Repository) CompleteSetup(ctx context.Context, operator, request string, check accountsetup.SetupCheck) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})

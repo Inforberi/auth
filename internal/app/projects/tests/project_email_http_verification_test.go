@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 )
 
 func checkEmailHTTPVerificationReset(t *testing.T, ctx context.Context, f *emailIsolationFixture, webs [2]isolationHTTP) {
@@ -39,14 +39,14 @@ func checkEmailHTTPVerificationReset(t *testing.T, ctx context.Context, f *email
 	}
 	for i, web := range webs {
 		isolationCommand(t, ctx, web, "GET", "/api/v1/auth/reset-password?token="+reset[i], "", nil, 405, nil)
-		input := passwordhttp.ResetRequest{Token: reset[1-i], NewPassword: isolationResetPassword, ConfirmPassword: isolationResetPassword}
+		input := passwordrecoveryhttp.ResetRequest{Token: reset[1-i], NewPassword: isolationResetPassword, ConfirmPassword: isolationResetPassword}
 		isolationCommand(t, ctx, web, "POST", "/api/v1/auth/reset-password", "", input, 400, nil)
 		input.Token = reset[i]
 		response := web.call(t, ctx, "POST", "/api/v1/auth/reset-password", "", "", input)
 		require.Equal(t, 403, response.status)
 	}
 	for i, web := range webs {
-		input := passwordhttp.ResetRequest{Token: reset[i], NewPassword: isolationResetPassword, ConfirmPassword: isolationResetPassword}
+		input := passwordrecoveryhttp.ResetRequest{Token: reset[i], NewPassword: isolationResetPassword, ConfirmPassword: isolationResetPassword}
 		response := web.call(t, ctx, "POST", "/api/v1/auth/reset-password", web.origin, "", input)
 		require.Equal(t, 200, response.status, "%s", response.body)
 		requireNoEmailLoginCookie(t, response)

@@ -7,8 +7,9 @@ import (
 	"testing"
 
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/admission"
+	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
-	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
@@ -22,7 +23,7 @@ func TestOperatorHTTPAllowlist(t *testing.T) {
 	cfg.Password.ResetURL = cfg.Platform.Origin + "/reset"
 	handler, err := NewOperator(Handlers{
 		Config: cfg, PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfamanagementhttp.Handler{},
-		Session: &sessionhttp.Handler{}, Middleware: &sessionhttp.Middleware{}, Recovery: &passwordhttp.RecoveryHandler{},
+		Session: &sessionhttp.Handler{}, Middleware: &sessionhttp.Middleware{}, Recovery: &passwordrecoveryhttp.RecoveryHandler{},
 		ReadyCheck: func(context.Context) error { return nil },
 	})
 	if err != nil {

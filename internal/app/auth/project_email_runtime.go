@@ -7,12 +7,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountredis "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/redis"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	otppostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/repository/postgres"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/redis"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
@@ -86,12 +88,12 @@ func (p *projectEmailRuntime) use(ctx context.Context, operation func(context.Co
 	})
 }
 
-func (p *projectEmailRuntime) verification(pool *pgxpool.Pool, mail *mailer.Mailer, cfg accountservice.Config) *accountservice.Service {
-	return accountservice.New(accountpostgres.New(pool), p.verificationLimits, p.verificationCipher, mail, cfg)
+func (p *projectEmailRuntime) verification(pool *pgxpool.Pool, mail *mailer.Mailer, cfg accountservice.Config) *accountemail.Verification {
+	return accountemail.NewVerification(accountpostgres.New(pool), p.verificationLimits, p.verificationCipher, mail, cfg)
 }
 
-func (p *projectEmailRuntime) recovery(pool *pgxpool.Pool, mail *mailer.Mailer, hash *hasher.Bounded, cfg passwordservice.Config) *passwordservice.RecoveryService {
-	return passwordservice.NewRecovery(passwordpostgres.New(pool), p.resetCipher, p.resetLimits, mail, hash, cfg)
+func (p *projectEmailRuntime) recovery(pool *pgxpool.Pool, mail *mailer.Mailer, hash *hasher.Bounded, cfg passwordrecovery.Config) *passwordrecovery.RecoveryService {
+	return passwordrecovery.NewRecovery(passwordpostgres.New(pool), p.resetCipher, p.resetLimits, mail, hash, cfg)
 }
 
 func (p *projectEmailRuntime) deliver(ctx context.Context, verification bool) error {
@@ -101,11 +103,11 @@ func (p *projectEmailRuntime) deliver(ctx context.Context, verification bool) er
 func (p *projectEmailRuntime) deliverAccount(ctx context.Context, verification bool, cfg accountpostgres.DeliveryConfig) error {
 	return p.use(ctx, func(ctx context.Context, pool *pgxpool.Pool, mail *mailer.Mailer) error {
 		if verification {
-			worker := accountservice.New(accountpostgres.NewWithDelivery(pool, cfg), p.verificationLimits, p.verificationCipher, mail, accountservice.Config{})
+			worker := accountemail.NewVerification(accountpostgres.NewWithDelivery(pool, cfg), p.verificationLimits, p.verificationCipher, mail, accountservice.Config{})
 			return worker.DeliverOne(ctx)
 		}
 		// Delivery consumes an existing encrypted body; it never hashes or builds a reset URL.
-		_, err := p.recovery(pool, mail, nil, passwordservice.Config{}).DeliverOne(ctx)
+		_, err := p.recovery(pool, mail, nil, passwordrecovery.Config{}).DeliverOne(ctx)
 		return err
 	})
 }

@@ -11,7 +11,7 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
 )
 
 type contractActivation struct {
@@ -46,7 +46,7 @@ func TestInvitationHTTPContract(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			s := &contractActivation{err: tc.err}
 			h := contractHandlers("test")
-			h.Activation = passwordhttp.NewActivation(s, zap.NewNop())
+			h.Activation = passwordprovisioninghttp.NewActivation(s, zap.NewNop())
 			r := httptest.NewRequest(tc.method, path, strings.NewReader(tc.body))
 			if tc.origin != "" {
 				r.Header.Set("Origin", tc.origin)

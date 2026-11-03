@@ -33,7 +33,7 @@ func TestCredentialInputBeforeDependencies(t *testing.T) {
 			}
 		})
 	}
-	email, err := parseCredentials(" USER@example.com ", "legacy-password")
+	email, err := ParseCredentials(" USER@example.com ", "legacy-password")
 	if err != nil || email.String() != "user@example.com" {
 		t.Fatal("normalization changed", email, err)
 	}

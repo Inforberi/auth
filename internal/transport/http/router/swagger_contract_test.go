@@ -17,9 +17,11 @@ import (
 	policyhttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/policy/transport/http"
 	roleshttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/transport/http"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
-	oidchttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/transport/http"
+	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
+	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
@@ -174,22 +176,22 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 		{"token_http.RefreshRequest", tokenhttp.RefreshRequest{}},
 		{"token_http.JWKSResponse", tokenhttp.JWKSResponse{Keys: []tokenhttp.PublicKey{}}},
 		{"token_http.PublicKey", tokenhttp.PublicKey{Operations: []string{"verify"}}},
-		{"password_http.ForgotRequest", passwordhttp.ForgotRequest{}},
-		{"password_http.ResetRequest", passwordhttp.ResetRequest{}},
-		{"password_http.ProtectedRecoveryRequest", passwordhttp.ProtectedRecoveryRequest{}},
-		{"password_http.ActivationRequest", passwordhttp.ActivationRequest{}},
-		{"password_http.TemporaryLoginRequest", passwordhttp.TemporaryLoginRequest{}},
-		{"password_http.TemporaryLoginResponse", passwordhttp.TemporaryLoginResponse{}},
-		{"password_http.TemporaryCompleteRequest", passwordhttp.TemporaryCompleteRequest{}},
+		{"password_http.ForgotRequest", passwordrecoveryhttp.ForgotRequest{}},
+		{"password_http.ResetRequest", passwordrecoveryhttp.ResetRequest{}},
+		{"password_http.ProtectedRecoveryRequest", passwordrecoveryhttp.ProtectedRecoveryRequest{}},
+		{"password_http.ActivationRequest", passwordprovisioninghttp.ActivationRequest{}},
+		{"password_http.TemporaryLoginRequest", passwordprovisioninghttp.TemporaryLoginRequest{}},
+		{"password_http.TemporaryLoginResponse", passwordprovisioninghttp.TemporaryLoginResponse{}},
+		{"password_http.TemporaryCompleteRequest", passwordprovisioninghttp.TemporaryCompleteRequest{}},
 		{"password_http.ReauthenticationRequest", passwordhttp.ReauthenticationRequest{}},
 		{"password_http.ReauthenticationResponse", passwordhttp.ReauthenticationResponse{}},
 		{"password_http.RecoveryResponse", passwordhttp.RecoveryResponse{}},
-		{"account_http.ResendRequest", accounthttp.ResendRequest{}},
-		{"account_http.ConfirmRequest", accounthttp.ConfirmRequest{}},
-		{"account_http.VerificationResponse", accounthttp.VerificationResponse{}},
-		{"account_http.EmailChangeRequest", accounthttp.EmailChangeRequest{}},
-		{"account_http.EmailChangeConfirmRequest", accounthttp.EmailChangeConfirmRequest{}},
-		{"account_http.EmailChangeReportRequest", accounthttp.EmailChangeReportRequest{}},
+		{"account_http.ResendRequest", accountemailhttp.ResendRequest{}},
+		{"account_http.ConfirmRequest", accountemailhttp.ConfirmRequest{}},
+		{"account_http.VerificationResponse", accountemailhttp.VerificationResponse{}},
+		{"account_http.EmailChangeRequest", accountemailhttp.EmailChangeRequest{}},
+		{"account_http.EmailChangeConfirmRequest", accountemailhttp.EmailChangeConfirmRequest{}},
+		{"account_http.EmailChangeReportRequest", accountemailhttp.EmailChangeReportRequest{}},
 		{"password_http.RegisterRequest", passwordhttp.RegisterRequest{}},
 		{"password_http.RegisterResponse", passwordhttp.RegisterResponse{VerificationRequired: true}},
 		{"password_http.LoginByEmailRequest", passwordhttp.LoginByEmailRequest{}},

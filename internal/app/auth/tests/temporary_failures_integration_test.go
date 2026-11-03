@@ -12,7 +12,7 @@ import (
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 )
 
 func checkTemporaryFailures(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
@@ -44,7 +44,7 @@ func checkTemporaryFailures(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 			t.Fatal("expired hash not cleaned", err)
 		}
 		allowTemporaryReissue(t, db, ctx, created.UserID)
-		if _, err := f.service.Reissue(ctx, passwordservice.TemporaryReissueInput{Actor: f.input.Actor, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}); err != nil {
+		if _, err := f.service.Reissue(ctx, passwordprovisioning.TemporaryReissueInput{Actor: f.input.Actor, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}); err != nil {
 			t.Fatal("cleanup lost durable reissue state", err)
 		}
 	})
@@ -115,7 +115,7 @@ func checkTemporaryFailures(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 		created := f.create(t, ctx)
 		setup := f.login(t, ctx, created.Password)
 		allowTemporaryReissue(t, db, ctx, created.UserID)
-		input := passwordservice.TemporaryReissueInput{Actor: f.input.Actor, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}
+		input := passwordprovisioning.TemporaryReissueInput{Actor: f.input.Actor, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}
 		var reissueErr, completeErr error
 		var wg sync.WaitGroup
 		wg.Go(func() { _, reissueErr = f.service.Reissue(ctx, input) })

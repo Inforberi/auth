@@ -19,7 +19,7 @@ import (
 // @Param userId path string true "Project user UUID"
 // @Param expectedVersion query int true "Current project version"
 // @Param expectedGeneration query int true "Current project generation"
-// @Success 200 {object} http.UserDetailResponse
+// @Success 200 {object} accounthttp.UserDetailResponse
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse

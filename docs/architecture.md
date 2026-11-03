@@ -22,9 +22,22 @@ internal/
 ├── config/                       # конфигурация запуска
 ├── server/http/                  # HTTP server, timeouts, graceful shutdown
 ├── auth/
-│   ├── account/                  # пользователь, email, привязки аккаунтов
+│   ├── account/                  # пользователь и его жизненный цикл
+│   │   ├── domain/               # общие user/email/identity инварианты
+│   │   ├── service/              # профиль, каталог, статус, удаление, identities
+│   │   ├── email/{service,transport/http}/
+│   │   ├── provisioning/{service,transport/http}/
+│   │   ├── setup/{service,transport/http}/
+│   │   ├── repository/{postgres,redis}/
+│   │   └── transport/http/       # профиль, directory и общие actor/response helpers
 │   ├── methods/
 │   │   ├── password/
+│   │   │   ├── domain/
+│   │   │   ├── service/          # login/register/change/reauth, shared ports/crypto
+│   │   │   ├── recovery/{service,transport/http}/
+│   │   │   ├── provisioning/{service,transport/http}/
+│   │   │   ├── repository/{postgres,redis}/
+│   │   │   └── transport/http/
 │   │   ├── emailotp/
 │   │   ├── google/
 │   │   └── telegram/
@@ -394,3 +407,17 @@ Repository возвращает MethodSelection одним прежним SQL-з
 Публичные unit/HTTP tests расположены в локальных tests. Private securityNotice payload tests остаются рядом с delivery implementation. Связный cross-feature SQL suite и общие fixtures перенесены из password/repository/postgres в internal/app/auth/tests одной closure: проверки не становятся частью парольного repository и не копируют fixtures. Private registrationError test остаётся у password repository. Проектные сквозные suites остаются internal/app/projects/tests. Это единый тестовый suite сборки, а не новый production-пакет.
 
 HTTP-пакеты подфич имеют явные Go names mfaloginhttp, mfamanagementhttp, mfarecoveryhttp и mfatelegramhttp; общий остаётся mfahttp. Существующие Swagger schema IDs закреплены @name: перенос не меняет клиентский контракт и не требует новой копии DTO ради генератора.
+
+### Account и пароль после R5
+
+Account/email владеет подтверждением, привязкой и сменой email, защитным report и существующей доставкой account outbox. Общая модель Email/User/Identity остаётся account/domain; правила не копируются в способы входа. Account/provisioning управляет ручной выдачей пользователя и приглашениями; account/setup — первым администратором и одноразовым setup. Каталог/статус/удаление/identity resolution и management остаются в корневом account/service по существующим сценариям.
+
+Account/provisioning и EmailChange получают собственные узкие repository ports, limiter и cipher напрямую. Verification не используется как контейнер технических зависимостей. App/account возвращает именованные собранные ресурсы verification/repository/limits/cipher: сборка соединяет их, service не импортирует app. Общие ports, admission, token helpers и зашифрованный EmailMessage лежат account/service и используются реальными потребителями. Bootstrap Config с прежними ENV остаётся там же; новых глобальных настроек не вводим.
+
+Password/service сохраняет обычные login/register/change/reauth и общие contracts. ParseCredentials используется обычным и временным входом без копирования правил. Password/recovery объединяет reset/outbox, защищённое и операторское восстановление. Password/provisioning — временные credentials, их обязательную замену и активацию приглашения. Activation не создаёт RecoveryService ради hashing/limits: получает эти зависимости явно, сохраняя порядок bounds/policy/admission/preflight/hash/transaction recheck. OIDC callback сохраняет общую атомарную flow-consumption/provider verification; email OTP сохраняет единый challenge/outbox, включая EmailLogin. Дополнительные слои для Google/Telegram не добавлены.
+
+SQL-владельцы account/repository/postgres и password/repository/postgres сохранены: current proofs, user/access locks, email/credential/version updates, invalidation/audit/outbox и idempotency commits не разрываем ради симметрии подпапок. Leaf repositories не создаются пустыми wrappers поверх этих transactions. Код SQL и schema не переписывается из-за имён Go-пакетов.
+
+Публичные service/HTTP сценарии, которые переносились, тестируются в локальных tests. Private cursor/error-table/payload assertions остаются рядом; инжектированный cipher в setup-тесте берётся из собственной fixture, не из private поля production service. Connected SQL suites остаются app/auth/tests и app/projects/tests после R4; повторного переноса/копий нет. Режим приёмки — только affected packages и связанные guarantees, с переиспользованием собственного стенда Luna.
+
+Go names HTTP-пакетов: accounthttp/accountemailhttp/accountprovisioninghttp/accountsetuphttp и passwordhttp/passwordrecoveryhttp/passwordprovisioninghttp. Прежние публичные Swagger schema IDs явно закреплены @name; внешние ссылки обновляются вместе с переносом, DTO не копируются ради генератора.

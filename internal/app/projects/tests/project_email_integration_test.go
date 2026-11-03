@@ -19,7 +19,7 @@ import (
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
@@ -82,7 +82,7 @@ func projectEmailDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key
 	})
 	cfg := appauth.ProjectEmailConfig{VerificationEnabled: true, RecoveryEnabled: true, Origin: "https://runtime-email.example.test", Verification: accountservice.Config{
 		URL: "https://runtime-email.example.test/verify-email", TTL: 30 * time.Minute, ResendInterval: time.Minute, RegistrationIPLimit: 5, RegistrationGlobalLimit: 100,
-	}, Password: passwordservice.Config{ResetURL: "https://runtime-email.example.test/reset-password", ResetTokenTTL: time.Hour, ResetGlobalLimit: 100}}
+	}, Password: passwordrecovery.Config{ResetURL: "https://runtime-email.example.test/reset-password", ResetTokenTTL: time.Hour, ResetGlobalLimit: 100}}
 	service, err := appauth.NewProjectEmail(ctx, key, cfg, []string{listener.Addr().String()}, appauth.ProjectEmailDependencies{ProjectSMTPDependencies: deps, Hash: hash})
 	require.NoError(t, err)
 	require.NoError(t, service.ResendVerification(ctx, email, ip))

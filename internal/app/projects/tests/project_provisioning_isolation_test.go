@@ -13,9 +13,9 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 )
 
 func checkInvitationTemporaryIsolation(t *testing.T, ctx context.Context, f *emailIsolationFixture) {
@@ -29,7 +29,7 @@ func checkInvitationTemporaryIsolation(t *testing.T, ctx context.Context, f *ema
 	}
 	const invitationEmail = "isolation-invite@example.test"
 	for i, service := range f.services {
-		input := accountservice.ProvisionInput{Actor: actors[1-i], IdempotencyKey: "e8900000-0000-4000-8000-000000000001", Email: invitationEmail, Invite: true}
+		input := accountprovisioning.ProvisionInput{Actor: actors[1-i], IdempotencyKey: "e8900000-0000-4000-8000-000000000001", Email: invitationEmail, Invite: true}
 		_, err := service.ProvisionUser(ctx, input)
 		require.ErrorIs(t, err, accessdomain.ErrFreshAuthRequired)
 		input.Actor = actors[i]
@@ -48,15 +48,15 @@ func checkInvitationTemporaryIsolation(t *testing.T, ctx context.Context, f *ema
 		require.ErrorIs(t, service.ActivateInvitation(ctx, invitationTokens[i], httpIsolationPassword, httpIsolationPassword, emailIsolationIP), accountdomain.ErrInvalidInvitation)
 	}
 	var passwords [2]*appauth.ProjectPassword
-	var issued [2]*passwordservice.TemporaryIssueResult
-	var setup [2]*passwordservice.TemporaryLoginResult
+	var issued [2]*passwordprovisioning.TemporaryIssueResult
+	var setup [2]*passwordprovisioning.TemporaryLoginResult
 	for i, key := range f.projects.projects {
 		cfg := f.projects.password
-		cfg.TemporaryPassword = passwordservice.TemporaryPasswordConfig{Enabled: true, TTL: time.Hour, SetupTTL: 5 * time.Minute, ReissueCooldown: time.Second, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}
+		cfg.TemporaryPassword = passwordprovisioning.TemporaryPasswordConfig{Enabled: true, TTL: time.Hour, SetupTTL: 5 * time.Minute, ReissueCooldown: time.Second, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}
 		var err error
 		passwords[i], err = appauth.NewProjectPassword(ctx, key, cfg, appauth.ProjectPasswordDependencies{Registry: f.projects.deps.Registry, Reader: f.projects.deps.Reader, Redis: f.projects.deps.Redis, Hash: f.projects.deps.Hash})
 		require.NoError(t, err)
-		issued[i], err = passwords[i].ProvisionTemporaryPassword(ctx, passwordservice.TemporaryProvisionInput{Actor: actors[i], IdempotencyKey: "e8900000-0000-4000-8000-000000000002", Email: "isolation-temp@example.test"})
+		issued[i], err = passwords[i].ProvisionTemporaryPassword(ctx, passwordprovisioning.TemporaryProvisionInput{Actor: actors[i], IdempotencyKey: "e8900000-0000-4000-8000-000000000002", Email: "isolation-temp@example.test"})
 		require.NoError(t, err)
 		f.users[i] = append(f.users[i], string(issued[i].UserID))
 	}

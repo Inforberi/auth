@@ -11,7 +11,7 @@ import (
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
@@ -33,7 +33,7 @@ type ProjectProfileConfig struct {
 	TelegramMFA              bool
 	Google, Telegram         *ProjectOIDCConfig
 	Verification             *accountservice.Config
-	Recovery                 *passwordservice.Config
+	Recovery                 *passwordrecovery.Config
 	EmailManagement          *ProjectEmailConfig
 	Tokens                   *ProjectTokenConfig
 	Timeout                  time.Duration

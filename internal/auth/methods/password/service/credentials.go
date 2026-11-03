@@ -5,7 +5,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 )
 
-func parseCredentials(rawEmail, password string) (accountdomain.Email, error) {
+func ParseCredentials(rawEmail, password string) (accountdomain.Email, error) {
 	email, err := accountdomain.NewEmail(rawEmail)
 	// Preserve the API order: missing email, missing password, invalid email.
 	if rawEmail == "" {

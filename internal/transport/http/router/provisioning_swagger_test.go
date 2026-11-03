@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	accountprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
+	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
 )
 
 func TestProvisioningSwaggerDTOs(t *testing.T) {
@@ -16,12 +16,12 @@ func TestProvisioningSwaggerDTOs(t *testing.T) {
 		name string
 		dto  any
 	}{
-		{"account_http.ProvisionRequest", accounthttp.ProvisionRequest{}},
-		{"account_http.ReissueInvitationRequest", accounthttp.ReissueInvitationRequest{}},
-		{"account_http.ProvisionResponse", accounthttp.ProvisionResponse{}},
-		{"password_http.TemporaryProvisionRequest", passwordhttp.TemporaryProvisionRequest{}},
-		{"password_http.TemporaryReissueRequest", passwordhttp.TemporaryReissueRequest{}},
-		{"password_http.TemporaryIssueResponse", passwordhttp.TemporaryIssueResponse{}},
+		{"account_http.ProvisionRequest", accountprovisioninghttp.ProvisionRequest{}},
+		{"account_http.ReissueInvitationRequest", accountprovisioninghttp.ReissueInvitationRequest{}},
+		{"account_http.ProvisionResponse", accountprovisioninghttp.ProvisionResponse{}},
+		{"password_http.TemporaryProvisionRequest", passwordprovisioninghttp.TemporaryProvisionRequest{}},
+		{"password_http.TemporaryReissueRequest", passwordprovisioninghttp.TemporaryReissueRequest{}},
+		{"password_http.TemporaryIssueResponse", passwordprovisioninghttp.TemporaryIssueResponse{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			schema, ok := doc.Definitions[tc.name]

@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
-	pgx "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
@@ -27,7 +28,7 @@ func checkVerification(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	}
 	repo := accountpostgres.New(db)
 	mail := &verificationMail{}
-	svc := accountservice.New(repo, verificationLimits{}, cipher, mail, accountservice.Config{URL: "https://example.com/verify", TTL: 30 * time.Minute, ResendInterval: time.Minute})
+	svc := accountemail.NewVerification(repo, verificationLimits{}, cipher, mail, accountservice.Config{URL: "https://example.com/verify", TTL: 30 * time.Minute, ResendInterval: time.Minute})
 	var last domain.Verification
 	prepare := func(ctx context.Context, tx pgx.Tx, user domain.UserID, id domain.AddressID, email string) error {
 		prepared, err := svc.PrepareVerification(email)
@@ -149,7 +150,7 @@ func checkVerificationRollback(t *testing.T, db *pgxpool.Pool, ctx context.Conte
 	}
 }
 
-func checkVerificationExpiry(t *testing.T, db *pgxpool.Pool, ctx context.Context, password *passwordpostgres.PasswordRepo, svc *accountservice.Service, cipher *secretbox.Cipher, last *domain.Verification) {
+func checkVerificationExpiry(t *testing.T, db *pgxpool.Pool, ctx context.Context, password *passwordpostgres.PasswordRepo, svc *accountemail.Verification, cipher *secretbox.Cipher, last *domain.Verification) {
 	t.Helper()
 	user, err := password.CreateUser(ctx, "expired-verification@example.com", "hash")
 	if err != nil {

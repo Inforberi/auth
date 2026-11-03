@@ -5,12 +5,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 )
 
 func TestProjectEmailManagementPrerequisitesAreIndependent(t *testing.T) {
 	profile := &ProjectProfile{origin: "https://alpha.example.test", states: map[string]ProjectFeatureState{}}
-	email := &ProjectEmailConfig{Origin: profile.origin, Binding: accountservice.EmailBindingConfig{Enabled: true}, Change: accountservice.EmailChangeConfig{Enabled: true}}
+	email := &ProjectEmailConfig{Origin: profile.origin, Binding: accountemail.EmailBindingConfig{Enabled: true}, Change: accountemail.EmailChangeConfig{Enabled: true}}
 	cfg := ProjectProfileConfig{EmailManagement: email}
 	profile.buildProfileEmailManagement(t.Context(), cfg, false)
 	require.Empty(t, profile.states, "browser disabled does not publish management")

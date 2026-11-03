@@ -5,8 +5,10 @@ import (
 	"net/url"
 	"time"
 
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 )
 
@@ -15,10 +17,10 @@ type ProjectEmailConfig struct {
 	RecoveryEnabled     bool
 	Origin              string
 	Verification        accountservice.Config
-	Password            passwordservice.Config
-	Invitations         accountservice.InvitationConfig
-	Binding             accountservice.EmailBindingConfig
-	Change              accountservice.EmailChangeConfig
+	Password            passwordrecovery.Config
+	Invitations         accountprovisioning.InvitationConfig
+	Binding             accountemail.EmailBindingConfig
+	Change              accountemail.EmailChangeConfig
 	FreshAuthTTL        time.Duration
 }
 

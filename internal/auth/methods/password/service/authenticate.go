@@ -18,7 +18,7 @@ func (l *PasswordService) Authenticate(ctx context.Context, input LoginInput) (m
 
 func (l *PasswordService) authenticate(ctx context.Context, input LoginInput, administrative bool) (mfaservice.PrimaryProof, error) {
 	var proof mfaservice.PrimaryProof
-	email, err := parseCredentials(input.Email, input.Password)
+	email, err := ParseCredentials(input.Email, input.Password)
 	if err != nil {
 		return proof, fmt.Errorf("service login: %w", err)
 	}

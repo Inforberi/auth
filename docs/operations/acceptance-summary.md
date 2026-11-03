@@ -255,3 +255,17 @@ Evidence: `/private/tmp/auth-r4-mfa-v9-results-summary.log`; V7 default tests `/
 Ранние import/namespace/fixture/govet/Swagger diagnostics исправлены без ослабления assertions и policy guards. Первоначальный общий SQL PASS не принят main: в evidence отсутствовали27 roots; полный gate закрыт только после их выполнения. Docker VM disk был заполнен при свободных104GiB host: стенды использовали отдельный0700 host bind PGDATA, PG18.6 TLS/SCRAM и isolated no-persistence Redis. Настройки Desktop и чужие кеши не менялись; этот correctness fixture не является evidence производительности.
 
 R4 завершён. R2 live readiness/TestPrepareJWT, внешний ingress/providers/SMTP и MP7/MP8 capacity/GC остаются отдельными gates. Следующий блок — R5 account/методы входа, UI не начинать без согласования.
+
+## R5 account и методы входа — приёмка 3 ноября 2026
+
+Принят снимок `/private/tmp/auth-r5-account-password-v4-_34822o1`, base `cfa0421`. Manifest совпал с 325 изменёнными путями; main повторно сверил все не-Markdown файлы рабочего дерева с manifest: расхождений нет. Пакеты account/email, account/provisioning, account/setup и password/recovery, password/provisioning отделены от общих сценариев; feature SQL-владельцы и транзакции сохранены.
+
+Luna выполнила согласованный набор `/private/tmp/auth-r5-required-checks.json`: 35 затронутых Go-пакетов под `go test -race -count=1`, pinned golangci-lint v2.14.0 (0 issues), API reproduction V1 PASS переиспользован при неизменных generated artifacts/DTO/endpoint annotations. Router повторён отдельно с loopback-доступом после запрета sandbox открыть TLS listener. Общие проверки R4 повторно не назначались.
+
+Все восемь SQL roots имеют actual RUN/PASS, exit 0 и не содержат SKIP/NOT RUN; main сверил логи: TestPostgresSchema, TestInitialSetupSchema, TestInitialSetupServiceSQL, TestOperatorRecoverySchema, TestPrepareCommandSQL, TestTwoProjectHTTPIsolationSQL, TestTwoProjectEmailIsolationSQL, TestTwoProjectEmailHTTPIsolationSQL. Первоначальные ошибки подготовки fixture устранены; итоговый PrepareCommandSQL выполнен через Unix socket внутри собственного PostgreSQL контейнера с отдельными loopback SCRAM checks. Прежние assertions не ослаблялись.
+
+Evidence: `/private/tmp/auth-r5-v4-validation-summary.json`, `/private/tmp/auth-r5-sql-root-results.json`, per-root logs из receipts, `/private/tmp/auth-r5-v4-go-race.log`, `/private/tmp/auth-r5-v4-router-race.log`, `/private/tmp/auth-r5-v4-lint.log`, `/private/tmp/auth-r5-check-api.log` и их exit receipts. API/schema/routes/ENV/dependencies не менялись.
+
+По указанию пользователя инфраструктура fixture сохранена: владелец Luna/R5, Compose project `auth-r5-retained`, PostgreSQL 18.6 `auth-r5-retained-postgres-1` с host bind `/private/tmp/auth-r5-fixture-pgdata` и loopback TLS/SCRAM; Redis 8.2 `auth-r5-retained-redis-1`, loopback host port 59146, без persistence. Compose `/private/tmp/auth-r5-retained-compose.yml`, metadata `/private/tmp/auth-r5-retained-fixture.json`. Cleanup данных PASS: project DBs/roles отсутствуют, auth/catalog/storage fixture schemas удалены, Redis DB15 пуст. Test login nonsuperuser CREATEROLE с `createrole_self_grant=set,inherit`. Для следующей задачи Luna проверяет metadata/совместимость и пересобирает актуальный снимок; retained fixture не доказывает production capacity.
+
+R5 закрыт. Далее R6 — session/JWT/access/settings/audit/delivery. R2 live readiness/TestPrepareJWT, внешние подключения и MP7/MP8 capacity/GC остаются отдельными gates; UI только после согласования.

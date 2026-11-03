@@ -6,13 +6,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 )
 
-func (r *TemporaryPasswordRepo) ProvisionTemporary(ctx context.Context, command accountservice.ProvisionCommand, credential domain.TemporaryCredential, ttl time.Duration) (*service.TemporaryIssueResult, error) {
-	result := &service.TemporaryIssueResult{}
+func (r *TemporaryPasswordRepo) ProvisionTemporary(ctx context.Context, command accountprovisioning.ProvisionCommand, credential domain.TemporaryCredential, ttl time.Duration) (*passwordprovisioning.TemporaryIssueResult, error) {
+	result := &passwordprovisioning.TemporaryIssueResult{}
 	err := r.transaction(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		account, err := r.provision(ctx, tx, command)
 		if err != nil {

@@ -13,6 +13,7 @@ import (
 	adminapp "github.com/Inforberi/financial-intelligence/internal/app/admin"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
@@ -51,10 +52,11 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 	if runtime != nil {
 		observer = runtime
 	}
-	account, repo, err := security.assembleAccount(deps.pool, deps.redis, mail, cfg.Account, postgres.DeliveryConfig{})
+	accountRuntime, err := security.assembleAccount(deps.pool, deps.redis, mail, cfg.Account, postgres.DeliveryConfig{})
 	if err != nil {
 		return nil, err
 	}
+	account, repo := accountRuntime.verification, accountRuntime.repository
 	setup, err := security.assembleSetup(operator, deps.redis, mail, deps.hash, cfg, deps.log)
 	if err != nil {
 		return nil, err
@@ -107,7 +109,7 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 		ProjectCapacity:   projecthttp.Capacity(capacity),
 		MFASettings:       adminapp.MFASettings(operator, cfg.MFA.Enabled, deps.log),
 		PasswordHandler:   passwordhttp.New(password.service, deps.log),
-		Recovery:          passwordhttp.NewRecovery(password.recovery, deps.log),
+		Recovery:          passwordrecoveryhttp.NewRecovery(password.recovery, deps.log),
 		Middleware:        sessionhttp.New(svc, deps.log),
 		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessions), deps.log),
 		Activity:          sessionhttp.NewActivity(sessionservice.NewActivity(sessions), deps.log),

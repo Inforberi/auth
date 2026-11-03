@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
@@ -38,7 +38,7 @@ func checkEmailHTTPBinding(t *testing.T, ctx context.Context, f *emailIsolationF
 		require.Equal(t, "http-bind@example.test", message.To)
 		code := regexp.MustCompile(`\b[0-9]{8}\b`).FindString(message.Body)
 		require.Len(t, code, 8)
-		input := accounthttp.ConfirmEmailBindingRequest{Code: code}
+		input := accountemailhttp.ConfirmEmailBindingRequest{Code: code}
 		isolationCommand(t, ctx, web, "POST", confirmPath, "", input, 401, nil)
 		isolationCommand(t, ctx, web, "POST", confirmPath, cookies[1-i], input, 401, nil)
 		if i == 0 {

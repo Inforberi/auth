@@ -1,4 +1,4 @@
-package http
+package accounthttp
 
 import (
 	"context"
@@ -55,5 +55,5 @@ func UserDirectoryErrorRules() []httpx.ErrorRule {
 }
 
 func (h *UserDirectoryHandler) respondError(w http.ResponseWriter, r *http.Request, err error) {
-	httpx.RespondError(w, r, h.log, "user_directory", err, userDirectoryErrors, dependencyFailure)
+	httpx.RespondError(w, r, h.log, "user_directory", err, userDirectoryErrors, Unavailable())
 }

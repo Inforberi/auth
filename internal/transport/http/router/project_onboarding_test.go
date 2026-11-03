@@ -12,14 +12,14 @@ import (
 	"go.uber.org/zap"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	accountsetuphttp "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/transport/http"
 	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
 func onboardingProfile(setup *contractSetup) ProjectOnboardingHTTP {
 	return ProjectOnboardingHTTP{
 		Origin: "https://project.example.test:8443",
-		Setup:  accounthttp.NewSetup(setup, zap.NewNop()),
+		Setup:  accountsetuphttp.NewSetup(setup, zap.NewNop()),
 		Capacity: requestmiddleware.CapacityConfig{
 			MaxInFlight: 2, RequestTimeout: time.Second,
 		},

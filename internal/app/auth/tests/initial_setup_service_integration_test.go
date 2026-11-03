@@ -8,7 +8,7 @@ import (
 	"time"
 
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountsetup "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
@@ -54,11 +54,11 @@ func initialSetupServiceSQL(t *testing.T, mode settingsdomain.MFAMode) {
 	hash := hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), 1)
 	operator := base64.RawURLEncoding.EncodeToString([]byte(strings.Repeat("o", 32)))
 	mail := &setupSQLMail{}
-	s, err := accountservice.NewSetup(accountpostgres.New(db), mfaTestLimit{}, cipher, factor, mail, hash, totp.Authenticator{}, accountservice.SetupConfig{Enabled: true, Secret: operator}, "Auth")
+	s, err := accountsetup.NewSetup(accountpostgres.New(db), mfaTestLimit{}, cipher, factor, mail, hash, totp.Authenticator{}, accountsetup.SetupConfig{Enabled: true, Secret: operator}, "Auth")
 	if err != nil {
 		t.Fatal(err)
 	}
-	started, err := s.Start(ctx, accountservice.SetupStartInput{OperatorSecret: operator, Email: "first-admin@example.test", Password: "Validpassword1", IP: "192.0.2.1", MFAMode: mode})
+	started, err := s.Start(ctx, accountsetup.SetupStartInput{OperatorSecret: operator, Email: "first-admin@example.test", Password: "Validpassword1", IP: "192.0.2.1", MFAMode: mode})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func initialSetupServiceSQL(t *testing.T, mode settingsdomain.MFAMode) {
 	if mode != settingsdomain.MFAOptional {
 		code = mfaCode(t, db, ctx, started.Secret, 0)
 	}
-	completed, err := s.Complete(ctx, accountservice.SetupCompleteInput{OperatorSecret: operator, Token: started.Token, EmailCode: mail.code, TOTP: code, IP: "192.0.2.1"})
+	completed, err := s.Complete(ctx, accountsetup.SetupCompleteInput{OperatorSecret: operator, Token: started.Token, EmailCode: mail.code, TOTP: code, IP: "192.0.2.1"})
 	if err != nil {
 		t.Fatal(err)
 	}

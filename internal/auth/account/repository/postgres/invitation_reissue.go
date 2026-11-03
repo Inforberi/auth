@@ -10,7 +10,7 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 )
 
 func (r *Repository) InvitationAddress(ctx context.Context, actor accessservice.Principal, user domain.UserID) (string, error) {
@@ -28,8 +28,8 @@ func (r *Repository) InvitationAddress(ctx context.Context, actor accessservice.
 	return email, err
 }
 
-func (r *Repository) ReissueInvitation(ctx context.Context, command service.InvitationReissueCommand) (*service.ProvisionResult, error) {
-	result := &service.ProvisionResult{UserID: command.Input.UserID}
+func (r *Repository) ReissueInvitation(ctx context.Context, command accountprovisioning.InvitationReissueCommand) (*accountprovisioning.ProvisionResult, error) {
+	result := &accountprovisioning.ProvisionResult{UserID: command.Input.UserID}
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, command.Input.Actor, string(command.Input.UserID), settings.UsersManage); err != nil {
 			return err
@@ -54,7 +54,7 @@ func (r *Repository) ReissueInvitation(ctx context.Context, command service.Invi
 	return result, nil
 }
 
-func replaceInvitation(ctx context.Context, tx pgx.Tx, c service.InvitationReissueCommand) error {
+func replaceInvitation(ctx context.Context, tx pgx.Tx, c accountprovisioning.InvitationReissueCommand) error {
 	var emailID domain.AddressID
 	var version domain.AuthVersion
 	var ready bool

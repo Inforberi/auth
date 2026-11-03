@@ -2,7 +2,7 @@ package service
 
 import "context"
 
-type loginLimiter interface {
+type LoginLimiter interface {
 	Allow(context.Context, string, string) error
 }
 
@@ -10,11 +10,11 @@ type PasswordService struct {
 	repo        passwordRepo
 	session     session
 	hash        loginHasher
-	loginLimit  loginLimiter
+	loginLimit  LoginLimiter
 	checkPolicy func(context.Context, bool) error
 }
 
-func New(repo passwordRepo, session session, hash loginHasher, limit loginLimiter) *PasswordService {
+func New(repo passwordRepo, session session, hash loginHasher, limit LoginLimiter) *PasswordService {
 	return &PasswordService{repo: repo, session: session, hash: hash, loginLimit: limit}
 }
 

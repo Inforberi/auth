@@ -10,7 +10,7 @@ import (
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 )
 
 const operatorRecoveryTargetQuery = `SELECT current_database(),session_user::text,u.status,u.auth_version
@@ -21,8 +21,8 @@ const operatorRecoveryTargetQuery = `SELECT current_database(),session_user::tex
 	AND EXISTS(SELECT 1 FROM pg_catalog.pg_roles r WHERE r.rolname='auth_recovery_operator'
 		AND pg_catalog.pg_has_role(session_user,r.oid,'MEMBER'))`
 
-func (r *PasswordRepo) OperatorRecoveryTarget(ctx context.Context, user accountdomain.UserID) (*service.OperatorRecoveryTarget, error) {
-	var target service.OperatorRecoveryTarget
+func (r *PasswordRepo) OperatorRecoveryTarget(ctx context.Context, user accountdomain.UserID) (*passwordrecovery.OperatorRecoveryTarget, error) {
+	var target passwordrecovery.OperatorRecoveryTarget
 	err := r.db.QueryRow(ctx, operatorRecoveryTargetQuery, user).Scan(&target.Database, &target.Operator, &target.Status, &target.AuthVersion)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrOperatorRecoveryDenied
@@ -48,7 +48,7 @@ func (r *PasswordRepo) ResetAdministratorPassword(ctx context.Context, request d
 	if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
 		return 0, err
 	}
-	var target service.OperatorRecoveryTarget
+	var target passwordrecovery.OperatorRecoveryTarget
 	err = tx.QueryRow(ctx, operatorRecoveryTargetQuery+` FOR UPDATE OF u`, request.UserID).Scan(&target.Database, &target.Operator, &target.Status, &target.AuthVersion)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, domain.ErrOperatorRecoveryDenied

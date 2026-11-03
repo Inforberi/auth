@@ -16,8 +16,8 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	otppostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/repository/postgres"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
@@ -32,7 +32,7 @@ import (
 type bindingSQLFixture struct {
 	statusFixture
 	repo      *accountpostgres.Repository
-	svc       *accountservice.EmailBindingService
+	svc       *accountemail.EmailBindingService
 	cipher    *secretbox.Cipher
 	principal accessservice.Principal
 	proof     mfaservice.Proof
@@ -61,13 +61,13 @@ func newBindingFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, name
 		t.Fatal(err)
 	}
 	repo := accountpostgres.NewWithDelivery(db, accountpostgres.DeliveryConfig{EmailBinding: true})
-	svc := accountservice.NewEmailBinding(repo, verificationLimits{}, cipher, accountservice.EmailBindingConfig{Enabled: true, TTL: 5 * time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 1000})
+	svc := accountemail.NewEmailBinding(repo, verificationLimits{}, cipher, accountemail.EmailBindingConfig{Enabled: true, TTL: 5 * time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 1000})
 	return bindingSQLFixture{statusFixture: f, repo: repo, svc: svc, cipher: cipher, principal: actor, proof: proof, role: role}
 }
 
 func (f bindingSQLFixture) issue(t *testing.T, db *pgxpool.Pool, ctx context.Context, email string) string {
 	t.Helper()
-	deadline, err := f.svc.Request(ctx, accountservice.EmailBindingInput{Actor: f.principal, UserID: f.user, Email: email, IP: "192.0.2.1"})
+	deadline, err := f.svc.Request(ctx, accountemail.EmailBindingInput{Actor: f.principal, UserID: f.user, Email: email, IP: "192.0.2.1"})
 	if err != nil || !deadline.After(time.Now()) || deadline.After(time.Now().Add(5*time.Minute)) {
 		t.Fatal(deadline, err)
 	}
@@ -270,7 +270,7 @@ func checkEmailBinding(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 			t.Fatal("binding administrator disabled mandatory MFA", err)
 		}
 		accessExec(t, db, ctx, `DELETE FROM auth.role_permissions WHERE role_id=$1`, f.role)
-		if _, err := f.svc.Request(ctx, accountservice.EmailBindingInput{Actor: f.principal, UserID: f.user, Email: f.email}); !errors.Is(err, accessdomain.ErrForbidden) {
+		if _, err := f.svc.Request(ctx, accountemail.EmailBindingInput{Actor: f.principal, UserID: f.user, Email: f.email}); !errors.Is(err, accessdomain.ErrForbidden) {
 			t.Fatal(err)
 		}
 	})

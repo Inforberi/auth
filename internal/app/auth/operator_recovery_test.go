@@ -19,8 +19,8 @@ import (
 	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/admin/administrators/repository/postgres"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	mfarecovery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/service"
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
@@ -155,7 +155,7 @@ func operatorRecoveryDrill(t *testing.T, admin *pgxpool.Pool, deps realmDependen
 	if err := passwordPool.QueryRow(ctx, `SELECT secret FROM auth.mfa_totp WHERE user_id=$1`, user).Scan(new([]byte)); err == nil {
 		t.Fatal("offline password login read the factor")
 	}
-	reset := passwordservice.NewOperatorRecovery(passwordpostgres.New(passwordPool), deps.hash)
+	reset := passwordrecovery.NewOperatorRecovery(passwordpostgres.New(passwordPool), deps.hash)
 	target, err := reset.Preview(ctx, user)
 	if err != nil {
 		t.Fatal(err)

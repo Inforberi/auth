@@ -9,14 +9,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 )
 
 func checkTemporaryConcurrency(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	t.Run("one-secret-per-command", func(t *testing.T) {
 		f := newTemporaryFixture(t, db, ctx, "concurrent-issue")
 		var wg sync.WaitGroup
-		results := make(chan *passwordservice.TemporaryIssueResult, 16)
+		results := make(chan *passwordprovisioning.TemporaryIssueResult, 16)
 		errs := make(chan error, 16)
 		for range 16 {
 			wg.Go(func() {
@@ -33,7 +33,7 @@ func checkTemporaryConcurrency(t *testing.T, db *pgxpool.Pool, ctx context.Conte
 				t.Fatal(err)
 			}
 		}
-		var issued *passwordservice.TemporaryIssueResult
+		var issued *passwordprovisioning.TemporaryIssueResult
 		secrets := 0
 		for result := range results {
 			if !result.Reused {
@@ -52,7 +52,7 @@ func checkTemporaryConcurrency(t *testing.T, db *pgxpool.Pool, ctx context.Conte
 		f := newTemporaryFixture(t, db, ctx, "concurrent-login")
 		created := f.create(t, ctx)
 		var wg sync.WaitGroup
-		results := make(chan *passwordservice.TemporaryLoginResult, 16)
+		results := make(chan *passwordprovisioning.TemporaryLoginResult, 16)
 		errs := make(chan error, 16)
 		for range 16 {
 			wg.Go(func() {
@@ -86,9 +86,9 @@ func checkTemporaryConcurrency(t *testing.T, db *pgxpool.Pool, ctx context.Conte
 		f := newTemporaryFixture(t, db, ctx, "concurrent-reissue")
 		created := f.create(t, ctx)
 		allowTemporaryReissue(t, db, ctx, created.UserID)
-		input := passwordservice.TemporaryReissueInput{Actor: f.input.Actor, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}
+		input := passwordprovisioning.TemporaryReissueInput{Actor: f.input.Actor, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}
 		var wg sync.WaitGroup
-		results := make(chan *passwordservice.TemporaryIssueResult, 16)
+		results := make(chan *passwordprovisioning.TemporaryIssueResult, 16)
 		errs := make(chan error, 16)
 		for range 16 {
 			wg.Go(func() {

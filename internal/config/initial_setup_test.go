@@ -5,14 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountsetup "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/service"
 )
 
 func TestInitialSetupDependencies(t *testing.T) {
 	var cfg Config
 	root := []byte(strings.Repeat("r", 32))
 	cfg.Account.EncryptionKey = base64.StdEncoding.EncodeToString(root)
-	cfg.InitialSetup = accountservice.SetupConfig{Enabled: true, Secret: base64.RawURLEncoding.EncodeToString(root)}
+	cfg.InitialSetup = accountsetup.SetupConfig{Enabled: true, Secret: base64.RawURLEncoding.EncodeToString(root)}
 	if err := cfg.validateInitialSetup(); err == nil {
 		t.Fatal("MFA dependency ignored")
 	}

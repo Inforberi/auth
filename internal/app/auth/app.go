@@ -11,16 +11,16 @@ import (
 	"go.uber.org/zap"
 
 	accessapp "github.com/Inforberi/financial-intelligence/internal/app/access"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	redisclient "github.com/Inforberi/financial-intelligence/internal/infra/redis"
-	httpserver "github.com/Inforberi/financial-intelligence/internal/server/http"
+	"github.com/Inforberi/financial-intelligence/internal/server/http"
 )
 
 // These dependencies are borrowed. Realm cleanup never closes their process owner.
@@ -92,8 +92,8 @@ func standalone(assembled *realm, owned *resources, log *zap.Logger, cfg httpser
 
 type realm struct {
 	Access             *accessapp.App
-	Provisioning       *accountservice.ProvisionService
-	TemporaryPasswords *passwordservice.TemporaryPasswordService
+	Provisioning       *accountprovisioning.ProvisionService
+	TemporaryPasswords *passwordprovisioning.TemporaryPasswordService
 	handler            http.Handler
 	drainHTTP          func()
 	retention          retentionWorker

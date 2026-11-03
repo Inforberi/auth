@@ -12,7 +12,7 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 )
 
 func (r *Repository) CanRequestEmailBinding(ctx context.Context, actor accessservice.Principal) error {
@@ -40,7 +40,7 @@ func requireInitialEmailTarget(ctx context.Context, tx pgx.Tx, user domain.UserI
 	return version, err
 }
 
-func (r *Repository) IssueEmailBinding(ctx context.Context, c service.EmailBindingCommand) (time.Time, error) {
+func (r *Repository) IssueEmailBinding(ctx context.Context, c accountemail.EmailBindingCommand) (time.Time, error) {
 	var expires time.Time
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		deadline, err := accesspostgres.AuthorizeMutation(ctx, tx, c.Actor, string(c.UserID), accesssettings.EmailBindingManage)

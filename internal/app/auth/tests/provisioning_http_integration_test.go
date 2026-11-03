@@ -16,12 +16,12 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
+	accountprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
+	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	mfapostgres "github.com/Inforberi/financial-intelligence/internal/auth/mfa/repository/postgres"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
@@ -71,20 +71,19 @@ func TestAdminProvisioningSchema(t *testing.T) {
 	actor.TokenHash = tokens.Hash(raw)
 	accessExec(t, db, ctx, `UPDATE auth.sessions SET token_hash=$2 WHERE user_id=$1`, actor.UserID, actor.TokenHash)
 	accounts := accountpostgres.NewWithDelivery(runtime, accountpostgres.DeliveryConfig{Invitations: true})
-	account := accountservice.New(accounts, verificationLimits{}, fixture.cipher, nil, accountservice.Config{})
-	invitationCfg := accountservice.InvitationConfig{Enabled: true, URL: "https://app.example.com/activate", TTL: time.Hour, ReissueCooldown: time.Minute}
-	provision := accountservice.NewProvisioning(accounts, account, invitationCfg)
+	invitationCfg := accountprovisioning.InvitationConfig{Enabled: true, URL: "https://app.example.com/activate", TTL: time.Hour, ReissueCooldown: time.Minute}
+	provision := accountprovisioning.NewProvisioning(accounts, verificationLimits{}, fixture.cipher, invitationCfg)
 	cipher, err := secretbox.NewScoped("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "password-reset:v1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	hash := &issuanceHasher{}
 	tempRepo := passwordpostgres.NewTemporaryPassword(runtime, accounts.ProvisionInTransaction)
-	tempCfg := passwordservice.TemporaryPasswordConfig{Enabled: true, TTL: time.Hour, SetupTTL: 5 * time.Minute, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 100, IssueProjectAttemptsPerMinute: 1000}
-	temporary := passwordservice.NewTemporaryPassword(tempRepo, hash, verificationLimits{}, cipher.Digest, nil, tempCfg)
+	tempCfg := passwordprovisioning.TemporaryPasswordConfig{Enabled: true, TTL: time.Hour, SetupTTL: 5 * time.Minute, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 100, IssueProjectAttemptsPerMinute: 1000}
+	temporary := passwordprovisioning.NewTemporaryPassword(tempRepo, hash, verificationLimits{}, cipher.Digest, nil, tempCfg)
 	sessions := sessionservice.New(clock.UTCClock{}, sessionpostgres.New(runtime), tokens, sessionservice.Config{AbsoluteSessionTTL: 24 * time.Hour})
 	h := router.New(router.Handlers{
-		Provisioning: accounthttp.NewProvisioning(provision, zap.NewNop()), TemporaryAdmin: passwordhttp.NewTemporaryAdmin(temporary, zap.NewNop()),
+		Provisioning: accountprovisioninghttp.NewProvisioning(provision, zap.NewNop()), TemporaryAdmin: passwordprovisioninghttp.NewTemporaryAdmin(temporary, zap.NewNop()),
 		Middleware: sessionhttp.New(sessions, zap.NewNop()),
 		Config:     &config.Config{MFA: mfaservice.Config{Enabled: true}, Invitation: invitationCfg, TemporaryPassword: tempCfg, Browser: requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://localhost:8443"}}},
 	})
@@ -108,7 +107,7 @@ func TestAdminProvisioningSchema(t *testing.T) {
 	inviteBody := fmt.Sprintf(`{"idempotencyKey":%q,"email":"admin-invited@example.com","invite":true}`, inviteKey)
 	created := send("", inviteBody)
 	check(created, 201)
-	var invited accounthttp.ProvisionResponse
+	var invited accountprovisioninghttp.ProvisionResponse
 	if err := json.Unmarshal(created.Body.Bytes(), &invited); err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +119,7 @@ func TestAdminProvisioningSchema(t *testing.T) {
 	bareBody := fmt.Sprintf(`{"idempotencyKey":%q}`, key())
 	bare := send("", bareBody)
 	check(bare, 201)
-	var bareUser accounthttp.ProvisionResponse
+	var bareUser accountprovisioninghttp.ProvisionResponse
 	if err := json.Unmarshal(bare.Body.Bytes(), &bareUser); err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +140,7 @@ func TestAdminProvisioningSchema(t *testing.T) {
 	tempBody := fmt.Sprintf(`{"idempotencyKey":%q,"email":"admin-temporary@example.com"}`, key())
 	first := send("/temporary-password", tempBody)
 	check(first, 201)
-	var issued passwordhttp.TemporaryIssueResponse
+	var issued passwordprovisioninghttp.TemporaryIssueResponse
 	if err := json.Unmarshal(first.Body.Bytes(), &issued); err != nil || len(issued.Password) != 43 {
 		t.Fatal("temporary issuance", err)
 	}
@@ -216,7 +215,7 @@ func TestAdminProvisioningSchema(t *testing.T) {
 		if response.Code != 200 && response.Code != 201 {
 			t.Fatal("concurrent issuance", response.Code, response.Body.String())
 		}
-		var result passwordhttp.TemporaryIssueResponse
+		var result passwordprovisioninghttp.TemporaryIssueResponse
 		if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil {
 			t.Fatal(err)
 		}
@@ -277,7 +276,7 @@ func TestAdminProvisioningSchema(t *testing.T) {
 	}
 	wrongActor := actor
 	wrongActor.TokenHash = strings.Repeat("0", 64)
-	if _, err := tempRepo.FindTemporaryProvision(ctx, accountservice.ProvisionCommand{Input: accountservice.ProvisionInput{Actor: wrongActor, IdempotencyKey: inviteKey}}); !errors.Is(err, accessdomain.ErrFreshAuthRequired) {
+	if _, err := tempRepo.FindTemporaryProvision(ctx, accountprovisioning.ProvisionCommand{Input: accountprovisioning.ProvisionInput{Actor: wrongActor, IdempotencyKey: inviteKey}}); !errors.Is(err, accessdomain.ErrFreshAuthRequired) {
 		t.Fatal("direct replay bypassed session authority", err)
 	}
 }

@@ -12,8 +12,9 @@ import (
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectservice "github.com/Inforberi/financial-intelligence/internal/admin/projects/service"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
+	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
-	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
@@ -64,7 +65,7 @@ func TestOperatorCatalogRouteBoundary(t *testing.T) {
 	h := Handlers{
 		ProjectCapacity: func(next http.Handler) http.Handler { return next },
 		Config:          cfg, Projects: projecthttp.New(catalog, nil), PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfamanagementhttp.Handler{},
-		Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(sessions, nil), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
+		Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(sessions, nil), Recovery: &passwordrecoveryhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
 	}
 	unguarded := h
 	unguarded.ProjectCapacity = nil

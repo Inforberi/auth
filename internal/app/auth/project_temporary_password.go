@@ -7,6 +7,7 @@ import (
 
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 )
@@ -16,7 +17,7 @@ type projectTemporary struct {
 	digest func(string) string
 }
 
-func (p *ProjectPassword) useTemporary(ctx context.Context, operation func(context.Context, *passwordservice.TemporaryPasswordService) error) error {
+func (p *ProjectPassword) useTemporary(ctx context.Context, operation func(context.Context, *passwordprovisioning.TemporaryPasswordService) error) error {
 	if p.temporary == nil {
 		return passworddomain.ErrTemporaryPasswordDisabled
 	}
@@ -28,7 +29,7 @@ func (p *ProjectPassword) useTemporary(ctx context.Context, operation func(conte
 		}
 		account := accountpostgres.New(pool)
 		repo := passwordpostgres.NewTemporaryPassword(pool, account.ProvisionInTransaction)
-		service := passwordservice.NewTemporaryPassword(repo, p.hash, p.temporary.limits, p.temporary.digest, p.limits, p.cfg.TemporaryPassword)
+		service := passwordprovisioning.NewTemporaryPassword(repo, p.hash, p.temporary.limits, p.temporary.digest, p.limits, p.cfg.TemporaryPassword)
 		if err := operation(ctx, service); err != nil {
 			return err
 		}
@@ -36,9 +37,9 @@ func (p *ProjectPassword) useTemporary(ctx context.Context, operation func(conte
 	})
 }
 
-func (p *ProjectPassword) ProvisionTemporaryPassword(ctx context.Context, input passwordservice.TemporaryProvisionInput) (*passwordservice.TemporaryIssueResult, error) {
-	var result *passwordservice.TemporaryIssueResult
-	err := p.useTemporary(ctx, func(ctx context.Context, service *passwordservice.TemporaryPasswordService) error {
+func (p *ProjectPassword) ProvisionTemporaryPassword(ctx context.Context, input passwordprovisioning.TemporaryProvisionInput) (*passwordprovisioning.TemporaryIssueResult, error) {
+	var result *passwordprovisioning.TemporaryIssueResult
+	err := p.useTemporary(ctx, func(ctx context.Context, service *passwordprovisioning.TemporaryPasswordService) error {
 		var err error
 		result, err = service.Provision(ctx, input)
 		return err
@@ -49,9 +50,9 @@ func (p *ProjectPassword) ProvisionTemporaryPassword(ctx context.Context, input 
 	return result, nil
 }
 
-func (p *ProjectPassword) ReissueTemporaryPassword(ctx context.Context, input passwordservice.TemporaryReissueInput) (*passwordservice.TemporaryIssueResult, error) {
-	var result *passwordservice.TemporaryIssueResult
-	err := p.useTemporary(ctx, func(ctx context.Context, service *passwordservice.TemporaryPasswordService) error {
+func (p *ProjectPassword) ReissueTemporaryPassword(ctx context.Context, input passwordprovisioning.TemporaryReissueInput) (*passwordprovisioning.TemporaryIssueResult, error) {
+	var result *passwordprovisioning.TemporaryIssueResult
+	err := p.useTemporary(ctx, func(ctx context.Context, service *passwordprovisioning.TemporaryPasswordService) error {
 		var err error
 		result, err = service.Reissue(ctx, input)
 		return err
@@ -62,9 +63,9 @@ func (p *ProjectPassword) ReissueTemporaryPassword(ctx context.Context, input pa
 	return result, nil
 }
 
-func (p *ProjectPassword) BeginTemporaryPassword(ctx context.Context, email, password, ip string) (*passwordservice.TemporaryLoginResult, error) {
-	var result *passwordservice.TemporaryLoginResult
-	err := p.useTemporary(ctx, func(ctx context.Context, service *passwordservice.TemporaryPasswordService) error {
+func (p *ProjectPassword) BeginTemporaryPassword(ctx context.Context, email, password, ip string) (*passwordprovisioning.TemporaryLoginResult, error) {
+	var result *passwordprovisioning.TemporaryLoginResult
+	err := p.useTemporary(ctx, func(ctx context.Context, service *passwordprovisioning.TemporaryPasswordService) error {
 		var err error
 		result, err = service.Login(ctx, email, password, ip)
 		return err
@@ -76,7 +77,7 @@ func (p *ProjectPassword) BeginTemporaryPassword(ctx context.Context, email, pas
 }
 
 func (p *ProjectPassword) CompleteTemporaryPassword(ctx context.Context, token, password, confirmation, ip string) error {
-	return p.useTemporary(ctx, func(ctx context.Context, service *passwordservice.TemporaryPasswordService) error {
+	return p.useTemporary(ctx, func(ctx context.Context, service *passwordprovisioning.TemporaryPasswordService) error {
 		return service.Complete(ctx, token, password, confirmation, ip)
 	})
 }

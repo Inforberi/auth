@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
@@ -21,12 +22,21 @@ type passwordRepo interface {
 	FindUserByUserID(context.Context, accountdomain.UserID) (*passworddomain.Credential, error)
 	ChangePassword(context.Context, accountdomain.UserID, string, string, string) error
 }
-type hasher interface {
+type Hasher interface {
 	GenerateHash(context.Context, []byte) (string, error)
 	Compare(context.Context, string, string) error
 }
 
 type loginHasher interface {
-	hasher
+	Hasher
 	NeedsRehash(string) bool
+}
+
+type RecoveryCipher interface {
+	Seal([]byte) ([]byte, error)
+	Open([]byte) ([]byte, error)
+	Digest(string) string
+}
+type RecoveryLimiter interface {
+	Allow(context.Context, string, int, time.Duration) (bool, error)
 }

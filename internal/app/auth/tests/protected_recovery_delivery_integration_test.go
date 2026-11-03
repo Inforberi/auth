@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
@@ -58,7 +59,7 @@ func checkProtectedRecoveryDelivery(t *testing.T, db *pgxpool.Pool, ctx context.
 			t.Fatal(err)
 		}
 		mail := &recoveryMailer{err: errors.New("SMTP unavailable")}
-		worker := accountservice.New(f.accounts, nil, cipher, mail, accountservice.Config{})
+		worker := accountemail.NewVerification(f.accounts, nil, cipher, mail, accountservice.Config{})
 		for attempt := 1; attempt <= 2; attempt++ {
 			if err := worker.DeliverOne(ctx); !errors.Is(err, mail.err) {
 				t.Fatal("delivery failure lost", err)

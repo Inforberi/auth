@@ -8,13 +8,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
-func checkVerificationFailures(t *testing.T, db *pgxpool.Pool, ctx context.Context, password *passwordpostgres.PasswordRepo, svc *accountservice.Service, repo *accountpostgres.Repository, cipher *secretbox.Cipher, last *domain.Verification) {
+func checkVerificationFailures(t *testing.T, db *pgxpool.Pool, ctx context.Context, password *passwordpostgres.PasswordRepo, svc *accountemail.Verification, repo *accountpostgres.Repository, cipher *secretbox.Cipher, last *domain.Verification) {
 	t.Helper()
 	user, err := password.CreateUser(ctx, "audit-failure@example.com", "hash")
 	if err != nil {

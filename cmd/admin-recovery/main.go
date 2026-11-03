@@ -10,8 +10,8 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 )
 
 type options struct {
@@ -73,6 +73,6 @@ func run(ctx context.Context, args []string) error {
 	}
 	destination = recoveryDestination(destination, opts.realm)
 	hash := hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), 1)
-	svc := passwordservice.NewOperatorRecovery(passwordpostgres.New(pool), hash)
+	svc := passwordrecovery.NewOperatorRecovery(passwordpostgres.New(pool), hash)
 	return execute(ctx, opts, destination, svc, os.Stdin, os.Stdout, readPasswordPipe)
 }

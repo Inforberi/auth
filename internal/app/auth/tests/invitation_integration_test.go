@@ -12,10 +12,10 @@ import (
 
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
@@ -31,10 +31,10 @@ func (invitationTestHasher) Compare(context.Context, string, string) error {
 
 type invitationFixture struct {
 	accounts   *accountpostgres.Repository
-	provision  *accountservice.ProvisionService
-	activation *passwordservice.ActivationService
+	provision  *accountprovisioning.ProvisionService
+	activation *passwordprovisioning.ActivationService
 	cipher     *secretbox.Cipher
-	input      accountservice.ProvisionInput
+	input      accountprovisioning.ProvisionInput
 }
 
 func newInvitationFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, name string) invitationFixture {
@@ -49,12 +49,10 @@ func newInvitationFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, n
 		t.Fatal(err)
 	}
 	repo := accountpostgres.NewWithDelivery(db, accountpostgres.DeliveryConfig{Invitations: true})
-	account := accountservice.New(repo, verificationLimits{}, cipher, nil, accountservice.Config{})
-	cfg := accountservice.InvitationConfig{Enabled: true, URL: "https://app.example.com/activate", TTL: 24 * time.Hour, ActivationGlobalLimit: 100}
-	recovery := passwordservice.NewRecovery(nil, cipher, verificationLimits{}, nil, invitationTestHasher{}, passwordservice.Config{})
+	cfg := accountprovisioning.InvitationConfig{Enabled: true, URL: "https://app.example.com/activate", TTL: 24 * time.Hour, ActivationGlobalLimit: 100}
 	return invitationFixture{
-		accounts: repo, provision: accountservice.NewProvisioning(repo, account, cfg), activation: passwordservice.NewActivation(repo, recovery, cfg), cipher: cipher,
-		input: accountservice.ProvisionInput{Actor: actor, IdempotencyKey: key, Email: "invited-" + name + "@example.com", Invite: true},
+		accounts: repo, provision: accountprovisioning.NewProvisioning(repo, verificationLimits{}, cipher, cfg), activation: passwordprovisioning.NewActivation(repo, invitationTestHasher{}, verificationLimits{}, cipher.Digest, cfg), cipher: cipher,
+		input: accountprovisioning.ProvisionInput{Actor: actor, IdempotencyKey: key, Email: "invited-" + name + "@example.com", Invite: true},
 	}
 }
 
@@ -171,7 +169,7 @@ func checkInvitations(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	})
 	t.Run("concurrent-provision", func(t *testing.T) {
 		f := newInvitationFixture(t, db, ctx, "commands")
-		results := make(chan *accountservice.ProvisionResult, 16)
+		results := make(chan *accountprovisioning.ProvisionResult, 16)
 		failures := make(chan error, 16)
 		for range 16 {
 			go func() { result, err := f.provision.Provision(ctx, f.input); results <- result; failures <- err }()

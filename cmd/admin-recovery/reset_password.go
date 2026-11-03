@@ -10,11 +10,11 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 )
 
 type recovery interface {
-	Preview(context.Context, accountdomain.UserID) (*passwordservice.OperatorRecoveryTarget, error)
+	Preview(context.Context, accountdomain.UserID) (*passwordrecovery.OperatorRecoveryTarget, error)
 	Reset(context.Context, passworddomain.OperatorRecovery, []byte) (int64, error)
 }
 

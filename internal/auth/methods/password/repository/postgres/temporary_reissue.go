@@ -11,11 +11,11 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 )
 
-func (r *TemporaryPasswordRepo) ReissueTemporary(ctx context.Context, input service.TemporaryReissueInput, credential domain.TemporaryCredential, ttl, cooldown time.Duration) (*service.TemporaryIssueResult, error) {
-	result := &service.TemporaryIssueResult{UserID: input.UserID}
+func (r *TemporaryPasswordRepo) ReissueTemporary(ctx context.Context, input passwordprovisioning.TemporaryReissueInput, credential domain.TemporaryCredential, ttl, cooldown time.Duration) (*passwordprovisioning.TemporaryIssueResult, error) {
+	result := &passwordprovisioning.TemporaryIssueResult{UserID: input.UserID}
 	err := r.transaction(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, input.Actor, string(input.UserID), settings.UsersManage); err != nil {
 			return err

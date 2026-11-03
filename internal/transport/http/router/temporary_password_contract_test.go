@@ -11,8 +11,8 @@ import (
 	"go.uber.org/zap"
 
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
+	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
 )
 
 type contractTemporaryPassword struct {
@@ -20,9 +20,9 @@ type contractTemporaryPassword struct {
 	err   error
 }
 
-func (s *contractTemporaryPassword) Login(context.Context, string, string, string) (*passwordservice.TemporaryLoginResult, error) {
+func (s *contractTemporaryPassword) Login(context.Context, string, string, string) (*passwordprovisioning.TemporaryLoginResult, error) {
 	s.calls++
-	return &passwordservice.TemporaryLoginResult{Token: "setup-only-token", ExpiresAt: time.Now().Add(time.Minute)}, s.err
+	return &passwordprovisioning.TemporaryLoginResult{Token: "setup-only-token", ExpiresAt: time.Now().Add(time.Minute)}, s.err
 }
 
 func (s *contractTemporaryPassword) Complete(context.Context, string, string, string, string) error {
@@ -53,7 +53,7 @@ func TestTemporaryPasswordHTTPContract(t *testing.T) {
 			t.Run(action+"/"+tc.name, func(t *testing.T) {
 				s := &contractTemporaryPassword{err: tc.err}
 				h := contractHandlers("test")
-				h.TemporaryPassword = passwordhttp.NewTemporaryPassword(s, zap.NewNop())
+				h.TemporaryPassword = passwordprovisioninghttp.NewTemporaryPassword(s, zap.NewNop())
 				r := httptest.NewRequest(tc.method, "/api/v1/auth/temporary-password/"+action, strings.NewReader(tc.body))
 				r.Header.Set("Content-Type", "application/json")
 				if tc.origin != "" {

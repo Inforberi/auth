@@ -18,6 +18,7 @@ import (
 	schemapostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/schema/postgres"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountsetup "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
@@ -90,7 +91,7 @@ func NewProjectOnboarding(ctx context.Context, cfg ProjectOnboardingConfig, deps
 	}
 	setupConfig := &config.Config{
 		Account:      accountservice.Config{EncryptionKey: cfg.Keys.EncryptionKey()},
-		InitialSetup: accountservice.SetupConfig{Enabled: true, Secret: cfg.Keys.SetupSecret()},
+		InitialSetup: accountsetup.SetupConfig{Enabled: true, Secret: cfg.Keys.SetupSecret()},
 		MFA:          mfaservice.Config{Enabled: true, Issuer: p.Slug},
 	}
 	setup, err := security.assembleSetup(accountpostgres.New(deps.Pool), deps.Redis, mail, deps.Hash, setupConfig, deps.Logger)

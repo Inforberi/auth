@@ -7,14 +7,18 @@ import (
 	"go.uber.org/zap"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
+	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
+	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
 	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
-	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
@@ -32,16 +36,16 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 			handlers["/api/v1/auth/register/email"] = p.requireHTTPDelivery(h.Register)
 		}
 		if p.featureReady("temporary_password") {
-			temporary := passwordhttp.NewTemporaryPassword(projectTemporaryHTTP{p.password}, log)
+			temporary := passwordprovisioninghttp.NewTemporaryPassword(projectTemporaryHTTP{p.password}, log)
 			handlers["/api/v1/auth/temporary-password/login"], handlers["/api/v1/auth/temporary-password/complete"] = temporary.Login, temporary.Complete
 		}
 	}
 	if p.verification != nil {
-		h := accounthttp.NewVerification(projectVerificationHTTP{p.verification}, log)
+		h := accountemailhttp.NewVerification(projectVerificationHTTP{p.verification}, log)
 		handlers["/api/v1/auth/email/resend"], handlers["/api/v1/auth/email/verify"] = p.requireHTTPDelivery(h.Resend), p.requireHTTPDelivery(h.Confirm)
 	}
 	if p.recovery != nil {
-		h := passwordhttp.NewRecovery(projectRecoveryHTTP{p.recovery}, log)
+		h := passwordrecoveryhttp.NewRecovery(projectRecoveryHTTP{p.recovery}, log)
 		handlers["/api/v1/auth/forgot-password"], handlers["/api/v1/auth/reset-password"] = p.requireHTTPDelivery(h.Forgot), p.requireHTTPDelivery(h.Reset)
 	}
 	if p.emailOTP != nil {
@@ -163,7 +167,7 @@ func (s projectBrowserMFAHTTP) ConfirmRequiredEnrollment(ctx context.Context, in
 
 type projectTemporaryHTTP struct{ *ProjectPassword }
 
-func (s projectTemporaryHTTP) Login(ctx context.Context, email, password, ip string) (*passwordservice.TemporaryLoginResult, error) {
+func (s projectTemporaryHTTP) Login(ctx context.Context, email, password, ip string) (*passwordprovisioning.TemporaryLoginResult, error) {
 	return s.BeginTemporaryPassword(ctx, email, password, ip)
 }
 

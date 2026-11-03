@@ -13,51 +13,51 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
+	accountprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
+	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
 )
 
 type contractProvisioning struct {
 	calls   int
 	err     error
 	reused  bool
-	input   accountservice.ProvisionInput
-	reissue accountservice.InvitationReissueInput
+	input   accountprovisioning.ProvisionInput
+	reissue accountprovisioning.InvitationReissueInput
 }
 
-func (s *contractProvisioning) Provision(_ context.Context, input accountservice.ProvisionInput) (*accountservice.ProvisionResult, error) {
+func (s *contractProvisioning) Provision(_ context.Context, input accountprovisioning.ProvisionInput) (*accountprovisioning.ProvisionResult, error) {
 	s.calls++
 	s.input = input
-	return &accountservice.ProvisionResult{UserID: "22222222-2222-4222-8222-222222222222", Reused: s.reused}, s.err
+	return &accountprovisioning.ProvisionResult{UserID: "22222222-2222-4222-8222-222222222222", Reused: s.reused}, s.err
 }
 
-func (s *contractProvisioning) ReissueInvitation(_ context.Context, input accountservice.InvitationReissueInput) (*accountservice.ProvisionResult, error) {
+func (s *contractProvisioning) ReissueInvitation(_ context.Context, input accountprovisioning.InvitationReissueInput) (*accountprovisioning.ProvisionResult, error) {
 	s.calls++
 	s.reissue = input
-	return &accountservice.ProvisionResult{UserID: input.UserID, Reused: s.reused}, s.err
+	return &accountprovisioning.ProvisionResult{UserID: input.UserID, Reused: s.reused}, s.err
 }
 
 type contractTemporaryAdmin struct {
 	calls   int
 	err     error
 	reused  bool
-	input   passwordservice.TemporaryProvisionInput
-	reissue passwordservice.TemporaryReissueInput
+	input   passwordprovisioning.TemporaryProvisionInput
+	reissue passwordprovisioning.TemporaryReissueInput
 }
 
-func (s *contractTemporaryAdmin) Provision(_ context.Context, input passwordservice.TemporaryProvisionInput) (*passwordservice.TemporaryIssueResult, error) {
+func (s *contractTemporaryAdmin) Provision(_ context.Context, input passwordprovisioning.TemporaryProvisionInput) (*passwordprovisioning.TemporaryIssueResult, error) {
 	s.calls++
 	s.input = input
-	return &passwordservice.TemporaryIssueResult{UserID: "22222222-2222-4222-8222-222222222222", Reused: s.reused, ExpiresAt: time.Now().Add(time.Hour), Password: "one-time-synthetic-secret"}, s.err
+	return &passwordprovisioning.TemporaryIssueResult{UserID: "22222222-2222-4222-8222-222222222222", Reused: s.reused, ExpiresAt: time.Now().Add(time.Hour), Password: "one-time-synthetic-secret"}, s.err
 }
 
-func (s *contractTemporaryAdmin) Reissue(_ context.Context, input passwordservice.TemporaryReissueInput) (*passwordservice.TemporaryIssueResult, error) {
+func (s *contractTemporaryAdmin) Reissue(_ context.Context, input passwordprovisioning.TemporaryReissueInput) (*passwordprovisioning.TemporaryIssueResult, error) {
 	s.calls++
 	s.reissue = input
-	return &passwordservice.TemporaryIssueResult{UserID: input.UserID, Reused: s.reused, Password: "one-time-synthetic-secret"}, s.err
+	return &passwordprovisioning.TemporaryIssueResult{UserID: input.UserID, Reused: s.reused, Password: "one-time-synthetic-secret"}, s.err
 }
 
 func TestProvisioningHTTPContracts(t *testing.T) {
@@ -99,8 +99,8 @@ func TestProvisioningHTTPContracts(t *testing.T) {
 					s := &contractProvisioning{err: tc.err, reused: tc.reused}
 					temp := &contractTemporaryAdmin{err: tc.err, reused: tc.reused}
 					h := contractHandlers("prod")
-					h.Provisioning = accounthttp.NewProvisioning(s, zap.NewNop())
-					h.TemporaryAdmin = passwordhttp.NewTemporaryAdmin(temp, zap.NewNop())
+					h.Provisioning = accountprovisioninghttp.NewProvisioning(s, zap.NewNop())
+					h.TemporaryAdmin = passwordprovisioninghttp.NewTemporaryAdmin(temp, zap.NewNop())
 					req := httptest.NewRequest(tc.method, endpoint.path, strings.NewReader(tc.body))
 					req.Header.Set("Content-Type", "application/json")
 					if tc.origin != "" {
@@ -168,10 +168,10 @@ func TestProvisioningRateLimits(t *testing.T) {
 		h := contractHandlers("prod")
 		path := "/api/v1/admin/users"
 		if temporary {
-			h.TemporaryAdmin = passwordhttp.NewTemporaryAdmin(&contractTemporaryAdmin{err: passworddomain.ErrRecoveryLimited}, zap.NewNop())
+			h.TemporaryAdmin = passwordprovisioninghttp.NewTemporaryAdmin(&contractTemporaryAdmin{err: passworddomain.ErrRecoveryLimited}, zap.NewNop())
 			path += "/temporary-password"
 		} else {
-			h.Provisioning = accounthttp.NewProvisioning(&contractProvisioning{err: accountdomain.ErrVerificationLimited}, zap.NewNop())
+			h.Provisioning = accountprovisioninghttp.NewProvisioning(&contractProvisioning{err: accountdomain.ErrVerificationLimited}, zap.NewNop())
 		}
 		r := httptest.NewRequest("POST", path, strings.NewReader(`{}`))
 		r.Header.Set("Content-Type", "application/json")
@@ -190,8 +190,8 @@ func TestProvisioningRequestMapping(t *testing.T) {
 	const target = "22222222-2222-4222-8222-222222222222"
 	s, temp := &contractProvisioning{}, &contractTemporaryAdmin{}
 	h := contractHandlers("prod")
-	h.Provisioning = accounthttp.NewProvisioning(s, zap.NewNop())
-	h.TemporaryAdmin = passwordhttp.NewTemporaryAdmin(temp, zap.NewNop())
+	h.Provisioning = accountprovisioninghttp.NewProvisioning(s, zap.NewNop())
+	h.TemporaryAdmin = passwordprovisioninghttp.NewTemporaryAdmin(temp, zap.NewNop())
 	for _, path := range []string{"", "/" + target + "/invitation", "/temporary-password", "/" + target + "/temporary-password"} {
 		body := `{"idempotencyKey":"` + key + `"}`
 		if path == "" {

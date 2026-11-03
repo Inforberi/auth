@@ -1,4 +1,4 @@
-package http
+package accounthttp
 
 import (
 	"context"
@@ -42,5 +42,5 @@ var userLifecycleErrors = []httpx.ErrorRule{
 }
 
 func (h *UserLifecycleHandler) respondError(w http.ResponseWriter, r *http.Request, err error) {
-	httpx.RespondError(w, r, h.log, "user_lifecycle", err, userLifecycleErrors, dependencyFailure)
+	httpx.RespondError(w, r, h.log, "user_lifecycle", err, userLifecycleErrors, Unavailable())
 }

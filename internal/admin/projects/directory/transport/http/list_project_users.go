@@ -22,7 +22,7 @@ import (
 // @Param status query string false "Account status" Enums(pending,active,blocked)
 // @Param email query string false "Exact email, not substring search"
 // @Param limit query int false "Page size 1..100, default 50" default(50)
-// @Success 200 {object} http.UserPageResponse
+// @Success 200 {object} accounthttp.UserPageResponse
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse

@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
-	pgx "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
@@ -42,7 +43,7 @@ func newRegistrationFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 		t.Fatal(err)
 	}
 	accounts := accountpostgres.New(db)
-	verification := accountservice.New(accounts, verificationLimits{}, cipher, &verificationMail{}, accountservice.Config{URL: "https://example.com/verify", TTL: 30 * time.Minute, ResendInterval: time.Minute})
+	verification := accountemail.NewVerification(accounts, verificationLimits{}, cipher, &verificationMail{}, accountservice.Config{URL: "https://example.com/verify", TTL: 30 * time.Minute, ResendInterval: time.Minute})
 	queueVerification := func(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, emailID accountdomain.AddressID, email string) error {
 		prepared, err := verification.PrepareVerification(email)
 		if err != nil {

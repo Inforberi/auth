@@ -17,6 +17,7 @@ import (
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountredis "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/redis"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
@@ -144,7 +145,7 @@ func projectRegistrationDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Clie
 					if err != nil {
 						return err
 					}
-					verifier := accountservice.New(accountpostgres.New(pool), limiter, cipher, nil, cfg.RegistrationVerification.Config)
+					verifier := accountemail.NewVerification(accountpostgres.New(pool), limiter, cipher, nil, cfg.RegistrationVerification.Config)
 					return verifier.Confirm(ctx, link.Query().Get("token"), ip)
 				})
 				require.NoError(t, err)

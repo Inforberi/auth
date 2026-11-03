@@ -30,13 +30,13 @@ type reauthenticationTokens interface {
 type Reauthentication struct {
 	credentials reauthenticationRepository
 	sessions    passwordConfirmationRepository
-	hash        hasher
+	hash        Hasher
 	limit       reauthenticationLimiter
 	tokens      reauthenticationTokens
 	freshFor    time.Duration
 }
 
-func NewReauthentication(credentials reauthenticationRepository, sessions passwordConfirmationRepository, hash hasher, limit reauthenticationLimiter, tokens reauthenticationTokens, freshFor time.Duration) *Reauthentication {
+func NewReauthentication(credentials reauthenticationRepository, sessions passwordConfirmationRepository, hash Hasher, limit reauthenticationLimiter, tokens reauthenticationTokens, freshFor time.Duration) *Reauthentication {
 	return &Reauthentication{credentials: credentials, sessions: sessions, hash: hash, limit: limit, tokens: tokens, freshFor: freshFor}
 }
 

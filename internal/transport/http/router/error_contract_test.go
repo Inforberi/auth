@@ -13,8 +13,9 @@ import (
 	"go.uber.org/zap"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
@@ -109,9 +110,9 @@ func TestRouterErrorContracts(t *testing.T) {
 			log := zap.NewNop()
 			switch tc.feature {
 			case "account":
-				h.Account = accounthttp.New(accountFault{err}, log)
+				h.Account = accountemailhttp.New(accountFault{err}, log)
 			case "recovery":
-				h.Recovery = passwordhttp.NewRecovery(recoveryFault{err}, log)
+				h.Recovery = passwordrecoveryhttp.NewRecovery(recoveryFault{err}, log)
 			case "password":
 				h.PasswordHandler = passwordhttp.New(passwordFault{err}, log)
 			case "session":

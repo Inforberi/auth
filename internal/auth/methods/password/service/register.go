@@ -24,7 +24,7 @@ func (r *PasswordService) Register(
 	userAgent,
 	ip string,
 ) (*RegisterResult, error) {
-	emailValue, err := parseCredentials(email, password)
+	emailValue, err := ParseCredentials(email, password)
 	if err != nil {
 		return nil, fmt.Errorf("register credentials: %w", err)
 	}

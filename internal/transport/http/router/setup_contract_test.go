@@ -10,8 +10,8 @@ import (
 	"go.uber.org/zap"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	accountsetup "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/service"
+	accountsetuphttp "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/transport/http"
 )
 
 type contractSetup struct {
@@ -20,16 +20,16 @@ type contractSetup struct {
 	err      error
 }
 
-func (f *contractSetup) Start(_ context.Context, in accountservice.SetupStartInput) (*accountservice.SetupStarted, error) {
+func (f *contractSetup) Start(_ context.Context, in accountsetup.SetupStartInput) (*accountsetup.SetupStarted, error) {
 	f.calls++
 	f.operator = in.OperatorSecret
-	return &accountservice.SetupStarted{Token: "intent", Secret: "secret", URI: "otpauth://test", ExpiresAt: time.Now()}, f.err
+	return &accountsetup.SetupStarted{Token: "intent", Secret: "secret", URI: "otpauth://test", ExpiresAt: time.Now()}, f.err
 }
 
-func (f *contractSetup) Complete(_ context.Context, in accountservice.SetupCompleteInput) (*accountservice.SetupCompleted, error) {
+func (f *contractSetup) Complete(_ context.Context, in accountsetup.SetupCompleteInput) (*accountsetup.SetupCompleted, error) {
 	f.calls++
 	f.operator = in.OperatorSecret
-	return &accountservice.SetupCompleted{RecoveryCodes: []string{"code"}}, f.err
+	return &accountsetup.SetupCompleted{RecoveryCodes: []string{"code"}}, f.err
 }
 
 func TestSetupRoutes(t *testing.T) {
@@ -38,7 +38,7 @@ func TestSetupRoutes(t *testing.T) {
 			t.Run(action+"/"+mode, func(t *testing.T) {
 				h := contractHandlers("prod")
 				f := &contractSetup{}
-				h.Setup = accounthttp.NewSetup(f, zap.NewNop())
+				h.Setup = accountsetuphttp.NewSetup(f, zap.NewNop())
 				h.Config.InitialSetup.Enabled = true
 				body := `{"email":"owner@example.test","password":"Validpass1"}`
 				want := 202

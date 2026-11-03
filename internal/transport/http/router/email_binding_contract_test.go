@@ -11,20 +11,20 @@ import (
 	"go.uber.org/zap"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
+	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 )
 
 type contractEmailBinding struct {
 	calls int
-	input accountservice.EmailBindingInput
+	input accountemail.EmailBindingInput
 	proof mfaservice.Proof
 	err   error
 }
 
-func (f *contractEmailBinding) Request(_ context.Context, input accountservice.EmailBindingInput) (time.Time, error) {
+func (f *contractEmailBinding) Request(_ context.Context, input accountemail.EmailBindingInput) (time.Time, error) {
 	f.calls++
 	f.input = input
 	return time.Now().Add(time.Minute), f.err
@@ -42,7 +42,7 @@ func TestEmailBindingRoutes(t *testing.T) {
 			t.Run(action+"-"+mode, func(t *testing.T) {
 				h := contractHandlers("prod")
 				f := &contractEmailBinding{}
-				h.EmailBinding = accounthttp.NewEmailBinding(f, zap.NewNop())
+				h.EmailBinding = accountemailhttp.NewEmailBinding(f, zap.NewNop())
 				path := "/api/v1/admin/users/00000000-0000-0000-0000-000000000002/email-binding"
 				body := `{"email":"user@example.test"}`
 				want := 202

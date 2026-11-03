@@ -1,4 +1,4 @@
-package http
+package accounthttp
 
 import (
 	"net/http"
@@ -52,7 +52,7 @@ type UserDetailResponse struct {
 // @Failure 503 {object} httpx.ErrorResponse
 // @Router /api/v1/admin/users/{id} [get]
 func (h *UserDirectoryHandler) Read(w http.ResponseWriter, r *http.Request) {
-	actor, ok := accountActor(w, r)
+	actor, ok := Actor(w, r)
 	if !ok {
 		return
 	}

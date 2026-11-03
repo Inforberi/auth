@@ -386,12 +386,16 @@ migrations/
 
 ### R5. Account и методы входа
 
-- [ ] Упорядочить согласованные группы user/profile, provisioning/invitations, email lifecycle и linked accounts. Общие account-инварианты не копировать в методы входа.
-- [ ] Разделить самостоятельные сценарии password, email OTP и внешних входов только там, где подтверждено смешение; сохранить общую session/MFA authority.
-- [ ] Проверить input/result рядом со сценарием, HTTP DTO/Swagger рядом с ручкой, отсутствие дублирующей предметной валидации и разрозненных error switches.
-- [ ] Обновить затронутые adapters/HTTP bindings вместе с владельцем. Перенести собственные tests/fixtures, сохранив необходимые private tests рядом и прежние ошибки/приоритет проверок.
+- [x] Упорядочить согласованные группы user/profile, provisioning/invitations, email lifecycle и linked accounts. Общие account-инварианты не копировать в методы входа.
+- [x] Разделить самостоятельные сценарии password, email OTP и внешних входов только там, где подтверждено смешение; сохранить общую session/MFA authority.
+- [x] Проверить input/result рядом со сценарием, HTTP DTO/Swagger рядом с ручкой, отсутствие дублирующей предметной валидации и разрозненных error switches.
+- [x] Обновить затронутые adapters/HTTP bindings вместе с владельцем. Перенести собственные tests/fixtures, сохранив необходимые private tests рядом и прежние ошибки/приоритет проверок.
 
 Результат: пользовательские сценарии и методы входа читаются в своих областях, между слоями нет подтверждённого лишнего дублирования.
+
+3 ноября: R5 реализован и принят Luna на `/private/tmp/auth-r5-account-password-v4-_34822o1`, base cfa0421. Account email/provisioning/setup и password recovery/provisioning получили собственные service/HTTP; общие domain-инварианты и SQL transaction owners сохранены. User/profile/identity остаются root account, обычный login/register/change/reauth — root password. Provisioning/EmailChange получают limiter/cipher напрямую; Activation — hash/limiter/digest. OIDC/email OTP остаются связными. Публичные tests у владельцев, private cursor/codec/error-table assertions рядом, fixture использует инжектированные cipher/limiter без доступа к private полям. API/schema/routes/ENV/dependencies не менялись.
+
+Приёмка: 35 affected packages под race, pinned lint без замечаний, API reproduction и все 8 exact SQL roots PASS без SKIP/NOT RUN. Main сверил source/manifest и actual SQL RUN/PASS. Ранние ошибки переноса исправлены; fixture-проблемы устранены в стенде. Собственный стенд Luna сохранён для следующего блока, тестовые данные очищены. Evidence и незакрытые внешние/load gates — в acceptance-summary. Следующий блок — R6.
 
 ### R6. Сессии, JWT, роли и настройки
 

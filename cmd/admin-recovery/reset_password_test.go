@@ -9,7 +9,7 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 )
 
 type commandRecovery struct {
@@ -19,8 +19,8 @@ type commandRecovery struct {
 	request  passworddomain.OperatorRecovery
 }
 
-func (f *commandRecovery) Preview(context.Context, accountdomain.UserID) (*passwordservice.OperatorRecoveryTarget, error) {
-	return &passwordservice.OperatorRecoveryTarget{Database: "auth", Operator: "recovery_login", Status: "blocked", AuthVersion: 7}, nil
+func (f *commandRecovery) Preview(context.Context, accountdomain.UserID) (*passwordrecovery.OperatorRecoveryTarget, error) {
+	return &passwordrecovery.OperatorRecoveryTarget{Database: "auth", Operator: "recovery_login", Status: "blocked", AuthVersion: 7}, nil
 }
 
 func (f *commandRecovery) Reset(_ context.Context, request passworddomain.OperatorRecovery, password []byte) (int64, error) {

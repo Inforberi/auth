@@ -8,23 +8,31 @@ import (
 
 	"go.uber.org/zap"
 
-	docs "github.com/Inforberi/financial-intelligence/docs/api/generated"
+	"github.com/Inforberi/financial-intelligence/docs/api/generated"
 	accesshttp "github.com/Inforberi/financial-intelligence/internal/access/transport/http"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
+	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
+	accountprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
+	accountsetup "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/service"
+	accountsetuphttp "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/transport/http"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	googleservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/service"
 	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
+	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
+	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
-	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
-	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
-	mfarecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
@@ -83,35 +91,35 @@ func contractHandlers(env string) Handlers {
 	return Handlers{
 		UserLifecycle:     accounthttp.NewUserLifecycle(&contractUserLifecycle{}, log),
 		UserDirectory:     accounthttp.NewUserDirectory(&contractUserDirectory{}, log),
-		Provisioning:      accounthttp.NewProvisioning(&contractProvisioning{}, log),
-		TemporaryAdmin:    passwordhttp.NewTemporaryAdmin(&contractTemporaryAdmin{}, log),
+		Provisioning:      accountprovisioninghttp.NewProvisioning(&contractProvisioning{}, log),
+		TemporaryAdmin:    passwordprovisioninghttp.NewTemporaryAdmin(&contractTemporaryAdmin{}, log),
 		Access:            accesshttp.New(&contractAccess{}, log),
 		AuthSettings:      settingshttp.New(&contractAuthSettings{}, availableSettingsMethods, log),
 		SMTPSettings:      settingshttp.NewSMTP(&contractSMTP{}, log),
 		ProviderSettings:  settingshttp.NewProviders(&contractProviders{}, log),
 		RetentionSettings: settingshttp.NewRetention(&contractRetention{}, log),
 		MFASettings:       settingshttp.NewMFA(&contractMFASettings{}, log),
-		Setup:             accounthttp.NewSetup(&contractSetup{}, log),
-		EmailBinding:      accounthttp.NewEmailBinding(&contractEmailBinding{}, log),
+		Setup:             accountsetuphttp.NewSetup(&contractSetup{}, log),
+		EmailBinding:      accountemailhttp.NewEmailBinding(&contractEmailBinding{}, log),
 		MFA:               mfamanagementhttp.New(&contractMFA{}, log), MFALogin: mfaloginhttp.New(&contractMFA{}, log), MFARecovery: mfarecoveryhttp.New(&contractMFARecovery{}, log),
 		Session:           sessionhttp.NewHandler(contractManagement{}, log),
 		Activity:          sessionhttp.NewActivity(contractActivity{}, log),
 		Rotation:          sessionhttp.NewRotation(contractRotation{}, log),
 		Reauthentication:  passwordhttp.NewReauthentication(contractReauthentication{}, log),
-		Recovery:          passwordhttp.NewRecovery(contractRecovery{}, log),
-		Account:           accounthttp.New(contractAccounts{}, log),
-		EmailChange:       accounthttp.NewEmailChange(contractEmailChange{}, log),
-		ProtectedRecovery: passwordhttp.NewProtectedRecovery(contractProtectedRecovery{}, log),
-		Activation:        passwordhttp.NewActivation(&contractActivation{}, log),
-		TemporaryPassword: passwordhttp.NewTemporaryPassword(&contractTemporaryPassword{}, log),
+		Recovery:          passwordrecoveryhttp.NewRecovery(contractRecovery{}, log),
+		Account:           accountemailhttp.New(contractAccounts{}, log),
+		EmailChange:       accountemailhttp.NewEmailChange(contractEmailChange{}, log),
+		ProtectedRecovery: passwordrecoveryhttp.NewProtectedRecovery(contractProtectedRecovery{}, log),
+		Activation:        passwordprovisioninghttp.NewActivation(&contractActivation{}, log),
+		TemporaryPassword: passwordprovisioninghttp.NewTemporaryPassword(&contractTemporaryPassword{}, log),
 		Telegram:          telegramhttp.New(&contractTelegram{}, log),
 		Google:            googlehttp.New(&contractTelegram{}, log),
 		EmailOTP:          otphttp.New(&contractEmailOTP{}, log),
 		Config: &config.Config{
-			Invitation:        accountservice.InvitationConfig{Enabled: true},
-			TemporaryPassword: passwordservice.TemporaryPasswordConfig{Enabled: true},
-			InitialSetup:      accountservice.SetupConfig{Enabled: true},
-			EmailBinding:      accountservice.EmailBindingConfig{Enabled: true},
+			Invitation:        accountprovisioning.InvitationConfig{Enabled: true},
+			TemporaryPassword: passwordprovisioning.TemporaryPasswordConfig{Enabled: true},
+			InitialSetup:      accountsetup.SetupConfig{Enabled: true},
+			EmailBinding:      accountemail.EmailBindingConfig{Enabled: true},
 			MFA:               mfaservice.Config{Enabled: true, RecoveryEnabled: true},
 			EmailOTP:          otpservice.Config{Enabled: true, ReauthenticationEnabled: true},
 			Telegram:          telegramservice.Config{Enabled: true},

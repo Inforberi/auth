@@ -9,13 +9,14 @@ import (
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 )
 
 type ProjectPasswordConfig struct {
-	TemporaryPassword        passwordservice.TemporaryPasswordConfig
+	TemporaryPassword        passwordprovisioning.TemporaryPasswordConfig
 	RegistrationVerification *ProjectRegistrationVerification
 	MFA                      mfaservice.Config
 	Session                  sessionservice.Config

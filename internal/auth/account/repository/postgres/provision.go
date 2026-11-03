@@ -10,11 +10,11 @@ import (
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 )
 
-func (r *Repository) ProvisionAccount(ctx context.Context, command service.ProvisionCommand) (*service.ProvisionResult, error) {
-	var result *service.ProvisionResult
+func (r *Repository) ProvisionAccount(ctx context.Context, command accountprovisioning.ProvisionCommand) (*accountprovisioning.ProvisionResult, error) {
+	var result *accountprovisioning.ProvisionResult
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		var err error
 		result, err = r.ProvisionInTransaction(ctx, tx, command)
@@ -24,11 +24,11 @@ func (r *Repository) ProvisionAccount(ctx context.Context, command service.Provi
 }
 
 // ProvisionInTransaction lets credential provisioning share the account creation transaction.
-func (r *Repository) ProvisionInTransaction(ctx context.Context, tx pgx.Tx, command service.ProvisionCommand) (*service.ProvisionResult, error) {
+func (r *Repository) ProvisionInTransaction(ctx context.Context, tx pgx.Tx, command accountprovisioning.ProvisionCommand) (*accountprovisioning.ProvisionResult, error) {
 	if _, err := accesspostgres.AuthorizeMutation(ctx, tx, command.Input.Actor, "", settings.UsersManage); err != nil {
 		return nil, err
 	}
-	result := &service.ProvisionResult{}
+	result := &accountprovisioning.ProvisionResult{}
 	err := provisionAccount(ctx, tx, command, result)
 	var sqlErr *pgconn.PgError
 	if errors.As(err, &sqlErr) && sqlErr.Code == "23505" && sqlErr.ConstraintName == "user_emails_email_key" {
@@ -40,7 +40,7 @@ func (r *Repository) ProvisionInTransaction(ctx context.Context, tx pgx.Tx, comm
 	return result, nil
 }
 
-func provisionAccount(ctx context.Context, tx pgx.Tx, command service.ProvisionCommand, result *service.ProvisionResult) error {
+func provisionAccount(ctx context.Context, tx pgx.Tx, command accountprovisioning.ProvisionCommand, result *accountprovisioning.ProvisionResult) error {
 	input := command.Input
 	err := tx.QueryRow(ctx, `INSERT INTO auth.account_provisions(actor_id,request_key,fingerprint)
 		VALUES($1,$2,$3) ON CONFLICT(actor_id,request_key) DO NOTHING RETURNING user_id`, input.Actor.UserID, input.IdempotencyKey, command.Fingerprint).Scan(&result.UserID)

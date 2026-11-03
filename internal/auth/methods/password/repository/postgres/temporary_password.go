@@ -8,16 +8,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 )
 
 type TemporaryPasswordRepo struct {
 	*PasswordRepo
-	provision func(context.Context, pgx.Tx, accountservice.ProvisionCommand) (*accountservice.ProvisionResult, error)
+	provision func(context.Context, pgx.Tx, accountprovisioning.ProvisionCommand) (*accountprovisioning.ProvisionResult, error)
 }
 
-func NewTemporaryPassword(db *pgxpool.Pool, provision func(context.Context, pgx.Tx, accountservice.ProvisionCommand) (*accountservice.ProvisionResult, error)) *TemporaryPasswordRepo {
+func NewTemporaryPassword(db *pgxpool.Pool, provision func(context.Context, pgx.Tx, accountprovisioning.ProvisionCommand) (*accountprovisioning.ProvisionResult, error)) *TemporaryPasswordRepo {
 	return &TemporaryPasswordRepo{PasswordRepo: New(db), provision: provision}
 }
 

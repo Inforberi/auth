@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
 )
 
 func checkEmailHTTPChange(t *testing.T, ctx context.Context, f *emailIsolationFixture, webs [2]isolationHTTP) {
@@ -14,7 +14,7 @@ func checkEmailHTTPChange(t *testing.T, ctx context.Context, f *emailIsolationFi
 	const base = "/api/v1/auth/email/change"
 	const newEmail = "isolation-new@example.test"
 	var cookies, confirm, report [2]string
-	request := accounthttp.EmailChangeRequest{Email: newEmail, Password: isolationResetPassword}
+	request := accountemailhttp.EmailChangeRequest{Email: newEmail, Password: isolationResetPassword}
 	for i, web := range webs {
 		cookie := emailHTTPLogin(t, ctx, web, httpIsolationEmail, isolationResetPassword)
 		response := web.call(t, ctx, "POST", "/api/v1/auth/reauthenticate/password", web.origin, cookie, map[string]string{"password": isolationResetPassword})

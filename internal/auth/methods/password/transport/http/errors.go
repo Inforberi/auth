@@ -1,4 +1,4 @@
-package http
+package passwordhttp
 
 import (
 	"context"
@@ -81,7 +81,7 @@ var loginClientErrors = []httpx.ErrorRule{
 
 var changePasswordErrors = []httpx.ErrorRule{
 	httpx.MatchError(accountdomain.ErrEmailUnverified, 403, "email_not_verified", "email not verified"),
-	{Match: passwordPolicyError, Response: passwordPolicyFailure},
+	{Match: PasswordPolicyError, Response: passwordPolicyFailure},
 	httpx.MatchError(passworddomain.ErrInvalidEmailOrPassword, http.StatusBadRequest, errInvalidEmailOrPassword.code, errInvalidEmailOrPassword.message),
 	httpx.MatchError(passworddomain.ErrSamePassword, http.StatusBadRequest, errSamePassword.code, errSamePassword.message),
 	httpx.MatchError(passworddomain.ErrNotFound, http.StatusNotFound, errNotFound.code, errNotFound.message),
@@ -92,10 +92,10 @@ var changePasswordErrors = []httpx.ErrorRule{
 }
 
 func (h *PublicPasswordHandler) respondError(w http.ResponseWriter, r *http.Request, err error, operation string, rules []httpx.ErrorRule) {
-	respondPasswordError(w, r, h.log, err, operation, rules)
+	RespondPasswordError(w, r, h.log, err, operation, rules)
 }
 
-func respondPasswordError(w http.ResponseWriter, r *http.Request, log *zap.Logger, err error, operation string, rules []httpx.ErrorRule) {
+func RespondPasswordError(w http.ResponseWriter, r *http.Request, log *zap.Logger, err error, operation string, rules []httpx.ErrorRule) {
 	if settingshttp.RespondPolicyError(w, r, log, err) {
 		return
 	}
@@ -114,10 +114,18 @@ var capacityErrors = []httpx.ErrorRule{
 	{Target: passworddomain.ErrLoginLimited, Response: httpx.Failure{Status: 429, Code: "rate_limited", Message: "rate limited", Headers: http.Header{"Retry-After": {"60"}}}},
 }
 
-func passwordPolicyError(err error) bool {
+func PasswordPolicyError(err error) bool {
 	return errors.Is(err, passworddomain.ErrPasswordTooShort) ||
 		errors.Is(err, passworddomain.ErrPasswordTooLong) ||
 		errors.Is(err, passworddomain.ErrPasswordNoLetter) ||
 		errors.Is(err, passworddomain.ErrPasswordNoDigit) ||
 		errors.Is(err, passworddomain.ErrPasswordNoUpper)
+}
+
+func PolicyFailure() httpx.Failure   { return passwordPolicyFailure }
+func Unavailable() httpx.Failure     { return dependencyFailure }
+func RecoveryLimit() httpx.ErrorRule { return recoveryLimit }
+
+func LoginErrors() []httpx.ErrorRule {
+	return append([]httpx.ErrorRule(nil), loginClientErrors...)
 }

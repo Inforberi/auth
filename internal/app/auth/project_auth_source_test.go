@@ -16,8 +16,8 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/credentials"
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	tokensettings "github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
 	"github.com/Inforberi/financial-intelligence/internal/config"
@@ -81,8 +81,8 @@ func TestProjectDeploymentManifestIsolationAndCopies(t *testing.T) {
 	}}
 	manifest.Projects[0].Access = &projectAccessDeployment{Permissions: []accesssettings.Permission{{Key: "reports.read", Name: "Read reports"}}}
 	manifest.Projects[0].Invitations, manifest.Projects[0].TemporaryPassword = true, true
-	cfg.Invitation = accountservice.InvitationConfig{TTL: time.Hour, ActivationGlobalLimit: 100, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100}
-	cfg.TemporaryPassword = passwordservice.TemporaryPasswordConfig{TTL: time.Hour, SetupTTL: time.Minute, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}
+	cfg.Invitation = accountprovisioning.InvitationConfig{TTL: time.Hour, ActivationGlobalLimit: 100, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100}
+	cfg.TemporaryPassword = passwordprovisioning.TemporaryPasswordConfig{TTL: time.Hour, SetupTTL: time.Minute, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}
 	manifest.Projects[0].ProviderSettings = true
 	manifest.Projects[0].RetentionSettings = true
 	manifest.Projects[0].SMTPSettings = true

@@ -6,7 +6,7 @@ import (
 
 	"github.com/ilyakaznacheev/cleanenv"
 
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 )
 
 func TestInvitationConfiguration(t *testing.T) {
@@ -17,7 +17,7 @@ func TestInvitationConfiguration(t *testing.T) {
 	t.Setenv("INVITATION_REISSUE_COOLDOWN", "2m")
 	t.Setenv("INVITATION_ISSUE_ACTOR_ATTEMPTS_PER_MINUTE", "40")
 	t.Setenv("INVITATION_ISSUE_PROJECT_ATTEMPTS_PER_MINUTE", "200")
-	var cfg accountservice.InvitationConfig
+	var cfg accountprovisioning.InvitationConfig
 	if err := cleanenv.ReadEnv(&cfg); err != nil {
 		t.Fatal(err)
 	}
@@ -30,10 +30,10 @@ func TestInvitationConfiguration(t *testing.T) {
 	if cfg.ReissueCooldown != 2*time.Minute || cfg.IssueActorAttemptsPerMinute != 40 || cfg.IssueProjectAttemptsPerMinute != 200 {
 		t.Fatal("invalid reissue settings")
 	}
-	for _, mutate := range []func(*accountservice.InvitationConfig){
-		func(c *accountservice.InvitationConfig) { c.ReissueCooldown = 0 },
-		func(c *accountservice.InvitationConfig) { c.IssueActorAttemptsPerMinute = 0 },
-		func(c *accountservice.InvitationConfig) { c.IssueProjectAttemptsPerMinute = 0 },
+	for _, mutate := range []func(*accountprovisioning.InvitationConfig){
+		func(c *accountprovisioning.InvitationConfig) { c.ReissueCooldown = 0 },
+		func(c *accountprovisioning.InvitationConfig) { c.IssueActorAttemptsPerMinute = 0 },
+		func(c *accountprovisioning.InvitationConfig) { c.IssueProjectAttemptsPerMinute = 0 },
 	} {
 		bad := cfg
 		mutate(&bad)
@@ -58,7 +58,7 @@ func TestInvitationConfiguration(t *testing.T) {
 	if bad.Validate(true) == nil {
 		t.Fatal("unbounded activation limit")
 	}
-	if (accountservice.InvitationConfig{}).Validate(true) != nil {
+	if (accountprovisioning.InvitationConfig{}).Validate(true) != nil {
 		t.Fatal("disabled invitations require settings")
 	}
 }

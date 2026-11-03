@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	pgx "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -36,8 +36,9 @@ import (
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projectservice "github.com/Inforberi/financial-intelligence/internal/admin/projects/service"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
+	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
-	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
@@ -93,7 +94,7 @@ func roleHTTPDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Repository, a
 		ProjectRoles:      roleshttp.NewRoles(roleservice.NewRoles(rolespostgres.NewRuntimeRoles(managed, registry, permissions)), zap.NewNop()),
 		ProjectAuthPolicy: policyhttp.NewAuthPolicy(policyservice.NewAuthPolicy(policypostgres.NewRuntimeAuthPolicy(managed, registry, settingsdomain.PolicyRuntime{Configured: true})), settingsdomain.PublicMethods{}, zap.NewNop()),
 		ProjectUsers:      directoryhttp.NewUsers(directoryservice.NewUsers(directorypostgres.NewRuntimeUsers(managed, registry)), zap.NewNop()),
-		ProjectCapacity:   func(next http.Handler) http.Handler { return next }, PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfamanagementhttp.Handler{}, Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(roleHTTPSession{actor}, zap.NewNop()), Recovery: &passwordhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
+		ProjectCapacity:   func(next http.Handler) http.Handler { return next }, PasswordHandler: &passwordhttp.PasswordHandler{}, MFA: &mfamanagementhttp.Handler{}, Session: &sessionhttp.Handler{}, Middleware: sessionhttp.New(roleHTTPSession{actor}, zap.NewNop()), Recovery: &passwordrecoveryhttp.RecoveryHandler{}, ReadyCheck: func(context.Context) error { return nil },
 	})
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)

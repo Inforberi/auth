@@ -9,7 +9,7 @@ import (
 
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountsetup "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/service"
 )
 
 func (r *Repository) CheckSetupOpen(ctx context.Context) error {
@@ -87,7 +87,7 @@ func (r *Repository) SaveSetup(ctx context.Context, operator, request string, pa
 	return expires, err
 }
 
-func (r *Repository) CompleteSetup(ctx context.Context, operator, request string, check service.SetupCheck) error {
+func (r *Repository) CompleteSetup(ctx context.Context, operator, request string, check accountsetup.SetupCheck) error {
 	rejected := false
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		var err error
@@ -106,7 +106,7 @@ func (r *Repository) CompleteSetup(ctx context.Context, operator, request string
 // CompleteSetupInTransaction lets platform bootstrap persist its authority atomically
 // with the Auth administrator. A rejected proof must be committed to count the attempt;
 // every non-nil error requires rollback. The caller owns the transaction.
-func CompleteSetupInTransaction(ctx context.Context, tx pgx.Tx, operator, request string, check service.SetupCheck) (*domain.SetupAccount, bool, error) {
+func CompleteSetupInTransaction(ctx context.Context, tx pgx.Tx, operator, request string, check accountsetup.SetupCheck) (*domain.SetupAccount, bool, error) {
 	if err := lockSetup(ctx, tx); err != nil {
 		return nil, false, err
 	}

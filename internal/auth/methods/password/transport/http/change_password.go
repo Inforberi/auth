@@ -1,4 +1,4 @@
-package http
+package passwordhttp
 
 import (
 	"context"
@@ -93,12 +93,12 @@ func (p *ChangePasswordHandler) ChangePassword(w http.ResponseWriter, r *http.Re
 	}
 
 	if err := validateChangePasswordInput(input); err != nil {
-		respondPasswordError(w, r, p.log, err, "change password", changePasswordErrors)
+		RespondPasswordError(w, r, p.log, err, "change password", changePasswordErrors)
 		return
 	}
 	if p.attempts != nil {
 		if err := p.attempts.AllowUser(r.Context(), auth.UserID, httpx.IP(r)); err != nil {
-			respondPasswordError(w, r, p.log, err, "change password", changePasswordErrors)
+			RespondPasswordError(w, r, p.log, err, "change password", changePasswordErrors)
 			return
 		}
 	}
@@ -111,7 +111,7 @@ func (p *ChangePasswordHandler) ChangePassword(w http.ResponseWriter, r *http.Re
 		input.NewPassword,
 	)
 	if err != nil {
-		respondPasswordError(w, r, p.log, err, "change password", changePasswordErrors)
+		RespondPasswordError(w, r, p.log, err, "change password", changePasswordErrors)
 		return
 	}
 

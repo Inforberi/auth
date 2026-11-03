@@ -17,7 +17,9 @@ import (
 	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/admin/administrators/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/admission"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountsetup "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
@@ -34,10 +36,10 @@ func operatorConfig(realm string) *config.Config {
 		HTTP:         requestmiddleware.CapacityConfig{MaxInFlight: 16, RequestTimeout: 10 * time.Second},
 		Browser:      requestmiddleware.OriginConfig{AllowedOrigins: []string{"https://console.auth.example"}},
 		Account:      accountservice.Config{URL: "https://console.auth.example/verify", EncryptionKey: "a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=", TTL: 30 * time.Minute, ResendInterval: time.Minute, RegistrationIPLimit: 5, RegistrationGlobalLimit: 100},
-		InitialSetup: accountservice.SetupConfig{Enabled: true, Secret: "b29vb29vb29vb29vb29vb29vb29vb29vb29vb29vb28"},
+		InitialSetup: accountsetup.SetupConfig{Enabled: true, Secret: "b29vb29vb29vb29vb29vb29vb29vb29vb29vb29vb28"},
 		MFA:          mfaservice.Config{Enabled: true, Issuer: "Operator", ChallengeTTL: 5 * time.Minute, UserLimitPerMinute: 30, IPLimitPerMinute: 50, GlobalLimitPerMinute: 100},
 		Session:      sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, SessionRefreshThreshold: time.Minute, FreshAuthTTL: 5 * time.Minute, AdminIdleTimeout: 30 * time.Minute, AdminAbsoluteTTL: 12 * time.Hour, AdminActivityInterval: time.Minute},
-		Password:     passwordservice.Config{ResetTokenTTL: 30 * time.Minute, ResetURL: "https://console.auth.example/reset", ResetGlobalLimit: 100},
+		Password:     passwordrecovery.Config{ResetTokenTTL: 30 * time.Minute, ResetURL: "https://console.auth.example/reset", ResetGlobalLimit: 100},
 		Capacity:     passwordservice.CapacityConfig{HashConcurrency: 1, LoginIPLimit: 30, LoginEmailLimit: 30, LoginGlobalLimit: 100},
 		Retention:    accountservice.RetentionConfig{EmailReservationDays: 30, SessionDays: 30, SecurityAuditDays: 180, BatchSize: 100, Interval: time.Minute},
 	}

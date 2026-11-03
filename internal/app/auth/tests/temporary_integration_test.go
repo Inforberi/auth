@@ -10,10 +10,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
@@ -73,7 +73,7 @@ func checkTemporaryPasswords(t *testing.T, db *pgxpool.Pool, ctx context.Context
 		if err := f.accounts.CheckInvitation(ctx, temporaryTokenDigest(setup.Token)); !errors.Is(err, accountdomain.ErrInvalidInvitation) {
 			t.Fatal("setup accepted as invitation", err)
 		}
-		command := accountservice.InvitationReissueCommand{Input: accountservice.InvitationReissueInput{Actor: f.input.Actor, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}, Email: f.input.Email, Cooldown: time.Second}
+		command := accountprovisioning.InvitationReissueCommand{Input: accountprovisioning.InvitationReissueInput{Actor: f.input.Actor, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}, Email: f.input.Email, Cooldown: time.Second}
 		if _, err := f.accounts.ReissueInvitation(ctx, command); !errors.Is(err, accountdomain.ErrInvalidInvitation) {
 			t.Fatal("invitation bypassed mandatory password change", err)
 		}
@@ -113,7 +113,7 @@ func checkTemporaryPasswords(t *testing.T, db *pgxpool.Pool, ctx context.Context
 		f := newTemporaryFixture(t, db, ctx, "reissue")
 		created := f.create(t, ctx)
 		setup := f.login(t, ctx, created.Password)
-		input := passwordservice.TemporaryReissueInput{Actor: f.input.Actor, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}
+		input := passwordprovisioning.TemporaryReissueInput{Actor: f.input.Actor, UserID: created.UserID, IdempotencyKey: temporaryRequestKey(t, db, ctx)}
 		if _, err := f.service.Reissue(ctx, input); !errors.Is(err, passworddomain.ErrTemporaryPasswordCooldown) {
 			t.Fatal("initial cooldown ignored", err)
 		}

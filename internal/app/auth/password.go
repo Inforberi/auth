@@ -6,6 +6,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/redis"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
@@ -17,13 +18,13 @@ import (
 
 type passwordApp struct {
 	service    *passwordservice.PasswordService
-	recovery   *passwordservice.RecoveryService
+	recovery   *passwordrecovery.RecoveryService
 	limits     *passwordredis.RedisRepo
 	cipher     *secretbox.Cipher
 	loginLimit *passwordservice.LoginLimit
 }
 
-func (s realmSecurity) assemblePassword(repo *passwordpostgres.PasswordRepo, rdb *redis.Client, sessions *sessionservice.Login, hash *hasher.Bounded, policy *settingsservice.Service, mail passwordservice.RecoveryMailer, cfg *config.Config) (*passwordApp, error) {
+func (s realmSecurity) assemblePassword(repo *passwordpostgres.PasswordRepo, rdb *redis.Client, sessions *sessionservice.Login, hash *hasher.Bounded, policy *settingsservice.Service, mail passwordrecovery.RecoveryMailer, cfg *config.Config) (*passwordApp, error) {
 	cipher, err := s.cipher(cfg.Account.EncryptionKey, "password-reset:v1")
 	if err != nil {
 		return nil, err
@@ -38,6 +39,6 @@ func (s realmSecurity) assemblePassword(repo *passwordpostgres.PasswordRepo, rdb
 	})
 	return &passwordApp{
 		service: service, limits: limits, cipher: cipher, loginLimit: loginLimit,
-		recovery: passwordservice.NewRecovery(repo, cipher, limits, mail, hash, cfg.Password),
+		recovery: passwordrecovery.NewRecovery(repo, cipher, limits, mail, hash, cfg.Password),
 	}, nil
 }

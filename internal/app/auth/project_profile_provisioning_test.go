@@ -5,13 +5,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
 func TestProjectProvisioningPrerequisites(t *testing.T) {
 	p := &ProjectProfile{origin: "https://project.example.test", states: map[string]ProjectFeatureState{}}
-	cfg := ProjectProfileConfig{EmailManagement: &ProjectEmailConfig{Invitations: accountservice.InvitationConfig{Enabled: true}}}
+	cfg := ProjectProfileConfig{EmailManagement: &ProjectEmailConfig{Invitations: accountprovisioning.InvitationConfig{Enabled: true}}}
 	p.buildProfileProvisioning(t.Context(), cfg, false)
 	require.Empty(t, p.states)
 	cfg.BrowserEnabled = true

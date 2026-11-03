@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	chi "github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"go.uber.org/zap"
@@ -15,14 +15,19 @@ import (
 	policyhttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/policy/transport/http"
 	roleshttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/transport/http"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
+	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
+	accountprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
+	accountsetuphttp "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/transport/http"
 	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
+	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
+	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
-	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
-	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
-	mfarecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
@@ -42,15 +47,15 @@ type Handlers struct {
 	Tokens            *tokenhttp.Handler
 	UserLifecycle     *accounthttp.UserLifecycleHandler
 	UserDirectory     *accounthttp.UserDirectoryHandler
-	Provisioning      *accounthttp.ProvisioningHandler
-	TemporaryAdmin    *passwordhttp.TemporaryAdminHandler
+	Provisioning      *accountprovisioninghttp.ProvisioningHandler
+	TemporaryAdmin    *passwordprovisioninghttp.TemporaryAdminHandler
 	Access            *accesshttp.Handler
 	AuthSettings      *settingshttp.Handler
 	SMTPSettings      *settingshttp.SMTPHandler
 	ProviderSettings  *settingshttp.ProviderHandler
 	RetentionSettings *settingshttp.RetentionHandler
 	MFASettings       *settingshttp.MFAHandler
-	Setup             *accounthttp.SetupHandler
+	Setup             *accountsetuphttp.SetupHandler
 	MFA               *mfamanagementhttp.Handler
 	MFALogin          *mfaloginhttp.Handler
 	MFARecovery       *mfarecoveryhttp.Handler
@@ -58,13 +63,13 @@ type Handlers struct {
 	Activity          *sessionhttp.ActivityHandler
 	Rotation          *sessionhttp.RotationHandler
 	Reauthentication  *passwordhttp.ReauthenticationHandler
-	Recovery          *passwordhttp.RecoveryHandler
-	Account           *accounthttp.Handler
-	EmailChange       *accounthttp.EmailChangeHandler
-	EmailBinding      *accounthttp.EmailBindingHandler
-	ProtectedRecovery *passwordhttp.ProtectedRecoveryHandler
-	Activation        *passwordhttp.ActivationHandler
-	TemporaryPassword *passwordhttp.TemporaryPasswordHandler
+	Recovery          *passwordrecoveryhttp.RecoveryHandler
+	Account           *accountemailhttp.Handler
+	EmailChange       *accountemailhttp.EmailChangeHandler
+	EmailBinding      *accountemailhttp.EmailBindingHandler
+	ProtectedRecovery *passwordrecoveryhttp.ProtectedRecoveryHandler
+	Activation        *passwordprovisioninghttp.ActivationHandler
+	TemporaryPassword *passwordprovisioninghttp.TemporaryPasswordHandler
 	Telegram          *telegramhttp.Handler
 	Google            *googlehttp.Handler
 	EmailOTP          *otphttp.Handler

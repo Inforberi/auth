@@ -6,9 +6,14 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
+	accountsetup "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/service"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	googleservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/service"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
@@ -29,11 +34,11 @@ type Config struct {
 	HTTP               requestmiddleware.CapacityConfig
 	Proxy              requestmiddleware.ProxyConfig
 	Account            accountservice.Config
-	EmailChange        accountservice.EmailChangeConfig
-	EmailBinding       accountservice.EmailBindingConfig
-	InitialSetup       accountservice.SetupConfig
-	Invitation         accountservice.InvitationConfig
-	TemporaryPassword  passwordservice.TemporaryPasswordConfig
+	EmailChange        accountemail.EmailChangeConfig
+	EmailBinding       accountemail.EmailBindingConfig
+	InitialSetup       accountsetup.SetupConfig
+	Invitation         accountprovisioning.InvitationConfig
+	TemporaryPassword  passwordprovisioning.TemporaryPasswordConfig
 	EmailOTP           otpservice.Config
 	Telegram           telegramservice.Config
 	Google             googleservice.Config
@@ -47,7 +52,7 @@ type Config struct {
 	Redis              redisclient.Config
 	MailSender         mailer.Config
 	SMTPAllowedTargets string `env:"SMTP_ALLOWED_TARGETS"`
-	Password           passwordservice.Config
+	Password           passwordrecovery.Config
 	Capacity           passwordservice.CapacityConfig
 	Swagger            SwaggerConfig
 }

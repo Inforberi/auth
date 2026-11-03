@@ -12,8 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
@@ -87,9 +89,9 @@ func prepareEmailIsolation(t *testing.T, projects projectIsolationHTTP) *emailIs
 		cfg := appauth.ProjectEmailConfig{
 			VerificationEnabled: true, RecoveryEnabled: true, Origin: origin,
 			Verification: accountservice.Config{URL: origin + "/verify-email", TTL: 30 * time.Minute, ResendInterval: time.Minute, RegistrationIPLimit: 10, RegistrationGlobalLimit: 100},
-			Password:     passwordservice.Config{ResetURL: origin + "/reset-password", ResetTokenTTL: time.Hour, ResetGlobalLimit: 100},
-			Invitations:  accountservice.InvitationConfig{Enabled: true, URL: origin + "/activate", TTL: time.Hour, ActivationGlobalLimit: 100, ReissueCooldown: time.Second, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100},
-			Change:       accountservice.EmailChangeConfig{Enabled: true, ConfirmURL: origin + "/change", ReportURL: origin + "/report", RecoveryURL: origin + "/recover", TTL: 30 * time.Minute, ProtectionTTL: 24 * time.Hour, RecoveryTTL: 30 * time.Minute}, FreshAuthTTL: 5 * time.Minute,
+			Password:     passwordrecovery.Config{ResetURL: origin + "/reset-password", ResetTokenTTL: time.Hour, ResetGlobalLimit: 100},
+			Invitations:  accountprovisioning.InvitationConfig{Enabled: true, URL: origin + "/activate", TTL: time.Hour, ActivationGlobalLimit: 100, ReissueCooldown: time.Second, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100},
+			Change:       accountemail.EmailChangeConfig{Enabled: true, ConfirmURL: origin + "/change", ReportURL: origin + "/report", RecoveryURL: origin + "/recover", TTL: 30 * time.Minute, ProtectionTTL: 24 * time.Hour, RecoveryTTL: 30 * time.Minute}, FreshAuthTTL: 5 * time.Minute,
 		}
 		f.configs[i] = cfg
 		f.services[i], err = appauth.NewProjectEmail(ctx, key, cfg, allowed, appauth.ProjectEmailDependencies{ProjectSMTPDependencies: deps, Hash: projects.deps.Hash})

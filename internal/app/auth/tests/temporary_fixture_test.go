@@ -12,6 +12,7 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
@@ -35,10 +36,10 @@ func (temporaryFixtureHash) Compare(_ context.Context, raw, hash string) error {
 }
 
 type temporaryFixture struct {
-	service  *passwordservice.TemporaryPasswordService
+	service  *passwordprovisioning.TemporaryPasswordService
 	repo     *passwordpostgres.TemporaryPasswordRepo
 	accounts *accountpostgres.Repository
-	input    passwordservice.TemporaryProvisionInput
+	input    passwordprovisioning.TemporaryProvisionInput
 }
 
 func newTemporaryFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, name string) temporaryFixture {
@@ -51,10 +52,10 @@ func newTemporaryFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, na
 	accounts := accountpostgres.NewWithDelivery(db, accountpostgres.DeliveryConfig{Invitations: true})
 	repo := passwordpostgres.NewTemporaryPassword(db, accounts.ProvisionInTransaction)
 	limit := passwordservice.NewLoginLimit(verificationLimits{}, cipher, passwordservice.CapacityConfig{LoginIPLimit: 30, LoginEmailLimit: 10, LoginGlobalLimit: 1000})
-	cfg := passwordservice.TemporaryPasswordConfig{Enabled: true, TTL: time.Hour, SetupTTL: 5 * time.Minute, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}
+	cfg := passwordprovisioning.TemporaryPasswordConfig{Enabled: true, TTL: time.Hour, SetupTTL: 5 * time.Minute, ReissueCooldown: time.Minute, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}
 	return temporaryFixture{
-		service: passwordservice.NewTemporaryPassword(repo, temporaryFixtureHash{}, verificationLimits{}, cipher.Digest, limit, cfg), repo: repo, accounts: accounts,
-		input: passwordservice.TemporaryProvisionInput{Actor: actor, IdempotencyKey: temporaryRequestKey(t, db, ctx), Email: "temporary-" + name + "@example.com"},
+		service: passwordprovisioning.NewTemporaryPassword(repo, temporaryFixtureHash{}, verificationLimits{}, cipher.Digest, limit, cfg), repo: repo, accounts: accounts,
+		input: passwordprovisioning.TemporaryProvisionInput{Actor: actor, IdempotencyKey: temporaryRequestKey(t, db, ctx), Email: "temporary-" + name + "@example.com"},
 	}
 }
 
@@ -67,7 +68,7 @@ func temporaryRequestKey(t *testing.T, db *pgxpool.Pool, ctx context.Context) st
 	return key
 }
 
-func (f temporaryFixture) create(t *testing.T, ctx context.Context) *passwordservice.TemporaryIssueResult {
+func (f temporaryFixture) create(t *testing.T, ctx context.Context) *passwordprovisioning.TemporaryIssueResult {
 	t.Helper()
 	result, err := f.service.Provision(ctx, f.input)
 	if err != nil || result.Password == "" {
@@ -76,7 +77,7 @@ func (f temporaryFixture) create(t *testing.T, ctx context.Context) *passwordser
 	return result
 }
 
-func (f temporaryFixture) login(t *testing.T, ctx context.Context, secret string) *passwordservice.TemporaryLoginResult {
+func (f temporaryFixture) login(t *testing.T, ctx context.Context, secret string) *passwordprovisioning.TemporaryLoginResult {
 	t.Helper()
 	result, err := f.service.Login(ctx, f.input.Email, secret, "127.0.0.1")
 	if err != nil {

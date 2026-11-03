@@ -9,6 +9,7 @@ import (
 
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountredis "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/redis"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
@@ -54,10 +55,10 @@ func newProjectRegistration(scope realmscope.Scope, root string, cfg *ProjectReg
 	return registration, nil
 }
 
-func (r *projectRegistration) account(pool *pgxpool.Pool) (*accountservice.Service, *accountpostgres.Repository) {
+func (r *projectRegistration) account(pool *pgxpool.Pool) (*accountemail.Verification, *accountpostgres.Repository) {
 	repo := accountpostgres.New(pool)
 	// Registration only prepares encrypted mail; SMTP belongs to the outbox worker.
-	return accountservice.New(repo, r.limits, r.cipher, nil, r.cfg), repo
+	return accountemail.NewVerification(repo, r.limits, r.cipher, nil, r.cfg), repo
 }
 
 func (p *ProjectPassword) Register(ctx context.Context, email, password, userAgent, ip string) (*passwordservice.RegisterResult, error) {

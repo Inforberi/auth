@@ -2,33 +2,43 @@ package auth
 
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
-	redis "github.com/redis/go-redis/v9"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
+	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
+	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountredis "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/redis"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	accountsetup "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/service"
+	accountsetuphttp "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
-func (s realmSecurity) assembleAccount(pool *pgxpool.Pool, redis *redis.Client, mail accountservice.Mailer, cfg accountservice.Config, delivery accountpostgres.DeliveryConfig) (*accountservice.Service, *accountpostgres.Repository, error) {
+type accountApp struct {
+	verification *accountemail.Verification
+	repository   *accountpostgres.Repository
+	limits       accountservice.Limiter
+	cipher       accountservice.Cipher
+}
+
+func (s realmSecurity) assembleAccount(pool *pgxpool.Pool, redis *redis.Client, mail accountservice.Mailer, cfg accountservice.Config, delivery accountpostgres.DeliveryConfig) (*accountApp, error) {
 	cipher, err := s.cipher(cfg.EncryptionKey, "email-verification:v1")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	repo := accountpostgres.NewWithDelivery(pool, delivery)
 	limits, err := accountredis.NewScoped(redis, s.scope)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	service := accountservice.New(repo, limits, cipher, mail, cfg)
-	return service, repo, nil
+	service := accountemail.NewVerification(repo, limits, cipher, mail, cfg)
+	return &accountApp{verification: service, repository: repo, limits: limits, cipher: cipher}, nil
 }
 
-func (s realmSecurity) assembleEmailBinding(repo *accountpostgres.Repository, rdb *redis.Client, cfg *config.Config, log *zap.Logger) (*accounthttp.EmailBindingHandler, error) {
+func (s realmSecurity) assembleEmailBinding(repo *accountpostgres.Repository, rdb *redis.Client, cfg *config.Config, log *zap.Logger) (*accountemailhttp.EmailBindingHandler, error) {
 	if !cfg.EmailBinding.Enabled {
 		return nil, nil
 	}
@@ -40,11 +50,11 @@ func (s realmSecurity) assembleEmailBinding(repo *accountpostgres.Repository, rd
 	if err != nil {
 		return nil, err
 	}
-	svc := accountservice.NewEmailBinding(repo, limits, cipher, cfg.EmailBinding)
-	return accounthttp.NewEmailBinding(svc, log), nil
+	svc := accountemail.NewEmailBinding(repo, limits, cipher, cfg.EmailBinding)
+	return accountemailhttp.NewEmailBinding(svc, log), nil
 }
 
-func (s realmSecurity) assembleSetup(repo accountservice.SetupRepository, rdb *redis.Client, mail accountservice.Mailer, hash *hasher.Bounded, cfg *config.Config, log *zap.Logger) (*accounthttp.SetupHandler, error) {
+func (s realmSecurity) assembleSetup(repo accountsetup.SetupRepository, rdb *redis.Client, mail accountservice.Mailer, hash *hasher.Bounded, cfg *config.Config, log *zap.Logger) (*accountsetuphttp.SetupHandler, error) {
 	if !cfg.InitialSetup.Enabled {
 		return nil, nil
 	}
@@ -60,9 +70,9 @@ func (s realmSecurity) assembleSetup(repo accountservice.SetupRepository, rdb *r
 	if err != nil {
 		return nil, err
 	}
-	svc, err := accountservice.NewSetup(repo, limits, cipher, factorCipher, mail, hash, totp.Authenticator{}, cfg.InitialSetup, cfg.MFA.Issuer)
+	svc, err := accountsetup.NewSetup(repo, limits, cipher, factorCipher, mail, hash, totp.Authenticator{}, cfg.InitialSetup, cfg.MFA.Issuer)
 	if err != nil {
 		return nil, err
 	}
-	return accounthttp.NewSetup(svc, log), nil
+	return accountsetuphttp.NewSetup(svc, log), nil
 }

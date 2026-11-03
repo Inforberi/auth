@@ -10,12 +10,12 @@ import (
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
+	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 )
 
-func (r *TemporaryPasswordRepo) FindTemporaryProvision(ctx context.Context, command accountservice.ProvisionCommand) (*service.TemporaryIssueResult, error) {
-	var result *service.TemporaryIssueResult
+func (r *TemporaryPasswordRepo) FindTemporaryProvision(ctx context.Context, command accountprovisioning.ProvisionCommand) (*passwordprovisioning.TemporaryIssueResult, error) {
+	var result *passwordprovisioning.TemporaryIssueResult
 	err := r.transaction(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, command.Input.Actor, "", settings.UsersManage); err != nil {
 			return err
@@ -32,14 +32,14 @@ func (r *TemporaryPasswordRepo) FindTemporaryProvision(ctx context.Context, comm
 		if fingerprint != command.Fingerprint {
 			return accountdomain.ErrProvisionConflict
 		}
-		result = &service.TemporaryIssueResult{UserID: user, Reused: true}
+		result = &passwordprovisioning.TemporaryIssueResult{UserID: user, Reused: true}
 		return nil
 	})
 	return result, err
 }
 
-func (r *TemporaryPasswordRepo) FindTemporaryReissue(ctx context.Context, input service.TemporaryReissueInput) (*service.TemporaryIssueResult, error) {
-	var result *service.TemporaryIssueResult
+func (r *TemporaryPasswordRepo) FindTemporaryReissue(ctx context.Context, input passwordprovisioning.TemporaryReissueInput) (*passwordprovisioning.TemporaryIssueResult, error) {
+	var result *passwordprovisioning.TemporaryIssueResult
 	err := r.transaction(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, input.Actor, string(input.UserID), settings.UsersManage); err != nil {
 			return err
@@ -56,7 +56,7 @@ func (r *TemporaryPasswordRepo) FindTemporaryReissue(ctx context.Context, input 
 		if user != input.UserID {
 			return accountdomain.ErrProvisionConflict
 		}
-		result = &service.TemporaryIssueResult{UserID: user, Reused: true, ExpiresAt: expires}
+		result = &passwordprovisioning.TemporaryIssueResult{UserID: user, Reused: true, ExpiresAt: expires}
 		return nil
 	})
 	return result, err
