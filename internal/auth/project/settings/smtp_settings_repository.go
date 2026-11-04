@@ -1,0 +1,96 @@
+package settings
+
+import (
+	"context"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
+	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
+)
+
+type projectSMTPSettingsRepository struct{ binding projectbinding.Binding }
+
+func (s *projectSMTPSettingsRepository) use(ctx context.Context, operation func(context.Context, *settingspostgres.Repository) error) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	p := s.binding
+	return p.Registry.UsePool(ctx, p.Key, func(ctx context.Context, pool *pgxpool.Pool) error {
+		if err := projectbinding.RequireCurrent(ctx, p.Reader, p.Key); err != nil {
+			return err
+		}
+		if err := operation(ctx, settingspostgres.New(pool)); err != nil {
+			return err
+		}
+		return projectbinding.RequireCurrent(ctx, p.Reader, p.Key)
+	})
+}
+
+func (s *projectSMTPSettingsRepository) LoadSMTP(ctx context.Context) (settingssmtp.SMTPStored, error) {
+	var result settingssmtp.SMTPStored
+	err := s.use(ctx, func(ctx context.Context, repo *settingspostgres.Repository) error {
+		var err error
+		result, err = repo.LoadSMTP(ctx)
+		return err
+	})
+	if err != nil {
+		return settingssmtp.SMTPStored{}, err
+	}
+	return result, nil
+}
+
+func (s *projectSMTPSettingsRepository) InitializeSMTP(ctx context.Context, seed settingssmtp.SMTPStored) (settingssmtp.SMTPStored, error) {
+	var result settingssmtp.SMTPStored
+	err := s.use(ctx, func(ctx context.Context, repo *settingspostgres.Repository) error {
+		var err error
+		result, err = repo.InitializeSMTP(ctx, seed)
+		return err
+	})
+	if err != nil {
+		return settingssmtp.SMTPStored{}, err
+	}
+	return result, nil
+}
+
+func (s *projectSMTPSettingsRepository) ReadSMTP(ctx context.Context, actor accessservice.Principal) (settingsdomain.SMTPSnapshot, error) {
+	var result settingsdomain.SMTPSnapshot
+	err := s.use(ctx, func(ctx context.Context, repo *settingspostgres.Repository) error {
+		var err error
+		result, err = repo.ReadSMTP(ctx, actor)
+		return err
+	})
+	if err != nil {
+		return settingsdomain.SMTPSnapshot{}, err
+	}
+	return result, nil
+}
+
+func (s *projectSMTPSettingsRepository) UpdateSMTP(ctx context.Context, input settingssmtp.SMTPUpdate) (settingsdomain.SMTPSnapshot, error) {
+	var result settingsdomain.SMTPSnapshot
+	err := s.use(ctx, func(ctx context.Context, repo *settingspostgres.Repository) error {
+		var err error
+		result, err = repo.UpdateSMTP(ctx, input)
+		return err
+	})
+	if err != nil {
+		return settingsdomain.SMTPSnapshot{}, err
+	}
+	return result, nil
+}
+
+func (s *projectSMTPSettingsRepository) AuthorizeSMTPTest(ctx context.Context, actor accessservice.Principal, version int64) (settingssmtp.SMTPStored, error) {
+	var result settingssmtp.SMTPStored
+	err := s.use(ctx, func(ctx context.Context, repo *settingspostgres.Repository) error {
+		var err error
+		result, err = repo.AuthorizeSMTPTest(ctx, actor, version)
+		return err
+	})
+	if err != nil {
+		return settingssmtp.SMTPStored{}, err
+	}
+	return result, nil
+}

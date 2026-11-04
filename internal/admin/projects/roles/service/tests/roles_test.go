@@ -13,10 +13,14 @@ import (
 )
 
 type roleRepositoryStub struct {
-	prepared, executed bool
-	err                error
-	directoryCalls     int
-	roles              []accessdomain.Role
+	prepared, executed  bool
+	err                 error
+	directoryCalls      int
+	roles               []accessdomain.Role
+	outcomes            []domain.RoleOutcome
+	reads, preparations int
+	reconciliation      roleservice.RoleReconciliation
+	prepareErr          error
 }
 
 func (s *roleRepositoryStub) ListProjectRoles(context.Context, operatordomain.Principal, roleservice.ProjectRoleQuery) ([]accessdomain.Role, error) {
@@ -49,11 +53,16 @@ func (s *roleRepositoryStub) ExecuteRoleCreation(context.Context, operatordomain
 }
 
 func (s *roleRepositoryStub) ReadRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleOutcome, error) {
+	s.reads++
+	if len(s.outcomes) >= s.reads {
+		return s.outcomes[s.reads-1], s.err
+	}
 	return domain.RoleOutcome{}, s.err
 }
 
-func (s *roleRepositoryStub) ReconcileRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleOutcome, error) {
-	return domain.RoleOutcome{}, s.err
+func (s *roleRepositoryStub) PrepareRoleReconciliation(context.Context, operatordomain.Principal, domain.ID, domain.ID) (roleservice.RoleReconciliation, error) {
+	s.preparations++
+	return s.reconciliation, s.prepareErr
 }
 
 func TestRoleCreationRequiresPreparedIntent(t *testing.T) {

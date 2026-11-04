@@ -8,9 +8,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 
+	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	catalog "github.com/Inforberi/financial-intelligence/internal/admin/projects/repository/postgres"
+	rolespostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/repository/postgres"
+	roleservice "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/service"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 )
 
@@ -35,7 +38,7 @@ func roleOutcomeDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Repository
 	otherProject := domain.ID("a2000000-0000-4000-8000-000000000099")
 	_, err = managed.ReadRoleOutcome(ctx, actor, otherProject, command.OperationID)
 	require.ErrorIs(t, err, domain.ErrNotFound)
-	_, err = managed.ReconcileRoleOutcome(ctx, actor, otherProject, command.OperationID, nil)
+	_, err = roleservice.NewRoles(rolespostgres.NewRuntimeRoles(managed, nil, accesssettings.Catalog{})).ReconcileRoleOutcome(ctx, actor, otherProject, command.OperationID)
 	require.ErrorIs(t, err, domain.ErrNotFound, "project scope must be checked before any runtime access")
 	require.Equal(t, created.Role, known.Role)
 	pending := command
@@ -44,7 +47,7 @@ func roleOutcomeDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Repository
 	require.NoError(t, err)
 	_, err = managed.AdmitRoleCreation(ctx, actor, pending)
 	require.NoError(t, err)
-	unresolved, err := managed.ReconcileRoleOutcome(ctx, actor, pending.ProjectID, pending.OperationID, registry)
+	unresolved, err := roleservice.NewRoles(rolespostgres.NewRuntimeRoles(managed, registry, accesssettings.Catalog{})).ReconcileRoleOutcome(ctx, actor, pending.ProjectID, pending.OperationID)
 	require.NoError(t, err)
 	require.False(t, unresolved.Committed, "missing receipt is unknown, never evidence of rollback or permission to create")
 	_, err = admin.Exec(ctx, `DELETE FROM platform.operator_permissions WHERE user_id=$1 AND permission_key='platform.project_access.manage'`, actor.UserID)
@@ -63,7 +66,7 @@ func roleOutcomeDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Repository
 	require.False(t, unknown.Committed)
 	require.Empty(t, unknown.Role.ID)
 	// Restore completion evidence from the immutable project receipt, without issuing authority.
-	known, err = managed.ReconcileRoleOutcome(ctx, actor, command.ProjectID, command.OperationID, registry)
+	known, err = roleservice.NewRoles(rolespostgres.NewRuntimeRoles(managed, registry, accesssettings.Catalog{})).ReconcileRoleOutcome(ctx, actor, command.ProjectID, command.OperationID)
 	require.NoError(t, err)
 	require.True(t, known.Committed)
 	require.Equal(t, created.Role, known.Role)
@@ -83,7 +86,7 @@ func roleOutcomeDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Repository
 	require.NoError(t, err)
 	_, err = managed.ReadRoleOutcome(ctx, actor, command.ProjectID, command.OperationID)
 	require.ErrorIs(t, err, operatordomain.ErrForbidden)
-	_, err = managed.ReconcileRoleOutcome(ctx, actor, command.ProjectID, command.OperationID, registry)
+	_, err = roleservice.NewRoles(rolespostgres.NewRuntimeRoles(managed, registry, accesssettings.Catalog{})).ReconcileRoleOutcome(ctx, actor, command.ProjectID, command.OperationID)
 	require.ErrorIs(t, err, operatordomain.ErrForbidden)
 	_, err = admin.Exec(ctx, `UPDATE auth.sessions SET revoked_at=NULL WHERE token_hash=$1`, actor.TokenHash)
 	require.NoError(t, err)

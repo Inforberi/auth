@@ -11,11 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
-	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/auth/project/token"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"

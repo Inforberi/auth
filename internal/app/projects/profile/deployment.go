@@ -4,12 +4,13 @@ import (
 	"context"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	projectaccount "github.com/Inforberi/financial-intelligence/internal/app/projects/account"
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
+	projectaccount "github.com/Inforberi/financial-intelligence/internal/auth/project/account"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
-func projectBrowserDeployment(cfg *config.Config) ProjectProfileSource {
+func projectBrowserDeployment(cfg *config.Config) projectprofile.ProjectProfileSource {
 	// Capture only operational values; never retain a platform encryption key or provider secret.
 	session, mfa, capacity := cfg.Session, cfg.MFA, cfg.Capacity
 	mfa.RecoveryEnabled = false
@@ -19,8 +20,8 @@ func projectBrowserDeployment(cfg *config.Config) ProjectProfileSource {
 	invitations.Enabled, temporary.Enabled = false, false
 	verification.EncryptionKey = ""
 	withMail, timeout := cfg.Platform.Delivery.Enabled, cfg.Platform.HTTP.BuildTimeout
-	return func(_ context.Context, _ projectruntime.Key, origin string) (ProjectProfileConfig, error) {
-		profile := ProjectProfileConfig{BrowserEnabled: true, Timeout: timeout, Password: &projectmethods.ProjectPasswordConfig{Session: session, MFA: mfa, TemporaryPassword: temporary, Capacity: capacity, Timeout: timeout}}
+	return func(_ context.Context, _ projectruntime.Key, origin string) (projectprofile.ProjectProfileConfig, error) {
+		profile := projectprofile.ProjectProfileConfig{BrowserEnabled: true, Timeout: timeout, Password: &projectmethods.ProjectPasswordConfig{Session: session, MFA: mfa, TemporaryPassword: temporary, Capacity: capacity, Timeout: timeout}}
 		projectChange := change
 		projectChange.ConfirmURL, projectChange.ReportURL, projectChange.RecoveryURL = origin+"/change-email", origin+"/protect-account", origin+"/recover-account"
 		projectRecovery := recovery

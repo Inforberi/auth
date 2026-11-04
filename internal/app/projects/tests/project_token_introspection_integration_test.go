@@ -10,7 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
-	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/auth/project/token"
 	tokendomain "github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 )

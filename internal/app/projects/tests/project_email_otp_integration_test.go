@@ -15,11 +15,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
-	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
+	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
@@ -36,14 +36,14 @@ type projectOTPFixture struct {
 	db     *pgx.Conn
 	rdb    *redis.Client
 	key    projectruntime.Key
-	deps   projectapp.ProjectSMTPDependencies
+	deps   projectbinding.ProjectSMTPDependencies
 	scope  realmscope.Scope
 	cipher *secretbox.Cipher
 	root   string
 	cfg    projectmethods.ProjectEmailOTPConfig
 }
 
-func projectEmailOTPDrill(t *testing.T, ctx context.Context, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, deps projectapp.ProjectSMTPDependencies, sourceUser string) {
+func projectEmailOTPDrill(t *testing.T, ctx context.Context, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, deps projectbinding.ProjectSMTPDependencies, sourceUser string) {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)

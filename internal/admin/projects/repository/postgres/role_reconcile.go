@@ -6,62 +6,46 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/internal/sqlerrors"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	schemapostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/schema/postgres"
 )
 
-// ReconcileRoleOutcome reads an existing receipt; it cannot create a role or
-// admission. A final guarded read prevents disclosure after authority changes.
-func (r *Repository) ReconcileRoleOutcome(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID, registry *projectruntime.Registry) (domain.RoleOutcome, error) {
-	known, err := r.ReadRoleOutcome(ctx, actor, project, operation)
-	if err != nil || known.Committed {
-		return known, err
-	}
-	if registry == nil {
-		return domain.RoleOutcome{}, domain.ErrUnavailable
-	}
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	job, err := r.roleRecoverySource(ctx, actor, project, operation)
+// RuntimeKey is the validated operation locator; it contains no connection credentials.
+func (j *RoleReceiptSource) RuntimeKey() projectruntime.Key { return j.key }
+
+func (j *RoleReceiptSource) ReadReceipt(ctx context.Context, db ProjectDatabase) (bool, error) {
+	j.read, j.found, j.snapshot = false, false, nil
+	tx, err := db.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
 	if err != nil {
-		return domain.RoleOutcome{}, err
+		return false, sqlerrors.Catalog(ctx, err)
 	}
-	var snapshot []byte
-	var admission domain.ID
-	var found bool
-	key := job.key
-	err = registry.Use(ctx, key, func(ctx context.Context, db projectruntime.Database) error {
-		tx, err := db.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
-		if err != nil {
-			return sqlerrors.Catalog(ctx, err)
-		}
-		defer func() {
-			cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
-			defer stop()
-			_ = tx.Rollback(cleanup) //nolint:gosec // Reconciliation never writes to the project.
-		}()
-		if err := schemapostgres.CheckRuntime(ctx, tx, job.key.Binding); err != nil {
-			return err
-		}
-		snapshot, admission, found, err = job.receipt(ctx, tx, domain.ID(actor.UserID))
-		if err != nil {
-			return err
-		}
-		return sqlerrors.Catalog(ctx, tx.Commit(ctx))
-	})
+	defer func() {
+		cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
+		defer stop()
+		_ = tx.Rollback(cleanup) //nolint:gosec // Receipt lookup never writes to the project.
+	}()
+	if err := schemapostgres.CheckRuntime(ctx, tx, j.key.Binding); err != nil {
+		return false, err
+	}
+	snapshot, admission, found, err := j.receipt(ctx, tx, j.actor)
 	if err != nil {
-		return domain.RoleOutcome{}, err
+		return false, err
 	}
-	if found {
-		if err := r.requireRoleAdmission(ctx, operation, admission); err != nil {
-			return domain.RoleOutcome{}, err
-		}
-		if err := r.recordRoleSnapshot(ctx, operation, admission, job.action, snapshot); err != nil {
-			return domain.RoleOutcome{}, err
-		}
+	if err := tx.Commit(ctx); err != nil {
+		return false, sqlerrors.Catalog(ctx, err)
 	}
-	return r.ReadRoleOutcome(ctx, actor, project, operation)
+	j.snapshot, j.admission, j.found, j.read = snapshot, admission, found, true
+	return found, nil
+}
+
+func (j *RoleReceiptSource) RecordReceipt(ctx context.Context) error {
+	if !j.read || !j.found {
+		return domain.ErrConflict
+	}
+	if err := j.repository.requireRoleAdmission(ctx, j.operation, j.admission); err != nil {
+		return err
+	}
+	return j.repository.recordRoleSnapshot(ctx, j.operation, j.admission, j.action, j.snapshot)
 }

@@ -37,7 +37,3 @@ func (r *RuntimeRoles) ExecuteRoleAssignment(ctx context.Context, actor operator
 	}
 	return grant.ExecuteWithRuntime(ctx, r.registry, r.permissions, false)
 }
-
-func (r *RuntimeRoles) ReconcileRoleOutcome(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (domain.RoleOutcome, error) {
-	return r.Repository.ReconcileRoleOutcome(ctx, actor, project, operation, r.registry)
-}

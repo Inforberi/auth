@@ -12,14 +12,14 @@ import (
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
-	projectmfa "github.com/Inforberi/financial-intelligence/internal/app/projects/mfa"
-	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	mfamanagement "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/service"
+	projectmfa "github.com/Inforberi/financial-intelligence/internal/auth/project/mfa"
+	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/transport/http/projects"
 )
 
 type emailMFAHTTPFixture struct {
@@ -77,14 +77,14 @@ func prepareMFAHTTP(t *testing.T, bot projectmfa.ProjectTelegramClient) emailMFA
 	deployment := loadEmailMFADeployment(t, f, []string{email.listeners[0].Addr().String(), email.listeners[1].Addr().String()})
 	source := deployment.Profile
 	if bot != nil {
-		source = func(ctx context.Context, key projectruntime.Key, origin string) (projectprofile.ProjectProfileConfig, error) {
+		source = func(ctx context.Context, key projectruntime.Key, origin string) (runtimeprofile.ProjectProfileConfig, error) {
 			config, err := deployment.Profile(ctx, key, origin)
 			config.TelegramMFA = true
 			config.MFASettingsEnabled = true
 			return config, err
 		}
 	}
-	handler, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
+	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute},
 		Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &projects.password.Session,
 	}, projects.deps, source, nil)

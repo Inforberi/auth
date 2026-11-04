@@ -10,11 +10,11 @@ import (
 	"github.com/pquerna/otp/totp"
 	"github.com/stretchr/testify/require"
 
-	projectdelivery "github.com/Inforberi/financial-intelligence/internal/app/projects/delivery"
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	projectdelivery "github.com/Inforberi/financial-intelligence/internal/auth/project/delivery"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	rolemutation "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/repository/postgres/mutation"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 )
 
@@ -18,7 +19,7 @@ func (a *AdmittedRoleAssignment) Execute(ctx context.Context, project ProjectDat
 	var result domain.RoleAssignmentResult
 	err := executeProjectTransaction(ctx, project, a.until, a.used, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
-		result, err = changePlatformAssignment(ctx, tx, a.actor, a.binding, a.command, permissions, mfaReady)
+		result, err = rolemutation.ChangeAssignment(ctx, tx, a.actor, a.binding, a.command, permissions, mfaReady)
 		return err
 	})
 	if err != nil {

@@ -19,21 +19,21 @@ import (
 	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	schemapostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/schema/postgres"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
-	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
-	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
+	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/auth/project/token"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/transport/http/projects"
 )
 
 func projectHTTPIsolationDrill(t *testing.T, admin *pgx.Conn, reader *runtimepostgres.RuntimeCredentialReader, a, b projectruntime.Key, target projectruntime.Target) {
 	t.Helper()
 	f := newProjectIsolationHTTP(t, admin, reader, a, b, target)
-	webs, handler, builds := f.serve(t, projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, Timeout: 5 * time.Second})
+	webs, handler, builds := f.serve(t, runtimeprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, Timeout: 5 * time.Second})
 	checkProjectHTTPIsolation(t, t.Context(), admin, f.databases, a, webs, handler)
 	for i := range builds {
 		require.EqualValues(t, 1, builds[i].Load(), "both resident profiles stay warm; suspended A must not be rebuilt")
@@ -49,7 +49,7 @@ type projectIsolationHTTP struct {
 	passwordPrefix [2]string
 	redisKeys      map[string]struct{}
 	password       projectmethods.ProjectPasswordConfig
-	deps           projectprofile.ProjectProfileDependencies
+	deps           runtimeprofile.ProjectProfileDependencies
 }
 
 func newProjectIsolationHTTP(t *testing.T, admin *pgx.Conn, reader *runtimepostgres.RuntimeCredentialReader, a, b projectruntime.Key, target projectruntime.Target) projectIsolationHTTP {
@@ -136,27 +136,27 @@ func newProjectIsolationHTTP(t *testing.T, admin *pgx.Conn, reader *runtimepostg
 	return projectIsolationHTTP{
 		databases: databases, origins: origins, projects: [2]projectruntime.Key{a, b}, traces: traces,
 		passwordCipher: passwordCiphers, passwordPrefix: passwordPrefixes, redisKeys: keys, password: password,
-		deps: projectprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: registry, Reader: reader, Redis: rdb, Hash: hash}},
+		deps: runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: registry, Reader: reader, Redis: rdb, Hash: hash}},
 	}
 }
 
-func (f projectIsolationHTTP) serve(t *testing.T, features projectprofile.ProjectProfileConfig) ([2]isolationHTTP, *projectbrowser.ProjectHTTP, *[2]atomic.Int32) {
+func (f projectIsolationHTTP) serve(t *testing.T, features runtimeprofile.ProjectProfileConfig) ([2]isolationHTTP, *projectbrowser.ProjectHTTP, *[2]atomic.Int32) {
 	t.Helper()
 	ctx := t.Context()
 	builds := new([2]atomic.Int32)
-	handler, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
+	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test",
 		Residents:      projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute},
 		Capacity:       middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &f.password.Session,
 	}, f.deps,
-		func(_ context.Context, key projectruntime.Key, origin string) (projectprofile.ProjectProfileConfig, error) {
+		func(_ context.Context, key projectruntime.Key, origin string) (runtimeprofile.ProjectProfileConfig, error) {
 			for i, expected := range f.projects {
 				if key == expected && origin == f.origins[i] {
 					builds[i].Add(1)
 					return features, nil
 				}
 			}
-			return projectprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
+			return runtimeprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
 		}, nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)

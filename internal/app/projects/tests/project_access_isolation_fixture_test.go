@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
-	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
+	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
 )
 
 const (
@@ -37,7 +37,7 @@ func TestTwoProjectAccessIsolationSQL(t *testing.T) {
 	}
 	catalog, err := accesssettings.NewCatalog([]accesssettings.Permission{{Key: "reports.read", Name: "Read"}, {Key: "reports.write", Name: "Write"}})
 	require.NoError(t, err)
-	webs, _, _ := f.serve(t, projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, Access: &catalog, AuthSettingsEnabled: true, Timeout: 5 * time.Second})
+	webs, _, _ := f.serve(t, runtimeprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, Access: &catalog, AuthSettingsEnabled: true, Timeout: 5 * time.Second})
 	checkProjectAccessIsolation(t, t.Context(), f, webs)
 	checkProjectSettingsIsolation(t, t.Context(), f, webs)
 	checkPlatformRoleIsolation(t, t.Context(), pair, f)

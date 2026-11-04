@@ -3,10 +3,11 @@ package profile
 import (
 	"fmt"
 
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
-	projectmfa "github.com/Inforberi/financial-intelligence/internal/app/projects/mfa"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	mfamanagement "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/service"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
+	projectmfa "github.com/Inforberi/financial-intelligence/internal/auth/project/mfa"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
@@ -28,7 +29,7 @@ func compileProjectEmailMFA(cfg *config.Config) (projectmfa.ProjectEmailMFAConfi
 	return result, nil
 }
 
-func (d *ProjectAuthDeployment) applyEmailMFA(profile *ProjectProfileConfig, enabled bool) {
+func (d *ProjectAuthDeployment) applyEmailMFA(profile *projectprofile.ProjectProfileConfig, enabled bool) {
 	if !enabled {
 		return
 	}
@@ -37,7 +38,7 @@ func (d *ProjectAuthDeployment) applyEmailMFA(profile *ProjectProfileConfig, ena
 	enableProjectMFARecovery(profile)
 }
 
-func enableProjectMFARecovery(profile *ProjectProfileConfig) {
+func enableProjectMFARecovery(profile *projectprofile.ProjectProfileConfig) {
 	if profile.Password != nil {
 		profile.Password.MFA.RecoveryEnabled = true
 	}

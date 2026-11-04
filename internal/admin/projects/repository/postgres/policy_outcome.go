@@ -10,6 +10,7 @@ import (
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/internal/sqlerrors"
+	policymutation "github.com/Inforberi/financial-intelligence/internal/admin/projects/policy/repository/postgres/mutation"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	schemapostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/schema/postgres"
 )
@@ -47,7 +48,7 @@ func (r *Repository) ReadAuthPolicyOutcome(ctx context.Context, actor operatordo
 		if err != nil {
 			return domain.ErrUnavailable
 		}
-		result.AuthPolicyResult, result.Committed, err = readPolicyReceipt(ctx, tx, domain.PlatformActor{RealmID: key.Binding.RealmID, UserID: domain.ID(actor.UserID)}, command, binding, request)
+		result.AuthPolicyResult, result.Committed, err = policymutation.ReadReceipt(ctx, tx, domain.PlatformActor{RealmID: key.Binding.RealmID, UserID: domain.ID(actor.UserID)}, command, binding, request)
 		if err != nil || !result.Committed {
 			return err
 		}

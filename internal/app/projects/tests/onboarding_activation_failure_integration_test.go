@@ -14,8 +14,8 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/credentials"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	storage "github.com/Inforberi/financial-intelligence/internal/admin/projects/preparation/database/postgres"
 	preparationpostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/preparation/repository/postgres"
-	storage "github.com/Inforberi/financial-intelligence/internal/admin/projects/storage/postgres"
 )
 
 func onboardingActivationFailures(t *testing.T, physical *pgx.Conn, env func(string) string, repo *preparationpostgres.PreparationRepository, r domain.PreparationReservation, b credentials.Binding, codec *credentials.Codec, runtime *pgxpool.Pool, open func() (*storage.Target, *pgx.Conn), check func(string, bool) string) {

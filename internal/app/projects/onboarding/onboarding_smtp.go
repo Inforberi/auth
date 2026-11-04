@@ -6,7 +6,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
-	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
+	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsredis "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/redis"
@@ -27,7 +27,7 @@ func projectOnboardingSMTP(ctx context.Context, scope realmscope.Scope, root str
 	}
 	svc, err := settingssmtp.NewSMTP(settingspostgres.New(pool), cipher,
 		func(ctx context.Context, c settingsdomain.SMTPConfig, password string) error {
-			return mailer.CheckContext(ctx, projectapp.MailConfig(c, password))
+			return mailer.CheckContext(ctx, projectbinding.MailConfig(c, password))
 		}, limits, allowed, true)
 	if err != nil {
 		return nil, err
@@ -40,6 +40,6 @@ func projectOnboardingSMTP(ctx context.Context, scope realmscope.Scope, root str
 		if err != nil {
 			return mailer.Config{}, err
 		}
-		return projectapp.MailConfig(c, password), nil
+		return projectbinding.MailConfig(c, password), nil
 	}), nil
 }

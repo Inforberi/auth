@@ -16,7 +16,7 @@ type RoleRepository interface {
 	PrepareRoleCreation(context.Context, operatordomain.Principal, domain.RoleCreation) (domain.RoleIntent, error)
 	ExecuteRoleCreation(context.Context, operatordomain.Principal, domain.RoleCreation) (domain.RoleCreationResult, error)
 	ReadRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleOutcome, error)
-	ReconcileRoleOutcome(context.Context, operatordomain.Principal, domain.ID, domain.ID) (domain.RoleOutcome, error)
+	PrepareRoleReconciliation(context.Context, operatordomain.Principal, domain.ID, domain.ID) (RoleReconciliation, error)
 }
 
 func (s *Roles) ChangeRoleAssignment(ctx context.Context, actor operatordomain.Principal, command domain.RoleAssignment) (domain.RoleAssignmentResult, error) {
@@ -39,8 +39,4 @@ func (s *Roles) CreateRole(ctx context.Context, actor operatordomain.Principal, 
 
 func (s *Roles) ReadRoleOutcome(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (domain.RoleOutcome, error) {
 	return s.repo.ReadRoleOutcome(ctx, actor, project, operation)
-}
-
-func (s *Roles) ReconcileRoleOutcome(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (domain.RoleOutcome, error) {
-	return s.repo.ReconcileRoleOutcome(ctx, actor, project, operation)
 }

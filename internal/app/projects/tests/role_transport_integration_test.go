@@ -18,6 +18,8 @@ import (
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	catalog "github.com/Inforberi/financial-intelligence/internal/admin/projects/repository/postgres"
+	rolespostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/repository/postgres"
+	roleservice "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/service"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	schemapostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/schema/postgres"
@@ -109,7 +111,7 @@ func roleTransportDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Reposito
 			_, err := admin.Exec(ctx, `DELETE FROM platform.operator_permissions WHERE user_id=$1 AND permission_key='platform.projects.read'`, actor.UserID)
 			require.NoError(t, err)
 		}()
-		recovered, err := managed.ReconcileRoleOutcome(ctx, actor, command.ProjectID, command.OperationID, registry)
+		recovered, err := roleservice.NewRoles(rolespostgres.NewRuntimeRoles(managed, registry, settings.Catalog{})).ReconcileRoleOutcome(ctx, actor, command.ProjectID, command.OperationID)
 		require.NoError(t, err)
 		require.True(t, recovered.Committed)
 		var exactlyOnce bool

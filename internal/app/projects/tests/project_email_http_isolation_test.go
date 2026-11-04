@@ -11,14 +11,14 @@ import (
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	projectaccount "github.com/Inforberi/financial-intelligence/internal/app/projects/account"
-	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
-	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
+	projectaccount "github.com/Inforberi/financial-intelligence/internal/auth/project/account"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
+	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/transport/http/projects"
 )
 
 const emailHTTPBindingUser = "f8b00000-0000-4000-8000-000000000001"
@@ -63,14 +63,14 @@ func serveEmailHTTPIsolation(t *testing.T, f *emailIsolationFixture) [2]isolatio
 		management[i] = f.configs[i]
 		management[i].Binding = accountemail.EmailBindingConfig{Enabled: true, TTL: 5 * time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 1000}
 	}
-	handler, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &password.Session}, deps,
-		func(_ context.Context, key projectruntime.Key, origin string) (projectprofile.ProjectProfileConfig, error) {
+	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &password.Session}, deps,
+		func(_ context.Context, key projectruntime.Key, origin string) (runtimeprofile.ProjectProfileConfig, error) {
 			for i, expected := range f.projects.projects {
 				if key == expected && origin == f.projects.origins[i] {
-					return projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &password, Verification: &management[i].Verification, Recovery: &management[i].Password, EmailManagement: &management[i], EmailOTP: &otp, Timeout: 5 * time.Second}, nil
+					return runtimeprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &password, Verification: &management[i].Verification, Recovery: &management[i].Password, EmailManagement: &management[i], EmailOTP: &otp, Timeout: 5 * time.Second}, nil
 				}
 			}
-			return projectprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
+			return runtimeprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
 		}, nil)
 	require.NoError(t, err)
 	for i, key := range f.projects.projects {

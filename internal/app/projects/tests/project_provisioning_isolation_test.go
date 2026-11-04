@@ -11,11 +11,11 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
 )
 
 func checkInvitationTemporaryIsolation(t *testing.T, ctx context.Context, f *emailIsolationFixture) {

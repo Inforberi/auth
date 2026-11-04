@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	projectdelivery "github.com/Inforberi/financial-intelligence/internal/app/projects/delivery"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	projectdelivery "github.com/Inforberi/financial-intelligence/internal/auth/project/delivery"
 )
 
 func (f projectAccountFixture) delivery(t *testing.T, ctx context.Context, invited, bound, changed accountdomain.UserID) {

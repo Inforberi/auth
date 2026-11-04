@@ -12,18 +12,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
-	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	oidcdomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 	oidcredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/repository/redis"
 	oidcservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
+	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
-func projectOIDCDrill(t *testing.T, ctx context.Context, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, deps projectapp.ProjectSMTPDependencies, sourceUser string, hash *hasher.Bounded) {
+func projectOIDCDrill(t *testing.T, ctx context.Context, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, deps projectbinding.ProjectSMTPDependencies, sourceUser string, hash *hasher.Bounded) {
 	t.Helper()
 	configuration, err := deps.Reader.LoadAuthConfiguration(ctx, key, deps.Registry)
 	require.NoError(t, err)

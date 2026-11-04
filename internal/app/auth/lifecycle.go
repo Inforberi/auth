@@ -6,20 +6,20 @@ import (
 
 	"go.uber.org/zap"
 
-	projectdelivery "github.com/Inforberi/financial-intelligence/internal/app/projects/delivery"
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	mfadelivery "github.com/Inforberi/financial-intelligence/internal/auth/mfa/delivery/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
+	projectdelivery "github.com/Inforberi/financial-intelligence/internal/auth/project/delivery"
 )
 
-type deliveryWorker interface {
+type DeliveryWorker interface {
 	RunDelivery(context.Context, func(error))
 }
 
-func realmDeliveryWorkers(recovery *passwordrecovery.RecoveryService, account *accountemail.Verification, mfa *mfadelivery.SecurityDelivery, email *otpservice.Delivery, projects ...*projectdelivery.ProjectDelivery) []deliveryWorker {
-	var workers []deliveryWorker
+func DeliveryWorkers(recovery *passwordrecovery.RecoveryService, account *accountemail.Verification, mfa *mfadelivery.SecurityDelivery, email *otpservice.Delivery, projects ...*projectdelivery.ProjectDelivery) []DeliveryWorker {
+	var workers []DeliveryWorker
 	// Check concrete pointers before conversion: a typed nil is a non-nil interface.
 	if recovery != nil {
 		workers = append(workers, recovery)
@@ -41,7 +41,7 @@ func realmDeliveryWorkers(recovery *passwordrecovery.RecoveryService, account *a
 	return workers
 }
 
-func startDelivery(ctx context.Context, service deliveryWorker, log *zap.Logger,
+func startDelivery(ctx context.Context, service DeliveryWorker, log *zap.Logger,
 ) func() {
 	return startBackground(ctx, func(ctx context.Context) {
 		service.RunDelivery(ctx, func(err error) {
@@ -64,7 +64,7 @@ func startBackground(ctx context.Context, run func(context.Context)) func() {
 	return func() { cancel(); <-done }
 }
 
-func runWithDelivery(ctx context.Context, log *zap.Logger, serve func(context.Context) error, workers ...deliveryWorker,
+func runWithDelivery(ctx context.Context, log *zap.Logger, serve func(context.Context) error, workers ...DeliveryWorker,
 ) error {
 	for _, worker := range workers {
 		stop := startDelivery(ctx, worker, log)
@@ -73,12 +73,12 @@ func runWithDelivery(ctx context.Context, log *zap.Logger, serve func(context.Co
 	return serve(ctx)
 }
 
-type retentionWorker interface {
+type RetentionWorker interface {
 	RunRetention(context.Context, func(error))
 }
 
 func (r *Runtime) Run(ctx context.Context, log *zap.Logger, serve func(context.Context) error) error {
-	active := make([]deliveryWorker, 0, len(r.workers))
+	active := make([]DeliveryWorker, 0, len(r.workers))
 	for _, worker := range r.workers {
 		if worker != nil {
 			active = append(active, worker)

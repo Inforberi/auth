@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 
+	adminapp "github.com/Inforberi/financial-intelligence/internal/app/admin"
 	"github.com/Inforberi/financial-intelligence/internal/app/auth"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	"github.com/Inforberi/financial-intelligence/internal/config"
+	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 )
 
@@ -38,7 +40,12 @@ func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
 			return nil, err
 		}
 	}
-	assembled, err := auth.Assemble(ctx, cfg, deps)
+	var assembled *auth.Runtime
+	if cfg.Platform.Enabled {
+		assembled, err = adminapp.Assemble(ctx, cfg, deps, mailer.New(cfg.MailSender))
+	} else {
+		assembled, err = auth.Assemble(ctx, cfg, deps)
+	}
 	if err != nil {
 		return nil, err
 	}

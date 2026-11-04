@@ -14,12 +14,12 @@ import (
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
-	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
+	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/transport/http/projects"
 )
 
 type oidcIsolationFixture struct {
@@ -108,16 +108,16 @@ func prepareOIDCIsolation(t *testing.T, projects projectIsolationHTTP, provider 
 	owners := projectmethods.NewProjectOIDCClients(ctx)
 	t.Cleanup(owners.Close)
 	projects.deps.OIDCClients = owners
-	handler, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
+	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test",
 		Residents:      projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &projects.password.Session,
-	}, projects.deps, func(_ context.Context, key projectruntime.Key, origin string) (projectprofile.ProjectProfileConfig, error) {
+	}, projects.deps, func(_ context.Context, key projectruntime.Key, origin string) (runtimeprofile.ProjectProfileConfig, error) {
 		for i, expected := range projects.projects {
 			if key == expected && origin == projects.origins[i] {
-				return projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &projects.password, Google: &configs[i][0], Telegram: &configs[i][1], Timeout: 5 * time.Second}, nil
+				return runtimeprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &projects.password, Google: &configs[i][0], Telegram: &configs[i][1], Timeout: 5 * time.Second}, nil
 			}
 		}
-		return projectprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
+		return runtimeprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
 	}, nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)

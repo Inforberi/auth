@@ -8,6 +8,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	rolemutation "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/repository/postgres/mutation"
 )
 
 // Execute checks the actual transaction's project profile before mutation.
@@ -20,7 +21,7 @@ func (a *AdmittedRoleCreation) Execute(ctx context.Context, project ProjectDatab
 	var result domain.RoleCreationResult
 	err := executeProjectTransaction(ctx, project, a.until, a.used, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
-		result, err = CreatePlatformRoleInTransaction(ctx, tx, a.actor, a.binding, a.command, permissions, mfaReady)
+		result, err = rolemutation.CreatePlatformRoleInTransaction(ctx, tx, a.actor, a.binding, a.command, permissions, mfaReady)
 		return err
 	})
 	if err != nil {

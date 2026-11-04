@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
-	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
-	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
+	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
+	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/auth/project/token"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
@@ -22,7 +22,7 @@ type projectProfileFixture struct {
 	admin, db            *pgx.Conn
 	rdb                  *redis.Client
 	key                  projectruntime.Key
-	deps                 projectapp.ProjectSMTPDependencies
+	deps                 projectbinding.ProjectSMTPDependencies
 	hash                 *hasher.Bounded
 	listener             net.Listener
 	sourceUser, password string
@@ -43,10 +43,10 @@ func (f projectProfileFixture) run(t *testing.T, ctx context.Context) {
 	var origin string
 	require.NoError(t, f.admin.QueryRow(ctx, `SELECT origin FROM platform.projects WHERE id=$1`, f.key.Binding.ProjectID).Scan(&origin))
 	t.Run("project user directory HTTP", func(t *testing.T) { f.httpUserDirectory(t, ctx, origin) })
-	cfg := projectprofile.ProjectProfileConfig{Timeout: 10 * time.Second}
-	deps := projectprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader}}
+	cfg := runtimeprofile.ProjectProfileConfig{Timeout: 10 * time.Second}
+	deps := runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader}}
 	t.Run("MFA capability compatibility", func(t *testing.T) { f.mfaCapabilityProfile(t, ctx, origin, deps) })
-	closed, err := projectprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+	closed, err := runtimeprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.True(t, closed.Readiness().Ready)
 	require.Empty(t, closed.RoutePlan())
@@ -57,14 +57,14 @@ func (f projectProfileFixture) run(t *testing.T, ctx context.Context) {
 	deps.Hash = f.hash
 	_, err = f.db.Exec(ctx, `UPDATE auth.auth_settings SET version=version+1,password_enabled=true,registration_enabled=true`)
 	require.NoError(t, err)
-	login, err := projectprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+	login, err := runtimeprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.True(t, login.Readiness().Ready)
 	require.Len(t, login.RoutePlan(), 11)
 	_, err = f.db.Exec(ctx, `UPDATE auth.auth_settings SET version=version+1,password_email_verification='required'`)
 	require.NoError(t, err)
 	require.ErrorIs(t, login.CheckCurrent(ctx), settingsdomain.ErrPolicyConflict)
-	missingMail, err := projectprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+	missingMail, err := runtimeprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.False(t, missingMail.Readiness().Ready)
 	require.Len(t, missingMail.RoutePlan(), 7)
@@ -78,7 +78,7 @@ func (f projectProfileFixture) run(t *testing.T, ctx context.Context) {
 	t.Run("project HTTP profiles", func(t *testing.T) { f.httpProfile(t, ctx, origin) })
 }
 
-func profileFeature(t *testing.T, profile *projectprofile.ProjectProfile, feature string) projectprofile.ProjectFeatureState {
+func profileFeature(t *testing.T, profile *runtimeprofile.ProjectProfile, feature string) runtimeprofile.ProjectFeatureState {
 	t.Helper()
 	for _, state := range profile.Readiness().Features {
 		if state.Feature == feature {
@@ -86,5 +86,5 @@ func profileFeature(t *testing.T, profile *projectprofile.ProjectProfile, featur
 		}
 	}
 	t.Fatalf("missing feature %s", feature)
-	return projectprofile.ProjectFeatureState{}
+	return runtimeprofile.ProjectFeatureState{}
 }

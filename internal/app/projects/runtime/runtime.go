@@ -102,14 +102,3 @@ func projectStorageTarget(c config.ProjectRuntimeConfig) (projectruntime.Target,
 	}
 	return projectruntime.NewTarget(c.StorageHost, c.StoragePort, transport)
 }
-
-func RequireCurrent(ctx context.Context, reader *runtimepostgres.RuntimeCredentialReader, key projectruntime.Key) error {
-	current, err := reader.CurrentRuntimes(ctx, []projectruntime.Key{key})
-	if err != nil {
-		return err
-	}
-	if !current[0] {
-		return projectdomain.ErrConflict
-	}
-	return nil
-}

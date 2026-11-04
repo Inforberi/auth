@@ -16,17 +16,17 @@ import (
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
-	projectaccount "github.com/Inforberi/financial-intelligence/internal/app/projects/account"
-	projectdelivery "github.com/Inforberi/financial-intelligence/internal/app/projects/delivery"
-	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
+	projectaccount "github.com/Inforberi/financial-intelligence/internal/auth/project/account"
+	projectdelivery "github.com/Inforberi/financial-intelligence/internal/auth/project/delivery"
+	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
-func projectEmailDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, deps projectapp.ProjectSMTPDependencies, listener net.Listener) {
+func projectEmailDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, deps projectbinding.ProjectSMTPDependencies, listener net.Listener) {
 	t.Helper()
 	ctx := t.Context()
 	const user = "f8200000-0000-4000-8000-000000000001"

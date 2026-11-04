@@ -7,11 +7,12 @@ import (
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
-	projectmfa "github.com/Inforberi/financial-intelligence/internal/app/projects/mfa"
-	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
-	projectsettings "github.com/Inforberi/financial-intelligence/internal/app/projects/settings"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
+	projectmfa "github.com/Inforberi/financial-intelligence/internal/auth/project/mfa"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
+	projectsettings "github.com/Inforberi/financial-intelligence/internal/auth/project/settings"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/auth/project/token"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
@@ -22,7 +23,7 @@ type compiledProjectDeployment struct {
 }
 
 type ProjectAuthDeployment struct {
-	legacy           ProjectProfileSource
+	legacy           projectprofile.ProjectProfileSource
 	smtpTargets      []string
 	realm            projectdomain.ID
 	entries          map[projectdomain.ID]compiledProjectDeployment
@@ -97,12 +98,12 @@ func LoadProjectAuthDeployment(cfg *config.Config) (*ProjectAuthDeployment, erro
 	return d, nil
 }
 
-func (d *ProjectAuthDeployment) Profile(ctx context.Context, key projectruntime.Key, origin string) (ProjectProfileConfig, error) {
+func (d *ProjectAuthDeployment) Profile(ctx context.Context, key projectruntime.Key, origin string) (projectprofile.ProjectProfileConfig, error) {
 	if d == nil || d.legacy == nil {
-		return ProjectProfileConfig{}, projectdomain.ErrUnavailable
+		return projectprofile.ProjectProfileConfig{}, projectdomain.ErrUnavailable
 	}
 	if !key.Valid() || key.Binding.RealmID != d.realm {
-		return ProjectProfileConfig{}, projectdomain.ErrConflict
+		return projectprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
 	}
 	base, err := d.legacy(ctx, key, origin)
 	if err != nil || d.entries == nil {
@@ -110,7 +111,7 @@ func (d *ProjectAuthDeployment) Profile(ctx context.Context, key projectruntime.
 	}
 	entry, ok := d.entries[key.Binding.ProjectID]
 	if !ok {
-		return ProjectProfileConfig{Timeout: base.Timeout}, nil
+		return projectprofile.ProjectProfileConfig{Timeout: base.Timeout}, nil
 	}
 	profile := d.browserProfile(base, entry.methods)
 	if entry.access != nil {
@@ -143,8 +144,8 @@ func (d *ProjectAuthDeployment) Profile(ctx context.Context, key projectruntime.
 	return profile, nil
 }
 
-func (d *ProjectAuthDeployment) browserProfile(base ProjectProfileConfig, methods projectMethodDeployment) ProjectProfileConfig {
-	profile := ProjectProfileConfig{BrowserEnabled: methods.Browser, UserDirectoryEnabled: methods.UserDirectory, UserLifecycleEnabled: methods.UserLifecycle, AuthSettingsEnabled: methods.AuthSettings, ProviderSettingsEnabled: methods.ProviderSettings, RetentionSettingsEnabled: methods.RetentionSettings, MFASettingsEnabled: methods.MFASettings, Timeout: base.Timeout}
+func (d *ProjectAuthDeployment) browserProfile(base projectprofile.ProjectProfileConfig, methods projectMethodDeployment) projectprofile.ProjectProfileConfig {
+	profile := projectprofile.ProjectProfileConfig{BrowserEnabled: methods.Browser, UserDirectoryEnabled: methods.UserDirectory, UserLifecycleEnabled: methods.UserLifecycle, AuthSettingsEnabled: methods.AuthSettings, ProviderSettingsEnabled: methods.ProviderSettings, RetentionSettingsEnabled: methods.RetentionSettings, MFASettingsEnabled: methods.MFASettings, Timeout: base.Timeout}
 	if methods.SMTPSettings {
 		profile.SMTPSettings = &projectsettings.ProjectSMTPSettingsConfig{AllowedTargets: slices.Clone(d.smtpTargets)}
 	}

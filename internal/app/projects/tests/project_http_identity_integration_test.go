@@ -17,23 +17,23 @@ import (
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
-	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
-	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
-	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
+	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
+	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/auth/project/token"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/transport/http/projects"
 )
 
 type projectIdentityHTTPFixture struct {
 	admin, db  *pgx.Conn
 	rdb        *redis.Client
 	key        projectruntime.Key
-	deps       projectapp.ProjectSMTPDependencies
+	deps       projectbinding.ProjectSMTPDependencies
 	clients    *projectmethods.ProjectOIDCClients
 	ciphers    map[string]*secretbox.Cipher
 	prefixes   map[string]string
@@ -67,12 +67,12 @@ UPDATE auth.auth_settings SET password_enabled=$2,google_enabled=$3,telegram_ena
 	provider := func(name string) *projectmethods.ProjectOIDCConfig {
 		return &projectmethods.ProjectOIDCConfig{Provider: name, Enabled: true, RedirectURI: origin + "/api/v1/auth/" + name + "/callback", IPLimit: 30, GlobalLimit: 1000, Session: session, Timeout: 10 * time.Second}
 	}
-	handler, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
+	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-identity.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 20 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &session,
-	}, projectprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, OIDCClients: f.clients}, func(_ context.Context, key projectruntime.Key, selected string) (projectprofile.ProjectProfileConfig, error) {
+	}, runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, OIDCClients: f.clients}, func(_ context.Context, key projectruntime.Key, selected string) (runtimeprofile.ProjectProfileConfig, error) {
 		require.Equal(t, f.key, key)
 		require.Equal(t, origin, selected)
-		return projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &passwordConfig, Google: provider("google"), Telegram: provider("telegram"), Timeout: 10 * time.Second}, nil
+		return runtimeprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &passwordConfig, Google: provider("google"), Telegram: provider("telegram"), Timeout: 10 * time.Second}, nil
 	}, nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)

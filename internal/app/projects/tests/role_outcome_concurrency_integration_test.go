@@ -8,10 +8,13 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 
+	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/credentials"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	catalog "github.com/Inforberi/financial-intelligence/internal/admin/projects/repository/postgres"
+	rolespostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/repository/postgres"
+	roleservice "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/service"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 )
 
@@ -70,7 +73,7 @@ func roleOutcomeConcurrencyDrill(t *testing.T, admin *pgx.Conn, managed *catalog
 			require.NoError(t, err)
 			finished := make(chan error, 1)
 			go func() {
-				_, e := managed.ReconcileRoleOutcome(bounded, actor, command.ProjectID, command.OperationID, registry)
+				_, e := roleservice.NewRoles(rolespostgres.NewRuntimeRoles(managed, registry, accesssettings.Catalog{})).ReconcileRoleOutcome(bounded, actor, command.ProjectID, command.OperationID)
 				finished <- e
 			}()
 			waitRoleSQL(t, bounded, blocker, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=current_database()
@@ -107,7 +110,7 @@ func roleOutcomeConcurrencyDrill(t *testing.T, admin *pgx.Conn, managed *catalog
 		for range 4 {
 			go func() {
 				<-start
-				outcome, e := managed.ReconcileRoleOutcome(bounded, actor, command.ProjectID, command.OperationID, registry)
+				outcome, e := roleservice.NewRoles(rolespostgres.NewRuntimeRoles(managed, registry, accesssettings.Catalog{})).ReconcileRoleOutcome(bounded, actor, command.ProjectID, command.OperationID)
 				if e == nil && (!outcome.Committed || outcome.Role.ID != created.Role.ID) {
 					e = domain.ErrConflict
 				}

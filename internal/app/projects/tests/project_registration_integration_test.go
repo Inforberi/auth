@@ -15,7 +15,6 @@ import (
 
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
@@ -24,6 +23,7 @@ import (
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"

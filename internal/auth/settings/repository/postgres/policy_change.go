@@ -9,25 +9,10 @@ import (
 )
 
 func CheckPolicyChange(ctx context.Context, tx pgx.Tx, before domain.Snapshot, expected int64, next domain.Policy, runtime domain.PolicyRuntime) error {
-	if before.Version != expected {
-		return domain.ErrPolicyConflict
-	}
-	if !runtime.Configured {
-		return domain.ErrMethodNotReady
-	}
-	if err := next.RequireAvailable(runtime.Methods); err != nil {
+	if err := runtime.CheckChange(before, expected, next); err != nil {
 		return err
 	}
-	if next.TokenIssuance.SessionExchange && !runtime.Tokens.SessionExchange || next.TokenIssuance.Native && !runtime.Tokens.Native {
-		return domain.ErrMethodNotReady
-	}
-	if runtime.RequireStoredProviders && next.RequiresEmailDelivery() && !runtime.EmailDeliveryReady {
-		return domain.ErrMethodNotReady
-	}
 	if runtime.Dependencies != nil {
-		if next.Methods.Password && next.PasswordEmailVerification != domain.VerificationDisabled && !runtime.VerificationReady {
-			return domain.ErrMethodNotReady
-		}
 		if err := checkDependencyVersions(ctx, tx, next, *runtime.Dependencies); err != nil {
 			return err
 		}

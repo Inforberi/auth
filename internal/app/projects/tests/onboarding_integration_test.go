@@ -12,9 +12,9 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/credentials"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
+	storage "github.com/Inforberi/financial-intelligence/internal/admin/projects/preparation/database/postgres"
 	preparationpostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/preparation/repository/postgres"
 	preparationcli "github.com/Inforberi/financial-intelligence/internal/admin/projects/preparation/transport/cli"
-	storage "github.com/Inforberi/financial-intelligence/internal/admin/projects/storage/postgres"
 	preparationapp "github.com/Inforberi/financial-intelligence/internal/app/projects/preparation"
 )
 

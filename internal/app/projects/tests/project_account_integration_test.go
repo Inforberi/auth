@@ -16,9 +16,6 @@ import (
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	projectaccount "github.com/Inforberi/financial-intelligence/internal/app/projects/account"
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
-	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
@@ -27,6 +24,9 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	projectaccount "github.com/Inforberi/financial-intelligence/internal/auth/project/account"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
+	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
@@ -39,7 +39,7 @@ type projectAccountFixture struct {
 	db         *pgx.Conn
 	rdb        *redis.Client
 	key        projectruntime.Key
-	deps       projectapp.ProjectSMTPDependencies
+	deps       projectbinding.ProjectSMTPDependencies
 	hash       *hasher.Bounded
 	cfg        projectaccount.ProjectEmailConfig
 	listener   net.Listener

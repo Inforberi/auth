@@ -16,12 +16,12 @@ import (
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
-	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
-	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
+	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/auth/project/token"
 	tokenredis "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/redis"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/transport/http/projects"
 )
 
 const isolationTokenClient = "isolated-reports"
@@ -75,16 +75,16 @@ func prepareTokenIsolation(t *testing.T, projects projectIsolationHTTP) tokenIso
 	require.NotEqual(t, names[0], names[1], "each project must use its own physical database")
 	require.NotEqual(t, projects.projects[0].Binding.DatabaseOID, projects.projects[1].Binding.DatabaseOID)
 	f.registerCleanup(t, ctx)
-	handler, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
+	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute},
 		Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &projects.password.Session,
-	}, projects.deps, func(_ context.Context, key projectruntime.Key, origin string) (projectprofile.ProjectProfileConfig, error) {
+	}, projects.deps, func(_ context.Context, key projectruntime.Key, origin string) (runtimeprofile.ProjectProfileConfig, error) {
 		for i, expected := range projects.projects {
 			if key == expected && origin == projects.origins[i] {
-				return projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &projects.password, Tokens: &f.configs[i], Timeout: 5 * time.Second}, nil
+				return runtimeprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &projects.password, Tokens: &f.configs[i], Timeout: 5 * time.Second}, nil
 			}
 		}
-		return projectprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
+		return runtimeprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
 	}, nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)

@@ -16,12 +16,12 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
-	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/auth/project/token"
 	tokenredis "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/redis"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
@@ -46,7 +46,7 @@ type projectTokenFixture struct {
 	db                   *pgx.Conn
 	rdb                  *redis.Client
 	key                  projectruntime.Key
-	deps                 projectapp.ProjectSMTPDependencies
+	deps                 projectbinding.ProjectSMTPDependencies
 	hash                 *hasher.Bounded
 	listener             net.Listener
 	sourceUser, password string

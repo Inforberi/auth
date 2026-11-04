@@ -11,6 +11,7 @@ import (
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	rolespostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/repository/postgres"
+	roleservice "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/service"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 )
 
@@ -69,7 +70,7 @@ func checkPlatformRoleIsolation(t *testing.T, ctx context.Context, pair prepared
 	require.ErrorIs(t, err, domain.ErrConflict)
 	_, err = managed.ReadRoleOutcome(ctx, actor, commands[1].ProjectID, commands[0].OperationID)
 	require.ErrorIs(t, err, domain.ErrNotFound)
-	_, err = managed.ReconcileRoleOutcome(ctx, actor, commands[1].ProjectID, commands[0].OperationID, f.deps.Registry)
+	_, err = roleservice.NewRoles(rolespostgres.NewRuntimeRoles(managed, f.deps.Registry, accesssettings.Catalog{})).ReconcileRoleOutcome(ctx, actor, commands[1].ProjectID, commands[0].OperationID)
 	require.ErrorIs(t, err, domain.ErrNotFound)
 	replayed, err := runtime.ExecuteRoleCreation(ctx, actor, commands[0])
 	require.NoError(t, err)

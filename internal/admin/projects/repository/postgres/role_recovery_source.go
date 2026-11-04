@@ -9,19 +9,26 @@ import (
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/internal/sqlerrors"
+	rolemutation "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/repository/postgres/mutation"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 )
 
-type roleRecoverySource struct {
-	key        projectruntime.Key
-	action     domain.RoleAction
-	request    []byte
-	creation   domain.RoleCreation
-	assignment domain.RoleAssignment
+type RoleReceiptSource struct {
+	repository  *Repository
+	operation   domain.ID
+	actor       domain.ID
+	snapshot    []byte
+	admission   domain.ID
+	found, read bool
+	key         projectruntime.Key
+	action      domain.RoleAction
+	request     []byte
+	creation    domain.RoleCreation
+	assignment  domain.RoleAssignment
 }
 
-func (r *Repository) roleRecoverySource(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (roleRecoverySource, error) {
-	var job roleRecoverySource
+func (r *Repository) LoadRoleReceiptSource(ctx context.Context, actor operatordomain.Principal, project, operation domain.ID) (*RoleReceiptSource, error) {
+	job := RoleReceiptSource{repository: r, operation: operation, actor: domain.ID(actor.UserID)}
 	b := &job.key.Binding
 	err := r.db.QueryRow(ctx, `SELECT realm_id::text,request,binding->>'target',binding->>'reservation',
 		(binding->>'database_oid')::oid,(binding->>'owner_oid')::oid,(binding->>'runtime_oid')::oid,(binding->>'schema')::int,
@@ -32,16 +39,16 @@ func (r *Repository) roleRecoverySource(ctx context.Context, actor operatordomai
 		&job.key.Version, &job.key.Generation, &job.action,
 	)
 	if err != nil {
-		return job, sqlerrors.Catalog(ctx, err)
+		return &job, sqlerrors.Catalog(ctx, err)
 	}
 	b.ProjectID = project
 	if err := job.validate(project, operation); err != nil {
-		return job, err
+		return &job, err
 	}
-	return job, nil
+	return &job, nil
 }
 
-func (j *roleRecoverySource) validate(project, operation domain.ID) error {
+func (j *RoleReceiptSource) validate(project, operation domain.ID) error {
 	switch j.action {
 	case domain.RoleCreate:
 		c := &j.creation
@@ -62,20 +69,20 @@ func (j *roleRecoverySource) validate(project, operation domain.ID) error {
 	return nil
 }
 
-func (j roleRecoverySource) receipt(ctx context.Context, tx pgx.Tx, actor domain.ID) ([]byte, domain.ID, bool, error) {
+func (j RoleReceiptSource) receipt(ctx context.Context, tx pgx.Tx, actor domain.ID) ([]byte, domain.ID, bool, error) {
 	target, err := json.Marshal(j.key.Binding)
 	if err != nil {
 		return nil, "", false, domain.ErrUnavailable
 	}
 	if j.action == domain.RoleCreate {
-		result, admission, found, err := readRoleReceipt(ctx, tx, j.key.Binding.RealmID, actor, j.creation, target, j.request)
+		result, admission, found, err := rolemutation.ReadCreationReceipt(ctx, tx, j.key.Binding.RealmID, actor, j.creation, target, j.request)
 		if err != nil || !found {
 			return nil, admission, found, err
 		}
 		snapshot, err := json.Marshal(result.Role)
 		return snapshot, admission, true, err
 	}
-	result, admission, found, err := readAssignmentReceipt(ctx, tx, j.key.Binding.RealmID, actor, j.assignment, target, j.request)
+	result, admission, found, err := rolemutation.ReadAssignmentReceipt(ctx, tx, j.key.Binding.RealmID, actor, j.assignment, target, j.request)
 	if err != nil || !found {
 		return nil, admission, found, err
 	}

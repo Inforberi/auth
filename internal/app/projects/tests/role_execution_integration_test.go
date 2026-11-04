@@ -14,7 +14,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/credentials"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
-	catalog "github.com/Inforberi/financial-intelligence/internal/admin/projects/repository/postgres"
+	rolemutation "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/repository/postgres/mutation"
 )
 
 func projectRoleDrill(t *testing.T, physical *pgx.Conn, runtime *pgxpool.Pool, binding credentials.Binding, markerBefore string) string {
@@ -54,7 +54,7 @@ func projectRoleDrill(t *testing.T, physical *pgx.Conn, runtime *pgxpool.Pool, b
 			return domain.RoleCreationResult{}, err
 		}
 		defer func() { _ = tx.Rollback(ctx) }()
-		result, err := catalog.CreatePlatformRoleInTransaction(bounded, tx, a, b, c, permissions, ready)
+		result, err := rolemutation.CreatePlatformRoleInTransaction(bounded, tx, a, b, c, permissions, ready)
 		if err != nil {
 			return domain.RoleCreationResult{}, err
 		}
@@ -70,7 +70,7 @@ func projectRoleDrill(t *testing.T, physical *pgx.Conn, runtime *pgxpool.Pool, b
 				return err
 			}
 			defer func() { _ = tx.Rollback(ctx) }()
-			_, err = catalog.CreatePlatformRoleInTransaction(ctx, tx, actor, binding, command, permissions, true)
+			_, err = rolemutation.CreatePlatformRoleInTransaction(ctx, tx, actor, binding, command, permissions, true)
 			return err
 		})
 	})
@@ -149,7 +149,7 @@ func projectRoleDrill(t *testing.T, physical *pgx.Conn, runtime *pgxpool.Pool, b
 		c.OperationID, c.Key = "e2000000-0000-4000-8000-000000000086", "platform_drill_rollback"
 		tx, err := runtime.Begin(ctx)
 		require.NoError(t, err)
-		_, prepared := catalog.CreatePlatformRoleInTransaction(ctx, tx, actor, binding, c, permissions, true)
+		_, prepared := rolemutation.CreatePlatformRoleInTransaction(ctx, tx, actor, binding, c, permissions, true)
 		require.NoError(t, tx.Rollback(ctx))
 		require.NoError(t, prepared)
 		require.NoError(t, runtime.QueryRow(ctx, `SELECT NOT EXISTS(SELECT 1 FROM auth.roles WHERE key=$1)

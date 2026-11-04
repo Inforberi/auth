@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
-	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/auth/project/token"
 	tokenredis "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/redis"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"

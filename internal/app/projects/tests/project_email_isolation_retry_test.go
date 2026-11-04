@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	projectdelivery "github.com/Inforberi/financial-intelligence/internal/app/projects/delivery"
-	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
+	projectdelivery "github.com/Inforberi/financial-intelligence/internal/auth/project/delivery"
+	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
 )
 
 func checkEmailIsolationRetries(t *testing.T, ctx context.Context, f *emailIsolationFixture) {
@@ -17,7 +17,7 @@ func checkEmailIsolationRetries(t *testing.T, ctx context.Context, f *emailIsola
 	runCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
 	defer cancel()
 	allowed := []string{f.listeners[0].Addr().String(), f.listeners[1].Addr().String()}
-	deps := projectapp.ProjectSMTPDependencies{Registry: f.projects.deps.Registry, Reader: f.projects.deps.Reader, Redis: f.projects.deps.Redis}
+	deps := projectbinding.ProjectSMTPDependencies{Registry: f.projects.deps.Registry, Reader: f.projects.deps.Reader, Redis: f.projects.deps.Redis}
 	runner, err := projectdelivery.NewProjectDelivery(projectdelivery.ProjectDeliveryConfig{Parallelism: 1, PageSize: projectruntime.StateBatchSize, Interval: time.Second, SMTPAllowedTargets: allowed}, deps)
 	require.NoError(t, err)
 	released := make(chan struct{})

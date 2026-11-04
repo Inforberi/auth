@@ -10,9 +10,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
-	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
+	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
@@ -58,7 +58,7 @@ func TestTwoProjectEmailOTPHTTPIsolationSQL(t *testing.T) {
 	})
 	f.deps.Delivery = runEmailHTTPDelivery(t, email)
 	cfg := projectmethods.ProjectEmailOTPConfig{OTP: otpservice.Config{Enabled: true, ReauthenticationEnabled: true, TTL: 5 * time.Minute, ResendInterval: time.Minute, RequestGlobalLimit: 100, ConfirmGlobalLimit: 1000}, MFA: f.password.MFA, Session: f.password.Session, Timeout: 5 * time.Second}
-	webs, handler, _ := f.serve(t, projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, EmailOTP: &cfg, Timeout: 5 * time.Second})
+	webs, handler, _ := f.serve(t, runtimeprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, EmailOTP: &cfg, Timeout: 5 * time.Second})
 	for i, key := range f.projects {
 		require.Eventually(t, func() bool {
 			assessment, err := handler.Assess(ctx, key, f.origins[i])

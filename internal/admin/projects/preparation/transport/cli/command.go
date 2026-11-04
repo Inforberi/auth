@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
-	preparationapp "github.com/Inforberi/financial-intelligence/internal/app/projects/preparation"
+	preparationservice "github.com/Inforberi/financial-intelligence/internal/admin/projects/preparation/service"
 )
 
 type command struct {
@@ -47,6 +47,6 @@ func parseCommand(args []string, env func(string) string, diagnostics io.Writer)
 	return input, input.options().ValidateStages()
 }
 
-func (input command) options() preparationapp.Input {
-	return preparationapp.Input{Request: input.request, Realm: input.realm, Target: input.target, Schema: input.schema, Secrets: input.secrets, Password: input.password, Onboarding: input.onboarding, Managed: input.managed}
+func (input command) options() preparationservice.Input {
+	return preparationservice.Input{Request: input.request, Realm: input.realm, Target: input.target, Schema: input.schema, Secrets: input.secrets, Password: input.password, Onboarding: input.onboarding, Managed: input.managed}
 }

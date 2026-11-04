@@ -11,12 +11,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	projectaccount "github.com/Inforberi/financial-intelligence/internal/app/projects/account"
-	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
+	projectaccount "github.com/Inforberi/financial-intelligence/internal/auth/project/account"
+	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
@@ -47,7 +47,7 @@ func prepareEmailIsolation(t *testing.T, projects projectIsolationHTTP) *emailIs
 	t.Helper()
 	ctx := t.Context()
 	f := &emailIsolationFixture{projects: projects}
-	deps := projectapp.ProjectSMTPDependencies{Registry: projects.deps.Registry, Reader: projects.deps.Reader, Redis: projects.deps.Redis}
+	deps := projectbinding.ProjectSMTPDependencies{Registry: projects.deps.Registry, Reader: projects.deps.Reader, Redis: projects.deps.Redis}
 	for i, key := range projects.projects {
 		db := projects.databases[i]
 		seedHTTPAdministrators(t, ctx, db)
