@@ -82,7 +82,7 @@ func TestStoragePreparationSQL(t *testing.T) {
 	if root == "" {
 		root = "../../../../.."
 	}
-	script, err := os.ReadFile(filepath.Join(root, "deploy/storage-target.sql"))
+	script, err := os.ReadFile(filepath.Join(root, "deploy/postgres/storage-target.sql"))
 	require.NoError(t, err)
 	realm := domain.ID("c1000000-0000-4000-8000-000000000001")
 	sql := strings.ReplaceAll(string(script), ":'realm'", "'"+string(realm)+"'")

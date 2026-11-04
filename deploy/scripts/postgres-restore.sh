@@ -11,7 +11,7 @@ database="${POSTGRES_DB:-$(read_key POSTGRES_DB)}"
 [[ "$app_name" =~ ^[a-z0-9][a-z0-9_-]*$ && "$database" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || { echo 'Unsafe target identifiers' >&2; exit 1; }
 [[ "${RESTORE_CONFIRM:-}" == "$app_name:$database" ]] || { echo "Confirmation must equal $app_name:$database" >&2; exit 1; }
 [[ "${RESTORE_FILE:-}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.dump$ ]] || { echo 'Invalid archive filename' >&2; exit 1; }
-compose() { docker compose --project-directory "$project_root" --env-file "$env_file" -p "$app_name" -f "$project_root/deploy/compose.base.yml" -f "$project_root/deploy/compose.prod.yml" "$@"; }
+compose() { APP_ENV_FILE="${AUTH_APP_ENV_FILE:-.env.prod.app}" docker compose --project-directory "$project_root" --env-file "$env_file" -p "$app_name" -f "$project_root/deploy/compose/base.yml" -f "$project_root/deploy/compose/production.yml" "$@"; }
 # Docker names provide a host-wide operation mutex, including on macOS.
 # An interrupted operation leaves API stopped; a stale mutex requires inspection.
 lock_container="$app_name-restore-operation"
@@ -26,8 +26,8 @@ compose run --rm --no-deps backup restore "$RESTORE_FILE"
 # Reconcile published migration versions after restoring an older archive.
 compose run --rm --no-deps migrate up
 # pg_dump/pg_restore deliberately omit privileges; reapply the reviewed role grants.
-compose exec -T postgres sh -c 'exec psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"' < "$project_root/deploy/runtime-grants.sql"
-compose exec -T postgres sh -c 'exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"' < "$project_root/deploy/restore-auth-state.sql"
+compose exec -T postgres sh -c 'exec psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"' < "$project_root/internal/admin/projects/schema/runtime-grants.sql"
+compose exec -T postgres sh -c 'exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"' < "$project_root/deploy/postgres/restore-auth-state.sql"
 compose run --rm --no-deps backup healthcheck-unlocked-standalone
 if [[ "$backup_running" == true ]]; then compose up -d --no-deps backup; fi
 echo "Database restore verified for $app_name:$database; API remains stopped."

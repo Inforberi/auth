@@ -4,18 +4,18 @@
 
 ## Настройка отдельного процесса
 
-Используются четыре operational ENV из [отдельного примера](../../deploy/project-prepare.env.example), не из настроек пользователя/UI:
+Используются четыре operational ENV из [отдельного примера](../../deploy/examples/project-prepare.env.example), не из настроек пользователя/UI:
 
 | ENV | Назначение |
 | --- | --- |
 | `PROVISIONER_REALM_ID` | UUID уже настроенной платформы |
 | `PROVISIONER_STORAGE_TARGET` | Единственный разрешённый target, совпадающий с каталогом и marker |
-| `PROVISIONER_CATALOG_URL` | Catalog LOGIN с [минимальными preparation grants](../../deploy/platform-preparation-grants.sql), без Auth/DDL |
+| `PROVISIONER_CATALOG_URL` | Catalog LOGIN с [минимальными preparation grants](../../deploy/postgres/grants/platform-preparation-grants.sql), без Auth/DDL |
 | `PROVISIONER_STORAGE_URL` | Отдельный LOGIN целевого PostgreSQL, подключённый к выделенной maintenance-БД |
 
 Для сети обязательны `sslmode=verify-full`, проверка hostname/certificate и один explicit endpoint без fallback. Для локального оператора/тестов допускается только явно указанный Unix socket с `sslmode=disable`; plaintext TCP не допускается. DSN/пароли не передаются в flags и не печатаются в результатах/driver errors. Runtime SQL options из URL/PGOPTIONS заменяются процессом, connect timeout5s, statement timeout45s, lock timeout2s, idle transaction5s. Секреты предоставляет защищённое окружение процесса; пример не содержит рабочих credentials.
 
-Оператор инфраструктуры один раз создаёт **отдельную maintenance-БД**, не Auth/каталог, и отдельный LOGIN `auth_storage_executor`: CREATEDB CREATEROLE NOINHERIT, без SUPERUSER/REPLICATION/BYPASSRLS и чужих memberships. Затем owner/migrator устанавливает [storage-target.sql](../../deploy/storage-target.sql), передав `psql -v ON_ERROR_STOP=1 -v realm=<platform UUID> -v target=primary`. Скрипт не создаёт LOGIN/пароль, не вызывается Auth автоматически и не является новой миграцией Auth. Таблицы принадлежат другому административному владельцу; executor не может менять marker, nonce, owner OID или удалять журнал. API credential не получает grants на эти таблицы.
+Оператор инфраструктуры один раз создаёт **отдельную maintenance-БД**, не Auth/каталог, и отдельный LOGIN `auth_storage_executor`: CREATEDB CREATEROLE NOINHERIT, без SUPERUSER/REPLICATION/BYPASSRLS и чужих memberships. Затем owner/migrator устанавливает [storage-target.sql](../../deploy/postgres/storage-target.sql), передав `psql -v ON_ERROR_STOP=1 -v realm=<platform UUID> -v target=primary`. Скрипт не создаёт LOGIN/пароль, не вызывается Auth автоматически и не является новой миграцией Auth. Таблицы принадлежат другому административному владельцу; executor не может менять marker, nonce, owner OID или удалять журнал. API credential не получает grants на эти таблицы.
 
 **Один target имеет ровно одну authoritative maintenance-БД**. Advisory locks PostgreSQL привязаны к БД: второй установленный журнал/копия maintenance-БД на том же кластере не является вторым независимым executor для того же target. Такая конфигурация запрещена. DSN нельзя принимать из HTTP; ручной перенос/failover требует остановки writers и согласованного восстановления marker/resources. Глобальную межкластерную блокировку этот этап не реализует.
 

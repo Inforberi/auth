@@ -38,7 +38,7 @@ func operatorPreparationDrill(t *testing.T, admin, api *pgxpool.Pool, realm stri
 	if root == "" {
 		root = filepath.Join("..", "..", "..")
 	}
-	source, err := os.ReadFile(filepath.Join(root, "deploy", "platform-preparation-grants.sql"))
+	source, err := os.ReadFile(filepath.Join(root, "deploy", "postgres", "grants", "platform-preparation-grants.sql"))
 	if err != nil {
 		t.Fatal(err)
 	}

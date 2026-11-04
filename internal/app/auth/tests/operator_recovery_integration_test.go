@@ -46,7 +46,7 @@ func TestOperatorRecoverySchema(t *testing.T) {
 		accessExec(t, db, ctx, `REVOKE CONNECT ON DATABASE auth_schema_test FROM auth_recovery_operator;
 			DROP ROLE auth_schema_operator; DROP ROLE auth_schema_runtime; DROP ROLE auth_recovery_operator`)
 	})
-	grants, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "deploy", "recovery-grants.sql"))
+	grants, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "deploy", "postgres", "grants", "recovery-grants.sql"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -28,7 +28,7 @@ Nonce/target/проект/createdAt не обновляются при повт�
 
 ## Credential и grants
 
-[Отдельный template](../../deploy/platform-preparation-grants.sql) рассчитан на catalog LOGIN `auth_platform_preparation` в платформенной БД. Его создаёт оператор отдельно; runtime owner/superuser/CREATEDB/CREATEROLE не подходит. Права: platform metadata SELECT, минимальные lifecycle/event column grants и preparation INSERT/UPDATE только mutable attempt fields. Нет Auth schema USAGE, operator grants mutation, project INSERT/DELETE/binding rewrite, event rewrite или preparation DELETE/identity rewrite.
+[Отдельный template](../../deploy/postgres/grants/platform-preparation-grants.sql) рассчитан на catalog LOGIN `auth_platform_preparation` в платформенной БД. Его создаёт оператор отдельно; runtime owner/superuser/CREATEDB/CREATEROLE не подходит. Права: platform metadata SELECT, минимальные lifecycle/event column grants и preparation INSERT/UPDATE только mutable attempt fields. Нет Auth schema USAGE, operator grants mutation, project INSERT/DELETE/binding rewrite, event rewrite или preparation DELETE/identity rewrite.
 
 Для shared row lock realm PostgreSQL требует UPDATE хотя бы одной колонки: разрешена только `singleton`, CHECK допускает только TRUE. UUID/initializedAt/firstOperator изменять нельзя. Это не разрешение сбрасывать setup. `CheckRuntime` проверяет допустимые/недостающие права; каждый Reserve вновь проверяет profile и блокирует matching initialized marker в транзакции. Auth operator startup отдельно отвергает даже column-only preparation DML, чтобы обычный API не использовал этот credential.
 

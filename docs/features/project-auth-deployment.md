@@ -18,7 +18,7 @@ Main formatter/source review, Luna task check/API-if-changed/affected race/secur
 
 Для управления email добавлены `emailBinding` и `emailChange` (default false, только browser). Binding дополнительно требует `reauthentication=true` и MFA config; actor права проверяются отдельно в проектной SQL. Producer зависит от SMTP/delivery, completion/protection — от SQL/Redis и выданных proofs. URLs строятся из origin проекта; подробности и шесть маршрутов — в [контракте email management](project-email-management.md).
 
-Включить существующий `PLATFORM_PROJECT_HTTP_ENABLED` и указать `PLATFORM_PROJECT_AUTH_CONFIG_FILE` с deployment-owned файлом. [Пример](../../deploy/project-auth.example.json) содержит синтетический UUID: заменить на реально подготовленный проект. Реальные ENV/секреты этим блоком не менялись. Файл загружается при startup, hot reload отсутствует; изменение требует restart.
+Включить существующий `PLATFORM_PROJECT_HTTP_ENABLED` и указать `PLATFORM_PROJECT_AUTH_CONFIG_FILE` с deployment-owned файлом. [Пример](../../deploy/examples/project-auth.example.json) содержит синтетический UUID: заменить на реально подготовленный проект. Реальные ENV/секреты этим блоком не менялись. Файл загружается при startup, hot reload отсутствует; изменение требует restart.
 
 | Поле записи | Значение |
 | --- | --- |
@@ -76,7 +76,7 @@ Main formatter/diff/read-only review. Luna task check, affected race/security, a
 
 ## Email MFA из manifest — A6.3m.6c.4b.3
 
-Принято после Luna V2: task check/config-app-router race и actual manifest-backed HTTP/SQL/Redis PASS/exit0, cleanup подтверждён; evidence — [history](../planning/history.md). `emailMFA: true` выбирается явно для UUID проекта; поле отсутствует/false — capability не собирается. Без manifest прежний ограниченный профиль сохраняется. ENV сами по себе метод не включают. [Пример manifest](../../deploy/project-auth.example.json) оставляет `emailMFA: false`.
+Принято после Luna V2: task check/config-app-router race и actual manifest-backed HTTP/SQL/Redis PASS/exit0, cleanup подтверждён; evidence — [history](../planning/history.md). `emailMFA: true` выбирается явно для UUID проекта; поле отсутствует/false — capability не собирается. Без manifest прежний ограниченный профиль сохраняется. ENV сами по себе метод не включают. [Пример manifest](../../deploy/examples/project-auth.example.json) оставляет `emailMFA: false`.
 
 Это capability, а не `auth.mfa_settings.email_factor_allowed`: сохранённая политика проекта отдельно разрешает фактор, пользователь отдельно подтверждает принадлежащий ему verified email и подключает его. Политикой/личной настройкой нельзя заменить отсутствующий runtime. Для настройки политики через проектный API отдельно включается `mfaSettings`; права и fresh proofs остаются обязательными.
 

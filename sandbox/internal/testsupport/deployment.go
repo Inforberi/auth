@@ -39,7 +39,7 @@ func RedeploySandboxAPI(t *testing.T, client *http.Client, override string) {
 	root := repositoryRoot(t)
 	args := []string{
 		"compose", "--project-directory", root, "--env-file", ".env.example", "-p", "auth-sandbox",
-		"-f", "deploy/compose.base.yml", "-f", "sandbox/compose.yml", "-f", "sandbox/config/jwt.yml",
+		"-f", "deploy/compose/base.yml", "-f", "sandbox/compose.yml", "-f", "sandbox/config/jwt.yml",
 	}
 	if override != "" {
 		args = append(args, "-f", override)

@@ -161,7 +161,7 @@ func operatorSecretsProfileDrill(t *testing.T, admin *pgx.Conn, env, read func(s
 		_, err := admin.Exec(cleanup, `DROP OWNED BY auth_platform_api_secrets_test; DROP ROLE auth_platform_api_secrets_test`)
 		require.NoError(t, err)
 	})
-	_, err = admin.Exec(ctx, strings.NewReplacer("auth_platform_runtime", "auth_platform_api_secrets_test", "DATABASE auth_platform ", "DATABASE auth_prepare_catalog_test ").Replace(read("deploy/platform-runtime-grants.sql")))
+	_, err = admin.Exec(ctx, strings.NewReplacer("auth_platform_runtime", "auth_platform_api_secrets_test", "DATABASE auth_platform ", "DATABASE auth_prepare_catalog_test ").Replace(read("deploy/postgres/grants/platform-runtime-grants.sql")))
 	require.NoError(t, err)
 	cfg, err := pgxpool.ParseConfig(strings.Replace(env("PROVISIONER_CATALOG_URL"), "auth_platform_preparation_test:catalog-fixture-only", "auth_platform_api_secrets_test:api-fixture-only", 1))
 	require.NoError(t, err)

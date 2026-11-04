@@ -50,7 +50,7 @@ Actor/UUID проекта/target/БД/phase/version/origin/credentials не пр
 
 По согласованному правилу добавлена таблица в **исходную** platform000001, без новой migration; down удаляет receipt до projects. Для ранее установленной platform DB требуется отдельно согласованный forward upgrade и новые grants/ENV; изменение исходного SQL не обновит старую БД. Не повторять initial migration/down/reset рабочей установки. Сама рабочая Auth БД не менялась.
 
-[Runtime template](../../deploy/platform-runtime-grants.sql) добавляет только INSERT(id,slug,name,origin,storage_target) projects и SELECT/INSERT project_creations. State/version/time/binding задают SQL defaults, runtime не получает INSERT этих колонок. Receipt UPDATE/DELETE/TRUNCATE запрещены; CheckRuntime отвергает missing/excess grants до запуска. Нет CREATEDB/DDL/owner/executor credentials. Schema/audit table не связаны FK с Auth user, сохраняя независимый порядок platform migrations; project_id FK и уникальность защищены БД.
+[Runtime template](../../deploy/postgres/grants/platform-runtime-grants.sql) добавляет только INSERT(id,slug,name,origin,storage_target) projects и SELECT/INSERT project_creations. State/version/time/binding задают SQL defaults, runtime не получает INSERT этих колонок. Receipt UPDATE/DELETE/TRUNCATE запрещены; CheckRuntime отвергает missing/excess grants до запуска. Нет CREATEDB/DDL/owner/executor credentials. Schema/audit table не связаны FK с Auth user, сохраняя независимый порядок platform migrations; project_id FK и уникальность защищены БД.
 
 ## Проверки и оставшееся
 

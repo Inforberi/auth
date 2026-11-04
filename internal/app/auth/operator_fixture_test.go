@@ -85,7 +85,7 @@ func operatorFixture(t *testing.T) (*pgxpool.Pool, Dependencies, *config.Config)
 		t.Fatal(err)
 	}
 	roleCreated = true
-	grants := strings.NewReplacer("auth_platform_runtime", operatorFixtureRole, "DATABASE auth_platform ", "DATABASE auth_platform_test ").Replace(read("deploy/platform-runtime-grants.sql"))
+	grants := strings.NewReplacer("auth_platform_runtime", operatorFixtureRole, "DATABASE auth_platform ", "DATABASE auth_platform_test ").Replace(read("deploy/postgres/grants/platform-runtime-grants.sql"))
 	if _, err := admin.Exec(ctx, grants); err != nil {
 		t.Fatal("runtime grants", err)
 	}

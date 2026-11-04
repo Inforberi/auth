@@ -11,5 +11,6 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
     GOOS=$TARGETOS GOARCH=$TARGETARCH go build -mod=readonly -trimpath -ldflags="-s -w" -o /out/auth ./cmd/auth
 FROM gcr.io/distroless/static-debian13:nonroot
 WORKDIR /app
+USER 65532:65532
 COPY --from=build /out/auth /app/auth
 ENTRYPOINT ["/app/auth"]

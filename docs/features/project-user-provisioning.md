@@ -16,7 +16,7 @@
 
 ## Выбор возможностей
 
-UUID manifest содержит независимые `invitations` и `temporaryPassword`, оба default false и требуют `browser=true`. Без manifest эти возможности не наследуют глобальное включение. [Пример](../../deploy/project-auth.example.json).
+UUID manifest содержит независимые `invitations` и `temporaryPassword`, оба default false и требуют `browser=true`. Без manifest эти возможности не наследуют глобальное включение. [Пример](../../deploy/examples/project-auth.example.json).
 
 Operational TTL/cooldown/budgets берутся из существующих `Invitation`/`TemporaryPassword` настроек; `Enabled` выбирается записью проекта. Invitation URL строится из доверенного origin проекта: `/activate`. Platform URL/key/secret не копируются. Новых ENV и зависимостей нет.
 

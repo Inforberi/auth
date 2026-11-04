@@ -42,7 +42,7 @@ services:
     image: axllent/mailpit:v1.27.10
   backup:
     extends:
-      file: deploy/compose.prod.yml
+      file: deploy/compose/production.yml
       service: backup
     environment:
       PGHOST: postgres

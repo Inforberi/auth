@@ -36,7 +36,7 @@ func isolationPlatformOperator(t *testing.T, ctx context.Context, pair preparedH
 	if root == "" {
 		root = "../../../.."
 	}
-	grants, err := os.ReadFile(filepath.Join(root, "deploy/platform-runtime-grants.sql"))
+	grants, err := os.ReadFile(filepath.Join(root, "deploy/postgres/grants/platform-runtime-grants.sql"))
 	require.NoError(t, err)
 	_, err = pair.admin.Exec(ctx, strings.NewReplacer("auth_platform_runtime", role, "DATABASE auth_platform ", "DATABASE auth_prepare_catalog_test ").Replace(string(grants)))
 	require.NoError(t, err)

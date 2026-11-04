@@ -8,7 +8,7 @@
 
 В том же executable появились два отдельных действия. Они **только одобряют/отменяют recovery request**, не меняют TOTP, пароль, роли, статус или сессии и не выдают вход. Owner HTTP start/complete и App delivery подключены opt-in в d.3; по умолчанию MFA_RECOVERY_ENABLED=false. Не создавать candidates прямым SQL вместо workflow. [HTTP-контракт](mfa.md#настройки-и-http).
 
-Для этих действий нужна другая инфраструктурная группа: `auth_mfa_recovery_operator`. Членство в `auth_recovery_operator` для смены пароля её не заменяет. DBA отдельно создаёт NOLOGIN группу/персональный LOGIN и применяет `deploy/mfa-recovery-grants.sql` владельцем миграций после адаптации database identifier. Не давать оператору/runtime CREATE в trusted schema, владение функцией или дополнительные write-grants.
+Для этих действий нужна другая инфраструктурная группа: `auth_mfa_recovery_operator`. Членство в `auth_recovery_operator` для смены пароля её не заменяет. DBA отдельно создаёт NOLOGIN группу/персональный LOGIN и применяет `deploy/postgres/grants/mfa-recovery-grants.sql` владельцем миграций после адаптации database identifier. Не давать оператору/runtime CREATE в trusted schema, владение функцией или дополнительные write-grants.
 
 Grants открывают только metadata пользователя/request и EXECUTE `auth.decide_mfa_recovery`. Прямое чтение candidate/current TOTP/primary reference и UPDATE request/users не разрешены. Операция SECURITY DEFINER имеет фиксированный безопасный search_path, без dynamic SQL и PUBLIC EXECUTE; проверяет именно `session_user`/membership, записывает его OID/name, environment и incident reference вместе с audit в одной транзакции. Migration owner/DBA остаётся доверенным инфраструктурным субъектом, не sandbox. Не применять через shared forced-user pooler.
 
@@ -88,7 +88,7 @@ CLI не меняет email/verified flag, роли/permissions/access_version, 
 
 Это инфраструктурное полномочие PostgreSQL, не Auth role/permission и не клиентский флаг. DBA отдельно создаёт NOLOGIN группу `auth_recovery_operator`, выделенный LOGIN конкретного оператора и выдаёт членство с наследованием прав. `auth_runtime` не должен быть членом этой группы. Приложение не создаёт роли БД и не выдаёт grants при запуске.
 
-Шаблон выдачи минимальных прав — `deploy/recovery-grants.sql`; адаптируйте имя БД `auth` перед использованием, применяйте владельцем после миграции/restore. Группа может обновлять только auth_version пользователя, password_hash credentials и revoked_at сессий; не получает write-доступа к текущему TOTP, roles/user_roles, status или setup marker. Для cleanup разрешён доступ к конкретным transient tables, для аудита — INSERT/sequence usage. Старые password hashes команде не нужны.
+Шаблон выдачи минимальных прав — `deploy/postgres/grants/recovery-grants.sql`; адаптируйте имя БД `auth` перед использованием, применяйте владельцем после миграции/restore. Группа может обновлять только auth_version пользователя, password_hash credentials и revoked_at сессий; не получает write-доступа к текущему TOTP, roles/user_roles, status или setup marker. Для cleanup разрешён доступ к конкретным transient tables, для аудита — INSERT/sequence usage. Старые password hashes команде не нужны.
 
 Пример административной подготовки (не выполняется приложением):
 

@@ -20,7 +20,7 @@
 
 ## Публикация и каталог
 
-UUID manifest содержит optional `access: {"permissions": [...]}`. Отсутствие объекта отключает все эти endpoints; `browser=true` обязателен. Пустой объект выбирает только built-in разрешения. В программной сборке — `ProjectProfileConfig.Access`, указатель на immutable `settings.Catalog`, созданный `settings.NewCatalog`. Пример — [deployment manifest](../../deploy/project-auth.example.json).
+UUID manifest содержит optional `access: {"permissions": [...]}`. Отсутствие объекта отключает все эти endpoints; `browser=true` обязателен. Пустой объект выбирает только built-in разрешения. В программной сборке — `ProjectProfileConfig.Access`, указатель на immutable `settings.Catalog`, созданный `settings.NewCatalog`. Пример — [deployment manifest](../../deploy/examples/project-auth.example.json).
 
 Каталог проекта не наследуется из platform access config. Каждому проекту можно задать свои дополнительные key/name/description/group; built-in ключи сохраняются, wildcard/повторные ключи отклоняются. Это definition доступных permissions, а не выдача прав. Роли создаются/меняются через API, затем назначаются отдельно. Произвольное создание permission через новый endpoint этим блоком не реализуется; существующие import/definition workflows остаются в [контракте каталога](access-catalog.md).
 

@@ -36,7 +36,7 @@ func TestRestoreAuthStateSchema(t *testing.T) {
 	migrateFixture(t, db, ctx, "up")
 	t.Cleanup(func() { migrateFixture(t, db, ctx, "down") })
 	root := filepath.Join("..", "..", "..", "..")
-	script, err := os.ReadFile(filepath.Join(root, "deploy", "restore-auth-state.sql"))
+	script, err := os.ReadFile(filepath.Join(root, "deploy", "postgres", "restore-auth-state.sql"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func checkRestoreRuntime(t *testing.T, db *pgxpool.Pool, ctx context.Context, ro
 	t.Helper()
 	accessExec(t, db, ctx, `CREATE ROLE auth_restore_runtime LOGIN`)
 	t.Cleanup(func() { accessExec(t, db, ctx, `DROP OWNED BY auth_restore_runtime; DROP ROLE auth_restore_runtime`) })
-	grants, err := os.ReadFile(filepath.Join(root, "deploy", "runtime-grants.sql"))
+	grants, err := os.ReadFile(filepath.Join(root, "internal", "admin", "projects", "schema", "runtime-grants.sql"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -4,7 +4,7 @@ MP4,24 октября2026. Local assembly проверена отдельным 
 
 ## Включение
 
-По умолчанию `PLATFORM_PROJECT_RUNTIME_ENABLED=false`: нет нового reader pool, master codec или registry janitor. При включении требуется PLATFORM_ENABLED и валидный platform profile. Все значения ниже относятся к operational deployment, не к body/Host/origin клиентского запроса. Примеры — [.env.example](../../.env.example) и [.env.prod.example](../../.env.prod.example); реальные env не менялись.
+По умолчанию `PLATFORM_PROJECT_RUNTIME_ENABLED=false`: нет нового reader pool, master codec или registry janitor. При включении требуется PLATFORM_ENABLED и валидный platform profile. Все значения ниже относятся к operational deployment, не к body/Host/origin клиентского запроса. Примеры — [.env.example](../../.env.example) и [.env.prod.app.example](../../.env.prod.app.example); реальные env не менялись.
 
 | Настройка | Назначение |
 | --- | --- |
@@ -18,7 +18,7 @@ MP4,24 октября2026. Local assembly проверена отдельным 
 
 Reader catalog pool имеет MaxConns2, MinConns/MinIdleConns0. Эти2 connections идут дополнительно к project budget; учесть также обычный platform pool, workers и число API replicas. Число зарегистрированных проектов не умножает MinConns. Fleet-wide admission/справедливость и общий deploy budget ещё отдельный этап.
 
-Reader startup/readiness проверяют его SQL профиль и ожидаемый realm. Root/привилегированный/пишущий credential отклоняется; нет fallback к обычному API pool. [Минимальные grants](../../deploy/platform-runtime-reader-grants.sql) и отсутствие PUBLIC TEMP/CREATE должен подготовить deployment. Initialized realm не требуется для самого startup probe, но cold credential load требует enabled/ready проекта и initialized realm.
+Reader startup/readiness проверяют его SQL профиль и ожидаемый realm. Root/привилегированный/пишущий credential отклоняется; нет fallback к обычному API pool. [Минимальные grants](../../deploy/postgres/grants/platform-runtime-reader-grants.sql) и отсутствие PUBLIC TEMP/CREATE должен подготовить deployment. Initialized realm не требуется для самого startup probe, но cold credential load требует enabled/ready проекта и initialized realm.
 
 Общий trusted PostgreSQL parser вынесен в `internal/infra/postgres`: один явный endpoint, network verify-full или явный local Unix socket, без multi-host fallback и чужих PGOPTIONS/runtime params. Existing project-prepare использует тот же parser со своим прежним timeout profile, второй копии transport validation нет.
 

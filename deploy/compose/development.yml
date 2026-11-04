@@ -9,7 +9,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: deploy/Dockerfile.dev
+      dockerfile: deploy/docker/Dockerfile.dev
     env_file: ['${APP_ENV_FILE:-.env}']
     volumes:
       - .:/workspace

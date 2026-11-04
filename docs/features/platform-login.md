@@ -12,7 +12,7 @@
 | `PLATFORM_PROJECT_AUTH_DOMAIN` | Канонический DNS-домен для `https://<slug>.<domain>`; обязателен при включённой платформе |
 | `PLATFORM_STORAGE_TARGET` | Один trusted target identifier, default primary; не DSN/credential, executor пока не подключён |
 
-Нужна **новая отдельная платформенная БД**. В ней offline migration owner применяет Auth000001, затем platform000001/000002; существующие Task migration-команды сами этого не делают. Миграция operator realm отвергает использованную Auth БД. После этого оператор создаёт отдельную LOGIN runtime-роль и адаптирует [grants template](../../deploy/platform-runtime-grants.sql) под свои имена БД/роли. Приложению передаётся runtime `DATABASE_URL`, не owner/provisioner credential. Само приложение БД/роли не создаёт.
+Нужна **новая отдельная платформенная БД**. В ней offline migration owner применяет Auth000001, затем platform000001/000002; существующие Task migration-команды сами этого не делают. Миграция operator realm отвергает использованную Auth БД. После этого оператор создаёт отдельную LOGIN runtime-роль и адаптирует [grants template](../../deploy/postgres/grants/platform-runtime-grants.sql) под свои имена БД/роли. Приложению передаётся runtime `DATABASE_URL`, не owner/provisioner credential. Само приложение БД/роли не создаёт.
 
 `EMAIL_OUTBOX_KEY` — отдельный платформенный ключ, не копия ключа проекта. Scope строится из `platform` + trusted realm UUID и сверяется с dependencies. Первый владелец создаётся через scoped setup этого профиля, не legacy/project bootstrap. Автоматического импорта/переинициализации/перешифрования старой установки нет.
 

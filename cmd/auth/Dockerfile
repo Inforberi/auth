@@ -1,5 +1,5 @@
 # Legacy entry point retained for compatibility. Canonical production build:
-# docker build -f deploy/Dockerfile.prod .
+# docker build -f deploy/docker/Dockerfile.prod .
 ARG GO_IMAGE=golang:1.27.2-bookworm
 FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS build
 WORKDIR /src

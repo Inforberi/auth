@@ -59,7 +59,7 @@ func TestProjectRuntimeAssemblySQL(t *testing.T) {
 		UPDATE platform.operator_realm SET id='c2000000-0000-4000-8000-000000000001';
 		CREATE ROLE auth_runtime_assembly_reader LOGIN NOINHERIT PASSWORD 'assembly-fixture-only'`)
 	require.NoError(t, err)
-	grants, err := os.ReadFile(filepath.Join(root, "deploy/platform-runtime-reader-grants.sql"))
+	grants, err := os.ReadFile(filepath.Join(root, "deploy/postgres/grants/platform-runtime-reader-grants.sql"))
 	require.NoError(t, err)
 	_, err = admin.Exec(ctx, strings.NewReplacer("auth_platform_runtime_reader", "auth_runtime_assembly_reader",
 		"DATABASE auth_platform ", "DATABASE auth_runtime_assembly_test ").Replace(string(grants)))

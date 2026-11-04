@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Inforberi/financial-intelligence/deploy"
 	projectschema "github.com/Inforberi/financial-intelligence/internal/admin/projects/schema"
 )
 
@@ -28,7 +27,7 @@ func projectRuntimeProfileDrill(t *testing.T, admin *pgx.Conn, runtime *pgxpool.
 	require.NoError(t, runtime.QueryRow(ctx, `SELECT array_agg(attname::text ORDER BY attnum) FROM pg_attribute
 		WHERE attrelid='auth.project_identity'::regclass AND attnum>0 AND NOT attisdropped`).Scan(&fields))
 	require.Equal(t, []string{"realm_id", "project_id", "reservation_id", "database_oid", "owner_oid", "runtime_oid", "schema_version", "schema_checksum"}, fields)
-	_, err := admin.Exec(ctx, deploy.RuntimeGrants(runtime.Config().ConnConfig.Database, runtime.Config().ConnConfig.User))
+	_, err := admin.Exec(ctx, projectschema.RuntimeGrants(runtime.Config().ConnConfig.Database, runtime.Config().ConnConfig.User))
 	require.NoError(t, err, "restore/reapply grants must preserve the read-only projection")
 	_, err = runtime.Exec(ctx, `SELECT setup_operator_hash FROM project_meta.identity`)
 	require.Error(t, err)

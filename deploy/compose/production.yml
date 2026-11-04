@@ -6,8 +6,17 @@ services:
   api:
     build:
       context: .
-      dockerfile: deploy/Dockerfile.prod
-    env_file: ['${APP_ENV_FILE:-.env.prod}']
+      dockerfile: deploy/docker/Dockerfile.prod
+    env_file: ['${APP_ENV_FILE:-.env.prod.app}']
+    environment:
+      PORT: '${PORT:-8080}'
+    volumes:
+      - type: bind
+        source: ${AUTH_SECRETS_DIR:-./secrets}
+        target: /run/secrets
+        read_only: true
+        bind:
+          create_host_path: false
     ports: ['127.0.0.1:${PORT:-8080}:${PORT:-8080}']
     depends_on:
       migrate:

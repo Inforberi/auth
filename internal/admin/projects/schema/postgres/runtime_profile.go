@@ -6,7 +6,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/Inforberi/financial-intelligence/deploy"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/credentials"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/internal/sqlerrors"
@@ -95,7 +94,7 @@ func runtimeProfileArguments(b credentials.Binding) ([]any, error) {
 	marker := "auth-project:" + string(b.RealmID) + ":" + string(b.ProjectID) + ":" + string(b.ReservationID)
 	return []any{
 		database, b.DatabaseOID, b.OwnerOID, marker, owner, b.RuntimeOID, runtime,
-		projectschema.ProjectSchemaChecksum(deploy.RuntimeGrants(database, runtime)), b.SchemaVersion,
+		projectschema.ProjectSchemaChecksum(projectschema.RuntimeGrants(database, runtime)), b.SchemaVersion,
 	}, nil
 }
 

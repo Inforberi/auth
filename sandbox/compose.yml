@@ -15,7 +15,7 @@ services:
     image: auth:sandbox
     build:
       context: .
-      dockerfile: deploy/Dockerfile.prod
+      dockerfile: deploy/docker/Dockerfile.prod
     user: '${SANDBOX_UID:?Run task sandbox:up}:${SANDBOX_GID:?Run task sandbox:up}'
     env_file: [.env.example]
     environment:

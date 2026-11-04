@@ -94,11 +94,11 @@ func prepareHTTPProjects(t *testing.T) preparedHTTPProjects {
  INSERT INTO platform.operator_permissions(user_id,permission_key) SELECT 'd2000000-0000-4000-8000-000000000001',
  unnest(ARRAY['platform.projects.read','platform.projects.manage','platform.project_users.manage','platform.project_access.manage','platform.project_settings.manage','platform.operators.manage'])`)
 	require.NoError(t, err)
-	_, err = admin.Exec(ctx, strings.NewReplacer("auth_platform_preparation", "auth_platform_preparation_test", "DATABASE auth_platform ", "DATABASE auth_prepare_catalog_test ").Replace(read("deploy/platform-preparation-grants.sql")))
+	_, err = admin.Exec(ctx, strings.NewReplacer("auth_platform_preparation", "auth_platform_preparation_test", "DATABASE auth_platform ", "DATABASE auth_prepare_catalog_test ").Replace(read("deploy/postgres/grants/platform-preparation-grants.sql")))
 	require.NoError(t, err)
-	_, err = admin.Exec(ctx, strings.NewReplacer("auth_platform_runtime_reader", "auth_platform_runtime_reader_test", "DATABASE auth_platform ", "DATABASE auth_prepare_catalog_test ").Replace(read("deploy/platform-runtime-reader-grants.sql")))
+	_, err = admin.Exec(ctx, strings.NewReplacer("auth_platform_runtime_reader", "auth_platform_runtime_reader_test", "DATABASE auth_platform ", "DATABASE auth_prepare_catalog_test ").Replace(read("deploy/postgres/grants/platform-runtime-reader-grants.sql")))
 	require.NoError(t, err)
-	_, err = physical.Exec(ctx, strings.NewReplacer(":'realm'", "'c2000000-0000-4000-8000-000000000001'", ":'target'", "'primary'").Replace(read("deploy/storage-target.sql")))
+	_, err = physical.Exec(ctx, strings.NewReplacer(":'realm'", "'c2000000-0000-4000-8000-000000000001'", ":'target'", "'primary'").Replace(read("deploy/postgres/storage-target.sql")))
 	require.NoError(t, err)
 	master := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{17}, 32))
 	env := func(name string) string {

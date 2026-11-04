@@ -77,7 +77,7 @@ task sandbox:jwt
 
 `sandbox/config/access-catalog.json` подключён ко всем вариантам sandbox. Owner fixture `sandbox/config/jwt-fixture.sql` в одной Access-locked транзакции создаёт **только тестовую** роль `sandbox_reader` с `sandbox.records.read` и назначает существующему Ивану. Первое назначение увеличивает auth/access versions и делает старые сессии Ивана неактуальными; повтор ничего не меняет. Это explicit SQL test seed, не проверка административного API назначения и не скрипт для рабочих пользователей. Права администратора/аккаунты/password/TOTP не сбрасываются. `sandbox.records.write` объявлен, но Ивану не выдан.
 
-JWT override включает только sandbox API: issuer `https://localhost:18443`, kid `sandbox-1`, access TTL1m. Native budget P60/min, retention B200/I1m: `2×60×65s ≤ 200×60s`. Это допустимая startup-арифметика для малой тестовой нагрузки, **не** измеренная скорость очистки или production tuning. Defaults `.env.example/.env.prod.example` не меняются.
+JWT override включает только sandbox API: issuer `https://localhost:18443`, kid `sandbox-1`, access TTL1m. Native budget P60/min, retention B200/I1m: `2×60×65s ≤ 200×60s`. Это допустимая startup-арифметика для малой тестовой нагрузки, **не** измеренная скорость очистки или production tuning. Sandbox не меняет production runtime defaults; они приведены в `.env.prod.app.example`.
 
 Ресурсы:
 

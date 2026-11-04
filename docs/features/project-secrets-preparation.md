@@ -15,7 +15,7 @@
 
 ## Operational master key
 
-В [отдельном ENV-примере](../../deploy/project-prepare.env.example):
+В [отдельном ENV-примере](../../deploy/examples/project-prepare.env.example):
 
 - `PROVISIONER_MASTER_KEY` — новый случайный32-byte standard-base64 key. Сохраняется в защищённом окружении executor/внешнем secret storage, **не в БД и не в репозитории/UI**; не переиспользовать platform EMAIL_OUTBOX_KEY.
 - `PROVISIONER_MASTER_KEY_ID` — явный non-secret ID вида `root-1` (lowercase letter, затем letters/digits/hyphen, до32 символов). Указывает на конкретный master key; это не сам ключ.

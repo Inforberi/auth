@@ -1,4 +1,4 @@
-package deploy
+package schema
 
 import (
 	_ "embed"

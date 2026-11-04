@@ -4,11 +4,12 @@ version: '3'
 vars:
     DEV_ENV: .env
     PROD_ENV: .env.prod
+    PROD_APP_ENV: .env.prod.app
     FILE: ''
     CONFIRM: ''
-    DEV_COMPOSE: 'APP_ENV_FILE={{.DEV_ENV | shellQuote}} docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file {{.DEV_ENV | shellQuote}} -f deploy/compose.base.yml -f deploy/compose.dev.yml'
-    PROD_COMPOSE: 'APP_ENV_FILE={{.PROD_ENV | shellQuote}} docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file {{.PROD_ENV | shellQuote}} -f deploy/compose.base.yml -f deploy/compose.prod.yml'
-    SANDBOX_COMPOSE: 'SANDBOX_UID=$(id -u) SANDBOX_GID=$(id -g) docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file .env.example -p auth-sandbox -f deploy/compose.base.yml -f sandbox/compose.yml'
+    DEV_COMPOSE: 'APP_ENV_FILE={{.DEV_ENV | shellQuote}} docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file {{.DEV_ENV | shellQuote}} -f deploy/compose/base.yml -f deploy/compose/development.yml'
+    PROD_COMPOSE: 'APP_ENV_FILE={{.PROD_APP_ENV | shellQuote}} docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file {{.PROD_ENV | shellQuote}} -f deploy/compose/base.yml -f deploy/compose/production.yml'
+    SANDBOX_COMPOSE: 'SANDBOX_UID=$(id -u) SANDBOX_GID=$(id -g) docker compose --project-directory {{.ROOT_DIR | shellQuote}} --env-file .env.example -p auth-sandbox -f deploy/compose/base.yml -f sandbox/compose.yml'
 
 tasks:
     default:
@@ -27,7 +28,7 @@ tasks:
             - '{{.SANDBOX_COMPOSE}} up -d --wait postgres redis mailpit'
             - '{{.SANDBOX_COMPOSE}} run --rm migrate up'
             - '{{.SANDBOX_COMPOSE}} exec -T postgres psql -X -v ON_ERROR_STOP=1 -U auth -d auth < sandbox/config/runtime.sql'
-            - '{{.SANDBOX_COMPOSE}} exec -T postgres psql -X -v ON_ERROR_STOP=1 -U auth -d auth < deploy/runtime-grants.sql'
+            - '{{.SANDBOX_COMPOSE}} exec -T postgres psql -X -v ON_ERROR_STOP=1 -U auth -d auth < internal/admin/projects/schema/runtime-grants.sql'
             - '{{.SANDBOX_COMPOSE}} up -d --build --no-deps api'
             - >-
                 curl --silent --show-error --fail --retry 20 --retry-all-errors --retry-connrefused --retry-delay 1
@@ -228,7 +229,7 @@ tasks:
         desc: Проверить инфраструктуру на изолированных контейнерах
         aliases: [check-integration]
         cmds:
-            - bash deploy/scripts/check-integration.sh
+            - bash sandbox/check-infrastructure.sh
 
     # PostgreSQL — production backup/restore выполнять осознанно
     db:runtime-grants:
@@ -238,7 +239,7 @@ tasks:
             - >-
                 {{.PROD_COMPOSE}} exec -T postgres sh -c
                 'exec psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"'
-                < deploy/runtime-grants.sql
+                < internal/admin/projects/schema/runtime-grants.sql
 
     backup:
         desc: Создать проверяемый production backup
@@ -252,6 +253,7 @@ tasks:
         cmds:
             - >-
                 AUTH_ENV_FILE={{.PROD_ENV | shellQuote}}
+                AUTH_APP_ENV_FILE={{.PROD_APP_ENV | shellQuote}}
                 RESTORE_FILE={{.FILE | shellQuote}}
                 RESTORE_CONFIRM={{.CONFIRM | shellQuote}}
                 bash deploy/scripts/postgres-restore.sh

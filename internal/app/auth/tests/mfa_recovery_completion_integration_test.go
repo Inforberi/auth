@@ -90,7 +90,7 @@ func TestMFARecoveryCompletionSchema(t *testing.T) {
 		accessExec(t, db, ctx, `REVOKE CONNECT ON DATABASE auth_schema_test FROM auth_mfa_recovery_operator;
 			DROP ROLE auth_mfa_completion_operator; DROP ROLE auth_mfa_completion_runtime; DROP ROLE auth_mfa_recovery_operator`)
 	})
-	grants, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "deploy", "mfa-recovery-grants.sql"))
+	grants, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "deploy", "postgres", "grants", "mfa-recovery-grants.sql"))
 	if err != nil {
 		t.Fatal(err)
 	}

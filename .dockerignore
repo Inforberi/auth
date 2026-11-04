@@ -1,7 +1,13 @@
 .git
 .serena
+.codex
+.agents
+.roo
 .env
-.env.prod
+.env.*
+**/*.env
+!.env*.example
+!**/*.env.example
 out
 data
 backups

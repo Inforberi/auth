@@ -7,7 +7,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/Inforberi/financial-intelligence/deploy"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectschema "github.com/Inforberi/financial-intelligence/internal/admin/projects/schema"
 	authschema "github.com/Inforberi/financial-intelligence/migrations/auth"
@@ -100,7 +99,7 @@ func (t *Target) installProjectSchema(ctx context.Context, conn *pgx.Conn, r dom
 		return unavailable(ctx)
 	}
 	runtime := "authr_" + strings.TrimPrefix(resources.Owner, "autho_")
-	grants := deploy.RuntimeGrants(resources.Database, runtime)
+	grants := projectschema.RuntimeGrants(resources.Database, runtime)
 	checksum := projectschema.ProjectSchemaChecksum(grants)
 	var installed bool
 	if err := tx.QueryRow(ctx, `SELECT to_regclass('project_meta.identity') IS NOT NULL`).Scan(&installed); err != nil {

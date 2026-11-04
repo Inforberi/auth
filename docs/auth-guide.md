@@ -1891,7 +1891,7 @@ Method/path, timestamp и timezone, HTTP status/code, безопасный reque
 - Sessions API: `internal/auth/session/transport/http`.
 - Telegram API: `internal/auth/methods/telegram/transport/http`.
 - Config: `internal/config` и конфигурация каждой фичи.
-- Примеры ENV: `.env.example` и `.env.prod.example`; реальные .env не входят в документацию.
+- Примеры API ENV: `.env.example` и `.env.prod.app.example`; Compose/owner credentials отдельно в `.env.prod.example`. Реальные env не входят в документацию.
 
 Организация руководства: подключение → сценарии → карточки методов → ошибки → ограничения. Это удобно переносить в отдельный documentation UI без изменения API.
 

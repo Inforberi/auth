@@ -84,9 +84,9 @@ func TestPrepareCommandSQL(t *testing.T) {
 		UPDATE platform.operator_realm SET id='c2000000-0000-4000-8000-000000000001',initialized_at=now(),first_operator_id='d2000000-0000-4000-8000-000000000001';
 		INSERT INTO platform.projects(id,slug,name,origin,storage_target) VALUES('a2000000-0000-4000-8000-000000000001','test-project','Test project','https://test.example.test','primary')`)
 	require.NoError(t, err)
-	_, err = admin.Exec(ctx, strings.NewReplacer("auth_platform_preparation", "auth_platform_preparation_test", "DATABASE auth_platform ", "DATABASE auth_prepare_catalog_test ").Replace(read("deploy/platform-preparation-grants.sql")))
+	_, err = admin.Exec(ctx, strings.NewReplacer("auth_platform_preparation", "auth_platform_preparation_test", "DATABASE auth_platform ", "DATABASE auth_prepare_catalog_test ").Replace(read("deploy/postgres/grants/platform-preparation-grants.sql")))
 	require.NoError(t, err)
-	_, err = physical.Exec(ctx, strings.NewReplacer(":'realm'", "'c2000000-0000-4000-8000-000000000001'", ":'target'", "'primary'").Replace(read("deploy/storage-target.sql")))
+	_, err = physical.Exec(ctx, strings.NewReplacer(":'realm'", "'c2000000-0000-4000-8000-000000000001'", ":'target'", "'primary'").Replace(read("deploy/postgres/storage-target.sql")))
 	require.NoError(t, err)
 	storageURL := strings.Replace(os.Getenv("AUTH_STORAGE_TEST_DATABASE_URL"), "auth@", "auth_storage_executor:storage-fixture-only@", 1)
 	catalogURL := strings.Replace(dsn, "auth@", "auth_platform_preparation_test:catalog-fixture-only@", 1)

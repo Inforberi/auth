@@ -1,4 +1,4 @@
-package scripts_test
+package sandbox_test
 
 import (
 	"os"
@@ -12,11 +12,11 @@ func TestRestoreDoesNotReopenAuth(t *testing.T) {
 	if _, err := exec.LookPath("bash"); err != nil {
 		t.Skip("bash unavailable")
 	}
-	source, err := os.ReadFile("postgres-restore.sh")
+	source, err := os.ReadFile("../../../deploy/scripts/postgres-restore.sh")
 	if err != nil {
 		t.Fatal(err)
 	}
-	invalidation, err := os.ReadFile("../restore-auth-state.sql")
+	invalidation, err := os.ReadFile("../../../deploy/postgres/restore-auth-state.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,8 +34,8 @@ func TestRestoreDoesNotReopenAuth(t *testing.T) {
 				}
 			}
 			write("deploy/scripts/postgres-restore.sh", string(source), 0o700)
-			write("deploy/runtime-grants.sql", "-- synthetic grants\n", 0o600)
-			write("deploy/restore-auth-state.sql", string(invalidation), 0o600)
+			write("internal/admin/projects/schema/runtime-grants.sql", "-- synthetic grants\n", 0o600)
+			write("deploy/postgres/restore-auth-state.sql", string(invalidation), 0o600)
 			write("synthetic.env", "APP_NAME=auth_restore_test\nPOSTGRES_DB=auth_restore_test\n", 0o600)
 			write("bin/docker", `#!/usr/bin/env bash
 set -eu

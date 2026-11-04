@@ -50,7 +50,7 @@ func projectRuntimeDrill(t *testing.T, admin *pgx.Conn, managed *catalog.Reposit
 	if root == "" {
 		root = "../../../.."
 	}
-	grants, err := os.ReadFile(filepath.Join(root, "deploy/platform-runtime-reader-grants.sql"))
+	grants, err := os.ReadFile(filepath.Join(root, "deploy/postgres/grants/platform-runtime-reader-grants.sql"))
 	require.NoError(t, err)
 	_, err = admin.Exec(ctx, strings.NewReplacer("auth_platform_runtime_reader", "auth_platform_runtime_reader_test",
 		"DATABASE auth_platform ", "DATABASE auth_prepare_catalog_test ").Replace(string(grants)))

@@ -21,7 +21,7 @@ task sandbox:down
 
 ## Содержимое
 
-- `compose.yml` дополняет общий `deploy/compose.base.yml`.
+- `compose.yml` дополняет общий `deploy/compose/base.yml`.
 - `config/` содержит JWT Compose override, тестовый каталог разрешений и SQL подготовки restricted runtime/тестовой роли. Общие migrations/grants не копируются.
 - `tests/{token,access,session,security,cleanup,load}` содержит существующие проверки по фичам.
 - `internal/testsupport` содержит общие test-only helpers HTTPS/login/Mailpit/deployment, используемые этими suites. В production-сборку они не входят.

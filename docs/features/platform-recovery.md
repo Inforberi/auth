@@ -25,9 +25,9 @@ DBA создаёт четыре NOLOGIN группы и два отдельны�
 
 Порядок применения владельцем миграций:
 
-1. Адаптировать копию [password grants](../../deploy/recovery-grants.sql): database `auth` → имя платформенной БД, получатель `auth_recovery_operator` → `platform_password_recovery_operator`.
-2. Адаптировать копию [MFA grants](../../deploy/mfa-recovery-grants.sql): database `auth` → имя платформенной БД, получатель `auth_mfa_recovery_operator` → `platform_mfa_recovery_operator`.
-3. Применить [platform grants](../../deploy/platform-recovery-grants.sql). Они дают metadata SELECT и только MEMBER-связь с прежними группами: **INHERIT FALSE, SET FALSE**. Это сохраняет существующие Auth проверки членства, но не переносит права из других БД и не разрешает SET ROLE в проектные группы. Требуется PostgreSQL с поддержкой этих membership options; проверено на18.6.
+1. Адаптировать копию [password grants](../../deploy/postgres/grants/recovery-grants.sql): database `auth` → имя платформенной БД, получатель `auth_recovery_operator` → `platform_password_recovery_operator`.
+2. Адаптировать копию [MFA grants](../../deploy/postgres/grants/mfa-recovery-grants.sql): database `auth` → имя платформенной БД, получатель `auth_mfa_recovery_operator` → `platform_mfa_recovery_operator`.
+3. Применить [platform grants](../../deploy/postgres/grants/platform-recovery-grants.sql). Они дают metadata SELECT и только MEMBER-связь с прежними группами: **INHERIT FALSE, SET FALSE**. Это сохраняет существующие Auth проверки членства, но не переносит права из других БД и не разрешает SET ROLE в проектные группы. Требуется PostgreSQL с поддержкой этих membership options; проверено на18.6.
 4. Выдать каждому персональному LOGIN только его платформенную группу, без ADMIN OPTION. Не включать их в обе recovery-группы, runtime или группы владельцев. Не использовать forced-user pooler.
 
 Runtime не получает аварийных полномочий; startup отвергает membership в recovery-группах и EXECUTE decision function даже при выключенном recovery. Для новых owner-запросов нужен `MFA_RECOVERY_ENABLED=true`; включение проверяет отдельную платформенную NOLOGIN MFA-группу, безопасную MEMBER-связь, function grants и отсутствие EXECUTE у runtime. По умолчанию флаг остаётся false.

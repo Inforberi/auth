@@ -28,7 +28,7 @@ func roleCreationIntent(t *testing.T, admin *pgxpool.Pool, ctx context.Context, 
 		_, err := admin.Exec(cleanup, `DROP OWNED BY auth_role_intent_test; DROP ROLE auth_role_intent_test`)
 		require.NoError(t, err)
 	})
-	grants, err := os.ReadFile(migrationPath("../deploy/platform-runtime-grants.sql"))
+	grants, err := os.ReadFile(migrationPath("../deploy/postgres/grants/platform-runtime-grants.sql"))
 	require.NoError(t, err)
 	_, err = admin.Exec(ctx, strings.NewReplacer("auth_platform_runtime", "auth_role_intent_test",
 		"DATABASE auth_platform ", "DATABASE auth_platform_test ").Replace(string(grants)))

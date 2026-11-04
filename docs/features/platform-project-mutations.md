@@ -47,7 +47,7 @@ Shared authority locks позволяют одновременные коман�
 
 ## Grants и ошибки
 
-[Runtime template](../../deploy/platform-runtime-grants.sql) содержит необходимые column UPDATE для lifecycle, SELECT/column INSERT для append-only `project_events`; timestamp события задаётся БД. UPDATE(permission_key) нужен PostgreSQL для row-locking SELECT, не является новым endpoint делегирования. Ограниченный project INSERT теперь добавлен только для [creation intent](platform-project-creation.md#схема-и-grants); нет project DELETE, binding/schema rewrite, event UPDATE/DELETE/TRUNCATE, CREATEDB/DDL или executor credential. CheckRuntime отвергает неполные/избыточные grants до assembly.
+[Runtime template](../../deploy/postgres/grants/platform-runtime-grants.sql) содержит необходимые column UPDATE для lifecycle, SELECT/column INSERT для append-only `project_events`; timestamp события задаётся БД. UPDATE(permission_key) нужен PostgreSQL для row-locking SELECT, не является новым endpoint делегирования. Ограниченный project INSERT теперь добавлен только для [creation intent](platform-project-creation.md#схема-и-grants); нет project DELETE, binding/schema rewrite, event UPDATE/DELETE/TRUNCATE, CREATEDB/DDL или executor credential. CheckRuntime отвергает неполные/избыточные grants до assembly.
 
 Для установленной платформы нужен отдельно контролируемый grants upgrade; новый код со старым набором fail-closed не запустится. Никакие реальные grants/ENV/secrets не менялись, новых ENV/dependencies/schema/migrations этим блоком нет.
 

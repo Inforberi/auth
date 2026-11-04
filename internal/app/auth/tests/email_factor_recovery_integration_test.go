@@ -36,7 +36,7 @@ func testSecondaryFactorRecovery(t *testing.T, telegram bool) {
  REVOKE CONNECT ON DATABASE auth_schema_test FROM auth_mfa_email_runtime;
  DROP ROLE auth_mfa_email_runtime; DROP ROLE auth_mfa_email_operator; DROP ROLE auth_mfa_recovery_operator`)
 	})
-	grants, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "deploy", "mfa-recovery-grants.sql"))
+	grants, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "deploy", "postgres", "grants", "mfa-recovery-grants.sql"))
 	require.NoError(t, err)
 	accessExec(t, db, ctx, strings.ReplaceAll(string(grants), "ON DATABASE auth TO", "ON DATABASE auth_schema_test TO"))
 	accessExec(t, db, ctx, `GRANT auth_mfa_recovery_operator TO auth_mfa_email_operator;

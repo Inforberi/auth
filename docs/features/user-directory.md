@@ -54,7 +54,7 @@ GET /api/v1/admin/users?before=<nextCursor>&limit=50
 
 ## Независимые проекты — MP5.1k
 
-Проектный HTTP dispatcher подключает эти же две ручки и JSON DTO при `userDirectory=true` в UUID deployment manifest (`browser=true` обязателен). По умолчанию capability выключена, в том числе в ограниченном deployment без manifest. В программной сборке это `ProjectProfileConfig.UserDirectoryEnabled`. Пример — [project-auth.example.json](../../deploy/project-auth.example.json).
+Проектный HTTP dispatcher подключает эти же две ручки и JSON DTO при `userDirectory=true` в UUID deployment manifest (`browser=true` обязателен). По умолчанию capability выключена, в том числе в ограниченном deployment без manifest. В программной сборке это `ProjectProfileConfig.UserDirectoryEnabled`. Пример — [project-auth.example.json](../../deploy/examples/project-auth.example.json).
 
 `user_directory` в readiness означает готовность подключённого backend, а не право конкретного пользователя. Существующая SQL-политика методов входа не скрывает управление уже выданной сессией: directory может работать при выключенных primary methods, без hasher, SMTP и Redis в самом reader-профиле. При получении/проверке сессии сохраняются действующие общие гарантии.
 

@@ -55,7 +55,7 @@ func operatorRecoveryPools(t *testing.T, admin *pgxpool.Pool) (*pgxpool.Pool, *p
 		root = filepath.Join("..", "..", "..")
 	}
 	for _, name := range []string{"recovery-grants.sql", "mfa-recovery-grants.sql", "platform-recovery-grants.sql"} {
-		data, err := os.ReadFile(filepath.Join(root, "deploy", name))
+		data, err := os.ReadFile(filepath.Join(root, "deploy", "postgres", "grants", name))
 		if err != nil {
 			t.Fatal(err)
 		}

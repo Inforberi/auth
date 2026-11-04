@@ -1,12 +1,24 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-project_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+project_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../" && pwd)
 cd "$project_root"
 for script in deploy/scripts/*.sh; do bash -n "$script"; done
 project="auth-check-$(date +%s)-$$"
-compose() { APP_ENV_FILE=.env.example docker compose --project-directory "$project_root" --env-file .env.example -p "$project" -f deploy/compose.base.yml -f deploy/compose.check.yml "$@"; }
+compose() { APP_ENV_FILE=.env.example docker compose --project-directory "$project_root" --env-file .env.example -p "$project" -f deploy/compose/base.yml -f sandbox/compose.check.yml "$@"; }
 # Cleanup targets only the unique project created by this script, never user data.
-trap 'compose down --volumes --remove-orphans' EXIT
+cleanup_check() {
+  check_status=$?
+  trap - EXIT
+  if [[ "$check_status" != 0 ]]; then
+    compose ps --all >&2 || true
+    compose logs --no-color --tail 60 postgres >&2 || true
+  fi
+  compose down --volumes --remove-orphans || {
+    [[ "$check_status" != 0 ]] || check_status=1
+  }
+  exit "$check_status"
+}
+trap cleanup_check EXIT
 # The nested writable Air volume needs its mountpoint in the readonly source bind.
 mkdir -p tmp
 compose up -d --wait postgres redis mailpit
@@ -18,7 +30,7 @@ if [[ "${AUTH_SMOKE_ONLY:-false}" != true ]]; then
 fi
 # Provision a restricted test login separately from the migration owner.
 compose exec -T postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB" -c "CREATE ROLE auth_runtime LOGIN PASSWORD '\''test-runtime-only'\'';"'
-compose exec -T postgres sh -c 'exec psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"' < deploy/runtime-grants.sql
+compose exec -T postgres sh -c 'exec psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"' < internal/admin/projects/schema/runtime-grants.sql
 compose exec -T postgres sh -c 'PGPASSWORD=test-runtime-only psql -h localhost -U auth_runtime "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM auth.users;"'
 if [[ "${AUTH_SMOKE_ONLY:-false}" != true ]]; then
   if compose exec -T postgres sh -c 'PGPASSWORD=test-runtime-only psql -h localhost -U auth_runtime "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "CREATE TABLE auth.forbidden(id int);"'; then echo 'Runtime DDL incorrectly permitted' >&2; exit 1; fi
@@ -59,12 +71,12 @@ docker rm -f "$project-lock-test"
 compose stop api
 compose exec -T postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB" -c "DELETE FROM auth.users;"'
 compose run --rm --no-deps backup restore "$archive"
-compose exec -T postgres sh -c 'exec psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"' < deploy/runtime-grants.sql
+compose exec -T postgres sh -c 'exec psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"' < internal/admin/projects/schema/runtime-grants.sql
 count=$(compose exec -T postgres sh -c 'psql -At -U "$POSTGRES_USER" "$POSTGRES_DB" -c "SELECT count(*) FROM auth.users;"')
 test "$count" = 1
 compose run --rm --no-deps migrate down 1
 compose run --rm --no-deps migrate up
-compose exec -T postgres sh -c 'exec psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"' < deploy/runtime-grants.sql
+compose exec -T postgres sh -c 'exec psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"' < internal/admin/projects/schema/runtime-grants.sql
 compose up -d --no-deps api
 wait_ready
 # Readiness must reflect real Redis failure; liveness remains healthy.

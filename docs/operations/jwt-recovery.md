@@ -10,7 +10,7 @@
 
 ## SQL-инвалидизация — J7.2-local
 
-В wrapper включён `deploy/restore-auth-state.sql`, выполняемый через owner `psql -X -v ON_ERROR_STOP=1`. Это не миграция, не ручка API и не фоновый worker. Файл сам содержит BEGIN/COMMIT: ошибка любого шага откатывает весь отзыв вместе с аудитом. Не добавлять вокруг него `psql --single-transaction` с расчётом на вложенную транзакцию. Режим `-X` исключает локальный psqlrc.
+В wrapper включён `deploy/postgres/restore-auth-state.sql`, выполняемый через owner `psql -X -v ON_ERROR_STOP=1`. Это не миграция, не ручка API и не фоновый worker. Файл сам содержит BEGIN/COMMIT: ошибка любого шага откатывает весь отзыв вместе с аудитом. Не добавлять вокруг него `psql --single-transaction` с расчётом на вложенную транзакцию. Режим `-X` исключает локальный psqlrc.
 
 | Данные | Действие |
 | --- | --- |

@@ -25,7 +25,7 @@ Report не требует сессии возможного злоумышле�
 
 В UUID manifest добавлены независимые `emailBinding` и `emailChange`, по умолчанию false. Оба требуют `browser=true`; `emailBinding` дополнительно требует `reauthentication=true`. Binding producer требует включённую MFA configuration и готовую email reauthentication capability. SQL-полномочия администратора от этих флагов не появляются.
 
-TTL/лимиты берутся из существующих operational EmailBinding/EmailChange/Password/Session настроек; новых ENV нет. URLs собираются только из доверенного origin проекта: `/change-email`, `/protect-account`, `/recover-account`. Platform host/URL/секреты не наследуются. Без manifest сохраняется прежний ограниченный deployment; binding требует явной настройки reauthentication через manifest. [Пример](../../deploy/project-auth.example.json).
+TTL/лимиты берутся из существующих operational EmailBinding/EmailChange/Password/Session настроек; новых ENV нет. URLs собираются только из доверенного origin проекта: `/change-email`, `/protect-account`, `/recover-account`. Platform host/URL/секреты не наследуются. Без manifest сохраняется прежний ограниченный deployment; binding требует явной настройки reauthentication через manifest. [Пример](../../deploy/examples/project-auth.example.json).
 
 Programmatic source использует `ProjectProfileConfig.EmailManagement`. Profile выбирает только Binding/Change и необходимые им настройки из этого config; Invitations/Verification/Recovery producer flags в нём не публикуют дополнительные ручки. Origin должен совпадать с выбранным проектом.
 
