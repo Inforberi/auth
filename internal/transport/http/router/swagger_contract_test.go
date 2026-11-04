@@ -17,15 +17,17 @@ import (
 	policyhttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/policy/transport/http"
 	roleshttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/transport/http"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/transport/http"
-	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
-	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
+	tokenintrospectionhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/introspection/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/native/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
@@ -40,7 +42,7 @@ func TestSwaggerMatchesRoutes(t *testing.T) {
 			h.Config.JWT.NativeEnabled = true
 			h.NativeTokens = nativeContractHandlers(&nativeContract{}).NativeTokens
 			h.Config.JWT.Enabled = true
-			h.Introspection = tokenhttp.NewIntrospection(&introspectionContract{})
+			h.Introspection = tokenintrospectionhttp.NewIntrospection(&introspectionContract{})
 			h.Tokens = tokenhttp.New(&contractExchange{}, []byte(`{"keys":[]}`), zap.NewNop())
 			err := chi.Walk(New(h), func(method, path string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
 				if method == http.MethodOptions {
@@ -159,21 +161,21 @@ func TestSwaggerMatchesDTOs(t *testing.T) {
 		{"project_http.TransitionResponse", projecthttp.TransitionResponse{}},
 		{"project_http.CreateProjectRequest", projecthttp.CreateProjectRequest{}},
 		{"project_http.CreateProjectResponse", projecthttp.CreateProjectResponse{}},
-		{"token_http.IntrospectionRequest", tokenhttp.IntrospectionRequest{}},
-		{"token_http.IntrospectionResponse", tokenhttp.IntrospectionResponse{Active: true, Issuer: "issuer", Subject: "user", SessionID: "session", ID: "token", Audience: "orders", ExpiresAt: 1, Scope: "orders.read"}},
+		{"token_http.IntrospectionRequest", tokenintrospectionhttp.IntrospectionRequest{}},
+		{"token_http.IntrospectionResponse", tokenintrospectionhttp.IntrospectionResponse{Active: true, Issuer: "issuer", Subject: "user", SessionID: "session", ID: "token", Audience: "orders", ExpiresAt: 1, Scope: "orders.read"}},
 		{"token_http.ExchangeRequest", tokenhttp.ExchangeRequest{Scope: []accessdomain.PermissionKey{}}},
 		{"token_http.ExchangeResponse", tokenhttp.ExchangeResponse{}},
-		{"token_http.NativePasswordRequest", tokenhttp.NativePasswordRequest{Scope: []accessdomain.PermissionKey{}}},
-		{"token_http.NativeEmailRequest", tokenhttp.NativeEmailRequest{Scope: []accessdomain.PermissionKey{}}},
-		{"token_http.NativeEmailConfirmRequest", tokenhttp.NativeEmailConfirmRequest{}},
-		{"token_http.NativeEmailResponse", tokenhttp.NativeEmailResponse{}},
-		{"token_http.NativeMFARequest", tokenhttp.NativeMFARequest{}},
-		{"token_http.NativeEnrollmentRequest", tokenhttp.NativeEnrollmentRequest{}},
-		{"token_http.NativeEnrollmentConfirmRequest", tokenhttp.NativeEnrollmentConfirmRequest{}},
-		{"token_http.NativeEnrollmentResponse", tokenhttp.NativeEnrollmentResponse{}},
-		{"token_http.NativeRecoveryCodesResponse", tokenhttp.NativeRecoveryCodesResponse{Codes: []string{}}},
-		{"token_http.NativeChallengeResponse", tokenhttp.NativeChallengeResponse{Method: "totp"}},
-		{"token_http.RefreshRequest", tokenhttp.RefreshRequest{}},
+		{"token_http.NativePasswordRequest", tokennativehttp.NativePasswordRequest{Scope: []accessdomain.PermissionKey{}}},
+		{"token_http.NativeEmailRequest", tokennativehttp.NativeEmailRequest{Scope: []accessdomain.PermissionKey{}}},
+		{"token_http.NativeEmailConfirmRequest", tokennativehttp.NativeEmailConfirmRequest{}},
+		{"token_http.NativeEmailResponse", tokennativehttp.NativeEmailResponse{}},
+		{"token_http.NativeMFARequest", tokennativehttp.NativeMFARequest{}},
+		{"token_http.NativeEnrollmentRequest", tokennativehttp.NativeEnrollmentRequest{}},
+		{"token_http.NativeEnrollmentConfirmRequest", tokennativehttp.NativeEnrollmentConfirmRequest{}},
+		{"token_http.NativeEnrollmentResponse", tokennativehttp.NativeEnrollmentResponse{}},
+		{"token_http.NativeRecoveryCodesResponse", tokennativehttp.NativeRecoveryCodesResponse{Codes: []string{}}},
+		{"token_http.NativeChallengeResponse", tokennativehttp.NativeChallengeResponse{Method: "totp"}},
+		{"token_http.RefreshRequest", tokennativehttp.RefreshRequest{}},
 		{"token_http.JWKSResponse", tokenhttp.JWKSResponse{Keys: []tokenhttp.PublicKey{}}},
 		{"token_http.PublicKey", tokenhttp.PublicKey{Operations: []string{"verify"}}},
 		{"password_http.ForgotRequest", passwordrecoveryhttp.ForgotRequest{}},

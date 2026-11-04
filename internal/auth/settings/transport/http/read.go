@@ -1,4 +1,4 @@
-package http
+package settingshttp
 
 import "net/http"
 
@@ -13,7 +13,7 @@ import "net/http"
 // @Failure 503 {object} httpx.ErrorResponse
 // @Router /api/v1/admin/auth/settings [get]
 func (h *Handler) Read(w http.ResponseWriter, r *http.Request) {
-	actor, ok := principal(w, r)
+	actor, ok := Principal(w, r)
 	if !ok {
 		return
 	}

@@ -1,4 +1,4 @@
-package http
+package settingshttp
 
 import (
 	"context"
@@ -39,7 +39,7 @@ func NewWithTokenDeployment(service settingsService, available domain.PublicMeth
 	return &Handler{service: service, available: available, log: log, tokens: tokenProfilesResponse(deployment)}
 }
 
-func principal(w http.ResponseWriter, r *http.Request) (accessservice.Principal, bool) {
+func Principal(w http.ResponseWriter, r *http.Request) (accessservice.Principal, bool) {
 	auth, ok := sessionhttp.GetAuthContext(r.Context())
 	if !ok {
 		httpx.Error(w, 401, "unauthorized", "unauthorized")
@@ -85,7 +85,7 @@ type ReadinessResponse struct {
 	PolicyVersion int64                     `json:"policyVersion"`
 	ObservedAt    time.Time                 `json:"observedAt"`
 	Features      []domain.FeatureReadiness `json:"features"`
-}
+} // @name http.ReadinessResponse
 
 func SettingsResponseWithDeployment(snapshot domain.Snapshot, available domain.PublicMethods, deployment domain.TokenDeployment) SettingsResponse {
 	response := SettingsResponseFrom(snapshot, available)

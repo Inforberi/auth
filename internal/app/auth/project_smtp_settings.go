@@ -8,7 +8,7 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 )
 
@@ -16,7 +16,7 @@ type ProjectSMTPSettingsConfig struct{ AllowedTargets []string }
 
 type projectSMTPSettings struct {
 	repo    *projectSMTPSettingsRepository
-	service *settingsservice.SMTP
+	service *settingssmtp.SMTP
 }
 
 func (p *ProjectProfile) buildProfileSMTPSettings(cfg ProjectProfileConfig, root string, redisReady bool) {
@@ -42,9 +42,9 @@ func (p *ProjectProfile) buildProfileSMTPSettings(cfg ProjectProfileConfig, root
 		if err == nil {
 			gate := p.deps.SMTPTests
 			if gate == nil {
-				gate = settingsservice.NewSMTPTestGate()
+				gate = settingssmtp.NewSMTPTestGate()
 			}
-			s.service, err = settingsservice.NewSMTPWithTestGate(s.repo, source.cipher, func(ctx context.Context, config settingsdomain.SMTPConfig, password string) error {
+			s.service, err = settingssmtp.NewSMTPWithTestGate(s.repo, source.cipher, func(ctx context.Context, config settingsdomain.SMTPConfig, password string) error {
 				if err := source.requireCurrent(ctx); err != nil {
 					return err
 				}
@@ -70,7 +70,7 @@ func (s *projectSMTPSettings) Read(ctx context.Context, actor accessservice.Prin
 	return s.repo.ReadSMTP(ctx, actor)
 }
 
-func (s *projectSMTPSettings) Update(ctx context.Context, input settingsservice.SMTPUpdateInput) (settingsdomain.SMTPSnapshot, error) {
+func (s *projectSMTPSettings) Update(ctx context.Context, input settingssmtp.SMTPUpdateInput) (settingsdomain.SMTPSnapshot, error) {
 	if s.service == nil {
 		return settingsdomain.SMTPSnapshot{}, projectdomain.ErrUnavailable
 	}

@@ -23,9 +23,10 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
+	tokenintrospectionhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/introspection/transport/http"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/signing"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
@@ -87,7 +88,7 @@ func TestConsumerWithAuthRouterOverTLS(t *testing.T) {
 	h := contractHandlers("prod")
 	h.Config.JWT.Enabled = true
 	h.Tokens = tokenhttp.New(&contractExchange{}, keys.JWKS(), zap.NewNop())
-	h.Introspection = tokenhttp.NewIntrospection(online)
+	h.Introspection = tokenintrospectionhttp.NewIntrospection(online)
 	server := httptest.NewTLSServer(New(h))
 	defer server.Close()
 	roots := x509.NewCertPool()

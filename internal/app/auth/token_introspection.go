@@ -4,14 +4,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
+	tokenintrospectionhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/introspection/transport/http"
 	tokenpostgres "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
-func assembleIntrospection(pool *pgxpool.Pool, limiter service.IntrospectionLimiter, public []byte, cfg settings.Config, resources []service.Resource, catalog accesssettings.Catalog) (*tokenhttp.IntrospectionHandler, error) {
+func assembleIntrospection(pool *pgxpool.Pool, limiter service.IntrospectionLimiter, public []byte, cfg settings.Config, resources []service.Resource, catalog accesssettings.Catalog) (*tokenintrospectionhttp.IntrospectionHandler, error) {
 	if cfg.IntrospectionClientFile == "" {
 		return nil, nil
 	}
@@ -30,5 +30,5 @@ func assembleIntrospection(pool *pgxpool.Pool, limiter service.IntrospectionLimi
 	if err != nil {
 		return nil, err
 	}
-	return tokenhttp.NewIntrospection(svc), nil
+	return tokenintrospectionhttp.NewIntrospection(svc), nil
 }

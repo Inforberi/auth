@@ -1,4 +1,4 @@
-package http
+package settingshttp
 
 import "net/http"
 
@@ -13,7 +13,7 @@ import "net/http"
 // @Router /api/v1/admin/auth/settings/mfa [get]
 // @Router /api/v1/platform/settings/mfa [get]
 func (h *MFAHandler) Read(w http.ResponseWriter, r *http.Request) {
-	actor, ok := principal(w, r)
+	actor, ok := Principal(w, r)
 	if !ok {
 		return
 	}

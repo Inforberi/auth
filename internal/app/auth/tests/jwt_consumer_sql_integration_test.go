@@ -15,10 +15,11 @@ import (
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	tokendomain "github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
+	tokenintrospectionhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/introspection/transport/http"
 	tokenpostgres "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/postgres"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	tokensettings "github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/router"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
@@ -52,7 +53,7 @@ func newSQLConsumer(t *testing.T, db *pgxpool.Pool, ctx context.Context, svc *to
 	}
 	server := httptest.NewTLSServer(router.New(router.Handlers{
 		Config: &config.Config{JWT: tokensettings.Config{Enabled: true}}, Logger: zap.NewNop(),
-		Tokens: tokenhttp.New(svc, keys.JWKS(), zap.NewNop()), Introspection: tokenhttp.NewIntrospection(online),
+		Tokens: tokenhttp.New(svc, keys.JWKS(), zap.NewNop()), Introspection: tokenintrospectionhttp.NewIntrospection(online),
 	}))
 	t.Cleanup(server.Close)
 	roots := x509.NewCertPool()

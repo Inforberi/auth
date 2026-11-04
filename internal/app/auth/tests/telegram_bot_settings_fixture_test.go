@@ -12,7 +12,7 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingstelegram "github.com/Inforberi/financial-intelligence/internal/auth/settings/telegram/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
@@ -25,7 +25,7 @@ func (f telegramBotVerifier) VerifyTelegramBot(ctx context.Context, token settin
 	return f(ctx, token)
 }
 
-func telegramBotSettingsFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, verify telegramBotVerifier) (*settingsservice.TelegramBotSettings, accessservice.Principal) {
+func telegramBotSettingsFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, verify telegramBotVerifier) (*settingstelegram.TelegramBotSettings, accessservice.Principal) {
 	t.Helper()
 	actor := accessPrincipal(t, db, ctx)
 	accessExec(t, db, ctx, `WITH role AS(INSERT INTO auth.roles(key,name) VALUES('telegram_bot_manager','Bot manager') RETURNING id),
@@ -36,7 +36,7 @@ func telegramBotSettingsFixture(t *testing.T, db *pgxpool.Pool, ctx context.Cont
 	require.NoError(t, err)
 	webhook, err := secretbox.NewScoped(root, "telegram-webhook:project-a:v1")
 	require.NoError(t, err)
-	svc, err := settingsservice.NewTelegramBotSettings(settingspostgres.New(db), token, webhook, verify, mfaTestLimit{}, tokengenerate.New(), settingsservice.TelegramBotLimits{
+	svc, err := settingstelegram.NewTelegramBotSettings(settingspostgres.New(db), token, webhook, verify, mfaTestLimit{}, tokengenerate.New(), settingstelegram.TelegramBotLimits{
 		UserUpdatesPerMinute: 100, ProjectUpdatesPerMinute: 1000,
 	})
 	require.NoError(t, err)

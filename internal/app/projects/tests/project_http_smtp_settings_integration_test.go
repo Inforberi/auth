@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 )
 
@@ -31,14 +31,14 @@ func (f projectAccountFixture) httpSMTPSettings(t *testing.T, ctx context.Contex
 		require.NoError(t, err)
 		require.NoError(t, f.rdb.Del(cleanup, prefix+"user:"+actor, prefix+"project").Err())
 	})
-	read := func(cookie string, expected int) settingshttp.SMTPResponse {
+	read := func(cookie string, expected int) settingssmtphttp.SMTPResponse {
 		t.Helper()
 		status, cookies, body := web("GET", path, origin, cookie, "")
 		require.Equal(t, expected, status, "%s", body)
 		require.Empty(t, cookies)
 		require.NotContains(t, string(body), "runtime-smtp-fixture-only")
 		require.NotContains(t, string(body), "new-project-SMTP-secret")
-		var response settingshttp.SMTPResponse
+		var response settingssmtphttp.SMTPResponse
 		if expected == 200 {
 			require.NoError(t, json.Unmarshal(body, &response))
 		}
@@ -48,9 +48,9 @@ func (f projectAccountFixture) httpSMTPSettings(t *testing.T, ctx context.Contex
 	read(ordinaryToken, 403)
 	before := read(actorToken, 200)
 	tls := true
-	config := &settingshttp.SMTPConfigRequest{Host: before.Config.Host, Port: before.Config.Port, Username: before.Config.Username, From: before.Config.From, Domain: before.Config.Domain, RequireTLS: &tls}
+	config := &settingssmtphttp.SMTPConfigRequest{Host: before.Config.Host, Port: before.Config.Port, Username: before.Config.Username, From: before.Config.From, Domain: before.Config.Domain, RequireTLS: &tls}
 	password := "new-project-SMTP-secret"
-	input := settingshttp.SMTPUpdateRequest{ExpectedVersion: before.Version, Config: config, Password: &password}
+	input := settingssmtphttp.SMTPUpdateRequest{ExpectedVersion: before.Version, Config: config, Password: &password}
 	web.command(t, path, "https://foreign.example.test", actorToken, input, 403, nil)
 	web.command(t, path, origin, ordinaryToken, input, 403, nil)
 	invalidConfig := *config
@@ -62,7 +62,7 @@ func (f projectAccountFixture) httpSMTPSettings(t *testing.T, ctx context.Contex
 	invalidConfig = *config
 	invalidConfig.RequireTLS = &noTLS
 	web.command(t, path, origin, actorToken, invalid, 400, nil)
-	var changed settingshttp.SMTPResponse
+	var changed settingssmtphttp.SMTPResponse
 	web.command(t, path, origin, actorToken, input, 200, &changed)
 	require.Equal(t, before.Version+1, changed.Version)
 	require.True(t, changed.PasswordSet)
@@ -80,7 +80,7 @@ func (f projectAccountFixture) httpSMTPSettings(t *testing.T, ctx context.Contex
 	web.command(t, path, origin, actorToken, input, 200, &changed)
 	require.Equal(t, before.Version+2, changed.Version)
 	read(actorToken, 200)
-	web.command(t, path+"/test", origin, actorToken, settingshttp.SMTPTestRequest{ExpectedVersion: before.Version}, 409, nil)
+	web.command(t, path+"/test", origin, actorToken, settingssmtphttp.SMTPTestRequest{ExpectedVersion: before.Version}, 409, nil)
 	connected, release, finished := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 	running, stop := context.WithCancel(ctx)
 	defer stop()
@@ -90,7 +90,7 @@ func (f projectAccountFixture) httpSMTPSettings(t *testing.T, ctx context.Contex
 	var body []byte
 	go func() {
 		defer close(done)
-		encoded, err := json.Marshal(settingshttp.SMTPTestRequest{ExpectedVersion: changed.Version})
+		encoded, err := json.Marshal(settingssmtphttp.SMTPTestRequest{ExpectedVersion: changed.Version})
 		if err != nil {
 			return
 		}
@@ -118,7 +118,7 @@ func (f projectAccountFixture) httpSMTPSettings(t *testing.T, ctx context.Contex
 	require.Contains(t, string(body), `"code":"smtp_connection_failed"`)
 	require.NoError(t, <-finished, "no AUTH or message may precede TLS")
 	require.NoError(t, f.rdb.Set(ctx, prefix+"user:"+actor, 3, time.Minute).Err())
-	web.command(t, path+"/test", origin, actorToken, settingshttp.SMTPTestRequest{ExpectedVersion: changed.Version}, 429, nil)
+	web.command(t, path+"/test", origin, actorToken, settingssmtphttp.SMTPTestRequest{ExpectedVersion: changed.Version}, 429, nil)
 	var audits int
 	require.NoError(t, f.db.QueryRow(ctx, `SELECT count(*) FROM auth.smtp_settings_audit WHERE actor_id=$1`, actor).Scan(&audits))
 	require.Equal(t, 2, audits)

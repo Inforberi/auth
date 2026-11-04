@@ -9,12 +9,13 @@ import (
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
+	settingsproviders "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/service"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	googleclient "github.com/Inforberi/financial-intelligence/internal/integrations/google"
 )
 
-func (s realmSecurity) assembleGoogle(ctx context.Context, cfg *config.Config, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, policy *settingsservice.Service, providers *settingsservice.Providers, log *zap.Logger) (*googlehttp.Handler, func(), error) {
+func (s realmSecurity) assembleGoogle(ctx context.Context, cfg *config.Config, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, policy *settingsservice.Service, providers *settingsproviders.Providers, log *zap.Logger) (*googlehttp.Handler, func(), error) {
 	if !cfg.Google.Enabled {
 		return nil, nil, nil
 	}

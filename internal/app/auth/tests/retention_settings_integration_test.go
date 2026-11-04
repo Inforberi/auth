@@ -11,7 +11,7 @@ import (
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingsretention "github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/service"
 )
 
 func TestRetentionSettingsSchema(t *testing.T) {
@@ -26,7 +26,7 @@ func TestRetentionSettingsSchema(t *testing.T) {
 	})
 	runtime := operatorPool(t, ctx, db, "auth_retention_runtime")
 	repo := settingspostgres.New(runtime)
-	svc, other := settingsservice.NewRetention(repo), settingsservice.NewRetention(repo)
+	svc, other := settingsretention.NewRetention(repo), settingsretention.NewRetention(repo)
 	p := settingsdomain.RetentionPolicy{EmailReservationDays: 100, SessionDays: 100, SecurityAuditDays: 180}
 	a, b := protectionPair(func() error { return svc.Initialize(ctx, p) }, func() error { return other.Initialize(ctx, p) })
 	if a != nil || b != nil {
@@ -43,7 +43,7 @@ func TestRetentionSettingsSchema(t *testing.T) {
 	if err != nil || before.Version != 1 || before.Policy != p {
 		t.Fatal(before, err)
 	}
-	input := settingsservice.RetentionUpdateInput{Actor: actor, ExpectedVersion: 1, Policy: p}
+	input := settingsretention.RetentionUpdateInput{Actor: actor, ExpectedVersion: 1, Policy: p}
 	if got, err := svc.Update(ctx, input); err != nil || got != before {
 		t.Fatal("no-op changed settings", got, err)
 	}
@@ -74,8 +74,10 @@ func TestRetentionSettingsSchema(t *testing.T) {
 	}
 	ageDeletion(t, db, ctx, f.user)
 	token := strings.Repeat("e", 64)
-	accessExec(t, db, ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,user_agent,ip_address)
-		VALUES($1,$2,1,clock_timestamp()-interval '50 days',clock_timestamp()-interval '40 days',clock_timestamp()-interval '39 days','','')`, token, actor.UserID)
+	accessExec(t, db, ctx, `INSERT INTO auth.sessions(token_hash,user_id,auth_version,created_at,expires_at,absolute_expires_at,
+		password_verified_at,primary_method,primary_verified_at,mfa_verified_at,mfa_method,user_agent,ip_address)
+		VALUES($1,$2,1,clock_timestamp()-interval '50 days',clock_timestamp()-interval '40 days',clock_timestamp()-interval '39 days',
+		clock_timestamp()-interval '50 days','password',clock_timestamp()-interval '50 days',clock_timestamp()-interval '50 days','totp','','')`, token, actor.UserID)
 	accessExec(t, db, ctx, `INSERT INTO auth.auth_settings_audit(actor_id,version,previous_policy,next_policy,created_at)
 		VALUES($1,777,'{}','{}',clock_timestamp()-interval '40 days')`, actor.UserID)
 	var expires, absolute time.Time
@@ -120,9 +122,10 @@ func TestRetentionSettingsSchema(t *testing.T) {
 	}
 
 	input.ExpectedVersion = 2
-	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL,mfa_method=NULL WHERE token_hash=$1`, actor.TokenHash)
+	accessExec(t, db, ctx, `UPDATE auth.sessions SET primary_verified_at=statement_timestamp()-interval '6 minutes',
+		mfa_verified_at=statement_timestamp()-interval '6 minutes',mfa_method='totp' WHERE token_hash=$1`, actor.TokenHash)
 	if _, err := svc.Update(ctx, input); !errors.Is(err, accessdomain.ErrFreshAuthRequired) {
-		t.Fatal("no-op bypassed MFA", err)
+		t.Fatal("no-op accepted stale MFA", err)
 	}
 	if _, err := svc.Read(ctx, actor); err != nil {
 		t.Fatal("reading requires fresh proof", err)

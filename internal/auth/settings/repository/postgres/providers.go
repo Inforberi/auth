@@ -11,13 +11,13 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingsproviders "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/service"
 )
 
 const providerColumns = `provider,version,client_id,secret_set`
 
-func scanProvider(row pgx.Row, secret bool) (service.ProviderStored, error) {
-	var result service.ProviderStored
+func scanProvider(row pgx.Row, secret bool) (settingsproviders.ProviderStored, error) {
+	var result settingsproviders.ProviderStored
 	values := []any{&result.Provider, &result.Version, &result.ClientID, &result.SecretSet}
 	if secret {
 		values = append(values, &result.Secret)
@@ -29,7 +29,7 @@ func scanProvider(row pgx.Row, secret bool) (service.ProviderStored, error) {
 	return result, err
 }
 
-func (r *Repository) LoadProvider(ctx context.Context, name string) (service.ProviderStored, error) {
+func (r *Repository) LoadProvider(ctx context.Context, name string) (settingsproviders.ProviderStored, error) {
 	return scanProvider(r.db.QueryRow(ctx, `SELECT `+providerColumns+`,secret FROM auth.provider_settings WHERE provider=$1`, name), true)
 }
 
@@ -42,8 +42,8 @@ func (r *Repository) ReadProvider(ctx context.Context, actor accessservice.Princ
 	return stored.ProviderSnapshot, err
 }
 
-func (r *Repository) InitializeProvider(ctx context.Context, seed service.ProviderStored) (service.ProviderStored, error) {
-	var result service.ProviderStored
+func (r *Repository) InitializeProvider(ctx context.Context, seed settingsproviders.ProviderStored) (settingsproviders.ProviderStored, error) {
+	var result settingsproviders.ProviderStored
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
 			return err

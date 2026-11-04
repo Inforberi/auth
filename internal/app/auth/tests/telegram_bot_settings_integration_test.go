@@ -11,7 +11,7 @@ import (
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingstelegram "github.com/Inforberi/financial-intelligence/internal/auth/settings/telegram/service"
 )
 
 func TestTelegramBotSettingsSchema(t *testing.T) {
@@ -38,7 +38,7 @@ func TestTelegramBotSettingsSchema(t *testing.T) {
 	require.ErrorIs(t, err, settingsdomain.ErrMethodNotReady)
 	token := settingsBotToken
 	hook = func(ctx context.Context) { requireBotVerificationUnlocked(t, db, ctx, actor) }
-	configured, err := svc.Update(ctx, settingsservice.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: before.Version, BotToken: &token})
+	configured, err := svc.Update(ctx, settingstelegram.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: before.Version, BotToken: &token})
 	require.NoError(t, err)
 	hook = nil
 	require.Equal(t, before.Version+1, configured.Version)
@@ -46,23 +46,23 @@ func TestTelegramBotSettingsSchema(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, token, credentials.Token.Value())
 	require.True(t, settingsdomain.ValidTelegramWebhookSecret(credentials.WebhookSecret))
-	_, err = svc.Update(ctx, settingsservice.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: configured.Version})
+	_, err = svc.Update(ctx, settingstelegram.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: configured.Version})
 	require.NoError(t, err)
 	require.EqualValues(t, 1, calls.Load(), "no-op must neither verify nor write")
 	unauthorized := accessPrincipal(t, db, ctx)
-	_, err = svc.Update(ctx, settingsservice.TelegramBotUpdateInput{Actor: unauthorized, ExpectedVersion: configured.Version, BotToken: &token})
+	_, err = svc.Update(ctx, settingstelegram.TelegramBotUpdateInput{Actor: unauthorized, ExpectedVersion: configured.Version, BotToken: &token})
 	require.ErrorIs(t, err, accessdomain.ErrForbidden)
 	require.EqualValues(t, 1, calls.Load())
 	_, err = svc.Read(ctx, unauthorized)
 	require.ErrorIs(t, err, accessdomain.ErrForbidden)
-	_, err = svc.Update(ctx, settingsservice.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: before.Version, BotToken: &token})
+	_, err = svc.Update(ctx, settingstelegram.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: before.Version, BotToken: &token})
 	require.ErrorIs(t, err, settingsdomain.ErrPolicyConflict)
 	require.EqualValues(t, 1, calls.Load())
 	t.Run("rotation invalidates pending preparation without purging it", func(t *testing.T) {
 		f := newTelegramPreparationFixture(t, db, ctx, "settings-rotation", false)
 		_, confirmation := f.begin(t, ctx)
 		rotated := strings.Replace(token, "abcdefgh", "ABCDEFGH", 1)
-		_, err := svc.Update(ctx, settingsservice.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: configured.Version, BotToken: &rotated})
+		_, err := svc.Update(ctx, settingstelegram.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: configured.Version, BotToken: &rotated})
 		require.NoError(t, err)
 		_, err = f.channel.Confirm(ctx, confirmation)
 		require.ErrorIs(t, err, mfadomain.ErrUnavailable)
@@ -78,7 +78,7 @@ func TestTelegramBotSettingsSchema(t *testing.T) {
 		t.Cleanup(func() {
 			accessExec(t, db, ctx, `ALTER TABLE auth.telegram_bot_settings_audit DROP CONSTRAINT IF EXISTS reject_bot_rotation`)
 		})
-		_, err = svc.Update(ctx, settingsservice.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: current.Snapshot.Version, RotateWebhookSecret: true})
+		_, err = svc.Update(ctx, settingstelegram.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: current.Snapshot.Version, RotateWebhookSecret: true})
 		require.Error(t, err)
 		after, err := svc.Credentials(ctx)
 		require.NoError(t, err)

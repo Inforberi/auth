@@ -11,25 +11,27 @@ import (
 	accesshttp "github.com/Inforberi/financial-intelligence/internal/access/transport/http"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
-	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
 	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
-	accountprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
-	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
 	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
-	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/transport/http"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
+	settingsretentionhttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/transport/http"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
@@ -152,8 +154,8 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 		Access:            accesshttp.New(access.Service, log),
 		AuthSettings:      settingshttp.NewWithTokenDeployment(policy, cfg.AvailableAuthMethods(), tokens.deployment, log),
 		SMTPSettings:      smtpSettings,
-		ProviderSettings:  settingshttp.NewProviders(providers, log),
-		RetentionSettings: settingshttp.NewRetention(retentionSettings, log),
+		ProviderSettings:  settingsprovidershttp.NewProviders(providers, log),
+		RetentionSettings: settingsretentionhttp.NewRetention(retentionSettings, log),
 		MFASettings:       settingshttp.NewMFA(settingsservice.NewMFA(settingspostgres.New(pool), cfg.MFA.Enabled), log),
 		Setup:             setup,
 		EmailBinding:      emailBinding,

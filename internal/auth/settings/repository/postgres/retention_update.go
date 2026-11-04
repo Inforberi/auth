@@ -8,10 +8,10 @@ import (
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingsretention "github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/service"
 )
 
-func (r *Repository) UpdateRetention(ctx context.Context, input service.RetentionUpdateInput) (domain.RetentionSnapshot, error) {
+func (r *Repository) UpdateRetention(ctx context.Context, input settingsretention.RetentionUpdateInput) (domain.RetentionSnapshot, error) {
 	var result domain.RetentionSnapshot
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, input.Actor, "", settings.AuthSettingsManage); err != nil {

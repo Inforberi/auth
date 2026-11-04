@@ -14,6 +14,7 @@ import (
 	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingsproviders "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/service"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
@@ -39,8 +40,8 @@ func TestProviderSettingsSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	repo := settingspostgres.New(runtime)
-	svc := settingsservice.NewProviders(repo, google, telegram)
-	other := settingsservice.NewProviders(repo, google, telegram)
+	svc := settingsproviders.NewProviders(repo, google, telegram)
+	other := settingsproviders.NewProviders(repo, google, telegram)
 	a, b := protectionPair(func() error {
 		return svc.Initialize(ctx, "google", "fixture.apps.googleusercontent.com", "first", true)
 	}, func() error {
@@ -63,7 +64,7 @@ func TestProviderSettingsSchema(t *testing.T) {
 	if err != nil || before.Version != 1 || !before.SecretSet {
 		t.Fatal(before, err)
 	}
-	input := settingsservice.ProviderUpdateInput{Actor: actor, Provider: "google", ClientID: before.ClientID, ExpectedVersion: 1}
+	input := settingsproviders.ProviderUpdateInput{Actor: actor, Provider: "google", ClientID: before.ClientID, ExpectedVersion: 1}
 	if got, err := svc.Update(ctx, input); err != nil || got != before {
 		t.Fatal("no-op changed credentials", got, err)
 	}
@@ -151,7 +152,7 @@ func TestProviderSettingsSchema(t *testing.T) {
 	}
 	accessExec(t, db, ctx, `UPDATE auth.auth_settings SET telegram_enabled=false`)
 	empty := ""
-	if _, err := svc.Update(ctx, settingsservice.ProviderUpdateInput{Actor: actor, Provider: "telegram", ClientID: "123", ExpectedVersion: 1, Secret: &empty}); err != nil {
+	if _, err := svc.Update(ctx, settingsproviders.ProviderUpdateInput{Actor: actor, Provider: "telegram", ClientID: "123", ExpectedVersion: 1, Secret: &empty}); err != nil {
 		t.Fatal("disabled provider secret could not be cleared", err)
 	}
 	policyRepo := settingspostgres.NewWithRuntime(runtime, settingsdomain.PublicMethods{Password: true, EmailOTP: true, Google: true, Telegram: true}, settingsdomain.TokenIssuance{SessionExchange: true, Native: true})
@@ -167,10 +168,11 @@ func TestProviderSettingsSchema(t *testing.T) {
 	if err := db.QueryRow(ctx, `SELECT string_agg(previous_configuration::text||next_configuration::text,'') FROM auth.provider_settings_audit`).Scan(&audit); err != nil || strings.Contains(audit, rotated) {
 		t.Fatal("secret in audit", err)
 	}
-	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL,mfa_method=NULL WHERE token_hash=$1`, actor.TokenHash)
+	accessExec(t, db, ctx, `UPDATE auth.sessions SET primary_verified_at=statement_timestamp()-interval '6 minutes',
+		mfa_verified_at=statement_timestamp()-interval '6 minutes',mfa_method='totp' WHERE token_hash=$1`, actor.TokenHash)
 	input.ClientID = before.ClientID
 	if _, err := svc.Update(ctx, input); !errors.Is(err, accessdomain.ErrFreshAuthRequired) {
-		t.Fatal("rotation missing MFA", err)
+		t.Fatal("rotation with stale MFA", err)
 	}
 	if _, err := svc.Read(ctx, actor, "google"); err != nil {
 		t.Fatal("read needs fresh proof", err)

@@ -13,13 +13,13 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
+	settingsretention "github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/service"
+	settingsretentionhttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/transport/http"
 )
 
 type contractRetention struct {
 	calls int
-	input settingsservice.RetentionUpdateInput
+	input settingsretention.RetentionUpdateInput
 	err   error
 }
 
@@ -29,7 +29,7 @@ func (s *contractRetention) Read(_ context.Context, actor accessservice.Principa
 	return settingsdomain.RetentionSnapshot{Version: 1}, s.err
 }
 
-func (s *contractRetention) Update(_ context.Context, input settingsservice.RetentionUpdateInput) (settingsdomain.RetentionSnapshot, error) {
+func (s *contractRetention) Update(_ context.Context, input settingsretention.RetentionUpdateInput) (settingsdomain.RetentionSnapshot, error) {
 	s.calls++
 	s.input = input
 	return settingsdomain.RetentionSnapshot{Version: 2, Policy: input.Policy}, s.err
@@ -43,7 +43,7 @@ func TestRetentionSettingsContracts(t *testing.T) {
 				h := contractHandlers("prod")
 				sessions := &securitySessions{}
 				h.Middleware = sessionhttp.New(sessions, zap.NewNop())
-				h.RetentionSettings = settingshttp.NewRetention(s, zap.NewNop())
+				h.RetentionSettings = settingsretentionhttp.NewRetention(s, zap.NewNop())
 				body := `{"expectedVersion":1,"policy":{"emailReservationDays":30,"sessionDays":30,"securityAuditDays":180},"confirmShortening":true}`
 				want := 200
 				switch mode {

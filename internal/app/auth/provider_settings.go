@@ -6,12 +6,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingsproviders "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/service"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
-func (s realmSecurity) assembleProviderSettings(ctx context.Context, pool *pgxpool.Pool, cfg *config.Config, policy settingsdomain.Policy) (*settingsservice.Providers, error) {
+func (s realmSecurity) assembleProviderSettings(ctx context.Context, pool *pgxpool.Pool, cfg *config.Config, policy settingsdomain.Policy) (*settingsproviders.Providers, error) {
 	google, err := s.cipher(cfg.Account.EncryptionKey, "provider-google:v1")
 	if err != nil {
 		return nil, err
@@ -20,7 +20,7 @@ func (s realmSecurity) assembleProviderSettings(ctx context.Context, pool *pgxpo
 	if err != nil {
 		return nil, err
 	}
-	svc := settingsservice.NewProviders(settingspostgres.New(pool), google, telegram)
+	svc := settingsproviders.NewProviders(settingspostgres.New(pool), google, telegram)
 	for _, seed := range []struct {
 		name, id, secret string
 		enabled          bool

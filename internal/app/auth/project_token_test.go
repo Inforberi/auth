@@ -10,12 +10,12 @@ import (
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	tokendomain "github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
+	tokenintrospectionhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/introspection/transport/http"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
-var _ tokenhttp.IntrospectionService = (*ProjectTokens)(nil)
+var _ tokenintrospectionhttp.IntrospectionService = (*ProjectTokens)(nil)
 
 func TestProjectTokensDisabledWithoutDependencies(t *testing.T) {
 	service, err := NewProjectTokens(t.Context(), projectruntime.Key{}, ProjectTokenConfig{}, ProjectTokenDependencies{})

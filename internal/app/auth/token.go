@@ -10,12 +10,14 @@ import (
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	tokenintrospectionhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/introspection/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/native/transport/http"
 	tokenpostgres "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/postgres"
 	tokenredis "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/redis"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/signing"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
@@ -23,8 +25,8 @@ import (
 type tokenApp struct {
 	service       *service.Service
 	handler       *tokenhttp.Handler
-	native        *tokenhttp.NativeHandler
-	introspection *tokenhttp.IntrospectionHandler
+	native        *tokennativehttp.NativeHandler
+	introspection *tokenintrospectionhttp.IntrospectionHandler
 	deployment    settingsdomain.TokenDeployment
 }
 

@@ -9,12 +9,13 @@ import (
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
+	settingsproviders "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/service"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	telegramclient "github.com/Inforberi/financial-intelligence/internal/integrations/telegram"
 )
 
-func (s realmSecurity) assembleTelegram(ctx context.Context, cfg *config.Config, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, policy *settingsservice.Service, providers *settingsservice.Providers, log *zap.Logger) (*telegramhttp.Handler, func(), error) {
+func (s realmSecurity) assembleTelegram(ctx context.Context, cfg *config.Config, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, policy *settingsservice.Service, providers *settingsproviders.Providers, log *zap.Logger) (*telegramhttp.Handler, func(), error) {
 	if !cfg.Telegram.Enabled {
 		return nil, nil, nil
 	}

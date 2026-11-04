@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
+	settingsretentionhttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/transport/http"
 )
 
 func (f projectAccountFixture) httpRetentionSettings(t *testing.T, ctx context.Context, web projectAccountRequest, origin, actorToken, ordinaryToken string) {
@@ -27,12 +27,12 @@ func (f projectAccountFixture) httpRetentionSettings(t *testing.T, ctx context.C
 	_, err = f.db.Exec(ctx, `INSERT INTO auth.retention_settings(singleton,email_reservation_days,session_days,security_audit_days)
  VALUES(true,30,30,180) ON CONFLICT(singleton) DO NOTHING`)
 	require.NoError(t, err)
-	read := func(cookie string, expected int) settingshttp.RetentionResponse {
+	read := func(cookie string, expected int) settingsretentionhttp.RetentionResponse {
 		t.Helper()
 		status, cookies, body := web("GET", path, origin, cookie, "")
 		require.Equal(t, expected, status, "%s", body)
 		require.Empty(t, cookies)
-		var response settingshttp.RetentionResponse
+		var response settingsretentionhttp.RetentionResponse
 		if expected == 200 {
 			require.NoError(t, json.Unmarshal(body, &response))
 		}
@@ -44,10 +44,10 @@ func (f projectAccountFixture) httpRetentionSettings(t *testing.T, ctx context.C
 	var sessionBefore, sessionAfter string
 	require.NoError(t, f.db.QueryRow(ctx, `SELECT row_to_json(s)::text FROM auth.sessions s WHERE user_id=$1`, actor).Scan(&sessionBefore))
 	policy := before.Policy
-	input := settingshttp.RetentionUpdateRequest{ExpectedVersion: before.Version, Policy: &policy}
+	input := settingsretentionhttp.RetentionUpdateRequest{ExpectedVersion: before.Version, Policy: &policy}
 	web.command(t, path, "https://foreign.example.test", actorToken, input, 403, nil)
 	web.command(t, path, origin, ordinaryToken, input, 403, nil)
-	var changed settingshttp.RetentionResponse
+	var changed settingsretentionhttp.RetentionResponse
 	web.command(t, path, origin, actorToken, input, 200, &changed)
 	require.Equal(t, before, changed, "no-op must preserve version")
 	policy.SessionDays = 106752

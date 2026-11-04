@@ -97,11 +97,16 @@ func TestAuthSettingsSchema(t *testing.T) {
 		t.Fatal("write survived permission revoke", err)
 	}
 	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL,mfa_method=NULL WHERE user_id=$1`, actor.UserID)
+	if _, err := svc.Read(ctx, actor); !errors.Is(err, accessdomain.ErrForbidden) {
+		t.Fatal("required MFA cannot be bypassed for reads", err)
+	}
+	accessExec(t, db, ctx, `UPDATE auth.sessions SET primary_verified_at=statement_timestamp()-interval '6 minutes',
+		mfa_verified_at=statement_timestamp()-interval '6 minutes',mfa_method='totp' WHERE user_id=$1`, actor.UserID)
 	if _, err := svc.Read(ctx, actor); err != nil {
 		t.Fatal("read unexpectedly requires fresh proof", err)
 	}
 	if _, err := svc.Update(ctx, input); !errors.Is(err, accessdomain.ErrFreshAuthRequired) {
-		t.Fatal("proof-less write", err)
+		t.Fatal("write with stale MFA", err)
 	}
 	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=clock_timestamp(),mfa_method='totp' WHERE user_id=$1`, actor.UserID)
 	current, err := svc.Update(ctx, input)

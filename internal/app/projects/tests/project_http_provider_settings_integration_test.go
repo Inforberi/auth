@@ -9,9 +9,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
+	settingsproviders "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/service"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/transport/http"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
@@ -49,13 +49,13 @@ func (f projectAccountFixture) httpProviderSettings(t *testing.T, ctx context.Co
 		_, err = f.db.Exec(ctx, `INSERT INTO auth.provider_settings(provider,client_id,secret,secret_set) VALUES($1,$2,$3,true)`, name, id, encrypted)
 		require.NoError(t, err)
 	}
-	read := func(name, cookie string, expected int) settingshttp.ProviderResponse {
+	read := func(name, cookie string, expected int) settingsprovidershttp.ProviderResponse {
 		t.Helper()
 		status, cookies, body := web("GET", base+name, origin, cookie, "")
 		require.Equal(t, expected, status, "%s", body)
 		require.Empty(t, cookies)
 		require.NotContains(t, string(body), "project-provider-secret")
-		var response settingshttp.ProviderResponse
+		var response settingsprovidershttp.ProviderResponse
 		if expected == 200 {
 			require.NoError(t, json.Unmarshal(body, &response))
 		}
@@ -68,10 +68,10 @@ func (f projectAccountFixture) httpProviderSettings(t *testing.T, ctx context.Co
 		before := read(name, actorToken, 200)
 		secret := "new-" + name + "-project-provider-secret"
 		id := before.ClientID
-		input := settingshttp.ProviderUpdateRequest{ExpectedVersion: before.Version, ClientID: &id, Secret: &secret}
+		input := settingsprovidershttp.ProviderUpdateRequest{ExpectedVersion: before.Version, ClientID: &id, Secret: &secret}
 		web.command(t, base+name, "https://foreign.example.test", actorToken, input, 403, nil)
 		web.command(t, base+name, origin, ordinaryToken, input, 403, nil)
-		var changed settingshttp.ProviderResponse
+		var changed settingsprovidershttp.ProviderResponse
 		body := web.commandMethod(t, "POST", base+name, origin, actorToken, input, 200, &changed)
 		require.NotContains(t, string(body), secret)
 		require.True(t, changed.SecretSet)
@@ -81,7 +81,7 @@ func (f projectAccountFixture) httpProviderSettings(t *testing.T, ctx context.Co
 		require.NoError(t, f.db.QueryRow(ctx, `SELECT secret FROM auth.provider_settings WHERE provider=$1`, name).Scan(&encrypted))
 		require.NotEqual(t, []byte(secret), encrypted)
 		err := f.deps.Registry.UsePool(ctx, f.key, func(ctx context.Context, pool *pgxpool.Pool) error {
-			providers := settingsservice.NewProviders(settingspostgres.New(pool), ciphers["google"], ciphers["telegram"])
+			providers := settingsproviders.NewProviders(settingspostgres.New(pool), ciphers["google"], ciphers["telegram"])
 			_, plain, err := providers.Credentials(ctx, name)
 			if err == nil {
 				require.Equal(t, secret, plain)
@@ -98,7 +98,7 @@ func (f projectAccountFixture) httpProviderSettings(t *testing.T, ctx context.Co
 	}
 	google := read("google", actorToken, 200)
 	changedID, secret := "other-project.apps.googleusercontent.com", "replacement-project-provider-secret"
-	web.command(t, base+"google", origin, actorToken, settingshttp.ProviderUpdateRequest{ExpectedVersion: google.Version, ClientID: &changedID, Secret: &secret}, 409, nil)
+	web.command(t, base+"google", origin, actorToken, settingsprovidershttp.ProviderUpdateRequest{ExpectedVersion: google.Version, ClientID: &changedID, Secret: &secret}, 409, nil)
 	status, _, _ := web("GET", "/api/v1/auth/me", origin, ordinaryToken, "")
 	require.Equal(t, 200, status, "provider rotation must not revoke an existing session")
 	var audits int

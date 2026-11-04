@@ -8,12 +8,14 @@ import (
 	accessapp "github.com/Inforberi/financial-intelligence/internal/app/access"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingsproviders "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/service"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
+	settingsretention "github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/service"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
-func (s realmSecurity) assembleAccessPolicy(ctx context.Context, pool *pgxpool.Pool, cfg *config.Config) (*accessapp.App, *settingsservice.Service, *settingsservice.Providers, error) {
+func (s realmSecurity) assembleAccessPolicy(ctx context.Context, pool *pgxpool.Pool, cfg *config.Config) (*accessapp.App, *settingsservice.Service, *settingsproviders.Providers, error) {
 	if _, err := settingsservice.NewMFA(settingspostgres.New(pool), cfg.MFA.Enabled).Current(ctx); err != nil {
 		return nil, nil, nil, err
 	}
@@ -38,8 +40,8 @@ func (s realmSecurity) assembleAccessPolicy(ctx context.Context, pool *pgxpool.P
 	return access, service, providers, nil
 }
 
-func assembleRetentionSettings(ctx context.Context, pool *pgxpool.Pool, cfg accountservice.RetentionConfig) (*settingsservice.Retention, error) {
-	service := settingsservice.NewRetention(settingspostgres.New(pool))
+func assembleRetentionSettings(ctx context.Context, pool *pgxpool.Pool, cfg accountservice.RetentionConfig) (*settingsretention.Retention, error) {
+	service := settingsretention.NewRetention(settingspostgres.New(pool))
 	err := service.Initialize(ctx, settingsdomain.RetentionPolicy{
 		EmailReservationDays: cfg.EmailReservationDays, SessionDays: cfg.SessionDays, SecurityAuditDays: cfg.SecurityAuditDays,
 	})

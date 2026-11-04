@@ -1,4 +1,4 @@
-package http
+package settingshttp
 
 import (
 	"net/http"
@@ -28,7 +28,7 @@ type EmailMFAUpdateRequest struct {
 // @Router /api/v1/admin/auth/settings/mfa/email [post]
 func (h *EmailMFAHandler) Update(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
-	actor, ok := principal(w, r)
+	actor, ok := Principal(w, r)
 	if !ok {
 		return
 	}

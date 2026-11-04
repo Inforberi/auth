@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/native/transport/http"
 )
 
 func checkProjectNativeIsolation(t *testing.T, ctx context.Context, f tokenIsolationFixture, browser tokenIsolationBrowser) {
 	t.Helper()
-	var native [2]tokenhttp.NativeResponse
-	login := tokenhttp.NativePasswordRequest{Email: httpIsolationEmail, Password: httpIsolationPassword, Audience: "reports", Scope: []accessdomain.PermissionKey{"reports.read"}}
+	var native [2]tokennativehttp.NativeResponse
+	login := tokennativehttp.NativePasswordRequest{Email: httpIsolationEmail, Password: httpIsolationPassword, Audience: "reports", Scope: []accessdomain.PermissionKey{"reports.read"}}
 	// Native transport intentionally has no Origin, Cookie or Authorization header.
 	for i, web := range f.webs {
 		response := web.call(t, ctx, "POST", "/api/v1/auth/native/password/login", "", "", login)
@@ -28,7 +28,7 @@ func checkProjectNativeIsolation(t *testing.T, ctx context.Context, f tokenIsola
 		require.True(t, f.inspect(t, ctx, i, native[i].AccessToken, i, 200).Active)
 	}
 	for i, web := range f.webs {
-		foreign := tokenhttp.RefreshRequest{RefreshToken: native[1-i].RefreshToken}
+		foreign := tokennativehttp.RefreshRequest{RefreshToken: native[1-i].RefreshToken}
 		for _, path := range []string{"/api/v1/auth/token/refresh", "/api/v1/auth/token/logout"} {
 			response := web.call(t, ctx, "POST", path, "", "", foreign)
 			expected := 401
@@ -38,16 +38,16 @@ func checkProjectNativeIsolation(t *testing.T, ctx context.Context, f tokenIsola
 			require.Equal(t, expected, response.status, "%s", response.body)
 			require.Empty(t, response.cookies)
 		}
-		response := web.call(t, ctx, "POST", "/api/v1/auth/token/refresh", web.origin, "", tokenhttp.RefreshRequest{RefreshToken: native[i].RefreshToken})
+		response := web.call(t, ctx, "POST", "/api/v1/auth/token/refresh", web.origin, "", tokennativehttp.RefreshRequest{RefreshToken: native[i].RefreshToken})
 		require.Equal(t, 403, response.status)
 		require.True(t, f.inspect(t, ctx, i, native[i].AccessToken, i, 200).Active)
 	}
-	refresh := func(i int, raw string, status int) tokenhttp.NativeResponse {
+	refresh := func(i int, raw string, status int) tokennativehttp.NativeResponse {
 		t.Helper()
-		response := f.webs[i].call(t, ctx, "POST", "/api/v1/auth/token/refresh", "", "", tokenhttp.RefreshRequest{RefreshToken: raw})
+		response := f.webs[i].call(t, ctx, "POST", "/api/v1/auth/token/refresh", "", "", tokennativehttp.RefreshRequest{RefreshToken: raw})
 		require.Equal(t, status, response.status, "%s", response.body)
 		require.Empty(t, response.cookies)
-		var result tokenhttp.NativeResponse
+		var result tokennativehttp.NativeResponse
 		if status == 200 {
 			require.NoError(t, json.Unmarshal(response.body, &result))
 		}
@@ -62,9 +62,9 @@ func checkProjectNativeIsolation(t *testing.T, ctx context.Context, f tokenIsola
 	require.True(t, f.inspect(t, ctx, 1, b.AccessToken, 1, 200).Active)
 	response := f.webs[0].call(t, ctx, "POST", "/api/v1/auth/native/password/login", "", "", login)
 	require.Equal(t, 200, response.status, "%s", response.body)
-	var another tokenhttp.NativeResponse
+	var another tokennativehttp.NativeResponse
 	require.NoError(t, json.Unmarshal(response.body, &another))
-	response = f.webs[0].call(t, ctx, "POST", "/api/v1/auth/token/logout", "", "", tokenhttp.RefreshRequest{RefreshToken: another.RefreshToken})
+	response = f.webs[0].call(t, ctx, "POST", "/api/v1/auth/token/logout", "", "", tokennativehttp.RefreshRequest{RefreshToken: another.RefreshToken})
 	require.Equal(t, 204, response.status, "%s", response.body)
 	require.False(t, f.inspect(t, ctx, 0, another.AccessToken, 0, 200).Active)
 	require.True(t, f.inspect(t, ctx, 1, b.AccessToken, 1, 200).Active)

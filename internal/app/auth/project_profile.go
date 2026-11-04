@@ -14,7 +14,7 @@ import (
 	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 )
 
 type ProjectProfileConfig struct {
@@ -44,7 +44,7 @@ type ProjectProfileDependencies struct {
 	OIDCClients *ProjectOIDCClients
 	BotAPI      ProjectTelegramClient
 	Delivery    *ProjectDelivery
-	SMTPTests   *settingsservice.SMTPTestGate
+	SMTPTests   *settingssmtp.SMTPTestGate
 }
 
 type ProjectProfile struct {

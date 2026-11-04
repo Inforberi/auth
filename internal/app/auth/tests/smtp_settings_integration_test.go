@@ -11,7 +11,7 @@ import (
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
@@ -54,8 +54,8 @@ func TestSMTPSettingsSchema(t *testing.T) {
 		}
 		return nil
 	}
-	makeService := func() *settingsservice.SMTP {
-		s, err := settingsservice.NewSMTP(repo, cipher, probe, mfaTestLimit{}, []string{"smtp.example.com:587", "backup.example.com:587"}, true)
+	makeService := func() *settingssmtp.SMTP {
+		s, err := settingssmtp.NewSMTP(repo, cipher, probe, mfaTestLimit{}, []string{"smtp.example.com:587", "backup.example.com:587"}, true)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -81,7 +81,7 @@ func TestSMTPSettingsSchema(t *testing.T) {
 	if err != nil || before.Version != 1 || !before.PasswordSet {
 		t.Fatal(before, err)
 	}
-	input := settingsservice.SMTPUpdateInput{Actor: actor, ExpectedVersion: 1, Config: initial}
+	input := settingssmtp.SMTPUpdateInput{Actor: actor, ExpectedVersion: 1, Config: initial}
 	if current, err := svc.Update(ctx, input); err != nil || current != before {
 		t.Fatal("no-op changed version", current, err)
 	}
@@ -123,16 +123,17 @@ func TestSMTPSettingsSchema(t *testing.T) {
 	if err := svc.TestConnection(ctx, actor, 1); !errors.Is(err, settingsdomain.ErrPolicyConflict) || probeCalls != 1 {
 		t.Fatal("stale test reached network", err)
 	}
-	accessExec(t, db, ctx, `UPDATE auth.sessions SET mfa_verified_at=NULL,mfa_method=NULL WHERE token_hash=$1`, actor.TokenHash)
+	accessExec(t, db, ctx, `UPDATE auth.sessions SET primary_verified_at=statement_timestamp()-interval '6 minutes',
+		mfa_verified_at=statement_timestamp()-interval '6 minutes',mfa_method='totp' WHERE token_hash=$1`, actor.TokenHash)
 	if _, err := svc.Read(ctx, actor); err != nil {
 		t.Fatal("read requires fresh proof", err)
 	}
 	input.ExpectedVersion = 2
 	if _, err := svc.Update(ctx, input); !errors.Is(err, accessdomain.ErrFreshAuthRequired) {
-		t.Fatal("write missing MFA", err)
+		t.Fatal("write with stale MFA", err)
 	}
 	if err := svc.TestConnection(ctx, actor, 2); !errors.Is(err, accessdomain.ErrFreshAuthRequired) || probeCalls != 1 {
-		t.Fatal("test missing MFA", err)
+		t.Fatal("connection test with stale MFA", err)
 	}
 	var audit string
 	if err := db.QueryRow(ctx, `SELECT previous_configuration::text||next_configuration::text FROM auth.smtp_settings_audit`).Scan(&audit); err != nil || strings.Contains(audit, "secret") || strings.Contains(audit, "password\"") {

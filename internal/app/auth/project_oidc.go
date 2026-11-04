@@ -16,6 +16,7 @@ import (
 	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingsproviders "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/service"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
@@ -117,7 +118,7 @@ func (p *ProjectOIDC) service(pool *pgxpool.Pool) (*oidcservice.Service, error) 
 	}
 	repo := settingspostgres.New(pool)
 	policy := settingsservice.New(repo)
-	providers := settingsservice.NewProviders(repo, p.googleCipher, p.telegramCipher)
+	providers := settingsproviders.NewProviders(repo, p.googleCipher, p.telegramCipher)
 	cfg := oidcservice.Config{
 		Enabled: true, Issuer: settingsdomain.ProviderIssuer(p.cfg.Provider), IPLimit: p.cfg.IPLimit, GlobalLimit: p.cfg.GlobalLimit,
 		CheckPolicy: func(ctx context.Context) error { return policy.CheckPublic(ctx, p.cfg.Provider, false) },
@@ -134,7 +135,7 @@ func (p *ProjectOIDC) service(pool *pgxpool.Pool) (*oidcservice.Service, error) 
 	}), nil
 }
 
-func projectProviderCredentials(ctx context.Context, providers *settingsservice.Providers, name string) (settingsdomain.ProviderSnapshot, string, error) {
+func projectProviderCredentials(ctx context.Context, providers *settingsproviders.Providers, name string) (settingsdomain.ProviderSnapshot, string, error) {
 	stored, secret, err := providers.Credentials(ctx, name)
 	if err != nil {
 		return settingsdomain.ProviderSnapshot{}, "", err

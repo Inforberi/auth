@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
+	tokennativehttp "github.com/Inforberi/financial-intelligence/internal/auth/token/native/transport/http"
 )
 
 func TestProjectRouteProfilesAndAllowlist(t *testing.T) {
@@ -22,7 +22,7 @@ func TestProjectRouteProfilesAndAllowlist(t *testing.T) {
 			next.ServeHTTP(w, r)
 		})
 	}
-	native := tokenhttp.NewNative(tokenhttp.NativeServices{}, nil)
+	native := tokennativehttp.NewNative(tokennativehttp.NativeServices{}, nil)
 	h, err := NewProjectRoutes("https://alpha.auth.test", []ProjectRoute{
 		{Method: "POST", Path: "/login", Protection: "browser", Handler: endpoint},
 		{Method: "GET", Path: "/callback", Protection: "callback", Handler: endpoint},

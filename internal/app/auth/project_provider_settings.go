@@ -9,8 +9,8 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingsproviders "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/service"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
@@ -47,7 +47,7 @@ func (p *ProjectProfile) buildProfileProviderSettings(cfg ProjectProfileConfig, 
 	p.feature("provider_settings_write", err)
 }
 
-func (s *projectProviderSettings) use(ctx context.Context, operation func(context.Context, *settingsservice.Providers) (settingsdomain.ProviderSnapshot, error)) (settingsdomain.ProviderSnapshot, error) {
+func (s *projectProviderSettings) use(ctx context.Context, operation func(context.Context, *settingsproviders.Providers) (settingsdomain.ProviderSnapshot, error)) (settingsdomain.ProviderSnapshot, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	p := s.profile
@@ -57,7 +57,7 @@ func (s *projectProviderSettings) use(ctx context.Context, operation func(contex
 			return err
 		}
 		var err error
-		result, err = operation(ctx, settingsservice.NewProviders(settingspostgres.New(pool), s.google, s.telegram))
+		result, err = operation(ctx, settingsproviders.NewProviders(settingspostgres.New(pool), s.google, s.telegram))
 		if err != nil {
 			return err
 		}
@@ -70,16 +70,16 @@ func (s *projectProviderSettings) use(ctx context.Context, operation func(contex
 }
 
 func (s *projectProviderSettings) Read(ctx context.Context, actor accessservice.Principal, name string) (settingsdomain.ProviderSnapshot, error) {
-	return s.use(ctx, func(ctx context.Context, service *settingsservice.Providers) (settingsdomain.ProviderSnapshot, error) {
+	return s.use(ctx, func(ctx context.Context, service *settingsproviders.Providers) (settingsdomain.ProviderSnapshot, error) {
 		return service.Read(ctx, actor, name)
 	})
 }
 
-func (s *projectProviderSettings) Update(ctx context.Context, input settingsservice.ProviderUpdateInput) (settingsdomain.ProviderSnapshot, error) {
+func (s *projectProviderSettings) Update(ctx context.Context, input settingsproviders.ProviderUpdateInput) (settingsdomain.ProviderSnapshot, error) {
 	if s.google == nil || s.telegram == nil {
 		return settingsdomain.ProviderSnapshot{}, projectdomain.ErrUnavailable
 	}
-	return s.use(ctx, func(ctx context.Context, service *settingsservice.Providers) (settingsdomain.ProviderSnapshot, error) {
+	return s.use(ctx, func(ctx context.Context, service *settingsproviders.Providers) (settingsdomain.ProviderSnapshot, error) {
 		return service.Update(ctx, input)
 	})
 }

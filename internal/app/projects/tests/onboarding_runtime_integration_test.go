@@ -21,7 +21,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
@@ -124,7 +124,7 @@ func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, env func(string) s
 	require.NoError(t, err)
 	password, err := cipher.Seal([]byte("smtp-fixture-password"))
 	require.NoError(t, err)
-	stored, err := settingspostgres.New(pool).InitializeSMTP(ctx, settingsservice.SMTPStored{
+	stored, err := settingspostgres.New(pool).InitializeSMTP(ctx, settingssmtp.SMTPStored{
 		SMTPSnapshot: settingsdomain.SMTPSnapshot{Version: 1, PasswordSet: true, Config: settingsdomain.SMTPConfig{
 			Host: "smtp.example.test", Port: 587, Username: "fixture", From: "auth@example.test", Domain: "test.example.test", RequireTLS: true,
 		}}, Password: password,

@@ -12,7 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
+	tokenintrospectionhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/introspection/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
@@ -64,7 +65,7 @@ func checkProjectTokenIsolation(t *testing.T, ctx context.Context, f tokenIsolat
 		require.ErrorIs(t, err, authjwt.ErrInvalidToken)
 		isolationCommand(t, ctx, web, "POST", "/api/v1/auth/token/exchange", browser.cookies[1-i], map[string]any{"audience": "reports", "scope": []string{"reports.read"}}, 401, nil)
 		f.inspect(t, ctx, i, browser.tokens[i], 1-i, 401)
-		require.Equal(t, tokenhttp.IntrospectionResponse{}, f.inspect(t, ctx, i, browser.tokens[1-i], i, 200))
+		require.Equal(t, tokenintrospectionhttp.IntrospectionResponse{}, f.inspect(t, ctx, i, browser.tokens[1-i], i, 200))
 		var exported tokenhttp.ExchangeResponse
 		isolationCommand(t, ctx, web, "POST", "/api/v1/auth/token/exchange", browser.cookies[i], map[string]any{"audience": "reports-export", "scope": []string{"reports.read"}}, 200, &exported)
 		f.inspect(t, ctx, i, exported.AccessToken, i, 403)
@@ -73,12 +74,12 @@ func checkProjectTokenIsolation(t *testing.T, ctx context.Context, f tokenIsolat
 	return browser
 }
 
-func (f tokenIsolationFixture) inspect(t *testing.T, ctx context.Context, project int, token string, credentials, status int) tokenhttp.IntrospectionResponse {
+func (f tokenIsolationFixture) inspect(t *testing.T, ctx context.Context, project int, token string, credentials, status int) tokenintrospectionhttp.IntrospectionResponse {
 	t.Helper()
 	basic := base64.StdEncoding.EncodeToString([]byte(isolationTokenClient + ":" + f.secrets[credentials]))
-	response := f.webs[project].call(t, ctx, "POST", "/api/v1/internal/auth/token/introspect", "", "", tokenhttp.IntrospectionRequest{Token: token}, http.Header{"Authorization": {"Basic " + basic}})
+	response := f.webs[project].call(t, ctx, "POST", "/api/v1/internal/auth/token/introspect", "", "", tokenintrospectionhttp.IntrospectionRequest{Token: token}, http.Header{"Authorization": {"Basic " + basic}})
 	require.Equal(t, status, response.status, "%s", response.body)
-	var result tokenhttp.IntrospectionResponse
+	var result tokenintrospectionhttp.IntrospectionResponse
 	if status == 200 {
 		require.NoError(t, json.Unmarshal(response.body, &result))
 	}

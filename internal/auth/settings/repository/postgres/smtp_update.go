@@ -9,10 +9,10 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 )
 
-func (r *Repository) UpdateSMTP(ctx context.Context, input service.SMTPUpdate) (domain.SMTPSnapshot, error) {
+func (r *Repository) UpdateSMTP(ctx context.Context, input settingssmtp.SMTPUpdate) (domain.SMTPSnapshot, error) {
 	var result domain.SMTPSnapshot
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, input.Actor, "", settings.AuthSettingsManage); err != nil {
@@ -53,8 +53,8 @@ func (r *Repository) UpdateSMTP(ctx context.Context, input service.SMTPUpdate) (
 	return result, err
 }
 
-func (r *Repository) AuthorizeSMTPTest(ctx context.Context, actor accessservice.Principal, version int64) (service.SMTPStored, error) {
-	var result service.SMTPStored
+func (r *Repository) AuthorizeSMTPTest(ctx context.Context, actor accessservice.Principal, version int64) (settingssmtp.SMTPStored, error) {
+	var result settingssmtp.SMTPStored
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, actor, "", settings.AuthSettingsManage); err != nil {
 			return err

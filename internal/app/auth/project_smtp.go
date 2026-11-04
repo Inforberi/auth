@@ -16,6 +16,7 @@ import (
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsredis "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/redis"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 )
@@ -30,7 +31,7 @@ type projectSMTP struct {
 	key      projectruntime.Key
 	registry *projectruntime.Registry
 	reader   *runtimepostgres.RuntimeCredentialReader
-	cipher   settingsservice.SMTPCipher
+	cipher   settingssmtp.SMTPCipher
 	limits   settingsservice.SettingsLimiter
 	allowed  []string
 }
@@ -95,7 +96,7 @@ func (s *projectSMTP) credentialsInPool(ctx context.Context, pool *pgxpool.Pool)
 	if err := s.requireCurrent(ctx); err != nil {
 		return mailer.Config{}, err
 	}
-	svc, err := settingsservice.NewSMTP(settingspostgres.New(pool), s.cipher,
+	svc, err := settingssmtp.NewSMTP(settingspostgres.New(pool), s.cipher,
 		func(ctx context.Context, c settingsdomain.SMTPConfig, password string) error {
 			return mailer.CheckContext(ctx, smtpMailerConfig(c, password))
 		}, s.limits, s.allowed, true)

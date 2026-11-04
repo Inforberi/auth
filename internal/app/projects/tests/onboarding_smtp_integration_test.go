@@ -14,7 +14,7 @@ import (
 	storage "github.com/Inforberi/financial-intelligence/internal/admin/projects/storage/postgres"
 	preparationapp "github.com/Inforberi/financial-intelligence/internal/app/projects/preparation"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
@@ -105,7 +105,7 @@ func onboardingSMTPDrill(t *testing.T, physical *pgx.Conn, env func(string) stri
 		})
 	}
 	var markerXmin, smtpXmin string
-	var stored settingsservice.SMTPStored
+	var stored settingssmtp.SMTPStored
 	inspect(func(conn *pgx.Conn) {
 		require.NoError(t, conn.QueryRow(ctx, `SELECT version,configuration,password_set,password FROM auth.smtp_settings WHERE singleton`).Scan(
 			&stored.Version, &stored.Config, &stored.PasswordSet, &stored.Password,

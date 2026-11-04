@@ -12,13 +12,13 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
+	settingsproviders "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/service"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/transport/http"
 )
 
 type contractProviders struct {
 	calls int
-	input settingsservice.ProviderUpdateInput
+	input settingsproviders.ProviderUpdateInput
 	err   error
 }
 
@@ -29,7 +29,7 @@ func (s *contractProviders) Read(_ context.Context, actor accessservice.Principa
 	return settingsdomain.ProviderSnapshot{Provider: name, Version: 1, ClientID: "123", SecretSet: true}, s.err
 }
 
-func (s *contractProviders) Update(_ context.Context, input settingsservice.ProviderUpdateInput) (settingsdomain.ProviderSnapshot, error) {
+func (s *contractProviders) Update(_ context.Context, input settingsproviders.ProviderUpdateInput) (settingsdomain.ProviderSnapshot, error) {
 	s.calls++
 	s.input = input
 	return settingsdomain.ProviderSnapshot{Provider: input.Provider, Version: 2, ClientID: input.ClientID, SecretSet: true}, s.err
@@ -43,7 +43,7 @@ func TestProviderSettingsContracts(t *testing.T) {
 				h := contractHandlers("prod")
 				sessions := &securitySessions{}
 				h.Middleware = sessionhttp.New(sessions, zap.NewNop())
-				h.ProviderSettings = settingshttp.NewProviders(s, zap.NewNop())
+				h.ProviderSettings = settingsprovidershttp.NewProviders(s, zap.NewNop())
 				if mode == "disabled" {
 					h.Config.MFA.Enabled = false
 				}

@@ -16,7 +16,7 @@ import (
 // @Produce json
 // @Param id path string true "Project UUID"
 // @Param operationId path string true "Operation UUID"
-// @Success 200 {object} ProjectAuthPolicyResponse{settings=http.SettingsResponse}
+// @Success 200 {object} ProjectAuthPolicyResponse{settings=settingshttp.SettingsResponse}
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse

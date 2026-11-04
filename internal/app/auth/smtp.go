@@ -13,13 +13,13 @@ import (
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsredis "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/redis"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 )
 
-func (s realmSecurity) assembleSMTP(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, cfg *config.Config, log *zap.Logger) (*mailer.Mailer, *settingshttp.SMTPHandler, error) {
+func (s realmSecurity) assembleSMTP(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, cfg *config.Config, log *zap.Logger) (*mailer.Mailer, *settingssmtphttp.SMTPHandler, error) {
 	cipher, err := s.cipher(cfg.Account.EncryptionKey, "smtp-settings:v1")
 	if err != nil {
 		return nil, nil, err
@@ -32,7 +32,7 @@ func (s realmSecurity) assembleSMTP(ctx context.Context, pool *pgxpool.Pool, rdb
 	if err != nil {
 		return nil, nil, err
 	}
-	svc, err := settingsservice.NewSMTP(settingspostgres.New(pool), cipher,
+	svc, err := settingssmtp.NewSMTP(settingspostgres.New(pool), cipher,
 		func(ctx context.Context, c settingsdomain.SMTPConfig, password string) error {
 			return mailer.CheckContext(ctx, smtpMailerConfig(c, password))
 		}, limits, allowed, cfg.Logger.Env == "prod")
@@ -57,7 +57,7 @@ func (s realmSecurity) assembleSMTP(ctx context.Context, pool *pgxpool.Pool, rdb
 		}
 		return smtpMailerConfig(c, password), nil
 	})
-	return mail, settingshttp.NewSMTP(svc, log), nil
+	return mail, settingssmtphttp.NewSMTP(svc, log), nil
 }
 
 func smtpMailerConfig(c settingsdomain.SMTPConfig, password string) mailer.Config {

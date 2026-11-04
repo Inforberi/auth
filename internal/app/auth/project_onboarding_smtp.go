@@ -9,7 +9,7 @@ import (
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsredis "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/redis"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 )
 
@@ -22,7 +22,7 @@ func (s realmSecurity) projectOnboardingSMTP(ctx context.Context, root string, p
 	if err != nil {
 		return nil, err
 	}
-	svc, err := settingsservice.NewSMTP(settingspostgres.New(pool), cipher,
+	svc, err := settingssmtp.NewSMTP(settingspostgres.New(pool), cipher,
 		func(ctx context.Context, c settingsdomain.SMTPConfig, password string) error {
 			return mailer.CheckContext(ctx, smtpMailerConfig(c, password))
 		}, limits, allowed, true)

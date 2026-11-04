@@ -15,7 +15,7 @@ import (
 // @Param id path string true "Project UUID"
 // @Param expectedVersion query int true "Current project version"
 // @Param expectedGeneration query int true "Current project generation"
-// @Success 200 {object} http.SettingsResponse
+// @Success 200 {object} settingshttp.SettingsResponse
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse

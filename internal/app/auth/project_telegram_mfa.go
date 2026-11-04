@@ -12,10 +12,10 @@ import (
 	mfatelegram "github.com/Inforberi/financial-intelligence/internal/auth/mfa/telegram/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingstelegram "github.com/Inforberi/financial-intelligence/internal/auth/settings/telegram/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
-	telegrambot "github.com/Inforberi/financial-intelligence/internal/integrations/telegram/bot"
+	"github.com/Inforberi/financial-intelligence/internal/integrations/telegram/bot"
 )
 
 type ProjectTelegramClient interface {
@@ -31,22 +31,22 @@ type projectTelegramMFA struct {
 	token, webhook, channel *secretbox.Cipher
 }
 
-func (p *projectTelegramMFA) settings(pool *pgxpool.Pool) (*settingsservice.TelegramBotSettings, error) {
+func (p *projectTelegramMFA) settings(pool *pgxpool.Pool) (*settingstelegram.TelegramBotSettings, error) {
 	cfg := p.manager.factory.managementConfig
-	return settingsservice.NewTelegramBotSettings(settingspostgres.New(pool), p.token, p.webhook, p.client, p.manager.factory.limits, tokengenerate.New(), settingsservice.TelegramBotLimits{
+	return settingstelegram.NewTelegramBotSettings(settingspostgres.New(pool), p.token, p.webhook, p.client, p.manager.factory.limits, tokengenerate.New(), settingstelegram.TelegramBotLimits{
 		UserUpdatesPerMinute: cfg.UserLimitPerMinute, ProjectUpdatesPerMinute: cfg.GlobalLimitPerMinute,
 	})
 }
 
-func (p *projectTelegramMFA) credentials(ctx context.Context, pool *pgxpool.Pool) (settingsservice.TelegramBotCredentials, error) {
+func (p *projectTelegramMFA) credentials(ctx context.Context, pool *pgxpool.Pool) (settingstelegram.TelegramBotCredentials, error) {
 	settings, err := p.settings(pool)
 	if err != nil {
-		return settingsservice.TelegramBotCredentials{}, err
+		return settingstelegram.TelegramBotCredentials{}, err
 	}
 	return settings.Credentials(ctx)
 }
 
-func (p *projectTelegramMFA) preparation(ctx context.Context, pool *pgxpool.Pool) (*mfatelegram.TelegramPreparation, settingsservice.TelegramBotCredentials, error) {
+func (p *projectTelegramMFA) preparation(ctx context.Context, pool *pgxpool.Pool) (*mfatelegram.TelegramPreparation, settingstelegram.TelegramBotCredentials, error) {
 	credentials, err := p.credentials(ctx, pool)
 	if err != nil {
 		return nil, credentials, err

@@ -10,10 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
-	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
-	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/native/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
@@ -105,11 +105,11 @@ func checkNativeEmailMFA(t *testing.T, f emailMFAHTTPFixture) {
 	response := web.call(t, ctx, "POST", path, "", "", input)
 	require.Equal(t, 202, response.status, string(response.body))
 	require.Empty(t, response.cookies)
-	var challenge tokenhttp.NativeChallengeResponse
+	var challenge tokennativehttp.NativeChallengeResponse
 	require.NoError(t, json.Unmarshal(response.body, &challenge))
 	f.trackCompletion(challenge.Challenge, challenge.Binding)
 	code := f.code(t, "mfa-email-login:", challenge.Challenge)
-	completion := tokenhttp.NativeMFARequest{Challenge: challenge.Challenge, Binding: challenge.Binding, Code: code}
+	completion := tokennativehttp.NativeMFARequest{Challenge: challenge.Challenge, Binding: challenge.Binding, Code: code}
 	path = "/api/v1/auth/native/mfa/email/complete"
 	foreign := f.webs[1].call(t, ctx, "POST", path, "", "", completion)
 	require.Equal(t, 400, foreign.status)
@@ -118,7 +118,7 @@ func checkNativeEmailMFA(t *testing.T, f emailMFAHTTPFixture) {
 	response = completeEmailMFAAfterRedisFailure(t, f, path, "", challenge.Challenge, challenge.Binding, completion)
 	require.Equal(t, 200, response.status, string(response.body))
 	require.Empty(t, response.cookies)
-	var tokens tokenhttp.NativeResponse
+	var tokens tokennativehttp.NativeResponse
 	require.NoError(t, json.Unmarshal(response.body, &tokens))
 	require.NotEmpty(t, tokens.AccessToken)
 	require.NotEmpty(t, tokens.RefreshToken)

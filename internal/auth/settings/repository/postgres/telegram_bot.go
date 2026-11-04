@@ -10,7 +10,7 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingstelegram "github.com/Inforberi/financial-intelligence/internal/auth/settings/telegram/service"
 )
 
 const telegramBotColumns = `m.version,COALESCE(m.telegram_bot_id,0),
@@ -22,8 +22,8 @@ const telegramBotEncryptedColumns = `,b.token,b.webhook_secret,COALESCE(b.bot_id
 const telegramBotFrom = ` FROM auth.mfa_settings m
  LEFT JOIN auth.telegram_bot_settings b ON b.singleton=m.singleton WHERE m.singleton`
 
-func scanTelegramBot(row pgx.Row, secrets bool) (service.TelegramBotStored, error) {
-	var stored service.TelegramBotStored
+func scanTelegramBot(row pgx.Row, secrets bool) (settingstelegram.TelegramBotStored, error) {
+	var stored settingstelegram.TelegramBotStored
 	values := []any{&stored.Version, &stored.BotID, &stored.Username, &stored.TokenSet, &stored.WebhookSecretSet}
 	if secrets {
 		values = append(values, &stored.Token, &stored.Webhook, &stored.StoredBotID)
@@ -44,6 +44,6 @@ func (r *Repository) ReadTelegramBot(ctx context.Context, actor accessservice.Pr
 	return stored.TelegramBotSnapshot, err
 }
 
-func (r *Repository) LoadTelegramBot(ctx context.Context) (service.TelegramBotStored, error) {
+func (r *Repository) LoadTelegramBot(ctx context.Context) (settingstelegram.TelegramBotStored, error) {
 	return scanTelegramBot(r.db.QueryRow(ctx, `SELECT `+telegramBotColumns+telegramBotEncryptedColumns+telegramBotFrom), true)
 }

@@ -1,4 +1,4 @@
-package http
+package settingshttp
 
 import (
 	"net/http"
@@ -18,7 +18,7 @@ import (
 // @Router /api/v1/admin/auth/settings/mfa/email [get]
 func (h *EmailMFAHandler) Read(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
-	actor, ok := principal(w, r)
+	actor, ok := Principal(w, r)
 	if !ok {
 		return
 	}

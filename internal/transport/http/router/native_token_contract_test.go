@@ -18,9 +18,9 @@ import (
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	tokendomain "github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/native/transport/http"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/signing"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 )
 
 type nativeContract struct {
@@ -96,7 +96,7 @@ func (s *nativeContract) Logout(_ context.Context, input tokenservice.RefreshInp
 func nativeContractHandlers(s *nativeContract) Handlers {
 	h := contractHandlers("test")
 	h.Config.JWT.Enabled, h.Config.JWT.NativeEnabled = true, true
-	h.NativeTokens = tokenhttp.NewNative(tokenhttp.NativeServices{Password: s, Email: s, MFA: s, Enrollment: s, Tokens: s}, zap.NewNop())
+	h.NativeTokens = tokennativehttp.NewNative(tokennativehttp.NativeServices{Password: s, Email: s, MFA: s, Enrollment: s, Tokens: s}, zap.NewNop())
 	return h
 }
 

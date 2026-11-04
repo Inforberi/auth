@@ -11,13 +11,14 @@ import (
 	oidcservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingsproviders "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/service"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
-	oidcclient "github.com/Inforberi/financial-intelligence/internal/integrations/oidc"
+	"github.com/Inforberi/financial-intelligence/internal/integrations/oidc"
 )
 
-func (s realmSecurity) assembleOIDC(cfg *config.Config, flow oidcservice.Config, client *oidcclient.Client, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, policy *settingsservice.Service, providers *settingsservice.Providers) (*oidcservice.Service, error) {
+func (s realmSecurity) assembleOIDC(cfg *config.Config, flow oidcservice.Config, client *oidcclient.Client, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, policy *settingsservice.Service, providers *settingsproviders.Providers) (*oidcservice.Service, error) {
 	method := settingsdomain.PrimaryMethod("oidc", flow.Issuer)
 	cipher, err := s.cipher(cfg.Account.EncryptionKey, method+"-login:v1")
 	if err != nil {

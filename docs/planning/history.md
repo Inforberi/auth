@@ -2671,3 +2671,7 @@ Luna: V7 full Go tests; V8 keyed-literal equivalence, lint0/race; V9 targeted te
 ## 3 ноября 2026 — R5: account и парольные сценарии
 
 Отделены account/email, provisioning, setup и password/recovery, provisioning с собственными service/HTTP/tests. Общие правила и транзакционные SQL-владельцы сохранены; технические зависимости передаются напрямую. API/schema/routes/ENV/dependencies не менялись. Luna V4: 35 affected packages под race, lint0, API reproduction и 8 SQL roots actual PASS без SKIP. Main сверил source/manifest и SQL evidence. Собственный стенд сохранён, данные очищены. [Результаты и ограничения](../operations/acceptance-summary.md#r5-account-и-методы-входа--приёмка-3-ноября-2026). Далее R6, UI отдельно.
+
+## 4 ноября 2026 — R6: настройки, HTTP токенов и публичные tests
+
+Разделены settings SMTP/providers/retention/Telegram Bot и token native/introspection HTTP; общие Policy/MFA/ports/parser/error rules и transactional SQL owners сохранены. Token service admission/signing/native authority не дробятся искусственно. Публичные tests у владельцев, private security/codec/DTO tests рядом. Исправлены старые SQL fixtures отсутствующего/stale MFA без ослабления production checks. Luna: все38 affected packages race, lint0, API, 11 SQL roots с11 selected JWT/native/refresh leaves и2 Redis suites PASS. Main сверил source/manifest и actual evidence. Стенд сохранён, данные очищены. [Evidence и ограничения](../operations/acceptance-summary.md#r6-настройки-и-http-токенов--приёмка-4-ноября-2026). Далее R7; UI отдельно.

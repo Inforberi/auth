@@ -17,7 +17,7 @@ import (
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
@@ -79,7 +79,7 @@ func prepareEmailIsolation(t *testing.T, projects projectIsolationHTTP) *emailIs
 		require.NoError(t, err)
 		allowed := []string{listener.Addr().String()}
 		smtp := settingsdomain.SMTPConfig{Host: host, Port: port, Username: fmt.Sprintf("project-%d", i), From: fmt.Sprintf("auth-%d@example.test", i), Domain: "example.test", RequireTLS: true}
-		seed, err := settingsservice.NewSMTPSeed(smtp, fmt.Sprintf("smtp-project-%d-fixture-only", i), allowed, true, ciphers[2])
+		seed, err := settingssmtp.NewSMTPSeed(smtp, fmt.Sprintf("smtp-project-%d-fixture-only", i), allowed, true, ciphers[2])
 		require.NoError(t, err)
 		encoded, err := json.Marshal(smtp)
 		require.NoError(t, err)

@@ -8,10 +8,10 @@ import (
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingsproviders "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/service"
 )
 
-func (r *Repository) UpdateProvider(ctx context.Context, input service.ProviderUpdate) (domain.ProviderSnapshot, error) {
+func (r *Repository) UpdateProvider(ctx context.Context, input settingsproviders.ProviderUpdate) (domain.ProviderSnapshot, error) {
 	var result domain.ProviderSnapshot
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, input.Actor, "", settings.AuthSettingsManage); err != nil {
@@ -59,7 +59,7 @@ func (r *Repository) UpdateProvider(ctx context.Context, input service.ProviderU
 	return result, err
 }
 
-func providerReplacement(before service.ProviderStored, input service.ProviderUpdate, enabled bool) ([]byte, bool, error) {
+func providerReplacement(before settingsproviders.ProviderStored, input settingsproviders.ProviderUpdate, enabled bool) ([]byte, bool, error) {
 	secret, set := input.Secret, input.SecretSet
 	if secret == nil {
 		if before.ClientID != input.ClientID {

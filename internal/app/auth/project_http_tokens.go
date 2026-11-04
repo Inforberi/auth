@@ -10,12 +10,14 @@ import (
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
+	tokenintrospectionhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/introspection/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/native/transport/http"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
-func (p *ProjectProfile) tokenHandlers(handlers map[string]http.HandlerFunc, log *zap.Logger) *tokenhttp.NativeHandler {
+func (p *ProjectProfile) tokenHandlers(handlers map[string]http.HandlerFunc, log *zap.Logger) *tokennativehttp.NativeHandler {
 	if p.tokens == nil {
 		return nil
 	}
@@ -30,12 +32,12 @@ func (p *ProjectProfile) tokenHandlers(handlers map[string]http.HandlerFunc, log
 		tokenhttp.New(p.tokens, public, log).JWKS(w, r)
 	}
 	if p.featureReady("introspection") {
-		handlers["/api/v1/internal/auth/token/introspect"] = tokenhttp.NewIntrospection(p.tokens).Inspect
+		handlers["/api/v1/internal/auth/token/introspect"] = tokenintrospectionhttp.NewIntrospection(p.tokens).Inspect
 	}
 	if p.tokens.native == nil {
 		return nil
 	}
-	native := tokenhttp.NewNative(tokenhttp.NativeServices{
+	native := tokennativehttp.NewNative(tokennativehttp.NativeServices{
 		Password: projectNativePasswordHTTP{p.tokens}, Email: projectNativeEmailHTTP{p.tokens}, MFA: projectNativeMFAHTTP{p.tokens}, Enrollment: projectNativeMFAHTTP{p.tokens}, Tokens: p.tokens,
 	}, log)
 	handlers["/api/v1/auth/native/password/login"] = native.Password

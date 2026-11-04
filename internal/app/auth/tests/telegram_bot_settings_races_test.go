@@ -11,17 +11,17 @@ import (
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingstelegram "github.com/Inforberi/financial-intelligence/internal/auth/settings/telegram/service"
 )
 
-func checkTelegramBotSettingsRaces(t *testing.T, db *pgxpool.Pool, ctx context.Context, svc *settingsservice.TelegramBotSettings, actor accessservice.Principal, hook *func(context.Context)) {
+func checkTelegramBotSettingsRaces(t *testing.T, db *pgxpool.Pool, ctx context.Context, svc *settingstelegram.TelegramBotSettings, actor accessservice.Principal, hook *func(context.Context)) {
 	t.Helper()
 	t.Run("version changes during verification", func(t *testing.T) {
 		before, err := svc.Credentials(ctx)
 		require.NoError(t, err)
 		*hook = func(ctx context.Context) { accessExec(t, db, ctx, `UPDATE auth.mfa_settings SET version=version+1`) }
 		t.Cleanup(func() { *hook = nil })
-		_, err = svc.Update(ctx, settingsservice.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: before.Snapshot.Version, RotateWebhookSecret: true})
+		_, err = svc.Update(ctx, settingstelegram.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: before.Snapshot.Version, RotateWebhookSecret: true})
 		require.ErrorIs(t, err, settingsdomain.ErrPolicyConflict)
 		after, err := svc.Credentials(ctx)
 		require.NoError(t, err)
@@ -40,7 +40,7 @@ func checkTelegramBotSettingsRaces(t *testing.T, db *pgxpool.Pool, ctx context.C
 			accessExec(t, db, ctx, `INSERT INTO auth.role_permissions(role_id,permission_key)
  SELECT id,'auth.settings.manage' FROM auth.roles WHERE key='telegram_bot_manager' ON CONFLICT DO NOTHING`)
 		})
-		_, err = svc.Update(ctx, settingsservice.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: before.Snapshot.Version, RotateWebhookSecret: true})
+		_, err = svc.Update(ctx, settingstelegram.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: before.Snapshot.Version, RotateWebhookSecret: true})
 		require.ErrorIs(t, err, accessdomain.ErrForbidden)
 		after, err := svc.Credentials(ctx)
 		require.NoError(t, err)
@@ -55,7 +55,7 @@ func checkTelegramBotSettingsRaces(t *testing.T, db *pgxpool.Pool, ctx context.C
 			accessExec(t, db, ctx, `UPDATE auth.sessions SET revoked_at=clock_timestamp() WHERE token_hash=$1`, login.TokenHash)
 		}
 		t.Cleanup(func() { *hook = nil })
-		_, err = svc.Update(ctx, settingsservice.TelegramBotUpdateInput{Actor: login, ExpectedVersion: before.Snapshot.Version, RotateWebhookSecret: true})
+		_, err = svc.Update(ctx, settingstelegram.TelegramBotUpdateInput{Actor: login, ExpectedVersion: before.Snapshot.Version, RotateWebhookSecret: true})
 		require.ErrorIs(t, err, accessdomain.ErrFreshAuthRequired)
 		after, err := svc.Credentials(ctx)
 		require.NoError(t, err)
@@ -77,7 +77,7 @@ func checkTelegramBotSettingsRaces(t *testing.T, db *pgxpool.Pool, ctx context.C
 		}
 		t.Cleanup(func() { *hook = nil })
 		rotate := func() error {
-			_, err := svc.Update(ctx, settingsservice.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: before.Version, RotateWebhookSecret: true})
+			_, err := svc.Update(ctx, settingstelegram.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: before.Version, RotateWebhookSecret: true})
 			return err
 		}
 		a, b := protectionPair(rotate, rotate)

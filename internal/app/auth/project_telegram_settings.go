@@ -9,7 +9,8 @@ import (
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
-	telegrambot "github.com/Inforberi/financial-intelligence/internal/integrations/telegram/bot"
+	settingstelegram "github.com/Inforberi/financial-intelligence/internal/auth/settings/telegram/service"
+	"github.com/Inforberi/financial-intelligence/internal/integrations/telegram/bot"
 )
 
 func (p *projectTelegramMFA) ReadBot(ctx context.Context, actor accessservice.Principal) (settingsdomain.TelegramBotSnapshot, error) {
@@ -25,7 +26,7 @@ func (p *projectTelegramMFA) ReadBot(ctx context.Context, actor accessservice.Pr
 	return result, err
 }
 
-func (p *projectTelegramMFA) UpdateBot(ctx context.Context, input settingsservice.TelegramBotUpdateInput) (settingsdomain.TelegramBotSnapshot, error) {
+func (p *projectTelegramMFA) UpdateBot(ctx context.Context, input settingstelegram.TelegramBotUpdateInput) (settingsdomain.TelegramBotSnapshot, error) {
 	var result settingsdomain.TelegramBotSnapshot
 	err := p.manager.use(ctx, func(ctx context.Context, pool *pgxpool.Pool) error {
 		service, err := p.settings(pool)
@@ -67,7 +68,7 @@ func (p *projectTelegramMFA) ActivateWebhook(ctx context.Context, actor accessse
 		if err != nil {
 			return err
 		}
-		result, err = service.ActivateWebhook(ctx, actor, version, func(ctx context.Context, credentials settingsservice.TelegramBotCredentials) error {
+		result, err = service.ActivateWebhook(ctx, actor, version, func(ctx context.Context, credentials settingstelegram.TelegramBotCredentials) error {
 			token, err := telegrambot.NewCredentials(credentials.Token.Value())
 			if err != nil {
 				return err

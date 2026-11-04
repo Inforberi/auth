@@ -15,22 +15,27 @@ import (
 	policyhttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/policy/transport/http"
 	roleshttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/transport/http"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
-	accountprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
-	accountsetuphttp "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/transport/http"
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/setup/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
-	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
-	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
+	settingsprovidershttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/transport/http"
+	settingsretentionhttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/transport/http"
+	settingssmtphttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
+	tokenintrospectionhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/introspection/transport/http"
+	tokennativehttp "github.com/Inforberi/financial-intelligence/internal/auth/token/native/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
 	requestmiddleware "github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
@@ -42,8 +47,8 @@ type Handlers struct {
 	ProjectAuthPolicy *policyhttp.AuthPolicyHandler
 	ProjectCapacity   func(http.Handler) http.Handler
 	Projects          *projecthttp.Handler
-	Introspection     *tokenhttp.IntrospectionHandler
-	NativeTokens      *tokenhttp.NativeHandler
+	Introspection     *tokenintrospectionhttp.IntrospectionHandler
+	NativeTokens      *tokennativehttp.NativeHandler
 	Tokens            *tokenhttp.Handler
 	UserLifecycle     *accounthttp.UserLifecycleHandler
 	UserDirectory     *accounthttp.UserDirectoryHandler
@@ -51,9 +56,9 @@ type Handlers struct {
 	TemporaryAdmin    *passwordprovisioninghttp.TemporaryAdminHandler
 	Access            *accesshttp.Handler
 	AuthSettings      *settingshttp.Handler
-	SMTPSettings      *settingshttp.SMTPHandler
-	ProviderSettings  *settingshttp.ProviderHandler
-	RetentionSettings *settingshttp.RetentionHandler
+	SMTPSettings      *settingssmtphttp.SMTPHandler
+	ProviderSettings  *settingsprovidershttp.ProviderHandler
+	RetentionSettings *settingsretentionhttp.RetentionHandler
 	MFASettings       *settingshttp.MFAHandler
 	Setup             *accountsetuphttp.SetupHandler
 	MFA               *mfamanagementhttp.Handler

@@ -42,7 +42,14 @@ internal/
 │   │   ├── google/
 │   │   └── telegram/
 │   ├── session/
-│   ├── token/                    # JWT и связанные сценарии
+│   ├── token/
+│   │   ├── service/              # issuance, refresh, native и общая authority
+│   │   ├── native/transport/http/
+│   │   ├── introspection/transport/http/
+│   │   ├── transport/http/       # exchange/JWKS, parser и общие error rules
+│   │   ├── signing/
+│   │   ├── settings/
+│   │   └── repository/{postgres,redis}/
 │   ├── mfa/
 │   │   ├── domain/               # модели и чистые правила выбора/отключения
 │   │   ├── service/              # общие proof, crypto и admission контракты
@@ -53,7 +60,15 @@ internal/
 │   │   ├── delivery/service/
 │   │   ├── repository/{postgres,redis}/
 │   │   └── transport/http/       # общие responses, errors и извлечение proof
-│   ├── settings/                 # настройки Auth и уведомлений
+│   ├── settings/
+│   │   ├── domain/               # Policy/MFA, настройки и их инварианты
+│   │   ├── service/              # Auth/MFA policy и общие ports
+│   │   ├── smtp/{service,transport/http}/
+│   │   ├── providers/{service,transport/http}/
+│   │   ├── retention/{service,transport/http}/
+│   │   ├── telegram/{service,transport/http}/
+│   │   ├── repository/{postgres,redis}/
+│   │   └── transport/http/       # Auth/MFA policy, trusted principal и mapper
 │   └── delivery/                 # существующая доставка уведомлений
 ├── admin/
 │   ├── administrators/           # владельцы и администраторы всей системы
@@ -421,3 +436,13 @@ SQL-владельцы account/repository/postgres и password/repository/postgr
 Публичные service/HTTP сценарии, которые переносились, тестируются в локальных tests. Private cursor/error-table/payload assertions остаются рядом; инжектированный cipher в setup-тесте берётся из собственной fixture, не из private поля production service. Connected SQL suites остаются app/auth/tests и app/projects/tests после R4; повторного переноса/копий нет. Режим приёмки — только affected packages и связанные guarantees, с переиспользованием собственного стенда Luna.
 
 Go names HTTP-пакетов: accounthttp/accountemailhttp/accountprovisioninghttp/accountsetuphttp и passwordhttp/passwordrecoveryhttp/passwordprovisioninghttp. Прежние публичные Swagger schema IDs явно закреплены @name; внешние ссылки обновляются вместе с переносом, DTO не копируются ради генератора.
+
+### Сессии, токены и настройки после R6
+
+Настройки SMTP, внешних провайдеров, сроков очистки и Telegram Bot имеют собственные service/HTTP в settings/smtp, providers, retention, telegram. Policy/MFA и общие ProviderCipher/SettingsLimiter остаются settings/service, предметные snapshot/инварианты — settings/domain. Раздельные сервисы получают нужные порты напрямую. Общий settings/repository/postgres сохраняет locked authorization, версии, согласованные guards и audit; новые repository wrappers не вводятся.
+
+Token HTTP разделён на browser exchange/JWKS (transport/http), cookie-free native endpoints (native/transport/http) и service introspection (introspection/transport/http). Общий DecodeRequest сохраняет прежние ограничения JSON/размера/required/null/unknown полей; общие error rules не копируются. Публичные Swagger schema IDs явно закреплены. Сервис issuance/native/refresh остаётся связным: coordinator, factory и native completion используют один admission budget, signer и transaction authority. Introspection factory и существующий public verifier boundary сохранены; private поля/каналы не открываем для переноса по имени файла.
+
+SessionService, Management, Activity и Rotation остаются в session/service с собственными сценариями и узкими портами; целостные SQL operations и немедленный отзыв сохранены. Access остаётся в существующих domain/service/repository/HTTP: общий Principal/permissions/версии и locked writes не разрываются. Audit Event/Recorder и маленький bounded delivery worker не требуют новых слоёв. Mailer уже разделён на connection/send/message и сохраняет прежнюю SMTP-реализацию.
+
+Публичные tests session service/HTTP, Access service/domain/settings, settings domain/service/HTTP, token domain/Redis, SMTP Redis, mailer и delivery находятся в локальных tests. Тесты приватного admission/signing/codec в token, private Access HTTP DTO assertions и SMTP gate/probe остаются рядом с владельцами. Тесты сессий проверяют оба существующих публичных validation entrypoints; safety mapper settings проверяется через публичный Read. Production internals ради tests не экспортируются. Малые test actors/лимитеры у владельцев не становятся production framework.

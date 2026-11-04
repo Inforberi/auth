@@ -18,9 +18,9 @@ import (
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/native/transport/http"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	tokensettings "github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
@@ -35,7 +35,7 @@ func nativeHTTPFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context) (nat
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := tokenhttp.NewNative(tokenhttp.NativeServices{Password: primary, Email: f.login, MFA: f.primary, Enrollment: f.mfa, Tokens: f.tokens}, zap.NewNop())
+	h := tokennativehttp.NewNative(tokennativehttp.NativeServices{Password: primary, Email: f.login, MFA: f.primary, Enrollment: f.mfa, Tokens: f.tokens}, zap.NewNop())
 	handler := router.New(router.Handlers{NativeTokens: h, Logger: zap.NewNop(), Config: &config.Config{JWT: tokensettings.Config{Enabled: true, NativeEnabled: true}, EmailOTP: otpservice.Config{Enabled: true}}})
 	return f, handler, password
 }
@@ -69,7 +69,7 @@ func nativeRefreshBody(raw string) string { return `{"refreshToken":"` + raw + `
 func checkNativeHTTP(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	t.Run("password login refresh replay logout and profile labels", func(t *testing.T) {
 		f, handler, password := nativeHTTPFixture(t, db, ctx)
-		var result tokenhttp.NativeResponse
+		var result tokennativehttp.NativeResponse
 		nativeHTTPDecode(t, nativeHTTPPost(handler, "/native/password/login", nativePasswordBody(f.email)), 200, &result)
 		if result.AccessToken == "" || result.RefreshToken == "" || result.TokenType != "Bearer" || result.Scope != "orders.read" {
 			t.Fatal("missing native credentials")
@@ -94,7 +94,7 @@ func checkNativeHTTP(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		if profiles["browser"] != 1 || profiles["api"] != 1 {
 			t.Fatal(profiles)
 		}
-		var rotated tokenhttp.NativeResponse
+		var rotated tokennativehttp.NativeResponse
 		nativeHTTPDecode(t, nativeHTTPPost(handler, "/token/refresh", nativeRefreshBody(result.RefreshToken)), 200, &rotated)
 		early := nativeHTTPPost(handler, "/token/refresh", nativeRefreshBody(rotated.RefreshToken))
 		nativeHTTPDecode(t, early, 429, nil)
@@ -115,7 +115,7 @@ func checkNativeHTTP(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	})
 	t.Run("parallel HTTP refresh commits replay revocation", func(t *testing.T) {
 		f, handler, _ := nativeHTTPFixture(t, db, ctx)
-		var issued tokenhttp.NativeResponse
+		var issued tokennativehttp.NativeResponse
 		nativeHTTPDecode(t, nativeHTTPPost(handler, "/native/password/login", nativePasswordBody(f.email)), 200, &issued)
 		var wg sync.WaitGroup
 		responses := make(chan *httptest.ResponseRecorder, 2)
@@ -125,7 +125,7 @@ func checkNativeHTTP(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		wg.Wait()
 		close(responses)
 		counts := map[int]int{}
-		var successor tokenhttp.NativeResponse
+		var successor tokennativehttp.NativeResponse
 		for w := range responses {
 			counts[w.Code]++
 			if w.Code == 200 {
@@ -142,15 +142,15 @@ func checkNativeHTTP(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 	t.Run("required enrollment requires fresh primary then recovery factor", func(t *testing.T) {
 		f, handler, _ := nativeHTTPFixture(t, db, ctx)
 		accessExec(t, db, ctx, `UPDATE auth.roles SET mfa_required=true WHERE id IN(SELECT role_id FROM auth.user_roles WHERE user_id=$1)`, f.user)
-		var challenge tokenhttp.NativeChallengeResponse
+		var challenge tokennativehttp.NativeChallengeResponse
 		nativeHTTPDecode(t, nativeHTTPPost(handler, "/native/password/login", nativePasswordBody(f.email)), 202, &challenge)
 		if challenge.NextStep != "enrollment" {
 			t.Fatal("enrollment not required")
 		}
 		bound := `{"challenge":"` + challenge.Challenge + `","binding":"` + challenge.Binding + `"`
-		var enrollment tokenhttp.NativeEnrollmentResponse
+		var enrollment tokennativehttp.NativeEnrollmentResponse
 		nativeHTTPDecode(t, nativeHTTPPost(handler, "/native/mfa/enrollment", bound+`}`), 200, &enrollment)
-		var codes tokenhttp.NativeRecoveryCodesResponse
+		var codes tokennativehttp.NativeRecoveryCodesResponse
 		nativeHTTPDecode(t, nativeHTTPPost(handler, "/native/mfa/enrollment/confirm", bound+`,"token":"`+enrollment.Token+`","code":"`+mfaCode(t, db, ctx, enrollment.Secret, 0)+`"}`), 200, &codes)
 		if len(codes.Codes) != 10 {
 			t.Fatal("recovery codes absent")
@@ -161,13 +161,13 @@ func checkNativeHTTP(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 			t.Fatal("factor was not required after enrollment")
 		}
 		complete := `{"challenge":"` + challenge.Challenge + `","binding":"` + challenge.Binding + `","code":"` + codes.Codes[0] + `","recovery":true}`
-		var result tokenhttp.NativeResponse
+		var result tokennativehttp.NativeResponse
 		nativeHTTPDecode(t, nativeHTTPPost(handler, "/native/mfa/complete", complete), 200, &result)
 		nativeHTTPDecode(t, nativeHTTPPost(handler, "/native/mfa/complete", complete), 400, nil)
 	})
 	t.Run("email native request and one-use confirmation", func(t *testing.T) {
 		f, handler, _ := nativeHTTPFixture(t, db, ctx)
-		var requested tokenhttp.NativeEmailResponse
+		var requested tokennativehttp.NativeEmailResponse
 		nativeHTTPDecode(t, nativeHTTPPost(handler, "/native/email/request", `{"email":"`+f.email+`","audience":"orders","scope":["orders.read"]}`), 202, &requested)
 		var encrypted []byte
 		if err := db.QueryRow(ctx, `SELECT payload FROM auth.email_login_outbox WHERE digest=$1`, f.cipher.Digest("native:binding:"+requested.Binding)).Scan(&encrypted); err != nil {
@@ -185,7 +185,7 @@ func checkNativeHTTP(t *testing.T, db *pgxpool.Pool, ctx context.Context) {
 		}
 		start := strings.Index(mail.Body, "<strong>") + len("<strong>")
 		body := `{"binding":"` + requested.Binding + `","code":"` + mail.Body[start:start+8] + `"}`
-		var result tokenhttp.NativeResponse
+		var result tokennativehttp.NativeResponse
 		nativeHTTPDecode(t, nativeHTTPPost(handler, "/native/email/confirm", body), 200, &result)
 		nativeHTTPDecode(t, nativeHTTPPost(handler, "/native/email/confirm", body), 400, nil)
 	})

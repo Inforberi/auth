@@ -11,9 +11,9 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
+	tokenintrospectionhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/introspection/transport/http"
 	tokenpostgres "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/postgres"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 )
 
 type introspectionSQLBudget struct{}
@@ -42,10 +42,10 @@ func checkIntrospectionHTTP(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 		if err != nil {
 			t.Fatal(err)
 		}
-		h := tokenhttp.NewIntrospection(online)
+		h := tokenintrospectionhttp.NewIntrospection(online)
 		check := func(active bool) {
 			t.Helper()
-			data, err := json.Marshal(tokenhttp.IntrospectionRequest{Token: token.Raw})
+			data, err := json.Marshal(tokenintrospectionhttp.IntrospectionRequest{Token: token.Raw})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -54,7 +54,7 @@ func checkIntrospectionHTTP(t *testing.T, db *pgxpool.Pool, ctx context.Context)
 			r.SetBasicAuth("orders-api", secret)
 			w := httptest.NewRecorder()
 			h.Inspect(w, r)
-			var result tokenhttp.IntrospectionResponse
+			var result tokenintrospectionhttp.IntrospectionResponse
 			if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &result) != nil || result.Active != active {
 				t.Fatal(w.Code, w.Body.String())
 			}

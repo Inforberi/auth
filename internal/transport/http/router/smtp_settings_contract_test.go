@@ -12,13 +12,13 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
+	settingssmtphttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/transport/http"
 )
 
 type contractSMTP struct {
 	calls int
-	input settingsservice.SMTPUpdateInput
+	input settingssmtp.SMTPUpdateInput
 	err   error
 }
 
@@ -28,7 +28,7 @@ func (s *contractSMTP) Read(_ context.Context, actor accessservice.Principal) (s
 	return settingsdomain.SMTPSnapshot{Version: 1, PasswordSet: true}, s.err
 }
 
-func (s *contractSMTP) Update(_ context.Context, input settingsservice.SMTPUpdateInput) (settingsdomain.SMTPSnapshot, error) {
+func (s *contractSMTP) Update(_ context.Context, input settingssmtp.SMTPUpdateInput) (settingsdomain.SMTPSnapshot, error) {
 	s.calls++
 	s.input = input
 	return settingsdomain.SMTPSnapshot{Version: 2, Config: input.Config, PasswordSet: true}, s.err
@@ -50,7 +50,7 @@ func TestSMTPSettingsRoutes(t *testing.T) {
 				h := contractHandlers("prod")
 				sessions := &securitySessions{}
 				h.Middleware = sessionhttp.New(sessions, zap.NewNop())
-				h.SMTPSettings = settingshttp.NewSMTP(s, zap.NewNop())
+				h.SMTPSettings = settingssmtphttp.NewSMTP(s, zap.NewNop())
 				method, path, body := "POST", "/api/v1/admin/auth/settings/smtp", smtpUpdateBody
 				if operation == "read" {
 					method, body = "GET", ""
@@ -114,7 +114,7 @@ func TestSMTPPasswordIntent(t *testing.T) {
 	for _, value := range []string{"null", `""`, `"replacement"`} {
 		s := &contractSMTP{}
 		h := contractHandlers("prod")
-		h.SMTPSettings = settingshttp.NewSMTP(s, zap.NewNop())
+		h.SMTPSettings = settingssmtphttp.NewSMTP(s, zap.NewNop())
 		body := strings.Replace(smtpUpdateBody, `"synthetic-secret"`, value, 1)
 		r := httptest.NewRequest("POST", "/api/v1/admin/auth/settings/smtp", strings.NewReader(body))
 		r.Header.Set("Origin", "https://localhost:8443")

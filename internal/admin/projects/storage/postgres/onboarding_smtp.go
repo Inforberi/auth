@@ -12,7 +12,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
@@ -47,7 +47,7 @@ func (t *Target) PrepareSMTP(ctx context.Context, keys credentials.OnboardingKey
 	if err != nil {
 		return settingsdomain.SMTPSnapshot{}, domain.ErrConflict
 	}
-	seed, err := settingsservice.NewSMTPSeed(input.Config, input.Password, input.AllowedTargets, true, cipher)
+	seed, err := settingssmtp.NewSMTPSeed(input.Config, input.Password, input.AllowedTargets, true, cipher)
 	if err != nil {
 		return settingsdomain.SMTPSnapshot{}, err
 	}
@@ -71,7 +71,7 @@ func (t *Target) PrepareSMTP(ctx context.Context, keys credentials.OnboardingKey
 	return result, nil
 }
 
-func (t *Target) initializeSMTP(ctx context.Context, project *pgx.Conn, proof credentials.SetupProof, seed settingsservice.SMTPStored, password string, cipher *secretbox.Cipher, authorize func(context.Context) error) (settingsdomain.SMTPSnapshot, error) {
+func (t *Target) initializeSMTP(ctx context.Context, project *pgx.Conn, proof credentials.SetupProof, seed settingssmtp.SMTPStored, password string, cipher *secretbox.Cipher, authorize func(context.Context) error) (settingsdomain.SMTPSnapshot, error) {
 	tx, err := project.Begin(ctx)
 	if err != nil {
 		return settingsdomain.SMTPSnapshot{}, unavailable(ctx)

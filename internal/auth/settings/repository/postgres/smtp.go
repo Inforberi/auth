@@ -11,25 +11,25 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 )
 
 const smtpColumns = `version,configuration,password_set`
 
-func scanSMTP(row pgx.Row, secret bool) (service.SMTPStored, error) {
-	var s service.SMTPStored
+func scanSMTP(row pgx.Row, secret bool) (settingssmtp.SMTPStored, error) {
+	var s settingssmtp.SMTPStored
 	values := []any{&s.Version, &s.Config, &s.PasswordSet}
 	if secret {
 		values = append(values, &s.Password)
 	}
 	err := row.Scan(values...)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return service.SMTPStored{}, domain.ErrNotInitialized
+		return settingssmtp.SMTPStored{}, domain.ErrNotInitialized
 	}
 	return s, err
 }
 
-func (r *Repository) LoadSMTP(ctx context.Context) (service.SMTPStored, error) {
+func (r *Repository) LoadSMTP(ctx context.Context) (settingssmtp.SMTPStored, error) {
 	return scanSMTP(r.db.QueryRow(ctx, `SELECT `+smtpColumns+`,password FROM auth.smtp_settings WHERE singleton`), true)
 }
 
@@ -42,8 +42,8 @@ func (r *Repository) ReadSMTP(ctx context.Context, actor accessservice.Principal
 	return stored.SMTPSnapshot, err
 }
 
-func (r *Repository) InitializeSMTP(ctx context.Context, seed service.SMTPStored) (service.SMTPStored, error) {
-	var result service.SMTPStored
+func (r *Repository) InitializeSMTP(ctx context.Context, seed settingssmtp.SMTPStored) (settingssmtp.SMTPStored, error) {
+	var result settingssmtp.SMTPStored
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		var err error
 		result, err = InitializeSMTPInTransaction(ctx, tx, seed)
@@ -53,23 +53,23 @@ func (r *Repository) InitializeSMTP(ctx context.Context, seed service.SMTPStored
 }
 
 // InitializeSMTPInTransaction preserves existing settings; the caller owns commit/rollback.
-func InitializeSMTPInTransaction(ctx context.Context, tx pgx.Tx, seed service.SMTPStored) (service.SMTPStored, error) {
+func InitializeSMTPInTransaction(ctx context.Context, tx pgx.Tx, seed settingssmtp.SMTPStored) (settingssmtp.SMTPStored, error) {
 	if err := accesspostgres.LockAccessChanges(ctx, tx); err != nil {
-		return service.SMTPStored{}, err
+		return settingssmtp.SMTPStored{}, err
 	}
 	stored, err := scanSMTP(tx.QueryRow(ctx, `SELECT `+smtpColumns+`,password FROM auth.smtp_settings WHERE singleton FOR UPDATE`), true)
 	if err == nil {
 		return stored, nil
 	}
 	if !errors.Is(err, domain.ErrNotInitialized) {
-		return service.SMTPStored{}, err
+		return settingssmtp.SMTPStored{}, err
 	}
 	var initialized bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.initial_setup WHERE initialized_at IS NOT NULL)`).Scan(&initialized); err != nil {
-		return service.SMTPStored{}, err
+		return settingssmtp.SMTPStored{}, err
 	}
 	if initialized {
-		return service.SMTPStored{}, domain.ErrNotInitialized
+		return settingssmtp.SMTPStored{}, domain.ErrNotInitialized
 	}
 	return scanSMTP(tx.QueryRow(ctx, `INSERT INTO auth.smtp_settings(singleton,configuration,password,password_set)
 		VALUES(true,$1,$2,$3) RETURNING `+smtpColumns+`,password`, seed.Config, seed.Password, seed.PasswordSet), true)

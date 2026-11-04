@@ -1,4 +1,4 @@
-package http
+package tokenhttp
 
 import (
 	"bytes"
@@ -69,10 +69,10 @@ func (h *Handler) Exchange(w http.ResponseWriter, r *http.Request) {
 		h.respondError(w, r, err)
 		return
 	}
-	httpx.JSON(w, 200, exchangeResponse(result))
+	httpx.JSON(w, 200, ToExchangeResponse(result))
 }
 
-func exchangeResponse(result *service.ExchangeResult) ExchangeResponse {
+func ToExchangeResponse(result *service.ExchangeResult) ExchangeResponse {
 	keys := make([]string, len(result.Scope))
 	for i, key := range result.Scope {
 		keys[i] = string(key)

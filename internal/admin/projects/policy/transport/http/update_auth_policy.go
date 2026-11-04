@@ -27,9 +27,9 @@ type UpdateProjectAuthPolicyRequest struct {
 // @Accept json
 // @Produce json
 // @Param id path string true "Project UUID"
-// @Param body body UpdateProjectAuthPolicyRequest{policy=http.PolicyRequest} true "Complete policy, immutable operation and expected versions"
-// @Success 200 {object} ProjectAuthPolicyResponse{settings=http.SettingsResponse}
-// @Success 202 {object} ProjectAuthPolicyResponse{settings=http.SettingsResponse}
+// @Param body body UpdateProjectAuthPolicyRequest{policy=settingshttp.PolicyRequest} true "Complete policy, immutable operation and expected versions"
+// @Success 200 {object} ProjectAuthPolicyResponse{settings=settingshttp.SettingsResponse}
+// @Success 202 {object} ProjectAuthPolicyResponse{settings=settingshttp.SettingsResponse}
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse

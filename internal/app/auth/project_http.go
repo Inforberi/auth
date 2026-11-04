@@ -11,7 +11,7 @@ import (
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/router"
@@ -40,7 +40,7 @@ func NewProjectHTTP(cfg ProjectHTTPConfig, deps ProjectProfileDependencies, sour
 		return nil, projectdomain.ErrUnavailable
 	}
 	if deps.SMTPTests == nil {
-		deps.SMTPTests = settingsservice.NewSMTPTestGate()
+		deps.SMTPTests = settingssmtp.NewSMTPTestGate()
 	}
 	if log == nil {
 		log = zap.NewNop()

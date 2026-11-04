@@ -11,13 +11,13 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	"github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingstelegram "github.com/Inforberi/financial-intelligence/internal/auth/settings/telegram/service"
 )
 
-func (r *Repository) AuthorizeTelegramBotUpdate(ctx context.Context, actor accessservice.Principal, version int64) (service.TelegramBotStored, error) {
+func (r *Repository) AuthorizeTelegramBotUpdate(ctx context.Context, actor accessservice.Principal, version int64) (settingstelegram.TelegramBotStored, error) {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	var stored service.TelegramBotStored
+	var stored settingstelegram.TelegramBotStored
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		deadline, err := accesspostgres.AuthorizeMutation(ctx, tx, actor, "", settings.AuthSettingsManage)
 		if err != nil {
@@ -35,7 +35,7 @@ func (r *Repository) AuthorizeTelegramBotUpdate(ctx context.Context, actor acces
 	return stored, err
 }
 
-func (r *Repository) UpdateTelegramBot(ctx context.Context, input service.TelegramBotUpdate) (domain.TelegramBotSnapshot, error) {
+func (r *Repository) UpdateTelegramBot(ctx context.Context, input settingstelegram.TelegramBotUpdate) (domain.TelegramBotSnapshot, error) {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	var result domain.TelegramBotSnapshot

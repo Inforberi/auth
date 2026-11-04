@@ -1,4 +1,4 @@
-package http
+package tokenhttp
 
 import "net/http"
 

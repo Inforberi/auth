@@ -1,4 +1,4 @@
-package http
+package settingshttp
 
 import (
 	"net/http"
@@ -28,7 +28,7 @@ type MFAUpdateRequest struct {
 // @Router /api/v1/admin/auth/settings/mfa [post]
 // @Router /api/v1/platform/settings/mfa [post]
 func (h *MFAHandler) Update(w http.ResponseWriter, r *http.Request) {
-	actor, ok := principal(w, r)
+	actor, ok := Principal(w, r)
 	if !ok {
 		return
 	}

@@ -9,7 +9,7 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingsretention "github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/service"
 )
 
 type projectRetentionSettings struct{ profile *ProjectProfile }
@@ -32,7 +32,7 @@ func (p *ProjectProfile) buildProfileRetentionSettings(cfg ProjectProfileConfig)
 	p.state("retention_settings_write", reason)
 }
 
-func (s *projectRetentionSettings) use(ctx context.Context, operation func(context.Context, *settingsservice.Retention) (settingsdomain.RetentionSnapshot, error)) (settingsdomain.RetentionSnapshot, error) {
+func (s *projectRetentionSettings) use(ctx context.Context, operation func(context.Context, *settingsretention.Retention) (settingsdomain.RetentionSnapshot, error)) (settingsdomain.RetentionSnapshot, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	p := s.profile
@@ -42,7 +42,7 @@ func (s *projectRetentionSettings) use(ctx context.Context, operation func(conte
 			return err
 		}
 		var err error
-		result, err = operation(ctx, settingsservice.NewRetention(settingspostgres.New(pool)))
+		result, err = operation(ctx, settingsretention.NewRetention(settingspostgres.New(pool)))
 		if err != nil {
 			return err
 		}
@@ -55,13 +55,13 @@ func (s *projectRetentionSettings) use(ctx context.Context, operation func(conte
 }
 
 func (s *projectRetentionSettings) Read(ctx context.Context, actor accessservice.Principal) (settingsdomain.RetentionSnapshot, error) {
-	return s.use(ctx, func(ctx context.Context, service *settingsservice.Retention) (settingsdomain.RetentionSnapshot, error) {
+	return s.use(ctx, func(ctx context.Context, service *settingsretention.Retention) (settingsdomain.RetentionSnapshot, error) {
 		return service.Read(ctx, actor)
 	})
 }
 
-func (s *projectRetentionSettings) Update(ctx context.Context, input settingsservice.RetentionUpdateInput) (settingsdomain.RetentionSnapshot, error) {
-	return s.use(ctx, func(ctx context.Context, service *settingsservice.Retention) (settingsdomain.RetentionSnapshot, error) {
+func (s *projectRetentionSettings) Update(ctx context.Context, input settingsretention.RetentionUpdateInput) (settingsdomain.RetentionSnapshot, error) {
+	return s.use(ctx, func(ctx context.Context, service *settingsretention.Retention) (settingsdomain.RetentionSnapshot, error) {
 		return service.Update(ctx, input)
 	})
 }

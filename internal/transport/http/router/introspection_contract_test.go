@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
+	tokenintrospectionhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/introspection/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/service"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
 )
 
 type introspectionContract struct {
@@ -60,7 +60,7 @@ func TestIntrospectionServiceTransport(t *testing.T) {
 			s := &introspectionContract{err: tc.err}
 			h := contractHandlers("prod")
 			h.Config.JWT.Enabled = true
-			h.Introspection = tokenhttp.NewIntrospection(s)
+			h.Introspection = tokenintrospectionhttp.NewIntrospection(s)
 			r := httptest.NewRequest("POST", path, strings.NewReader(tc.body))
 			r.Header.Set("Content-Type", "application/json")
 			r.SetBasicAuth("orders", "synthetic")
@@ -90,7 +90,7 @@ func TestIntrospectionServiceTransport(t *testing.T) {
 		h := contractHandlers("prod")
 		h.Config.JWT.Enabled = enabled
 		if !enabled {
-			h.Introspection = tokenhttp.NewIntrospection(&introspectionContract{})
+			h.Introspection = tokenintrospectionhttp.NewIntrospection(&introspectionContract{})
 		}
 		w := httptest.NewRecorder()
 		New(h).ServeHTTP(w, httptest.NewRequest("POST", path, nil))

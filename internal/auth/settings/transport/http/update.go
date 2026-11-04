@@ -1,4 +1,4 @@
-package http
+package settingshttp
 
 import (
 	"net/http"
@@ -71,7 +71,7 @@ func (input *PolicyRequest) Domain() (domain.Policy, bool) {
 // @Failure 503 {object} httpx.ErrorResponse
 // @Router /api/v1/admin/auth/settings [post]
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	actor, ok := principal(w, r)
+	actor, ok := Principal(w, r)
 	if !ok {
 		return
 	}

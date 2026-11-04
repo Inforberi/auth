@@ -12,22 +12,22 @@ import (
 	accesshttp "github.com/Inforberi/financial-intelligence/internal/access/transport/http"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
-	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
 	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
-	accountprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
 	accountsetup "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/service"
-	accountsetuphttp "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/transport/http"
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/setup/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	googleservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/service"
 	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
-	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
-	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
@@ -37,7 +37,10 @@ import (
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/dev"
@@ -95,9 +98,9 @@ func contractHandlers(env string) Handlers {
 		TemporaryAdmin:    passwordprovisioninghttp.NewTemporaryAdmin(&contractTemporaryAdmin{}, log),
 		Access:            accesshttp.New(&contractAccess{}, log),
 		AuthSettings:      settingshttp.New(&contractAuthSettings{}, availableSettingsMethods, log),
-		SMTPSettings:      settingshttp.NewSMTP(&contractSMTP{}, log),
-		ProviderSettings:  settingshttp.NewProviders(&contractProviders{}, log),
-		RetentionSettings: settingshttp.NewRetention(&contractRetention{}, log),
+		SMTPSettings:      settingssmtphttp.NewSMTP(&contractSMTP{}, log),
+		ProviderSettings:  settingsprovidershttp.NewProviders(&contractProviders{}, log),
+		RetentionSettings: settingsretentionhttp.NewRetention(&contractRetention{}, log),
 		MFASettings:       settingshttp.NewMFA(&contractMFASettings{}, log),
 		Setup:             accountsetuphttp.NewSetup(&contractSetup{}, log),
 		EmailBinding:      accountemailhttp.NewEmailBinding(&contractEmailBinding{}, log),

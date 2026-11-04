@@ -13,6 +13,7 @@ import (
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingstelegram "github.com/Inforberi/financial-intelligence/internal/auth/settings/telegram/service"
 )
 
 func TestTelegramFactorLifecycleSchema(t *testing.T) {
@@ -29,7 +30,7 @@ func TestTelegramFactorLifecycleSchema(t *testing.T) {
 	_, err = policy.Update(ctx, settingsservice.TelegramMFAUpdate{Actor: actor, ExpectedVersion: initial.Version, Allowed: true})
 	require.ErrorIs(t, err, settingsdomain.ErrMethodNotReady, "configuration needs bot credentials")
 	token := settingsBotToken
-	configured, err := bot.Update(ctx, settingsservice.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: initial.Version, BotToken: &token})
+	configured, err := bot.Update(ctx, settingstelegram.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: initial.Version, BotToken: &token})
 	require.NoError(t, err)
 	change := settingsservice.TelegramMFAUpdate{Actor: actor, ExpectedVersion: configured.Version, Allowed: true}
 	_, err = settingsservice.NewTelegramMFA(settingspostgres.New(db), false).Update(ctx, change)
@@ -60,7 +61,7 @@ func TestTelegramFactorLifecycleSchema(t *testing.T) {
 		_, err = policy.Update(ctx, settingsservice.TelegramMFAUpdate{Actor: actor, ExpectedVersion: current.Version, Allowed: false})
 		require.ErrorIs(t, err, settingsdomain.ErrTelegramFactorInUse)
 		otherToken := strings.Replace(token, "123456789", "987654321", 1)
-		_, err = bot.Update(ctx, settingsservice.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: current.Version, BotToken: &otherToken})
+		_, err = bot.Update(ctx, settingstelegram.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: current.Version, BotToken: &otherToken})
 		require.ErrorIs(t, err, settingsdomain.ErrTelegramFactorInUse)
 
 		confirmTelegramFactorChannel(t, ctx, &f, 1<<40+1)

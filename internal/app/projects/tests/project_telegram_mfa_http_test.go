@@ -10,11 +10,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
-	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
-	mfatelegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/telegram/transport/http"
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
-	tokenhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/telegram/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/telegram/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/native/transport/http"
 )
 
 func TestTwoProjectTelegramMFAHTTP(t *testing.T) {
@@ -28,7 +28,7 @@ func TestTwoProjectTelegramMFAHTTP(t *testing.T) {
 		path := "/api/v1/admin/auth/settings/mfa/telegram/bot"
 		response := web.call(t, ctx, "GET", path, "", owner, nil)
 		require.Equal(t, 200, response.status, string(response.body))
-		var saved settingshttp.TelegramBotResponse
+		var saved settingstelegramhttp.TelegramBotResponse
 		require.NoError(t, json.Unmarshal(response.body, &saved))
 		token := fmt.Sprintf("%d:abcdefghijklmnopqrstuvwxyz_0123456789", 123456789+i)
 		response = web.call(t, ctx, "POST", path, web.origin, owner, map[string]any{"expectedVersion": saved.Version, "botToken": token})
@@ -105,7 +105,7 @@ func TestTwoProjectTelegramMFAHTTP(t *testing.T) {
 	response = web.call(t, ctx, "POST", "/api/v1/auth/native/password/login", "", "", map[string]any{"email": httpIsolationEmail, "password": httpIsolationPassword, "audience": "reports", "scope": []string{"reports.read"}})
 	// Native policy in the shared fixture supplies its own declared audience.
 	if response.status == 202 {
-		var challenge tokenhttp.NativeChallengeResponse
+		var challenge tokennativehttp.NativeChallengeResponse
 		require.NoError(t, json.Unmarshal(response.body, &challenge))
 		require.Equal(t, "telegram", challenge.Method)
 		f.trackCompletion(challenge.Challenge, challenge.Binding)

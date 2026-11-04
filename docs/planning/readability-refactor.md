@@ -399,13 +399,15 @@ migrations/
 
 ### R6. Сессии, JWT, роли и настройки
 
-- [ ] Применить ту же организацию к session/token/access/settings/audit/delivery и связанным интеграциям — только в подтверждённых проблемных местах.
-- [ ] Сохранить feature-local repositories, signing/public verifier boundary, auth/access versions, немедленный отзыв и действующие SQL/Redis guarantees.
-- [ ] Разделить широкие группы по самостоятельным контрактам; не переписывать уже связные пакеты и не добавлять Redis repositories/слои/tests ради симметрии дерева.
-- [ ] Перенести оставшиеся tests сразу к конечным владельцам; учесть переехавшие ранее cross-feature suites, targeted commands и coverage.
-- [ ] Обновить необходимые callers, настройки сборки и профильные документы в этом же блоке.
+- [x] Применить ту же организацию к session/token/access/settings/audit/delivery и связанным интеграциям — только в подтверждённых проблемных местах.
+- [x] Сохранить feature-local repositories, signing/public verifier boundary, auth/access versions, немедленный отзыв и действующие SQL/Redis guarantees.
+- [x] Разделить широкие группы по самостоятельным контрактам; не переписывать уже связные пакеты и не добавлять Redis repositories/слои/tests ради симметрии дерева.
+- [x] Перенести оставшиеся tests сразу к конечным владельцам; учесть переехавшие ранее cross-feature suites, targeted commands и coverage.
+- [x] Обновить необходимые callers, настройки сборки и профильные документы в этом же блоке.
 
 Результат: оставшиеся общие механизмы и tests приведены к единым правилам, только обоснованные изменения, без новой реализации уже проверенного функционала.
+
+4 ноября, R6 реализован и принят на `/private/tmp/auth-r6-settings-token-v4-k_io6d07`, base `1bc286c`. Settings выделяет самостоятельные SMTP, providers, retention и Telegram Bot service/HTTP; общие Policy/MFA/domain/ports и SQL transaction owners сохранены. Token HTTP разделяет exchange/JWKS, native и service introspection, shared DecodeRequest и error rules сохраняют контракт. Native issuance/MFA coordinator остаётся единым service с общим admission/signing/refresh/SQL ownership: искусственное разделение потребовало бы экспорта private деталей. Access/Session сохраняют узкие сервисы и целостные repository, audit/worker/mailer — связную существующую реализацию. Публичные domain/service/HTTP/Redis tests перенесены в local tests, private budget/signing/codec/DTO/gate assertions рядом. Tests roots не потеряны по source inventory. API generation сохранила byte-identical Swagger, dependencies/schema/routes/ENV не менялись. Приёмка — только согласованные affected packages и SQL/Redis contracts, на собственном сохранённом стенде Luna. Приёмка Luna: 38 packages race, lint0, API, 11 SQL roots (в umbrella только 11 согласованных JWT/native/refresh leaves), оба Redis suites actual PASS. Старые settings SQL fixtures приведены к действующим MFA-инвариантам: отсутствующий required proof запрещает read; stale6min primary/MFA допускают read, но не mutation; историческая retention-session содержит исторические proofs. Production SQL/constraints не менялись. Main сверил source/manifest, package results и actual SQL/Redis logs. Внешние/load gates отдельно; далее R7.
 
 ### R7. Завершение сборки приложения и lifecycle
 

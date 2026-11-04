@@ -7,21 +7,24 @@ import (
 	"go.uber.org/zap"
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
-	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
-	accounthttp "github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/transport/http"
 	otphttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/transport/http"
 	googlehttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/google/transport/http"
 	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
-	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
-	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	telegramhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/transport/http"
 	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/transport/http"
+	settingsretentionhttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/transport/http"
+	settingssmtphttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
@@ -81,16 +84,16 @@ func (p *ProjectProfile) browserHandlers(log *zap.Logger) map[string]http.Handle
 		handlers["GET /api/v1/admin/auth/settings"], handlers["POST /api/v1/admin/auth/settings"] = settings.Read, settings.Update
 	}
 	if p.smtpSettings != nil {
-		smtp := settingshttp.NewSMTP(p.smtpSettings, log)
+		smtp := settingssmtphttp.NewSMTP(p.smtpSettings, log)
 		handlers["GET /api/v1/admin/auth/settings/smtp"], handlers["POST /api/v1/admin/auth/settings/smtp"] = smtp.Read, smtp.Update
 		handlers["POST /api/v1/admin/auth/settings/smtp/test"] = smtp.TestConnection
 	}
 	if p.providerSettings != nil {
-		providers := settingshttp.NewProviders(p.providerSettings, log)
+		providers := settingsprovidershttp.NewProviders(p.providerSettings, log)
 		handlers["GET /api/v1/admin/auth/settings/providers/{provider}"], handlers["POST /api/v1/admin/auth/settings/providers/{provider}"] = providers.Read, providers.Update
 	}
 	if p.retentionSettings != nil {
-		retention := settingshttp.NewRetention(p.retentionSettings, log)
+		retention := settingsretentionhttp.NewRetention(p.retentionSettings, log)
 		handlers["GET /api/v1/admin/auth/settings/retention"], handlers["POST /api/v1/admin/auth/settings/retention"] = retention.Read, retention.Update
 	}
 	if p.mfaSettings != nil {

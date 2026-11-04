@@ -22,7 +22,7 @@ import (
 	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
@@ -79,7 +79,7 @@ func projectSMTPDrill(t *testing.T, admin *pgx.Conn, reader *runtimepostgres.Run
 	port, err := strconv.Atoi(smtpPort)
 	require.NoError(t, err)
 	input := settingsdomain.SMTPConfig{Host: smtpHost, Port: port, Username: "fixture", From: "auth@example.test", Domain: "example.test", RequireTLS: true}
-	seed, err := settingsservice.NewSMTPSeed(input, "runtime-smtp-fixture-only", allowed, true, cipher)
+	seed, err := settingssmtp.NewSMTPSeed(input, "runtime-smtp-fixture-only", allowed, true, cipher)
 	require.NoError(t, err)
 	encoded, err := json.Marshal(input)
 	require.NoError(t, err)

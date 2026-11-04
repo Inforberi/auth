@@ -5,8 +5,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	settingsproviders "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/service"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 )
 
 func (p *ProjectProfile) buildProfileMethods(ctx context.Context, cfg ProjectProfileConfig, redisReady bool) {
@@ -70,7 +70,7 @@ func (p *ProjectProfile) buildProfileOIDC(ctx context.Context, name string, cfg 
 		return nil
 	}
 	err = p.deps.Registry.UsePool(ctx, p.key, func(ctx context.Context, pool *pgxpool.Pool) error {
-		providers := settingsservice.NewProviders(settingspostgres.New(pool), service.googleCipher, service.telegramCipher)
+		providers := settingsproviders.NewProviders(settingspostgres.New(pool), service.googleCipher, service.telegramCipher)
 		_, _, err := projectProviderCredentials(ctx, providers, name)
 		return err
 	})

@@ -14,7 +14,7 @@ import (
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingstelegram "github.com/Inforberi/financial-intelligence/internal/auth/settings/telegram/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
@@ -50,7 +50,7 @@ func configureTelegramLoginFixture(t *testing.T, db *pgxpool.Pool, ctx context.C
 	saved, err := bot.Read(ctx, actor)
 	require.NoError(t, err)
 	token := settingsBotToken
-	_, err = bot.Update(ctx, settingsservice.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: saved.Version, BotToken: &token})
+	_, err = bot.Update(ctx, settingstelegram.TelegramBotUpdateInput{Actor: actor, ExpectedVersion: saved.Version, BotToken: &token})
 	require.NoError(t, err)
 	accessExec(t, db, ctx, `UPDATE auth.mfa_settings SET telegram_factor_allowed=true`)
 }
