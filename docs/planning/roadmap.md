@@ -415,7 +415,7 @@ Free/Pro — демонстрационный каталог, не ограни�
 | `middleware/request.go`, `infra/logger/context.go` | Request ID/context logger и redaction; route templates вместо чувствительных URL paths | 2.3 |
 | `router/router.go`, `router_test.go` | Liveness/readiness и Swagger policy; дополнить readiness Redis | 2.4, 4 |
 | `httpx/request.go`, `request_test.go` | Body limit, Content-Type, single JSON value, unknown fields и DTO validation; сохранить error contract | 4 |
-| `deploy/Dockerfile.dev`, `.prod`, `.dockerignore`, `.air.toml` | Сборка `cmd/auth`, проверенная Go version, multi-platform, nonroot и минимальный runtime | 3.1–3.4 |
+| `deploy/docker/Dockerfile.dev`, `.prod`, `.dockerignore`, `.air.toml` | Сборка `cmd/auth`, проверенная Go version, multi-platform, nonroot и минимальный runtime | 3.1–3.4 |
 | `compose.dev.yml`, `compose.prod.yml` | Раздельные профили, readiness/migration ordering; дополнить Redis/SMTP и secrets | 3.3–3.4 |
 | `Taskfile.yml`, `.github/workflows/ci.yml` | Единый интерфейс через `Taskfile.yml`; tests/lint по умолчанию, остальные checks отдельно по риску | 3.5 |
 | Swagger tasks и защищённый UI | Pinned generator, reproducible docs, отключение dev endpoints в prod | 4 |
@@ -490,7 +490,7 @@ A6.3b-local (17 октября): transition guard пригодного system su
 
 Этапы 0, 1 и 4 завершены. 5.1–5.4 и 5.5a–d реализованы и локально проверены: verification/recovery/session HTTP API/account status, opt-in email change/report/protected password recovery и необходимая часть SQL session security. 5.5e-local завершён, 5.6a deletion и 5.6b-worker реализованы и локально проверены; далее provisioning 5.7. Restore/ban-erasure 5.6b-operations открыты. Provenance — [template-adoption](../template-adoption.md); проверки и границы — ниже. Внешняя приёмка 5.5e-staging остаётся открытой: почта/browser и операционные процедуры ещё не проверены; auth/RBAC/MFA/billing release gates впереди, шаблон не готов к production release.
 
-Проверка этого шага: `docker build -f deploy/Dockerfile.dev -t auth:devcheck .`; `AUTH_TEST_IMAGE=auth:devcheck AUTH_TEST_APP_ENV=dev AUTH_SMOKE_ONLY=true task check-integration` — exit 0. Проверены dev startup, migration up, runtime DB connection, PostgreSQL/Redis readiness, liveness, Swagger disabled (404), локальная SMTP отправка в Mailpit. Disposable project `auth-check-1791315226-3825` и его volumes удалены runner; существующая БД не затронута. Это не полный integration/backup drill или external SMTP delivery. На этапе 0 изменения были документационными; tests/lint/security scan и GitHub CI тогда повторно не запускались. Проверка local Markdown links и `git diff --check` прошла. Release checks этапа 14 сохраняются.
+Проверка этого шага: `docker build -f deploy/docker/Dockerfile.dev -t auth:devcheck .`; `AUTH_TEST_IMAGE=auth:devcheck AUTH_TEST_APP_ENV=dev AUTH_SMOKE_ONLY=true task check-integration` — exit 0. Проверены dev startup, migration up, runtime DB connection, PostgreSQL/Redis readiness, liveness, Swagger disabled (404), локальная SMTP отправка в Mailpit. Disposable project `auth-check-1791315226-3825` и его volumes удалены runner; существующая БД не затронута. Это не полный integration/backup drill или external SMTP delivery. На этапе 0 изменения были документационными; tests/lint/security scan и GitHub CI тогда повторно не запускались. Проверка local Markdown links и `git diff --check` прошла. Release checks этапа 14 сохраняются.
 
 | Этап | Статус | Зависимость / результат |
 | --- | --- | --- |

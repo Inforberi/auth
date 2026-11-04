@@ -1,6 +1,6 @@
 # MP6R: план рефакторинга читаемости
 
-Статус: целевые принципы и дерево согласованы 1 ноября 2026; пользователь отдельно подтвердил разделение широких пакетов по логике. Сейчас только документация и планирование, реализация не разрешена. Это детализация [MP6R](multi-project.md#mp6r-проверка-безопасности-и-рефакторинг-перед-итоговой-приёмкой), а не новый функциональный этап. [Целевая архитектура](../architecture.md) определяет направления; конкретные переносы, интерфейсы и выделяемые подфичи уточняются в R1 до изменения кода.
+Статус: целевые принципы и дерево согласованы 1 ноября 2026; пользователь отдельно подтвердил разделение широких пакетов по логике. R1–R8 имеют принятые snapshots/evidence. Дополнительный boundary-review4 ноября выявил незавершённое разделение app/Auth/admin и SQL orchestration; корректирующий блок ниже открыт до MP7. DOC PASS R8 не равен завершению этих изменений. Это детализация [MP6R](multi-project.md#mp6r-проверка-безопасности-и-рефакторинг-перед-итоговой-приёмкой), а не новый функциональный этап. [Целевая архитектура](../architecture.md) определяет направления; конкретные переносы, интерфейсы и выделяемые подфичи зафиксированы в R1; фактические результаты — в R2–R8.
 
 ## Итог обсуждения
 
@@ -10,7 +10,7 @@
 - В cmd остаются понятные эксплуатационные команды; в app — сборка и владение ресурсами. Целевые имена: app/auth, app/admin, app/projects; функции общей панели — admin/administrators и admin/projects. Старые platform/projectauth и standalone/operator/project не используем для нового дерева.
 - Если в пакете много разнородных файлов, разделяем по самостоятельным логическим подфичам и контрактам. Один большой пакет из множества маленьких файлов не решает проблему читаемости. Числового лимита файлов нет, перенос обязан сохранять транзакции и понятное владение ресурсами.
 - Чистые бизнес-решения принадлежат domain/service; repository обеспечивает сохранение, актуальность и атомарность. Перенос правил не разрывает транзакции.
-- Документация обновляется вместе с каждым переносом: архитектура и реальные пути, контракты фич, команды cmd/sandbox и проверки. Следующий результат планирования — точная карта переносов и интерфейсов. Исполнение R1–R8 начинается после отдельного разрешения; сейчас меняются только документы.
+- Документация обновляется вместе с каждым переносом: архитектура и реальные пути, контракты фич, команды cmd/sandbox и проверки. Карта переносов и интерфейсов зафиксирована в R1; R2–R7 приняты по отдельным снимкам. В R8 повторяем только проверки конкретных новых изменений, не весь ранее принятый набор.
 
 ## Цель и неизменяемые условия
 
@@ -433,14 +433,39 @@ migrations/
 
 ### R8. Сквозное ревью и закрытие рефакторинга
 
-- [ ] Завершить security review sessions/JWT/refresh/revoke, MFA/recovery, roles/admin bridge, project isolation, provisioning/rotation, HTTP/CORS/CSRF/cookies, secrets/errors/logs. Проверки безопасности также идут в R3–R7 по изменениям.
-- [ ] Зафиксировать конкретные дефекты и ограничения; дефекты исправлять отдельно от механического переноса с затронутыми regression checks.
-- [ ] Сверить SQL/Redis round trips, индексы/locks, bounded inputs/concurrency и pool/client ownership; не выдавать структурный рефакторинг за измеренную capacity.
-- [ ] Сверить исходные/новые suites и coverage, согласованность путей/команд/контрактов и документации. Исчезнувший suite не PASS.
-- [ ] Свести evidence уже принятых проверок без формального повторения всего набора; закрыть оставшиеся затронутые checks через Luna, отметить NOT RUN.
-- [ ] Подготовить краткий итог и передачу в MP7, затем MP8 нагрузка/память/GC. UI требует отдельного предупреждения и согласования.
+- [x] Завершить security review sessions/JWT/refresh/revoke, MFA/recovery, roles/admin bridge, project isolation, provisioning/rotation, HTTP/CORS/CSRF/cookies, secrets/errors/logs. Проверки безопасности также идут в R3–R7 по изменениям.
+- [x] Зафиксировать конкретные дефекты и ограничения; дефекты исправлять отдельно от механического переноса с затронутыми regression checks.
+- [x] Сверить SQL/Redis round trips, индексы/locks, bounded inputs/concurrency и pool/client ownership; не выдавать структурный рефакторинг за измеренную capacity.
+- [x] Сверить исходные/новые suites и coverage, согласованность путей/команд/контрактов и документации. Исчезнувший suite не PASS.
+- [x] Свести evidence уже принятых проверок без формального повторения всего набора; закрыть оставшиеся затронутые checks через Luna, отметить NOT RUN.
+- [x] Подготовить краткий итог и передачу в MP7, затем MP8 нагрузка/память/GC. UI требует отдельного предупреждения и согласования.
+
 
 Результат: рефакторинг принят с явными проверками и оставшимися gates. Новые функции и недоступные внешние проверки не объявляются выполненными.
+
+#### R8: результаты ревью 4 ноября 2026
+
+Scope — изменения R1–R7 и их границы доверия на `0aa644b`, а не новый функционал и не полная эксплуатационная MP7/MP8 приёмка. Подтверждённого production-дефекта, требующего изменения поведения, при ревью не найдено. SQL guards не переносились в service: проверки актуальности и locks должны оставаться в общей security-транзакции.
+
+| Область | Проверенные владельцы и гарантии | Сохранённое evidence |
+| --- | --- | --- |
+| Browser sessions | `auth/session/repository/postgres/{sessions,rotate}.go`: статус/удаление/auth_version, browser profile, expiry/absolute и role-bound view; rotation один победитель, refresh не оживляет revoked credential | R3–R7 SQL и session contract/unit suites; R7 session isolation |
+| JWT/native/refresh | `auth/token/service` и `repository/postgres/{refresh,refresh_lock,refresh_authorization,refresh_rotate}.go`: issuer/audience/profile и current authority остаются у владельца; проектная сборка не экспортирует signing/limiter state | R6 JWT/native/refresh leaves, R7 token isolation и API |
+| MFA/recovery | `auth/mfa/{login,management,recovery,telegram}` + общий SQL owner: primary/factor selection, approval, invalidation и audit не разделены по разным транзакциям | R4 SQL suites, R7 email/Telegram/recovery HTTP и Redis refusal paths |
+| Access/admin bridge | `access/repository/postgres`, `admin/projects/repository/postgres/{project_transaction,project_target}.go`: authority/versions и last-admin проверяются при записи, платформенный principal не заменяет проектный | R3 authority/receipt/preparation suites, R7 Access/directory/identity isolation |
+| HTTP и проектный routing | middleware Origin/cookie checks, router protection; profile HTTPRoutes не публикует отсутствующий handler/guard. Runtime key/origin и SQL policy перепроверяются перед dispatch | R7 full tests, HTTP isolation и Swagger parity; реальный ingress/browser остаётся отдельным gate |
+| Runtime/ресурсы | Registry ограничивает residents/acquires/open timeout; retired pool занимает слот до Close. Leases удерживаются внутри UsePool; final drain идёт до закрытия reader/catalog. Shared hash/SMTP/Bot budgets переиспользуются | R3 registry/runtime checks и R7 startup/drain/race/Redis |
+| Доставка и SQL нагрузка | PageRuntimes использует keyset+LIMIT; delivery имеет PageSize/Parallelism/Interval и timeout/cancellation. Горячий auth lookup использует token/session predicates; current guards не заменены stale cache | R2/R5 cleanup и R7 delivery/lifecycle/race; измеренная capacity не заявляется |
+| Provisioning/restore/rotation | SQL миграции перенесены без изменения байтов; прямые зависимости и restore script не менялись. Закрытый onboarding и versioned credentials остаются отдельными владельцами | R3 schema/preparation/rotation receipts; fleet restore/live fault acceptance отдельно |
+
+Сохранность suites: чтение Git source на `43e0a38` (до исполнения R2–R7) и `0aa644b` даёт 705→707 корневых Test/Benchmark/Fuzz/Example, пропавших имён/количеств нет. Добавлены `TestDisableTOTPPolicy`, `TestMethodSelectionPolicy`. Таблица корней — статическая сверка, не доказательство одинаковых assertions/покрытия. Исполнение подтверждено принятыми snapshots и regression suites, а не одним совпадением имён.
+
+`task check` и CI используют `go test ./...`, поэтому новые локальные tests-пакеты входят в обычный прогон. Числового baseline coverage/coverprofile в этом процессе нет: процент до/после не измерен. При отдельном измерении tests-пакеты необходимо связывать с production owners через coverpkg; не считать собственное покрытие tests-пакета покрытием сервиса и не добавлять фиктивный coverage gate.
+
+Обнаруженные проблемы документации: шесть broken links в security-плане после переноса suites, старые пути в карте и статусы «реализация не начата». Исправлены в этом блоке; runtime-код не менялся. Итог R7 evidence переиспользуется, Go/Docker не запускаются ради Markdown. Документационная приёмка Luna PASS: `/private/tmp/auth-r8-review-v1-zpg1kts5`, receipt `/private/tmp/auth-r8-review-v1-summary.json`. Проверены6 hashes, отсутствие source delta, diff, 341 local links/anchors и независимая source inventory705→707. Это DOC PASS; исполняемые проверки не запускались.
+
+Оставшиеся ограничения: R2 live sandbox readiness/TestPrepareJWT, внешние Google/Telegram/SMTP и реальный browser/ingress, полная MP7 security/fault/fleet/restore матрица и MP8 RPS/память/GC. Финальный drain ожидает leases и не является обещанием мгновенного shutdown при неотвечающей внешней зависимости. Наблюдения ограниченности ресурсов не доказывают отсутствие утечек или capacity. UI отдельно согласовывается.
+
 
 ### Правила выполнения без лишних переносов
 
@@ -471,3 +496,70 @@ migrations/
 - [Согласованная архитектура](../architecture.md), [правила проекта](../../AGENTS.md), [MP6R](multi-project.md#mp6r-проверка-безопасности-и-рефакторинг-перед-итоговой-приёмкой).
 
 На этапе планирования tests/lint/SQL/Docker не запускались; безопасность и производительность заново не аттестованы. Изменения ограничены Markdown-планом и навигацией к нему.
+
+
+## Дополнительная проверка границ после R8 — 4 ноября 2026
+
+По новому запросу пользователя проверены app/Auth, project storage/catalog repositories и разделение SQL/правил. Приёмка R7/R8 подтверждает конкретные snapshots и проверки, но не означает, что оставшиеся широкие пакеты уже соответствуют желаемой читаемости. Следующие архитектурные исправления ещё не реализованы; до их завершения MP6R в части границ не считать окончательно закрытым. Не запускать MP7 вместо устранения этого смешения.
+
+### Фактические находки
+
+| Место | Что подтверждено в исходнике | Требуемое разделение |
+| --- | --- | --- |
+| `app/auth` | 22 прямых source и26 test files. `assembleRealm` собирает обычный Auth, `assembleOperator` — общую админку, проекты и их HTTP/runtime. Файлы methods/account/MFA преимущественно создают сервисы и adapters, а не выполняют пользовательские сценарии | Развести сборку Auth и общей админки. Самостоятельные группы builders держать рядом; общий root не становится складом всех режимов |
+| `app/auth/realm.go:assembleRealm` | В одном связном constructor находятся account/session/login/token/settings и HTTP bindings, в том числе temporary/invitations/email-change | Сделать верхний уровень последовательностью feature builders с явными результатами и ресурсами; сохранить существующий порядок startup/cleanup, один hash/limiter/mail owner |
+| `admin/projects/storage/postgres` |14 source и3 test files. `Target.Prepare` создаёт SQL-ресурсы под advisory lock отдельного соединения; schema/runtime role/grants/identity записываются согласованно | Это physical database preparation, не второй CRUD repository. Более понятный путь — `admin/projects/preparation/database/postgres`. Не объединять privileged DDL с runtime catalog role |
+| `admin/projects/repository/postgres` |27 source и2 test files. Общие catalog/authority helpers соседствуют с role/assignment/policy execution и reconciliation | Оставить каталог и общие SQL transaction/authority primitives; scenario-specific persistence — рядом с roles/policy. Переносить связанными группами, не по одному prefix-файлу |
+| `repository/postgres/role_reconcile.go:ReconcileRoleOutcome` | Читает каталог, выбирает recovery source, получает runtime lease, открывает read-only project transaction, читает receipt и обновляет catalog outcome | Межбазовая последовательность принадлежит role service/use case; SQL чтение receipt и атомарная запись результата — узким persistence adapters. Сохранить actor/admission binding и идемпотентность |
+| `role_execution.go:CreatePlatformRoleInTransaction` | SQL/audit/replay и locks соседствуют с чистым permission-catalog/MFA-readiness решением | Чистые правила — domain/service owner, вызов по актуальному snapshot внутри той же транзакции. Сама authority/replay/security transaction не разрывается |
+| `auth/settings/repository/postgres/policy_change.go:CheckPolicyChange` | Первые проверки version/configured/method availability/token capability — без SQL; затем dependency versions и stored prerequisites читаются из SQL | Чистую проверку входных snapshots оформить у policy domain/service и переиспользовать; SQL wrapper вызывает её внутри прежней locked transaction перед проверкой stored dependencies |
+
+`AdmittedAuthPolicy.changePolicy` принудительно задаёт RequireStoredProviders=true и проверяет prerequisites в locked transaction. Это fail-closed инфраструктурная гарантия, а не причина вынести всё в service до транзакции. `WHERE status='active'`, auth_version/role revision, locks, constraints, replay/audit, OID/generation и last-admin guards остаются у SQL-владельца. Repository имеет ответственность за атомарность и SQL authority, а не только безусловные INSERT/UPDATE.
+
+### Целевые владельцы
+
+```text
+internal/app/
+├── app.go, run.go, server.go, resources.go
+├── auth/
+│   ├── assembly.go, lifecycle.go
+│   ├── account/             # только создание и связывание account-сервисов
+│   ├── methods/             # password/OTP/OIDC builders, не реализация входа
+│   ├── mfa/                 # общая сборка MFA/factor resources
+│   ├── token/               # выдача HTTP/service adapters, ключи у их владельца
+│   ├── settings/            # сборка настроек и feature capabilities
+│   ├── registration/, setup/ # существующие связные builders
+│   └── tests/               # чёрный ящик Auth; private tests у actual owner
+├── admin/                   # сборка общей админки и проектного управления
+└── projects/                # trusted scope, bounded resources/leases, публикация профилей
+
+internal/admin/projects/
+├── domain/
+├── service/
+├── repository/postgres/     # каталог + общие atomic authority/transaction helpers
+├── roles/
+│   ├── service/             # create/assignment/reconciliation orchestration
+│   └── repository/postgres/ # role intent/receipt persistence, без второго use case
+├── policy/
+│   ├── service/
+│   └── repository/postgres/
+└── preparation/
+    ├── service/
+    ├── repository/postgres/ # reservation/catalog state
+    ├── database/postgres/   # physical DDL/SQL roles/schema и crash-safe recovery
+    └── transport/cli/
+```
+
+Это target, не описание уже созданных каталогов и не задание сделать пустые пакеты ради симметрии. Конкретные группы builders выделяются по реальным совместным зависимостям; если два сценария нельзя отделить без большого экспорта crypto/config/limiters, они остаются одной связной группой. Root App выбирает Auth/admin assembly. Shared runtime contracts должны иметь одно направление imports, без app/common, bootstrap, DI container и compatibility alias-пакетов. Application constructors не принимают business decisions и не исполняют SQL; lease/current-scope adapters не объявляются бизнес-логикой только из-за наличия callback.
+
+### Тесты и порядок корректировки
+
+1. Зафиксировать портовую границу SQL snapshot → чистое решение → SQL commit. Выделить без-SQL правила, сохранить порядок ошибок, validation и trusted capability checks. Domain/service не импортируют pgx/repository. Уже существующие domain правила не копируются в новый helper.
+2. Разделить Auth/admin builders и tests одной closure. Новый публичный constructor должен быть настоящим production entrypoint, а не экспортом ради теста. Публичные scenario/SQL tests переходят в локальные tests; private lifecycle/security-helper assertions остаются рядом с узким владельцем. Импорт из подпапки tests не даёт доступа к private symbols; unsafe/linkname и копии fixtures запрещены.
+3. Перенести межбазовую orchestration в roles/policy service, их persistence к feature owner; переименовать physical storage. Обновить callers/CLI/docs/source paths одновременно. Общие SQL locks/authority/receipt transaction остаются цельными, без N+1 и нового database round trip.
+
+Перед source edits сверить references/import graph и набор existing regression roots. Публичные HTTP/ENV/schema, алгоритмы hash/MFA/refresh и отзыв не меняются. После целого корректирующего блока — один immutable snapshot Luna, checks только по влиянию: formatter/tests/lint, соответствующие SQL/authority/reconcile/lease regressions; старый R7 PASS не закрывает новый layout. Не добавлять dependency или framework.
+
+Дополнительный просмотр остальных auth/access/administrators repositories не обнаружил прямых repository imports в app/HTTP/SMTP/external clients и не подтвердил новых самостоятельных orchestration hotspots. Service imports контрактных типов, SMTP credential rebinding guards и MFA authority callbacks сами по себе не нарушения. Это ограниченный source-review, а не доказательство отсутствия всех ошибок.
+
+Вывод текущего просмотра — конкретные нарушения границ и план их устранения, не production/security certification и не выполненный рефакторинг этого target. Текущий executable deployment gate рассматривается отдельно на `/private/tmp/auth-deployment-v1-y0nko35e`.

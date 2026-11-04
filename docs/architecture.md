@@ -479,3 +479,19 @@ internal/app/
 Crypto state, limiters и техническая конфигурация остаются private. Внешняя сборка использует операции готовности, создания сервисов и привязки факторов. SMTP.Use сохраняет один lease и прежние guards до/после операции; Mailer связан с тем же pool. `secretbox.ForScope` выполняет прежние Scope.Purpose и NewScoped. Общие hash/SMTP/Bot gates переиспользуются.
 
 Root tests проверяют реальный App.Run/startup cleanup. Общие синтетические config/manifest helpers используются только тестами из `internal/app/tests/fixtures`; production-код их не импортирует. Private lifecycle/конфигурационные assertions остаются рядом с владельцем; публичные сценарии могут быть в локальных tests. Связанные SQL suites не копируются. Весь R7 принят Luna по итоговому V5: tests/lint, affected race, SQL/Redis и API. Evidence и ограничения — в [сводке приёмки](operations/acceptance-summary.md#r7-сборка-приложения--приёмка-4-ноября-2026).
+
+### Deployment после MP6R
+
+`deploy` содержит только операционные артефакты: `compose` (base/development/production), `docker`, `postgres/grants`, примеры и backup/restore scripts. Принципы и команды — [deploy/README](../deploy/README.md). Проверочный Compose и integration runner находятся в `sandbox`; fake restore и Compose security regression — в `sandbox/tests/security`.
+
+`internal/admin/projects/schema` владеет единственным runtime-grants SQL template, его безопасной параметризацией и schema checksum. Storage/schema adapters и эксплуатационные команды используют один источник; Go package deploy удалён, SQL body и checksum не меняются. Остальные grant scripts остаются операционными в `deploy/postgres`, миграции — в `migrations/{auth,admin}`.
+
+Production API читает `.env.prod.app`, а не owner Compose `.env.prod`. Host env/secrets не входят в image. Нужные API files доступны через существующий host directory, read-only `/run/secrets`, UID/GID65532. Это подготовка deployment и явная граница полномочий, а не новый бизнес-слой Auth или разрешение production release.
+
+### Каталог проектов и физическая подготовка БД
+
+Текущий `admin/projects/repository/postgres` сохраняет каталог/переходы/результаты. `admin/projects/preparation/repository/postgres` сохраняет reservations и этапы подготовки. Текущий `admin/projects/storage/postgres` создаёт физическую БД, SQL-роли, grants и схему на trusted target; он использует привилегированное отдельное соединение и advisory lock, а не runtime CRUD-пул. Поэтому наличие двух SQL-adapters оправдано разными данными и полномочиями; название storage требует уточнения до preparation/database/postgres.
+
+Продуктовые правила и orchestration принадлежат domain/service. Repository читает актуальный state, держит locks, вызывает чистое правило в атомарном сценарии, пишет изменения/audit/receipt и преобразует SQL errors. Запретить ему WHERE/constraints/current authority — значит ослабить транзакционную гарантию; это не цель разделения. Межбазовая последовательность role reconciliation не должна скрываться за именем repository.
+
+Application root создаёт и связывает зависимости, выбирает доверенный режим и управляет ресурсами. Сервисные решения о роли, доступе, policy transitions и recovery не должны реализовываться в app. Текущие constructors app/auth по большей части соответствуют этому правилу, но их смешение с admin assembly и root-level test fixtures требует дополнительного разделения. [Фактические находки и ещё не реализованный target](planning/readability-refactor.md#дополнительная-проверка-границ-после-r8--4-ноября-2026). Ранее принятые snapshots не заменяют эту корректировку.
