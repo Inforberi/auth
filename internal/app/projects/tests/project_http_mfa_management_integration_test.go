@@ -11,25 +11,28 @@ import (
 	"testing"
 	"time"
 
-	pgx "github.com/jackc/pgx/v5"
-	redis "github.com/redis/go-redis/v9"
+	"github.com/jackc/pgx/v5"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
-	mfamanagementhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
-func projectMFAManagementHTTPDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, cfg appauth.ProjectPasswordConfig, deps appauth.ProjectPasswordDependencies, input passwordservice.LoginInput) {
+func projectMFAManagementHTTPDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, cfg projectmethods.ProjectPasswordConfig, deps projectmethods.ProjectPasswordDependencies, input passwordservice.LoginInput) {
 	t.Helper()
 	ctx := t.Context()
 	cfg.MFA = mfaservice.Config{Enabled: true, Issuer: "Project MFA management", ChallengeTTL: time.Minute, UserLimitPerMinute: 100, IPLimitPerMinute: 100, GlobalLimitPerMinute: 100}
@@ -75,12 +78,12 @@ DELETE FROM auth.auth_settings; INSERT INTO auth.auth_settings SELECT * FROM mfa
 	})
 	var origin string
 	require.NoError(t, admin.QueryRow(ctx, `SELECT origin FROM platform.projects WHERE id=$1`, key.Binding.ProjectID).Scan(&origin))
-	handler, err := appauth.NewProjectHTTP(appauth.ProjectHTTPConfig{
+	handler, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-mfa.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 20 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &cfg.Session,
-	}, appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: deps.Registry, Reader: deps.Reader, Redis: rdb, Hash: deps.Hash}}, func(_ context.Context, selected projectruntime.Key, selectedOrigin string) (appauth.ProjectProfileConfig, error) {
+	}, projectprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: deps.Registry, Reader: deps.Reader, Redis: rdb, Hash: deps.Hash}}, func(_ context.Context, selected projectruntime.Key, selectedOrigin string) (projectprofile.ProjectProfileConfig, error) {
 		require.Equal(t, key, selected)
 		require.Equal(t, origin, selectedOrigin)
-		return appauth.ProjectProfileConfig{BrowserEnabled: true, Password: &cfg, Timeout: 10 * time.Second}, nil
+		return projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &cfg, Timeout: 10 * time.Second}, nil
 	}, nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)

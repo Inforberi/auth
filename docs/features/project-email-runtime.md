@@ -12,7 +12,7 @@ MP4.1e,25 октября2026. Решение перед реализацией.
 
 ## Реализация
 
-`internal/app/auth/project_email.go` — NewProjectEmail и ResendVerification/ConfirmVerification/ForgotPassword/ResetPassword. Project data key заменяет любой переданный outbox key; cipher purposes и Redis keys изолированы существующим realm scope. Проверка recovery config перенесена из общей config в существующий password Config.Validate и вызывается обоими потребителями, без второго набора правил. Email URL должны принадлежать явно переданному HTTPS origin; это assembly input, не HTTP Host. Ошибка финальной сверки после commit не доказывает rollback уже выполненной операции.
+`internal/app/projects/account/email.go` — NewProjectEmail и ResendVerification/ConfirmVerification/ForgotPassword/ResetPassword. Project data key заменяет любой переданный outbox key; cipher purposes и Redis keys изолированы существующим realm scope. Проверка recovery config перенесена из общей config в существующий password Config.Validate и вызывается обоими потребителями, без второго набора правил. Email URL должны принадлежать явно переданному HTTPS origin; это assembly input, не HTTP Host. Ошибка финальной сверки после commit не доказывает rollback уже выполненной операции.
 
 `project_email_runtime.go` — построение services только внутри lease, без копирования business/SQL логики. В delivery path URL/hash не используются: ciphertext уже содержит готовое письмо. SMTP source получает текущий borrowed pool, ограничивает чтение3s и проверяет key; вложенной registry lease нет. Внешняя операция может пережить suspend после последней проверки; следующий вызов запрещён.
 

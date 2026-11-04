@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
@@ -83,11 +83,11 @@ func TestTwoProjectEmailMFAHTTP(t *testing.T) {
 	checkEmailMFARoleTransitions(t, f, owner)
 	checkNativeEmailMFA(t, f)
 	checkEmailMFAChallengeRoleChange(t, f, owner)
-	cfg := appauth.ProjectProfileConfig{BrowserEnabled: true, Password: &f.projects.password, EmailMFA: &f.config, Tokens: &f.tokens.configs[0], Timeout: 10 * time.Second}
-	_, err := appauth.BuildProjectProfile(ctx, f.projects.projects[0], web.origin, cfg, f.projects.deps)
+	cfg := projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &f.projects.password, EmailMFA: &f.config, Tokens: &f.tokens.configs[0], Timeout: 10 * time.Second}
+	_, err := projectprofile.BuildProjectProfile(ctx, f.projects.projects[0], web.origin, cfg, f.projects.deps)
 	require.NoError(t, err, "cold profile must accept a fully assembled stored email factor")
 	cfg.EmailMFA = nil
-	_, err = appauth.BuildProjectProfile(ctx, f.projects.projects[0], web.origin, cfg, f.projects.deps)
+	_, err = projectprofile.BuildProjectProfile(ctx, f.projects.projects[0], web.origin, cfg, f.projects.deps)
 	require.Error(t, err, "stored factors must fail closed without the email runtime")
 }
 

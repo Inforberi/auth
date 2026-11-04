@@ -22,7 +22,7 @@ import (
 func TestOperatorProfileSQLHTTPS(t *testing.T) {
 	admin, deps, cfg := operatorFixture(t)
 	ctx := t.Context()
-	repo, err := operatorpostgres.New(deps.pool, operatordomain.RealmID(cfg.Platform.RealmID))
+	repo, err := operatorpostgres.New(deps.Pool, operatordomain.RealmID(cfg.Platform.RealmID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestOperatorProfileSQLHTTPS(t *testing.T) {
 	if err := repo.CheckRuntime(ctx, false); err == nil {
 		t.Fatal("uninitialized runtime started without setup")
 	}
-	wrong, err := operatorpostgres.New(deps.pool, "1c82c477-3a57-4823-8c49-a476550d8a21")
+	wrong, err := operatorpostgres.New(deps.Pool, "1c82c477-3a57-4823-8c49-a476550d8a21")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,8 +68,8 @@ func TestOperatorProfileSQLHTTPS(t *testing.T) {
 	if err != nil {
 		t.Fatal("operator assembly", err)
 	}
-	t.Cleanup(assembled.resources.close)
-	h := newOperatorHTTPS(t, assembled.handler, cfg.Platform.Origin)
+	t.Cleanup(assembled.resources.Close)
+	h := newOperatorHTTPS(t, assembled.Handler, cfg.Platform.Origin)
 	// Setup proof is an installation header, never a query string or login credential.
 	startInput := map[string]string{"email": "operator@example.test", "password": "Initialpassword1"}
 	startRequest, err := http.NewRequestWithContext(ctx, "POST", h.server.URL+"/api/v1/setup/start", strings.NewReader(`{"email":"operator@example.test","password":"Initialpassword1"}`))
@@ -140,14 +140,14 @@ func TestOperatorProfileSQLHTTPS(t *testing.T) {
 		t.Fatal("issued operator session lacks current authority", err)
 	}
 	operatorCatalogReadDrill(t, admin, h, user, session)
-	operatorCatalogWriteDrill(t, admin, deps.pool, repo, h, actor, session)
-	operatorCatalogCreateDrill(t, admin, deps.pool, repo, h, actor, session)
-	operatorPreparationDrill(t, admin, deps.pool, cfg.Platform.RealmID)
+	operatorCatalogWriteDrill(t, admin, deps.Pool, repo, h, actor, session)
+	operatorCatalogCreateDrill(t, admin, deps.Pool, repo, h, actor, session)
+	operatorPreparationDrill(t, admin, deps.Pool, cfg.Platform.RealmID)
 	h.call("GET", "/api/v1/auth/me", nil, []*http.Cookie{{Name: sessionhttp.SessionCookieName, Value: strings.Repeat("A", 43)}}, 401)
 	workerCtx, cancel := context.WithCancel(ctx)
 	done := make(chan error, 1)
 	go func() {
-		done <- assembled.run(workerCtx, deps.log, func(ctx context.Context) error { <-ctx.Done(); return nil })
+		done <- assembled.Run(workerCtx, deps.Logger, func(ctx context.Context) error { <-ctx.Done(); return nil })
 	}()
 	t.Cleanup(func() {
 		cancel()

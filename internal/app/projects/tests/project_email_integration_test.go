@@ -16,7 +16,9 @@ import (
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectaccount "github.com/Inforberi/financial-intelligence/internal/app/projects/account"
+	projectdelivery "github.com/Inforberi/financial-intelligence/internal/app/projects/delivery"
+	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
@@ -24,7 +26,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
-func projectEmailDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, deps appauth.ProjectSMTPDependencies, listener net.Listener) {
+func projectEmailDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, deps projectapp.ProjectSMTPDependencies, listener net.Listener) {
 	t.Helper()
 	ctx := t.Context()
 	const user = "f8200000-0000-4000-8000-000000000001"
@@ -80,10 +82,10 @@ func projectEmailDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key
 		require.NoError(t, err)
 		require.Zero(t, count)
 	})
-	cfg := appauth.ProjectEmailConfig{VerificationEnabled: true, RecoveryEnabled: true, Origin: "https://runtime-email.example.test", Verification: accountservice.Config{
+	cfg := projectaccount.ProjectEmailConfig{VerificationEnabled: true, RecoveryEnabled: true, Origin: "https://runtime-email.example.test", Verification: accountservice.Config{
 		URL: "https://runtime-email.example.test/verify-email", TTL: 30 * time.Minute, ResendInterval: time.Minute, RegistrationIPLimit: 5, RegistrationGlobalLimit: 100,
 	}, Password: passwordrecovery.Config{ResetURL: "https://runtime-email.example.test/reset-password", ResetTokenTTL: time.Hour, ResetGlobalLimit: 100}}
-	service, err := appauth.NewProjectEmail(ctx, key, cfg, []string{listener.Addr().String()}, appauth.ProjectEmailDependencies{ProjectSMTPDependencies: deps, Hash: hash})
+	service, err := projectaccount.NewProjectEmail(ctx, key, cfg, []string{listener.Addr().String()}, projectaccount.ProjectEmailDependencies{ProjectSMTPDependencies: deps, Hash: hash})
 	require.NoError(t, err)
 	require.NoError(t, service.ResendVerification(ctx, email, ip))
 	require.NoError(t, service.ForgotPassword(ctx, email, ip))
@@ -112,7 +114,7 @@ func projectEmailDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key
 	_, err = ciphers[1].Open(verificationPayload)
 	require.Error(t, err, "queue purposes must remain distinct")
 	projectEmailPageDrill(t, deps.Reader, key)
-	runner, err := appauth.NewProjectDelivery(appauth.ProjectDeliveryConfig{Parallelism: 1, PageSize: projectruntime.StateBatchSize, Interval: time.Second, SMTPAllowedTargets: []string{listener.Addr().String()}}, deps)
+	runner, err := projectdelivery.NewProjectDelivery(projectdelivery.ProjectDeliveryConfig{Parallelism: 1, PageSize: projectruntime.StateBatchSize, Interval: time.Second, SMTPAllowedTargets: []string{listener.Addr().String()}}, deps)
 	require.NoError(t, err)
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()

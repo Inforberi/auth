@@ -446,3 +446,36 @@ Token HTTP разделён на browser exchange/JWKS (transport/http), cookie-
 SessionService, Management, Activity и Rotation остаются в session/service с собственными сценариями и узкими портами; целостные SQL operations и немедленный отзыв сохранены. Access остаётся в существующих domain/service/repository/HTTP: общий Principal/permissions/версии и locked writes не разрываются. Audit Event/Recorder и маленький bounded delivery worker не требуют новых слоёв. Mailer уже разделён на connection/send/message и сохраняет прежнюю SMTP-реализацию.
 
 Публичные tests session service/HTTP, Access service/domain/settings, settings domain/service/HTTP, token domain/Redis, SMTP Redis, mailer и delivery находятся в локальных tests. Тесты приватного admission/signing/codec в token, private Access HTTP DTO assertions и SMTP gate/probe остаются рядом с владельцами. Тесты сессий проверяют оба существующих публичных validation entrypoints; safety mapper settings проверяется через публичный Read. Production internals ради tests не экспортируются. Малые test actors/лимитеры у владельцев не становятся production framework.
+
+### R7: сборка приложения и проектные границы
+
+`cmd/auth` вызывает `internal/app.New`. Root App владеет process SQL/Redis/logger/shared hasher, HTTP запуском, startup cleanup и завершением. `app/auth.Assemble` получает заимствованные Dependencies и возвращает Runtime с Handler/Run/Close. Runtime владеет своими workers; teardown выполняется в прежнем порядке через небольшую LIFO Resources-группу. Общая конфигурация и `server/http` самостоятельны.
+
+```text
+internal/app/
+├── app.go, run.go, server.go, resources.go
+├── auth/                   # общая Auth сборка и lifecycle
+│   ├── registration/      # сборка регистрации с email-outbox
+│   └── setup/             # сборка первого администратора
+├── admin/                  # сборка административных сценариев
+└── projects/
+    ├── runtime/            # registry, reader, scoped SMTP и Binding
+    ├── profile/            # конфигурация, readiness и таблица маршрутов
+    ├── browser/            # HTTP dispatcher, cache и lifetime профиля
+    ├── methods/            # password/registration/temporary, OTP, OIDC
+    ├── account/            # email, приглашения, directory и lifecycle
+    ├── mfa/                # сборка login, management и факторов
+    ├── native/             # сборка JWT/native/refresh
+    ├── access/             # проектные адаптеры ролей и permissions
+    ├── settings/           # проектные адаптеры настроек
+    ├── delivery/           # bounded workers доставки
+    ├── onboarding/         # закрытый setup проекта
+    ├── preparation/        # сборка privileged preparation CLI
+    └── tests/              # связанные проектные SQL/HTTP suites
+```
+
+Это сборка существующих фич: domain/service/repository/transport остаются у фич, SQL и транзакции не переносятся в app. Scoped adapters используют Binding вместо ссылки на весь профиль. Profile зависит от feature adapters; browser публикует собранные маршруты. Обратных imports в source нет. Shared setup/registration сборка используется обычным и проектным режимами, без копий security-сценариев.
+
+Crypto state, limiters и техническая конфигурация остаются private. Внешняя сборка использует операции готовности, создания сервисов и привязки факторов. SMTP.Use сохраняет один lease и прежние guards до/после операции; Mailer связан с тем же pool. `secretbox.ForScope` выполняет прежние Scope.Purpose и NewScoped. Общие hash/SMTP/Bot gates переиспользуются.
+
+Root tests проверяют реальный App.Run/startup cleanup. Общие синтетические config/manifest helpers используются только тестами из `internal/app/tests/fixtures`; production-код их не импортирует. Private lifecycle/конфигурационные assertions остаются рядом с владельцем; публичные сценарии могут быть в локальных tests. Связанные SQL suites не копируются. Весь R7 принят Luna по итоговому V5: tests/lint, affected race, SQL/Redis и API. Evidence и ограничения — в [сводке приёмки](operations/acceptance-summary.md#r7-сборка-приложения--приёмка-4-ноября-2026).

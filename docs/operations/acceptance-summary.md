@@ -285,3 +285,17 @@ SQL: все11 exact roots actual RUN/PASS/exit0 без SKIP/NOT RUN. Auth: TestA
 Cleanup данных подтверждён Luna: выделенная test DB удалена, `authp_*` DBs/test roles отсутствуют, Redis DB15 пуста, authenticated PING PONG. Собственная инфраструктура `auth-r5-retained` сохранена для следующей задачи по указанию пользователя; владелец Luna, metadata `/private/tmp/auth-r5-retained-fixture.json`, Compose `/private/tmp/auth-r5-retained-compose.yml`. R6 не является capacity/GC evidence.
 
 Обратная отправка итогового отчёта Luna была отклонена автоматической проверкой разрешений чата. Main получил итог через read_thread и самостоятельно прочитал receipts/logs; недоставленное сообщение не считалось PASS. Коммит разрешён пользователем после полной приёмки. R6 закрыт; далее R7 assembly/lifecycle. R2 live readiness/TestPrepareJWT, внешние подключения и MP7/MP8 security/load/resource gates остаются отдельными; UI после согласования.
+
+### R7: сборка приложения — приёмка 4 ноября 2026
+
+Полный этап принят Luna по `/private/tmp/auth-r7-final-v5-p4mvajgb` на базе `a12ff58`. Main сверил все 350 manifest entries (234 файла и 116 удалений) с рабочим деревом: расхождений нет. Последующие изменения — только документы о приёмке. Process App/lifecycle и project feature adapters/profile/browser разделены; private crypto/limiters, shared budgets, SQL/Redis authority и leases сохранены. Новых schema/routes/ENV/dependencies нет. Все 148 исходных App Test roots сохранены статически и проходят в итоговой сборке.
+
+- V5 `task check` exit0: `go test ./...` и pinned golangci-lint v2.14.0, 0 issues. Лог `/private/tmp/auth-r7-final-v5-task-check.log`.
+- Affected race по 21 пакету, включая test fixtures, exit0: `/private/tmp/auth-r7-final-v3-race.log`. V3→V4 именует те же поля struct literals; V5 меняет только synthetic setup secret и заметку, production поведение не меняется.
+- Все 15 согласованных SQL roots имеют actual RUN/PASS без skips: operator/startup, runtime assembly, HTTP/email/OTP/OIDC/MFA/recovery/Telegram/directory/Access/identities/sessions/tokens isolation. Evidence перечислены в `/private/tmp/auth-r7-final-v3-summary.json`; после случайного setup secret только `TestOperatorProfileSQLHTTPS` повторён на V5, exit0 `/private/tmp/auth-r7-final-v5-sql-TestOperatorProfileSQLHTTPS.log`.
+- Actual `TestRealmRedisIsolation` exit0: `/private/tmp/auth-r7-final-v3-redis-TestRealmRedisIsolation.log`. `task check:api` PASS из V1, `/private/tmp/auth-r7-final-check-api.log`; Swagger generation не изменила артефакты, контракт после этого не менялся.
+- Formatter изменённого кода exit0. При переносе исправлены compile/private-test edges и keyed composites. Ложный G101 не подавляется: setup token в test-only fixture генерируется существующим генератором, callers читают его из cfg.
+
+Итоговый receipt `/private/tmp/auth-r7-final-v5-summary.json` связывает V5 с неизменившимися успешными V3/V1 checks. Main прочитал summary и фактические окончания логов; повтор успешных suites ради смены версии не выполнялся. Проверки выполняла только Luna. Её retained R5 PostgreSQL/Redis сохранены; только свои тестовые данные очищены, Redis DB15 пуст и authenticated PING=PONG. Временные OIDC hosts aliases восстановлены.
+
+R7 закрыт, далее R8 сквозное ревью. Полная MP7 security/functional приёмка, MP8 RPS/память/GC, R2 live/external readiness gates этим блоком не закрываются. UI отдельно согласовывается.

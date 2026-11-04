@@ -16,7 +16,8 @@ import (
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
+	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
@@ -45,7 +46,7 @@ type projectTokenFixture struct {
 	db                   *pgx.Conn
 	rdb                  *redis.Client
 	key                  projectruntime.Key
-	deps                 appauth.ProjectSMTPDependencies
+	deps                 projectapp.ProjectSMTPDependencies
 	hash                 *hasher.Bounded
 	listener             net.Listener
 	sourceUser, password string
@@ -87,20 +88,20 @@ func (f projectTokenFixture) run(t *testing.T, ctx context.Context) {
 	}
 	keys := []string{}
 	f.cleanupTokenLimits(t, ctx, scope, ciphers, &keys)
-	client, err := appauth.NewProjectTokenRedis(f.rdb)
+	client, err := projectnative.NewProjectTokenRedis(f.rdb)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, client.Close()) })
 	base := projectPasswordFixtureConfig()
 	catalog, err := accesssettings.NewCatalog([]accesssettings.Permission{{Key: tokenFixturePermission, Name: "Read reports"}})
 	require.NoError(t, err)
 	consumerHash := sha256.Sum256([]byte(tokenConsumerSecret))
-	cfg := appauth.ProjectTokenConfig{
-		Introspection: &appauth.ProjectIntrospectionConfig{Clients: []tokenservice.IntrospectionClientConfig{{ID: tokenConsumerID, SecretHashes: []string{hex.EncodeToString(consumerHash[:])}, Audiences: []string{"reports"}}}, ConsumerPerMinute: 100, ProjectPerMinute: 100},
+	cfg := projectnative.ProjectTokenConfig{
+		Introspection: &projectnative.ProjectIntrospectionConfig{Clients: []tokenservice.IntrospectionClientConfig{{ID: tokenConsumerID, SecretHashes: []string{hex.EncodeToString(consumerHash[:])}, Audiences: []string{"reports"}}}, ConsumerPerMinute: 100, ProjectPerMinute: 100},
 		Enabled:       true, Issuer: "https://project-token.example.test", Catalog: catalog, Limits: tokenredis.DefaultLimits(), Timeout: 15 * time.Second,
 		Tokens: tokenservice.Config{AccessTTL: 2 * time.Minute, Resources: []tokenservice.Resource{{Audience: "reports", Permissions: []accessdomain.PermissionKey{tokenFixturePermission}}, {Audience: "reports-export", Permissions: []accessdomain.PermissionKey{tokenFixturePermission}}}, Native: &tokenservice.NativePolicy{IdleTTL: time.Hour, AbsoluteTTL: 2 * time.Hour, Sessions: base.Session}},
-		Native: appauth.ProjectNativeConfig{PasswordEnabled: true, Capacity: base.Capacity, EmailOTP: otpservice.Config{Enabled: true, TTL: 5 * time.Minute, ResendInterval: time.Minute, RequestGlobalLimit: 100, ConfirmGlobalLimit: 1000}, MFA: mfaservice.Config{Enabled: true, Issuer: "Project tokens", ChallengeTTL: time.Minute, UserLimitPerMinute: 100, IPLimitPerMinute: 100, GlobalLimitPerMinute: 100}, SMTPAllowedTargets: []string{f.listener.Addr().String()}},
+		Native: projectnative.ProjectNativeConfig{PasswordEnabled: true, Capacity: base.Capacity, EmailOTP: otpservice.Config{Enabled: true, TTL: 5 * time.Minute, ResendInterval: time.Minute, RequestGlobalLimit: 100, ConfirmGlobalLimit: 1000}, MFA: mfaservice.Config{Enabled: true, Issuer: "Project tokens", ChallengeTTL: time.Minute, UserLimitPerMinute: 100, IPLimitPerMinute: 100, GlobalLimitPerMinute: 100}, SMTPAllowedTargets: []string{f.listener.Addr().String()}},
 	}
-	service, err := appauth.NewProjectTokens(ctx, f.key, cfg, appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, IssuanceRedis: client, Hash: f.hash})
+	service, err := projectnative.NewProjectTokens(ctx, f.key, cfg, projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, IssuanceRedis: client, Hash: f.hash})
 	require.NoError(t, err)
 	jwks, err := service.PublicJWKS(ctx)
 	require.NoError(t, err)

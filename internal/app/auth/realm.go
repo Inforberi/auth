@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
 	accesshttp "github.com/Inforberi/financial-intelligence/internal/access/transport/http"
-	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	registrationapp "github.com/Inforberi/financial-intelligence/internal/app/auth/registration"
+	setupapp "github.com/Inforberi/financial-intelligence/internal/app/auth/setup"
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
 	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
@@ -29,7 +28,7 @@ import (
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/transport/http"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
-	settingsretentionhttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/transport/http"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
@@ -39,20 +38,20 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/router"
 )
 
-func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependencies) (_ *realm, err error) {
+func assembleRealm(ctx context.Context, cfg *config.Config, deps Dependencies) (_ *Runtime, err error) {
 	runtimeConfig := *cfg
 	cfg = &runtimeConfig
-	owned := &resources{}
+	owned := &Resources{}
 	defer func() {
 		if err != nil {
-			owned.close()
+			owned.Close()
 		}
 	}()
 	if err := deps.validate(); err != nil {
 		return nil, err
 	}
-	pool, rdb, log, argonHash := deps.pool, deps.redis, deps.log, deps.hash
-	security := realmSecurity{scope: deps.scope}
+	pool, rdb, log, argonHash := deps.Pool, deps.Redis, deps.Logger, deps.Hash
+	security := realmSecurity{scope: deps.Scope}
 	access, policy, providers, err := security.assembleAccessPolicy(ctx, pool, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("assemble access and auth policy: %w", err)
@@ -68,7 +67,7 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 		return nil, fmt.Errorf("assemble account: %w", err)
 	}
 	accountSvc, accountRepo := accountRuntime.verification, accountRuntime.repository
-	passwordRepo := assembleRegistration(pool, accountSvc, accountRepo)
+	passwordRepo := registrationapp.Assemble(pool, accountSvc, accountRepo)
 	emailBinding, err := security.assembleEmailBinding(accountRepo, rdb, cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble email binding: %w", err)
@@ -78,7 +77,7 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 		return nil, fmt.Errorf("assemble retention settings: %w", err)
 	}
 	retentionSvc := accountservice.NewRetention(accountRepo, cfg.Retention).WithSettings(retentionSettings)
-	setup, err := security.assembleSetup(accountRepo, rdb, mail, argonHash, cfg, log)
+	setup, err := setupapp.Assemble(security.scope, accountRepo, rdb, mail, argonHash, cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble setup: %w", err)
 	}
@@ -108,12 +107,12 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 	if err != nil {
 		return nil, fmt.Errorf("assemble telegram: %w", err)
 	}
-	owned.add(closeTelegram)
+	owned.Add(closeTelegram)
 	google, closeGoogle, err := security.assembleGoogle(ctx, cfg, accountRepo, rdb, loginSvc, policy, providers, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble Google: %w", err)
 	}
-	owned.add(closeGoogle)
+	owned.Add(closeGoogle)
 	var emailChange *accountemailhttp.EmailChangeHandler
 	var protectedRecovery *passwordrecoveryhttp.ProtectedRecoveryHandler
 	var activation *passwordprovisioninghttp.ActivationHandler
@@ -185,23 +184,13 @@ func assembleRealm(ctx context.Context, cfg *config.Config, deps realmDependenci
 			return rdb.Ping(ctx).Err()
 		},
 	})
-	return &realm{
+	return &Runtime{
 		Access:             access,
 		Provisioning:       provisioning,
 		TemporaryPasswords: temporary,
 		resources:          owned,
-		handler:            handler,
+		Handler:            handler,
 		retention:          retentionSvc,
 		workers:            realmDeliveryWorkers(password.recovery, accountSvc, mfa.delivery, emailOTP.delivery),
 	}, nil
-}
-
-func assembleRegistration(pool *pgxpool.Pool, service *accountemail.Verification, repo *accountpostgres.Repository) *passwordpostgres.PasswordRepo {
-	return passwordpostgres.NewWithRegistration(pool, func(ctx context.Context, tx pgx.Tx, user accountdomain.UserID, emailID accountdomain.AddressID, email string) error {
-		prepared, err := service.PrepareVerification(email)
-		if err != nil {
-			return err
-		}
-		return repo.QueueInTransaction(ctx, tx, user, emailID, prepared)
-	})
 }

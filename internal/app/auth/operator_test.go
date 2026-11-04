@@ -7,12 +7,13 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
+	appfixtures "github.com/Inforberi/financial-intelligence/internal/app/tests/fixtures"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 )
 
 func TestOperatorRejectsForeignScopeBeforeSQL(t *testing.T) {
-	cfg := operatorConfig("1c82c477-3a57-4823-8c49-a476550d8a21")
+	cfg := appfixtures.OperatorConfig("1c82c477-3a57-4823-8c49-a476550d8a21")
 	project, err := realmscope.New("project", cfg.Platform.RealmID)
 	if err != nil {
 		t.Fatal(err)
@@ -23,7 +24,7 @@ func TestOperatorRejectsForeignScopeBeforeSQL(t *testing.T) {
 	}
 	for _, scope := range []realmscope.Scope{{}, realmscope.Legacy(), project, other} {
 		// Invalid scopes must fail before these intentionally unusable adapters are touched.
-		deps := realmDependencies{pool: &pgxpool.Pool{}, redis: &redis.Client{}, log: zap.NewNop(), hash: &hasher.Bounded{}, scope: scope}
+		deps := Dependencies{Pool: &pgxpool.Pool{}, Redis: &redis.Client{}, Logger: zap.NewNop(), Hash: &hasher.Bounded{}, Scope: scope}
 		if result, err := assembleOperator(t.Context(), cfg, deps, &operatorMailbox{}); result != nil || err == nil {
 			t.Fatal("operator accepted missing/foreign scope")
 		}

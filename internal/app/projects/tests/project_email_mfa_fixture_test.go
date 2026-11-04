@@ -12,7 +12,9 @@ import (
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
+	projectmfa "github.com/Inforberi/financial-intelligence/internal/app/projects/mfa"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	mfamanagement "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
@@ -28,12 +30,12 @@ type emailMFAHTTPFixture struct {
 	mfa      [2]*secretbox.Cipher
 	channel  [2]*secretbox.Cipher
 	prefix   [2]string
-	config   appauth.ProjectEmailMFAConfig
+	config   projectmfa.ProjectEmailMFAConfig
 }
 
 func prepareEmailMFAHTTP(t *testing.T) emailMFAHTTPFixture { return prepareMFAHTTP(t, nil) }
 
-func prepareMFAHTTP(t *testing.T, bot appauth.ProjectTelegramClient) emailMFAHTTPFixture {
+func prepareMFAHTTP(t *testing.T, bot projectmfa.ProjectTelegramClient) emailMFAHTTPFixture {
 	t.Helper()
 	pair := prepareHTTPProjects(t)
 	projects := newProjectIsolationHTTP(t, pair.admin, pair.reader, pair.a, pair.b, pair.target)
@@ -70,19 +72,19 @@ func prepareMFAHTTP(t *testing.T, bot appauth.ProjectTelegramClient) emailMFAHTT
 		require.NoError(t, err)
 	}
 	f.trackLimits(t)
-	config := appauth.ProjectEmailMFAConfig{Preparation: otpservice.EmailPreparationConfig{TTL: 3 * time.Minute, ResendInterval: time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 100}, Factors: mfamanagement.EmailFactorConfig{UserMutationsPerMinute: 5, ProjectMutationsPerMinute: 500}}
+	config := projectmfa.ProjectEmailMFAConfig{Preparation: otpservice.EmailPreparationConfig{TTL: 3 * time.Minute, ResendInterval: time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 100}, Factors: mfamanagement.EmailFactorConfig{UserMutationsPerMinute: 5, ProjectMutationsPerMinute: 500}}
 	f.config = config
 	deployment := loadEmailMFADeployment(t, f, []string{email.listeners[0].Addr().String(), email.listeners[1].Addr().String()})
 	source := deployment.Profile
 	if bot != nil {
-		source = func(ctx context.Context, key projectruntime.Key, origin string) (appauth.ProjectProfileConfig, error) {
+		source = func(ctx context.Context, key projectruntime.Key, origin string) (projectprofile.ProjectProfileConfig, error) {
 			config, err := deployment.Profile(ctx, key, origin)
 			config.TelegramMFA = true
 			config.MFASettingsEnabled = true
 			return config, err
 		}
 	}
-	handler, err := appauth.NewProjectHTTP(appauth.ProjectHTTPConfig{
+	handler, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute},
 		Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &projects.password.Session,
 	}, projects.deps, source, nil)

@@ -11,7 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
@@ -21,7 +22,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
-func (f projectTokenFixture) nativeTokenFlows(t *testing.T, ctx context.Context, service *appauth.ProjectTokens, cfg appauth.ProjectTokenConfig, verifier *authjwt.Verifier, ciphers map[string]*secretbox.Cipher, scope realmscope.Scope, keys *[]string) {
+func (f projectTokenFixture) nativeTokenFlows(t *testing.T, ctx context.Context, service *projectnative.ProjectTokens, cfg projectnative.ProjectTokenConfig, verifier *authjwt.Verifier, ciphers map[string]*secretbox.Cipher, scope realmscope.Scope, keys *[]string) {
 	t.Helper()
 	input := tokenservice.NativePasswordInput{Email: tokenFixtureEmails[0], Password: f.password, Audience: "reports", Scope: []accessdomain.PermissionKey{tokenFixturePermission}, IP: tokenFixtureIP, UserAgent: "native fixture"}
 	result, err := service.LoginPassword(ctx, input)
@@ -63,7 +64,7 @@ func (f projectTokenFixture) nativeTokenFlows(t *testing.T, ctx context.Context,
 	complete := mfalogin.CompleteLoginInput{Token: challenged.Challenge.Token, Binding: challenged.Challenge.Binding, Code: code, IP: tokenFixtureIP, UserAgent: input.UserAgent}
 	browserCfg := projectPasswordFixtureConfig()
 	browserCfg.MFA = cfg.Native.MFA
-	browser, err := appauth.NewProjectPassword(ctx, f.key, browserCfg, appauth.ProjectPasswordDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash})
+	browser, err := projectmethods.NewProjectPassword(ctx, f.key, browserCfg, projectmethods.ProjectPasswordDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash})
 	require.NoError(t, err)
 	wrong, err := browser.CompleteMFA(ctx, complete)
 	require.ErrorIs(t, err, mfadomain.ErrInvalidCode)
@@ -78,7 +79,7 @@ func (f projectTokenFixture) nativeTokenFlows(t *testing.T, ctx context.Context,
 	require.Nil(t, completed)
 }
 
-func (f projectTokenFixture) nativeEmailToken(t *testing.T, ctx context.Context, service *appauth.ProjectTokens, verifier *authjwt.Verifier, cipher *secretbox.Cipher) {
+func (f projectTokenFixture) nativeEmailToken(t *testing.T, ctx context.Context, service *projectnative.ProjectTokens, verifier *authjwt.Verifier, cipher *secretbox.Cipher) {
 	t.Helper()
 	requested, err := service.RequestEmail(ctx, tokenFixtureEmails[2], tokenFixtureIP, "reports", []accessdomain.PermissionKey{tokenFixturePermission})
 	require.NoError(t, err)

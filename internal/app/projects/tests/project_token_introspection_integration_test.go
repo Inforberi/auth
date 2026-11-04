@@ -10,12 +10,12 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
 	tokendomain "github.com/Inforberi/financial-intelligence/internal/auth/token/domain"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 )
 
-func (f projectTokenFixture) introspectionIsolation(t *testing.T, ctx context.Context, service *appauth.ProjectTokens, cfg appauth.ProjectTokenConfig, issuanceRedis *redis.Client, input tokenservice.ExchangeInput, raw string) {
+func (f projectTokenFixture) introspectionIsolation(t *testing.T, ctx context.Context, service *projectnative.ProjectTokens, cfg projectnative.ProjectTokenConfig, issuanceRedis *redis.Client, input tokenservice.ExchangeInput, raw string) {
 	t.Helper()
 	consumer, ok := service.Authenticate(tokenConsumerID, tokenConsumerSecret)
 	require.True(t, ok)
@@ -45,8 +45,8 @@ func (f projectTokenFixture) introspectionIsolation(t *testing.T, ctx context.Co
 	foreignSecret := base64.RawURLEncoding.EncodeToString(foreignBytes)
 	hash := sha256.Sum256([]byte(foreignSecret))
 	cfg.Issuer = "https://foreign-project.example.test"
-	cfg.Introspection = &appauth.ProjectIntrospectionConfig{Clients: []tokenservice.IntrospectionClientConfig{{ID: tokenConsumerID, SecretHashes: []string{hex.EncodeToString(hash[:])}, Audiences: []string{"reports"}}}, ConsumerPerMinute: 100, ProjectPerMinute: 100}
-	other, err := appauth.NewProjectTokens(ctx, f.key, cfg, appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, IssuanceRedis: issuanceRedis, Hash: f.hash})
+	cfg.Introspection = &projectnative.ProjectIntrospectionConfig{Clients: []tokenservice.IntrospectionClientConfig{{ID: tokenConsumerID, SecretHashes: []string{hex.EncodeToString(hash[:])}, Audiences: []string{"reports"}}}, ConsumerPerMinute: 100, ProjectPerMinute: 100}
+	other, err := projectnative.NewProjectTokens(ctx, f.key, cfg, projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, IssuanceRedis: issuanceRedis, Hash: f.hash})
 	require.NoError(t, err)
 	foreign, ok := other.Authenticate(tokenConsumerID, tokenConsumerSecret)
 	require.False(t, ok)

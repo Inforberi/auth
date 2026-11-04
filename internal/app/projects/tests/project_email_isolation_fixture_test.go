@@ -11,7 +11,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectaccount "github.com/Inforberi/financial-intelligence/internal/app/projects/account"
+	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
@@ -26,10 +27,10 @@ const emailIsolationIP = "192.0.2.89"
 
 type emailIsolationFixture struct {
 	projects  projectIsolationHTTP
-	services  [2]*appauth.ProjectEmail
+	services  [2]*projectaccount.ProjectEmail
 	ciphers   [2][2]*secretbox.Cipher
 	listeners [2]net.Listener
-	configs   [2]appauth.ProjectEmailConfig
+	configs   [2]projectaccount.ProjectEmailConfig
 	users     [2][]string
 }
 
@@ -46,7 +47,7 @@ func prepareEmailIsolation(t *testing.T, projects projectIsolationHTTP) *emailIs
 	t.Helper()
 	ctx := t.Context()
 	f := &emailIsolationFixture{projects: projects}
-	deps := appauth.ProjectSMTPDependencies{Registry: projects.deps.Registry, Reader: projects.deps.Reader, Redis: projects.deps.Redis}
+	deps := projectapp.ProjectSMTPDependencies{Registry: projects.deps.Registry, Reader: projects.deps.Reader, Redis: projects.deps.Redis}
 	for i, key := range projects.projects {
 		db := projects.databases[i]
 		seedHTTPAdministrators(t, ctx, db)
@@ -86,7 +87,7 @@ func prepareEmailIsolation(t *testing.T, projects projectIsolationHTTP) *emailIs
 		_, err = db.Exec(ctx, `INSERT INTO auth.smtp_settings(singleton,configuration,password_set,password) VALUES(true,$1::jsonb,true,$2)`, string(encoded), seed.Password)
 		require.NoError(t, err)
 		origin := projects.origins[i]
-		cfg := appauth.ProjectEmailConfig{
+		cfg := projectaccount.ProjectEmailConfig{
 			VerificationEnabled: true, RecoveryEnabled: true, Origin: origin,
 			Verification: accountservice.Config{URL: origin + "/verify-email", TTL: 30 * time.Minute, ResendInterval: time.Minute, RegistrationIPLimit: 10, RegistrationGlobalLimit: 100},
 			Password:     passwordrecovery.Config{ResetURL: origin + "/reset-password", ResetTokenTTL: time.Hour, ResetGlobalLimit: 100},
@@ -94,7 +95,7 @@ func prepareEmailIsolation(t *testing.T, projects projectIsolationHTTP) *emailIs
 			Change:       accountemail.EmailChangeConfig{Enabled: true, ConfirmURL: origin + "/change", ReportURL: origin + "/report", RecoveryURL: origin + "/recover", TTL: 30 * time.Minute, ProtectionTTL: 24 * time.Hour, RecoveryTTL: 30 * time.Minute}, FreshAuthTTL: 5 * time.Minute,
 		}
 		f.configs[i] = cfg
-		f.services[i], err = appauth.NewProjectEmail(ctx, key, cfg, allowed, appauth.ProjectEmailDependencies{ProjectSMTPDependencies: deps, Hash: projects.deps.Hash})
+		f.services[i], err = projectaccount.NewProjectEmail(ctx, key, cfg, allowed, projectaccount.ProjectEmailDependencies{ProjectSMTPDependencies: deps, Hash: projects.deps.Hash})
 		require.NoError(t, err)
 		f.trackLimits(t, i, scope)
 	}

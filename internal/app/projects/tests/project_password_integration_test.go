@@ -14,7 +14,7 @@ import (
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
@@ -98,8 +98,8 @@ func projectPasswordDrill(t *testing.T, admin *pgx.Conn, reader *runtimepostgres
 		require.Zero(t, count)
 	})
 	pcfg := projectPasswordFixtureConfig()
-	deps := appauth.ProjectPasswordDependencies{Registry: registry, Reader: reader, Redis: rdb, Hash: bounded}
-	svc, err := appauth.NewProjectPassword(ctx, key, pcfg, deps)
+	deps := projectmethods.ProjectPasswordDependencies{Registry: registry, Reader: reader, Redis: rdb, Hash: bounded}
+	svc, err := projectmethods.NewProjectPassword(ctx, key, pcfg, deps)
 	require.NoError(t, err)
 	first, err := svc.Login(ctx, input)
 	require.NoError(t, err)
@@ -224,12 +224,12 @@ func (h *blockingProjectHash) Compare(password, encoded string) error {
 	return h.Argon2idHash.Compare(password, encoded)
 }
 
-func projectPasswordHashDrill(t *testing.T, admin *pgx.Conn, key projectruntime.Key, registry *projectruntime.Registry, cfg appauth.ProjectPasswordConfig, deps appauth.ProjectPasswordDependencies, realHash *hasher.Argon2idHash, input passwordservice.LoginInput, suspend bool) {
+func projectPasswordHashDrill(t *testing.T, admin *pgx.Conn, key projectruntime.Key, registry *projectruntime.Registry, cfg projectmethods.ProjectPasswordConfig, deps projectmethods.ProjectPasswordDependencies, realHash *hasher.Argon2idHash, input passwordservice.LoginInput, suspend bool) {
 	t.Helper()
 	ctx := t.Context()
 	hash := &blockingProjectHash{Argon2idHash: realHash, entered: make(chan struct{}), release: make(chan struct{})}
 	deps.Hash = hasher.NewBounded(hash, 1)
-	svc, err := appauth.NewProjectPassword(ctx, key, cfg, deps)
+	svc, err := projectmethods.NewProjectPassword(ctx, key, cfg, deps)
 	require.NoError(t, err)
 	type outcome struct {
 		result *passwordservice.LoginResult
@@ -293,6 +293,6 @@ func projectPasswordHashDrill(t *testing.T, admin *pgx.Conn, key projectruntime.
 	}
 }
 
-func projectPasswordFixtureConfig() appauth.ProjectPasswordConfig {
-	return appauth.ProjectPasswordConfig{Timeout: 5 * time.Second, Capacity: passwordservice.CapacityConfig{HashConcurrency: 1, LoginIPLimit: 100, LoginEmailLimit: 100, LoginGlobalLimit: 100}, Session: sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, SessionRefreshThreshold: time.Minute, FreshAuthTTL: 5 * time.Minute, AdminIdleTimeout: 30 * time.Minute, AdminAbsoluteTTL: 12 * time.Hour, AdminActivityInterval: time.Minute}}
+func projectPasswordFixtureConfig() projectmethods.ProjectPasswordConfig {
+	return projectmethods.ProjectPasswordConfig{Timeout: 5 * time.Second, Capacity: passwordservice.CapacityConfig{HashConcurrency: 1, LoginIPLimit: 100, LoginEmailLimit: 100, LoginGlobalLimit: 100}, Session: sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, SessionRefreshThreshold: time.Minute, FreshAuthTTL: 5 * time.Minute, AdminIdleTimeout: 30 * time.Minute, AdminAbsoluteTTL: 12 * time.Hour, AdminActivityInterval: time.Minute}}
 }

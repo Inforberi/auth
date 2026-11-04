@@ -19,18 +19,18 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
-func operatorPersonalMFADrill(t *testing.T, admin *pgxpool.Pool, deps realmDependencies, cfg *config.Config, h *operatorHTTPS, user accountdomain.UserID) {
+func operatorPersonalMFADrill(t *testing.T, admin *pgxpool.Pool, deps Dependencies, cfg *config.Config, h *operatorHTTPS, user accountdomain.UserID) {
 	t.Helper()
 	ctx := t.Context()
 	client := *h
 	client.t = t
 	h = &client
-	cipher, err := (realmSecurity{scope: deps.scope}).cipher(cfg.Account.EncryptionKey, "mfa:v1")
+	cipher, err := (realmSecurity{scope: deps.Scope}).cipher(cfg.Account.EncryptionKey, "mfa:v1")
 	require.NoError(t, err)
-	prefix, err := deps.scope.RedisPrefix("mfa-limit", "auth:mfa:limit:")
+	prefix, err := deps.Scope.RedisPrefix("mfa-limit", "auth:mfa:limit:")
 	require.NoError(t, err)
 	// DB15 belongs to this fixture. Start a new scenario without prior login-factor attempts.
-	require.NoError(t, deps.redis.Del(ctx, prefix+cipher.Digest("login:factor-user:"+string(user))).Err())
+	require.NoError(t, deps.Redis.Del(ctx, prefix+cipher.Digest("login:factor-user:"+string(user))).Err())
 	tokens := tokengenerate.New()
 	raw, err := tokens.GenerateToken()
 	require.NoError(t, err)

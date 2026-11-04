@@ -16,7 +16,9 @@ import (
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	tokenredis "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/redis"
 	tokenservice "github.com/Inforberi/financial-intelligence/internal/auth/token/service"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
@@ -26,7 +28,7 @@ const isolationTokenClient = "isolated-reports"
 
 type tokenIsolationFixture struct {
 	projects projectIsolationHTTP
-	configs  [2]appauth.ProjectTokenConfig
+	configs  [2]projectnative.ProjectTokenConfig
 	secrets  [2]string
 	webs     [2]isolationHTTP
 }
@@ -42,7 +44,7 @@ func TestTwoProjectTokenIsolationSQL(t *testing.T) {
 func prepareTokenIsolation(t *testing.T, projects projectIsolationHTTP) tokenIsolationFixture {
 	t.Helper()
 	ctx := t.Context()
-	issuance, err := appauth.NewProjectTokenRedis(projects.deps.Redis)
+	issuance, err := projectnative.NewProjectTokenRedis(projects.deps.Redis)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, issuance.Close()) })
 	projects.deps.IssuanceRedis = issuance
@@ -63,26 +65,26 @@ func prepareTokenIsolation(t *testing.T, projects projectIsolationHTTP) tokenIso
 		secret[0] = byte(i + 1)
 		f.secrets[i] = base64.RawURLEncoding.EncodeToString(secret)
 		digest := sha256.Sum256([]byte(f.secrets[i]))
-		f.configs[i] = appauth.ProjectTokenConfig{
+		f.configs[i] = projectnative.ProjectTokenConfig{
 			Enabled: true, Issuer: projects.origins[i], Catalog: catalog, Limits: tokenredis.DefaultLimits(), Timeout: 5 * time.Second,
-			Introspection: &appauth.ProjectIntrospectionConfig{Clients: []tokenservice.IntrospectionClientConfig{{ID: isolationTokenClient, SecretHashes: []string{hex.EncodeToString(digest[:])}, Audiences: []string{"reports"}}}, ConsumerPerMinute: 100, ProjectPerMinute: 200},
+			Introspection: &projectnative.ProjectIntrospectionConfig{Clients: []tokenservice.IntrospectionClientConfig{{ID: isolationTokenClient, SecretHashes: []string{hex.EncodeToString(digest[:])}, Audiences: []string{"reports"}}}, ConsumerPerMinute: 100, ProjectPerMinute: 200},
 			Tokens:        tokenservice.Config{AccessTTL: time.Minute, Resources: []tokenservice.Resource{{Audience: "reports", Permissions: []accessdomain.PermissionKey{"reports.read"}}, {Audience: "reports-export", Permissions: []accessdomain.PermissionKey{"reports.read"}}}, Native: &tokenservice.NativePolicy{IdleTTL: time.Hour, AbsoluteTTL: 2 * time.Hour, Sessions: projects.password.Session}},
-			Native:        appauth.ProjectNativeConfig{PasswordEnabled: true, Capacity: projects.password.Capacity, MFA: projects.password.MFA},
+			Native:        projectnative.ProjectNativeConfig{PasswordEnabled: true, Capacity: projects.password.Capacity, MFA: projects.password.MFA},
 		}
 	}
 	require.NotEqual(t, names[0], names[1], "each project must use its own physical database")
 	require.NotEqual(t, projects.projects[0].Binding.DatabaseOID, projects.projects[1].Binding.DatabaseOID)
 	f.registerCleanup(t, ctx)
-	handler, err := appauth.NewProjectHTTP(appauth.ProjectHTTPConfig{
+	handler, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute},
 		Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &projects.password.Session,
-	}, projects.deps, func(_ context.Context, key projectruntime.Key, origin string) (appauth.ProjectProfileConfig, error) {
+	}, projects.deps, func(_ context.Context, key projectruntime.Key, origin string) (projectprofile.ProjectProfileConfig, error) {
 		for i, expected := range projects.projects {
 			if key == expected && origin == projects.origins[i] {
-				return appauth.ProjectProfileConfig{BrowserEnabled: true, Password: &projects.password, Tokens: &f.configs[i], Timeout: 5 * time.Second}, nil
+				return projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &projects.password, Tokens: &f.configs[i], Timeout: 5 * time.Second}, nil
 			}
 		}
-		return appauth.ProjectProfileConfig{}, projectdomain.ErrConflict
+		return projectprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
 	}, nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)

@@ -6,14 +6,10 @@ import (
 	"go.uber.org/zap"
 
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
-	accountemailhttp "github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/email/transport/http"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountredis "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/redis"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	accountsetup "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/service"
-	accountsetuphttp "github.com/Inforberi/financial-intelligence/internal/auth/account/setup/transport/http"
-	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
-	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
@@ -52,27 +48,4 @@ func (s realmSecurity) assembleEmailBinding(repo *accountpostgres.Repository, rd
 	}
 	svc := accountemail.NewEmailBinding(repo, limits, cipher, cfg.EmailBinding)
 	return accountemailhttp.NewEmailBinding(svc, log), nil
-}
-
-func (s realmSecurity) assembleSetup(repo accountsetup.SetupRepository, rdb *redis.Client, mail accountservice.Mailer, hash *hasher.Bounded, cfg *config.Config, log *zap.Logger) (*accountsetuphttp.SetupHandler, error) {
-	if !cfg.InitialSetup.Enabled {
-		return nil, nil
-	}
-	cipher, err := s.cipher(cfg.Account.EncryptionKey, "initial-setup:v1")
-	if err != nil {
-		return nil, err
-	}
-	factorCipher, err := s.cipher(cfg.Account.EncryptionKey, "mfa:v1")
-	if err != nil {
-		return nil, err
-	}
-	limits, err := accountredis.NewScoped(rdb, s.scope)
-	if err != nil {
-		return nil, err
-	}
-	svc, err := accountsetup.NewSetup(repo, limits, cipher, factorCipher, mail, hash, totp.Authenticator{}, cfg.InitialSetup, cfg.MFA.Issuer)
-	if err != nil {
-		return nil, err
-	}
-	return accountsetuphttp.NewSetup(svc, log), nil
 }

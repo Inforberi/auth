@@ -10,10 +10,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectonboarding "github.com/Inforberi/financial-intelligence/internal/app/projects/onboarding"
 )
 
-func onboardingAssemblySuspendDrill(t *testing.T, admin, project *pgxpool.Pool, observer *pgx.Conn, cfg appauth.ProjectOnboardingConfig, deps appauth.ProjectOnboardingDependencies) {
+func onboardingAssemblySuspendDrill(t *testing.T, admin, project *pgxpool.Pool, observer *pgx.Conn, cfg projectonboarding.ProjectOnboardingConfig, deps projectonboarding.ProjectOnboardingDependencies) {
 	t.Helper()
 	ctx := t.Context()
 	lock, err := project.Begin(ctx)
@@ -27,7 +27,7 @@ func onboardingAssemblySuspendDrill(t *testing.T, admin, project *pgxpool.Pool, 
 	}
 	finished := make(chan result, 1)
 	go func() {
-		h, err := appauth.NewProjectOnboarding(ctx, cfg, deps)
+		h, err := projectonboarding.NewProjectOnboarding(ctx, cfg, deps)
 		finished <- result{h, err}
 	}()
 	observe, cancel := context.WithTimeout(ctx, time.Second)

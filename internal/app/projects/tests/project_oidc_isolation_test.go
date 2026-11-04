@@ -14,7 +14,9 @@ import (
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
@@ -56,7 +58,7 @@ func prepareOIDCIsolation(t *testing.T, projects projectIsolationHTTP, provider 
 	t.Helper()
 	ctx := t.Context()
 	f := oidcIsolationFixture{projects: projects, provider: provider}
-	var configs [2][2]appauth.ProjectOIDCConfig
+	var configs [2][2]projectmethods.ProjectOIDCConfig
 	for i, key := range projects.projects {
 		f.clientIDs[i], f.secrets[i] = map[string]string{}, map[string]string{}
 		f.ciphers[i], f.prefixes[i] = map[string]*secretbox.Cipher{}, map[string]string{}
@@ -99,23 +101,23 @@ func prepareOIDCIsolation(t *testing.T, projects projectIsolationHTTP, provider 
 			for _, suffix := range []string{":limit:" + f.ciphers[i][name].Digest("127.0.0.1"), ":limit:global"} {
 				projects.redisKeys[f.prefixes[i][name]+suffix] = struct{}{}
 			}
-			configs[i][j] = appauth.ProjectOIDCConfig{Provider: name, Enabled: true, RedirectURI: projects.origins[i] + "/api/v1/auth/" + name + "/callback", IPLimit: 100, GlobalLimit: 1000, MFA: projects.password.MFA, Session: projects.password.Session, Timeout: 5 * time.Second}
+			configs[i][j] = projectmethods.ProjectOIDCConfig{Provider: name, Enabled: true, RedirectURI: projects.origins[i] + "/api/v1/auth/" + name + "/callback", IPLimit: 100, GlobalLimit: 1000, MFA: projects.password.MFA, Session: projects.password.Session, Timeout: 5 * time.Second}
 		}
 	}
 	f.registerCleanup(t, ctx)
-	owners := appauth.NewProjectOIDCClients(ctx)
+	owners := projectmethods.NewProjectOIDCClients(ctx)
 	t.Cleanup(owners.Close)
 	projects.deps.OIDCClients = owners
-	handler, err := appauth.NewProjectHTTP(appauth.ProjectHTTPConfig{
+	handler, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test",
 		Residents:      projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &projects.password.Session,
-	}, projects.deps, func(_ context.Context, key projectruntime.Key, origin string) (appauth.ProjectProfileConfig, error) {
+	}, projects.deps, func(_ context.Context, key projectruntime.Key, origin string) (projectprofile.ProjectProfileConfig, error) {
 		for i, expected := range projects.projects {
 			if key == expected && origin == projects.origins[i] {
-				return appauth.ProjectProfileConfig{BrowserEnabled: true, Password: &projects.password, Google: &configs[i][0], Telegram: &configs[i][1], Timeout: 5 * time.Second}, nil
+				return projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &projects.password, Google: &configs[i][0], Telegram: &configs[i][1], Timeout: 5 * time.Second}, nil
 			}
 		}
-		return appauth.ProjectProfileConfig{}, projectdomain.ErrConflict
+		return projectprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
 	}, nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)

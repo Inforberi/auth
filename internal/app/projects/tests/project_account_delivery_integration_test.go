@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectdelivery "github.com/Inforberi/financial-intelligence/internal/app/projects/delivery"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 )
 
@@ -16,7 +16,7 @@ func (f projectAccountFixture) delivery(t *testing.T, ctx context.Context, invit
 	t.Helper()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	runner, err := appauth.NewProjectDelivery(appauth.ProjectDeliveryConfig{Parallelism: 1, PageSize: projectruntime.StateBatchSize, Interval: time.Second, SMTPAllowedTargets: []string{f.listener.Addr().String()}}, f.deps)
+	runner, err := projectdelivery.NewProjectDelivery(projectdelivery.ProjectDeliveryConfig{Parallelism: 1, PageSize: projectruntime.StateBatchSize, Interval: time.Second, SMTPAllowedTargets: []string{f.listener.Addr().String()}}, f.deps)
 	require.NoError(t, err)
 	release := make(chan struct{})
 	close(release)

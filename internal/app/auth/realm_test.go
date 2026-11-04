@@ -24,21 +24,21 @@ import (
 
 func TestRealmRequiresBorrowedDependencies(t *testing.T) {
 	// Only dependency validation runs here; empty adapters must never receive a call.
-	complete := realmDependencies{pool: &pgxpool.Pool{}, redis: &redis.Client{}, log: zap.NewNop(), hash: hasher.NewBounded(&blockingHash{}, 1), scope: realmscope.Legacy()}
+	complete := Dependencies{Pool: &pgxpool.Pool{}, Redis: &redis.Client{}, Logger: zap.NewNop(), Hash: hasher.NewBounded(&blockingHash{}, 1), Scope: realmscope.Legacy()}
 	for _, missing := range []string{"pool", "redis", "logger", "hasher", "scope"} {
 		t.Run(missing, func(t *testing.T) {
 			deps := complete
 			switch missing {
 			case "pool":
-				deps.pool = nil
+				deps.Pool = nil
 			case "redis":
-				deps.redis = nil
+				deps.Redis = nil
 			case "logger":
-				deps.log = nil
+				deps.Logger = nil
 			case "hasher":
-				deps.hash = nil
+				deps.Hash = nil
 			case "scope":
-				deps.scope = realmscope.Scope{}
+				deps.Scope = realmscope.Scope{}
 			}
 			writer, flags, prefix := stdlog.Writer(), stdlog.Flags(), stdlog.Prefix()
 			assembled, err := assembleRealm(t.Context(), &config.Config{}, deps)
@@ -67,15 +67,15 @@ func (*blockingHash) Compare(string, string) error { return nil }
 func TestRealmsShareHashBudget(t *testing.T) {
 	engine := &blockingHash{entered: make(chan struct{}), release: make(chan struct{})}
 	shared := hasher.NewBounded(engine, 1)
-	first, second := realmDependencies{hash: shared}, realmDependencies{hash: shared}
+	first, second := Dependencies{Hash: shared}, Dependencies{Hash: shared}
 	done := make(chan error, 1)
 	go func() {
-		_, err := first.hash.GenerateHash(t.Context(), []byte("password"))
+		_, err := first.Hash.GenerateHash(t.Context(), []byte("password"))
 		done <- err
 	}()
 	<-engine.entered
-	_, generateErr := second.hash.GenerateHash(t.Context(), []byte("password"))
-	compareErr := second.hash.Compare(t.Context(), "password", "fixture hash")
+	_, generateErr := second.Hash.GenerateHash(t.Context(), []byte("password"))
+	compareErr := second.Hash.Compare(t.Context(), "password", "fixture hash")
 	close(engine.release)
 	if err := <-done; err != nil {
 		t.Fatal(err)
@@ -83,7 +83,7 @@ func TestRealmsShareHashBudget(t *testing.T) {
 	if !errors.Is(generateErr, passworddomain.ErrHashBusy) || !errors.Is(compareErr, passworddomain.ErrHashBusy) {
 		t.Fatal("another realm bypassed the process hash budget")
 	}
-	if err := second.hash.Compare(t.Context(), "password", "fixture hash"); err != nil {
+	if err := second.Hash.Compare(t.Context(), "password", "fixture hash"); err != nil {
 		t.Fatal("hash slot was not released", err)
 	}
 }
@@ -104,8 +104,8 @@ func TestRealmLifecycleBeforeProcessCleanup(t *testing.T) {
 			worker := &testDeliveryWorker{started: make(chan struct{}), stopped: make(chan struct{})}
 			retention := &testRetentionWorker{started: make(chan struct{}), stopped: make(chan struct{})}
 			var order []string
-			assembled := &realm{retention: retention, workers: []deliveryWorker{worker, nil}, resources: &resources{}}
-			assembled.resources.add(func() {
+			assembled := &Runtime{retention: retention, workers: []deliveryWorker{worker, nil}, resources: &Resources{}}
+			assembled.resources.Add(func() {
 				for _, stopped := range []chan struct{}{worker.stopped, retention.stopped} {
 					select {
 					case <-stopped:
@@ -115,12 +115,12 @@ func TestRealmLifecycleBeforeProcessCleanup(t *testing.T) {
 				}
 				order = append(order, "realm clients")
 			})
-			owned := &resources{}
-			owned.add(func() { order = append(order, "process dependencies") })
-			owned.add(assembled.resources.close)
+			owned := &Resources{}
+			owned.Add(func() { order = append(order, "process dependencies") })
+			owned.Add(assembled.resources.Close)
 			failure := errors.New("serve failed")
-			app := &App{resources: owned, serve: func(ctx context.Context) error {
-				return assembled.run(ctx, zap.NewNop(), func(ctx context.Context) error {
+			app := &testApplication{resources: owned, serve: func(ctx context.Context) error {
+				return assembled.Run(ctx, zap.NewNop(), func(ctx context.Context) error {
 					for _, started := range []chan struct{}{worker.started, retention.started} {
 						select {
 						case <-started:
@@ -150,18 +150,18 @@ func TestRealmLifecycleBeforeProcessCleanup(t *testing.T) {
 
 func TestRealmCleanupDoesNotCloseProcess(t *testing.T) {
 	processClosed := false
-	owned := &resources{}
-	owned.add(func() { processClosed = true })
-	clients := &resources{}
+	owned := &Resources{}
+	owned.Add(func() { processClosed = true })
+	clients := &Resources{}
 	closed := 0
-	clients.add(func() { closed++ })
-	owned.add(clients.close)
-	clients.close()
+	clients.Add(func() { closed++ })
+	owned.Add(clients.Close)
+	clients.Close()
 	if processClosed || closed != 1 {
 		t.Fatal("realm cleanup closed borrowed dependencies")
 	}
-	owned.close()
-	owned.close()
+	owned.Close()
+	owned.Close()
 	if !processClosed || closed != 1 {
 		t.Fatal("cleanup repeated or leaked an owner")
 	}

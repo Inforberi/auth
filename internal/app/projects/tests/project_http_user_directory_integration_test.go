@@ -14,7 +14,9 @@ import (
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
@@ -48,12 +50,12 @@ func (f projectProfileFixture) httpUserDirectory(t *testing.T, ctx context.Conte
 		require.NoError(t, err)
 	})
 	session := projectPasswordFixtureConfig().Session
-	handler, err := appauth.NewProjectHTTP(appauth.ProjectHTTPConfig{
+	handler, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-directory.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 5 * time.Second}, SessionValidation: &session,
-	}, appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader}}, func(_ context.Context, key projectruntime.Key, selected string) (appauth.ProjectProfileConfig, error) {
+	}, projectprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader}}, func(_ context.Context, key projectruntime.Key, selected string) (projectprofile.ProjectProfileConfig, error) {
 		require.Equal(t, f.key, key)
 		require.Equal(t, origin, selected)
-		return appauth.ProjectProfileConfig{BrowserEnabled: true, UserDirectoryEnabled: true, Timeout: 5 * time.Second}, nil
+		return projectprofile.ProjectProfileConfig{BrowserEnabled: true, UserDirectoryEnabled: true, Timeout: 5 * time.Second}, nil
 	}, nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)

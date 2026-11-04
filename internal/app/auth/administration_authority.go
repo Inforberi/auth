@@ -10,7 +10,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 )
 
-func administrationAuthority(ctx context.Context, cfg *config.Config, deps realmDependencies) (*operatorpostgres.Repository, realmSecurity, error) {
+func administrationAuthority(ctx context.Context, cfg *config.Config, deps Dependencies) (*operatorpostgres.Repository, realmSecurity, error) {
 	if err := cfg.ValidatePlatform(); err != nil {
 		return nil, realmSecurity{}, err
 	}
@@ -22,11 +22,11 @@ func administrationAuthority(ctx context.Context, cfg *config.Config, deps realm
 	if err != nil {
 		return nil, realmSecurity{}, err
 	}
-	if deps.scope != scope {
+	if deps.Scope != scope {
 		return nil, realmSecurity{}, errors.New("operator dependencies require the matching platform scope")
 	}
 	security := realmSecurity{scope: scope}
-	operator, err := operatorpostgres.New(deps.pool, operatordomain.RealmID(cfg.Platform.RealmID))
+	operator, err := operatorpostgres.New(deps.Pool, operatordomain.RealmID(cfg.Platform.RealmID))
 	if err != nil {
 		return nil, realmSecurity{}, err
 	}

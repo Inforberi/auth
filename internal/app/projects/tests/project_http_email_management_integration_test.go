@@ -15,14 +15,20 @@ import (
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectaccount "github.com/Inforberi/financial-intelligence/internal/app/projects/account"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
+	projectdelivery "github.com/Inforberi/financial-intelligence/internal/app/projects/delivery"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
+	projectsettings "github.com/Inforberi/financial-intelligence/internal/app/projects/settings"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
-func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.Context, management appauth.ProjectEmailConfig, temporary passwordprovisioning.TemporaryPasswordConfig) (projectAccountRequest, string, func()) {
+func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.Context, management projectaccount.ProjectEmailConfig, temporary passwordprovisioning.TemporaryPasswordConfig) (projectAccountRequest, string, func()) {
 	t.Helper()
 	var origin string
 	require.NoError(t, f.admin.QueryRow(ctx, `SELECT origin FROM platform.projects WHERE id=$1`, f.key.Binding.ProjectID).Scan(&origin))
@@ -34,8 +40,8 @@ func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.C
 	password := projectPasswordFixtureConfig()
 	password.TemporaryPassword = temporary
 	password.MFA = mfaservice.Config{Enabled: true, Issuer: "Project", ChallengeTTL: time.Minute, UserLimitPerMinute: 30, IPLimitPerMinute: 50, GlobalLimitPerMinute: 100}
-	otp := appauth.ProjectEmailOTPConfig{OTP: otpservice.Config{ReauthenticationEnabled: true, TTL: 5 * time.Minute, ResendInterval: time.Minute, RequestGlobalLimit: 100, ConfirmGlobalLimit: 1000}, MFA: password.MFA, Session: password.Session, Timeout: 5 * time.Second}
-	delivery, err := appauth.NewProjectDelivery(appauth.ProjectDeliveryConfig{Parallelism: 1, PageSize: projectruntime.StateBatchSize, Interval: time.Minute, SMTPAllowedTargets: []string{f.listener.Addr().String()}}, f.deps)
+	otp := projectmethods.ProjectEmailOTPConfig{OTP: otpservice.Config{ReauthenticationEnabled: true, TTL: 5 * time.Minute, ResendInterval: time.Minute, RequestGlobalLimit: 100, ConfirmGlobalLimit: 1000}, MFA: password.MFA, Session: password.Session, Timeout: 5 * time.Second}
+	delivery, err := projectdelivery.NewProjectDelivery(projectdelivery.ProjectDeliveryConfig{Parallelism: 1, PageSize: projectruntime.StateBatchSize, Interval: time.Minute, SMTPAllowedTargets: []string{f.listener.Addr().String()}}, f.deps)
 	require.NoError(t, err)
 	running, stop := context.WithCancel(ctx)
 	done := make(chan error, 1)
@@ -55,12 +61,12 @@ func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.C
 		}
 	}
 	t.Cleanup(stopDelivery)
-	handler, err := appauth.NewProjectHTTP(appauth.ProjectHTTPConfig{
+	handler, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-account.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 20 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &password.Session,
-	}, appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, Delivery: delivery}, func(_ context.Context, key projectruntime.Key, selected string) (appauth.ProjectProfileConfig, error) {
+	}, projectprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, Delivery: delivery}, func(_ context.Context, key projectruntime.Key, selected string) (projectprofile.ProjectProfileConfig, error) {
 		require.Equal(t, f.key, key)
 		require.Equal(t, origin, selected)
-		return appauth.ProjectProfileConfig{BrowserEnabled: true, UserLifecycleEnabled: true, AuthSettingsEnabled: true, ProviderSettingsEnabled: true, RetentionSettingsEnabled: true, MFASettingsEnabled: true, SMTPSettings: &appauth.ProjectSMTPSettingsConfig{AllowedTargets: []string{f.listener.Addr().String()}}, Access: &catalog, Password: &password, EmailOTP: &otp, EmailManagement: &management, Timeout: 10 * time.Second}, nil
+		return projectprofile.ProjectProfileConfig{BrowserEnabled: true, UserLifecycleEnabled: true, AuthSettingsEnabled: true, ProviderSettingsEnabled: true, RetentionSettingsEnabled: true, MFASettingsEnabled: true, SMTPSettings: &projectsettings.ProjectSMTPSettingsConfig{AllowedTargets: []string{f.listener.Addr().String()}}, Access: &catalog, Password: &password, EmailOTP: &otp, EmailManagement: &management, Timeout: 10 * time.Second}, nil
 	}, nil)
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {

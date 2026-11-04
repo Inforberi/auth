@@ -15,6 +15,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/credentials"
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
@@ -73,28 +74,28 @@ func TestProjectRuntimeAssemblySQL(t *testing.T) {
 			SyncInterval: time.Minute, SyncTimeout: time.Second,
 		},
 	}
-	owned := &resources{}
-	defer owned.close()
-	runtime, err := openProjectRuntime(ctx, cfg, owned)
+	owned := &Resources{}
+	defer owned.Close()
+	runtime, err := projectapp.Open(ctx, cfg, owned)
 	require.NoError(t, err)
-	require.NoError(t, runtime.reader.CheckRuntime(ctx))
+	require.NoError(t, runtime.Reader.CheckRuntime(ctx))
 	t.Run("project delivery lifecycle", func(t *testing.T) { projectDeliveryLifecycleDrill(t, admin, cfg, runtime) })
 	t.Run("project HTTP deployment", func(t *testing.T) { projectHTTPDeploymentDrill(t, cfg, runtime) })
 	_, err = admin.Exec(ctx, `GRANT UPDATE(name) ON platform.projects TO auth_runtime_assembly_reader`)
 	require.NoError(t, err)
-	require.Error(t, runtime.reader.CheckRuntime(ctx))
-	failed := &resources{}
-	_, err = openProjectRuntime(ctx, cfg, failed)
+	require.Error(t, runtime.Reader.CheckRuntime(ctx))
+	failed := &Resources{}
+	_, err = projectapp.Open(ctx, cfg, failed)
 	require.Error(t, err, "unsafe reader must fail startup")
-	failed.close()
+	failed.Close()
 	_, err = admin.Exec(ctx, `REVOKE UPDATE(name) ON platform.projects FROM auth_runtime_assembly_reader`)
 	require.NoError(t, err)
-	owned.close()
+	owned.Close()
 	key := projectruntime.Key{Version: 1, Generation: 1, Binding: credentials.Binding{
 		RealmID: projectdomain.ID(cfg.RealmID), ProjectID: "a2000000-0000-4000-8000-000000000001", ReservationID: "b2000000-0000-4000-8000-000000000001",
 		StorageTarget: "primary", DatabaseOID: 1, OwnerOID: 2, RuntimeOID: 3, SchemaVersion: 1,
 	}}
-	require.ErrorIs(t, runtime.registry.Use(ctx, key, func(context.Context, projectruntime.Database) error {
+	require.ErrorIs(t, runtime.Registry.Use(ctx, key, func(context.Context, projectruntime.Database) error {
 		t.Error("closed registry called back")
 		return nil
 	}), projectruntime.ErrClosed)

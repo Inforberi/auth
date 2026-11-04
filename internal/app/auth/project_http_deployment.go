@@ -5,14 +5,19 @@ import (
 	"errors"
 	"net/http"
 
-	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
+	projectdelivery "github.com/Inforberi/financial-intelligence/internal/app/projects/delivery"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
+	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	telegrambot "github.com/Inforberi/financial-intelligence/internal/integrations/telegram/bot"
+	"github.com/Inforberi/financial-intelligence/internal/integrations/telegram/bot"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
-func openProjectHTTP(ctx context.Context, cfg *config.Config, runtime *projectRuntime, delivery *ProjectDelivery, deps realmDependencies, owned *resources) (*ProjectHTTP, func(), error) {
+func openProjectHTTP(ctx context.Context, cfg *config.Config, runtime *projectapp.Runtime, delivery *projectdelivery.ProjectDelivery, deps Dependencies, owned *Resources) (*projectbrowser.ProjectHTTP, func(), error) {
 	c := cfg.Platform.HTTP
 	if !c.Enabled {
 		return nil, nil, nil
@@ -24,54 +29,54 @@ func openProjectHTTP(ctx context.Context, cfg *config.Config, runtime *projectRu
 	if err := cfg.ValidatePlatform(); err != nil {
 		return nil, nil, err
 	}
-	deployment, err := LoadProjectAuthDeployment(cfg)
+	deployment, err := projectprofile.LoadProjectAuthDeployment(cfg)
 	if err != nil {
 		return nil, nil, err
 	}
-	dependencies := ProjectProfileDependencies{ProjectTokenDependencies: ProjectTokenDependencies{Registry: runtime.registry, Reader: runtime.reader, Redis: deps.redis, Hash: deps.hash}, Delivery: delivery}
-	if deployment.botAPI {
+	dependencies := projectprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: runtime.Registry, Reader: runtime.Reader, Redis: deps.Redis, Hash: deps.Hash}, Delivery: delivery}
+	if deployment.NeedsBotAPI() {
 		botClient, openErr := telegrambot.New(ctx, 8)
 		err = openErr
 		dependencies.BotAPI = botClient
 		if err != nil {
 			return nil, nil, err
 		}
-		owned.add(botClient.Close)
+		owned.Add(botClient.Close)
 	}
-	if deployment.oidc {
-		dependencies.OIDCClients = NewProjectOIDCClients(ctx)
-		owned.add(dependencies.OIDCClients.Close)
+	if deployment.NeedsOIDC() {
+		dependencies.OIDCClients = projectmethods.NewProjectOIDCClients(ctx)
+		owned.Add(dependencies.OIDCClients.Close)
 	}
-	if deployment.jwt {
-		dependencies.IssuanceRedis, err = NewProjectTokenRedis(deps.redis)
+	if deployment.NeedsTokenRedis() {
+		dependencies.IssuanceRedis, err = projectnative.NewProjectTokenRedis(deps.Redis)
 		if err != nil {
 			return nil, nil, err
 		}
-		owned.add(func() {
+		owned.Add(func() {
 			if err := dependencies.IssuanceRedis.Close(); err != nil {
-				deps.log.Error("project token Redis close failed")
+				deps.Logger.Error("project token Redis close failed")
 			}
 		})
 	}
-	profile, err := NewProjectHTTP(ProjectHTTPConfig{
+	profile, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
 		PlatformOrigin: cfg.Platform.Origin,
 		Residents:      projecthttp.RuntimeDispatcherConfig{MaxProfiles: c.MaxProfiles, MaxBuilding: c.MaxBuilding, BuildTimeout: c.BuildTimeout, MaxAge: c.MaxAge},
 		Capacity:       middleware.CapacityConfig{MaxInFlight: c.MaxInFlight, RequestTimeout: cfg.HTTP.RequestTimeout}, Proxy: cfg.Proxy,
 		SessionValidation: &cfg.Session,
-	}, dependencies, deployment.Profile, deps.log)
+	}, dependencies, deployment.Profile, deps.Logger)
 	if err != nil {
 		return nil, nil, err
 	}
 	drain := func() {
 		if err := profile.Close(context.WithoutCancel(ctx)); err != nil {
-			deps.log.Error("project HTTP drain failed")
+			deps.Logger.Error("project HTTP drain failed")
 		}
 	}
-	owned.add(drain)
+	owned.Add(drain)
 	return profile, drain, nil
 }
 
-func projectHostRouter(platformOrigin string, operator http.Handler, project *ProjectHTTP) http.Handler {
+func projectHostRouter(platformOrigin string, operator http.Handler, project *projectbrowser.ProjectHTTP) http.Handler {
 	if project == nil {
 		return operator
 	}
@@ -82,32 +87,4 @@ func projectHostRouter(platformOrigin string, operator http.Handler, project *Pr
 		}
 		project.ServeHTTP(w, r)
 	})
-}
-
-func projectBrowserDeployment(cfg *config.Config) ProjectProfileSource {
-	// Capture only operational values; never retain a platform encryption key or provider secret.
-	session, mfa, capacity := cfg.Session, cfg.MFA, cfg.Capacity
-	mfa.RecoveryEnabled = false
-	verification, recovery := cfg.Account, cfg.Password
-	binding, change := cfg.EmailBinding, cfg.EmailChange
-	invitations, temporary := cfg.Invitation, cfg.TemporaryPassword
-	invitations.Enabled, temporary.Enabled = false, false
-	verification.EncryptionKey = ""
-	withMail, timeout := cfg.Platform.Delivery.Enabled, cfg.Platform.HTTP.BuildTimeout
-	return func(_ context.Context, _ projectruntime.Key, origin string) (ProjectProfileConfig, error) {
-		profile := ProjectProfileConfig{BrowserEnabled: true, Timeout: timeout, Password: &ProjectPasswordConfig{Session: session, MFA: mfa, TemporaryPassword: temporary, Capacity: capacity, Timeout: timeout}}
-		projectChange := change
-		projectChange.ConfirmURL, projectChange.ReportURL, projectChange.RecoveryURL = origin+"/change-email", origin+"/protect-account", origin+"/recover-account"
-		projectRecovery := recovery
-		projectRecovery.ResetURL = origin + "/reset-password"
-		projectInvitations := invitations
-		projectInvitations.URL = origin + "/activate"
-		profile.EmailManagement = &ProjectEmailConfig{Invitations: projectInvitations, Origin: origin, Binding: binding, Change: projectChange, Verification: verification, Password: projectRecovery, FreshAuthTTL: session.FreshAuthTTL}
-		if withMail {
-			verify, reset := verification, recovery
-			verify.URL, reset.ResetURL = origin+"/verify-email", origin+"/reset-password"
-			profile.Verification, profile.Recovery = &verify, &reset
-		}
-		return profile, nil
-	}
 }

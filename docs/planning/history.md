@@ -2675,3 +2675,7 @@ Luna: V7 full Go tests; V8 keyed-literal equivalence, lint0/race; V9 targeted te
 ## 4 ноября 2026 — R6: настройки, HTTP токенов и публичные tests
 
 Разделены settings SMTP/providers/retention/Telegram Bot и token native/introspection HTTP; общие Policy/MFA/ports/parser/error rules и transactional SQL owners сохранены. Token service admission/signing/native authority не дробятся искусственно. Публичные tests у владельцев, private security/codec/DTO tests рядом. Исправлены старые SQL fixtures отсутствующего/stale MFA без ослабления production checks. Luna: все38 affected packages race, lint0, API, 11 SQL roots с11 selected JWT/native/refresh leaves и2 Redis suites PASS. Main сверил source/manifest и actual evidence. Стенд сохранён, данные очищены. [Evidence и ограничения](../operations/acceptance-summary.md#r6-настройки-и-http-токенов--приёмка-4-ноября-2026). Далее R7; UI отдельно.
+
+### 4 ноября 2026 — завершён весь R7
+
+Root App владеет process resources/HTTP, Auth возвращает borrowed Runtime; project runtime/profile/browser и feature adapters разделены по владельцам. Общая setup/registration сборка переиспользуется; private fields не открывались ради переноса. Документация и пути обновлены. Luna full V5 PASS: task check/lint0, affected race, 15 actual SQL roots, Redis isolation и API. Частичные compile/lint ошибки исправлены; повторялись только затронутые проверки. Main сверил manifest350 и evidence; source совпадает. [Сводка](../operations/acceptance-summary.md#r7-сборка-приложения--приёмка-4-ноября-2026). Далее R8, затем MP7/MP8; UI не начат.

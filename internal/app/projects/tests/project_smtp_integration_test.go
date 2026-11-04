@@ -20,7 +20,7 @@ import (
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
@@ -55,12 +55,12 @@ func projectSMTPDrill(t *testing.T, admin *pgx.Conn, reader *runtimepostgres.Run
 	beforeRedis, err := rdb.DBSize(ctx).Result()
 	require.NoError(t, err)
 	require.Zero(t, beforeRedis)
-	deps := appauth.ProjectSMTPDependencies{Registry: registry, Reader: reader, Redis: rdb}
+	deps := projectapp.ProjectSMTPDependencies{Registry: registry, Reader: reader, Redis: rdb}
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, listener.Close()) })
 	allowed := []string{listener.Addr().String()}
-	mail, err := appauth.NewProjectMailer(ctx, key, allowed, deps)
+	mail, err := projectapp.NewProjectMailer(ctx, key, allowed, deps)
 	require.ErrorIs(t, err, settingsdomain.ErrNotInitialized)
 	require.Nil(t, mail)
 	var count int
@@ -87,7 +87,7 @@ func projectSMTPDrill(t *testing.T, admin *pgx.Conn, reader *runtimepostgres.Run
 	require.NoError(t, err)
 	var xmin string
 	require.NoError(t, db.QueryRow(ctx, `SELECT xmin::text FROM auth.smtp_settings`).Scan(&xmin))
-	mail, err = appauth.NewProjectMailer(ctx, key, allowed, deps)
+	mail, err = projectapp.NewProjectMailer(ctx, key, allowed, deps)
 	require.NoError(t, err)
 	allowed[0] = "forbidden.example.test:587"
 	connected, release, finished := make(chan struct{}), make(chan struct{}), make(chan error, 1)

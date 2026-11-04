@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
-	pgx "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
-	mfaloginhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
-	mfarecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
-	mfahttp "github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
@@ -52,17 +52,17 @@ func TestTwoProjectMFARecoverySQL(t *testing.T) {
 		require.NoError(t, err)
 	}
 	f.password.MFA.RecoveryEnabled = true
-	cfg := appauth.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, Timeout: 10 * time.Second}
+	cfg := projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, Timeout: 10 * time.Second}
 	withoutDelivery := f.deps
 	withoutDelivery.Delivery = nil
-	profile, err := appauth.BuildProjectProfile(t.Context(), f.projects[0], f.origins[0], cfg, withoutDelivery)
+	profile, err := projectprofile.BuildProjectProfile(t.Context(), f.projects[0], f.origins[0], cfg, withoutDelivery)
 	require.NoError(t, err)
 	for _, route := range profile.RoutePlan() {
 		require.NotEqual(t, "mfa_recovery", route.Feature, "no public recovery without delivery")
 	}
 	_, err = f.databases[1].Exec(t.Context(), `REVOKE EXECUTE ON FUNCTION auth.decide_mfa_recovery(uuid,uuid,bigint,boolean,text,text) FROM auth_mfa_recovery_operator`)
 	require.NoError(t, err)
-	profile, err = appauth.BuildProjectProfile(t.Context(), f.projects[1], f.origins[1], cfg, f.deps)
+	profile, err = projectprofile.BuildProjectProfile(t.Context(), f.projects[1], f.origins[1], cfg, f.deps)
 	require.NoError(t, err)
 	for _, route := range profile.RoutePlan() {
 		require.NotEqual(t, "mfa_recovery", route.Feature, "no public recovery without independent operator grants")

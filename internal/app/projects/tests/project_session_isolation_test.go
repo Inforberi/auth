@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 )
 
@@ -33,7 +33,7 @@ func TestTwoProjectSessionLifecycleIsolationSQL(t *testing.T) {
 			}
 		}
 	})
-	webs, _, _ := f.serve(t, appauth.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, UserLifecycleEnabled: true, Timeout: 5 * time.Second})
+	webs, _, _ := f.serve(t, projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, UserLifecycleEnabled: true, Timeout: 5 * time.Second})
 	checkProjectSessionIsolation(t, ctx, webs)
 	checkProjectLifecycleIsolation(t, ctx, f, webs)
 }

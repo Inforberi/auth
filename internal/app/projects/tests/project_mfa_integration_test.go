@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	pgx "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/pquerna/otp/totp"
-	redis "github.com/redis/go-redis/v9"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	mfadomain "github.com/Inforberi/financial-intelligence/internal/auth/mfa/domain"
 	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
@@ -23,7 +23,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
-func projectMFADrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, cfg appauth.ProjectPasswordConfig, deps appauth.ProjectPasswordDependencies, input passwordservice.LoginInput) {
+func projectMFADrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, cfg projectmethods.ProjectPasswordConfig, deps projectmethods.ProjectPasswordDependencies, input passwordservice.LoginInput) {
 	t.Helper()
 	ctx := t.Context()
 	cfg.MFA = mfaservice.Config{Enabled: true, Issuer: "Project MFA fixture", ChallengeTTL: time.Minute, UserLimitPerMinute: 100, IPLimitPerMinute: 100, GlobalLimitPerMinute: 100}
@@ -65,7 +65,7 @@ func projectMFADrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key p
 	require.True(t, clean)
 	_, err = db.Exec(ctx, `WITH r AS(INSERT INTO auth.roles(key,name,mfa_required) VALUES('project_password_fixture_mfa','Project MFA',true) RETURNING id) INSERT INTO auth.user_roles(user_id,role_id) SELECT $1,id FROM r`, passwordFixtureUser)
 	require.NoError(t, err)
-	svc, err := appauth.NewProjectPassword(ctx, key, cfg, deps)
+	svc, err := projectmethods.NewProjectPassword(ctx, key, cfg, deps)
 	require.NoError(t, err)
 	countSessions := func() int {
 		var n int

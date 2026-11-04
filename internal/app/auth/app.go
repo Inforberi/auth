@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -15,117 +14,42 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
-	"github.com/Inforberi/financial-intelligence/internal/infra/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
-	redisclient "github.com/Inforberi/financial-intelligence/internal/infra/redis"
-	"github.com/Inforberi/financial-intelligence/internal/server/http"
 )
 
 // These dependencies are borrowed. Realm cleanup never closes their process owner.
-type realmDependencies struct {
-	pool  *pgxpool.Pool
-	redis *redis.Client
-	log   *zap.Logger
-	hash  *hasher.Bounded
-	scope realmscope.Scope
+type Dependencies struct {
+	Pool   *pgxpool.Pool
+	Redis  *redis.Client
+	Logger *zap.Logger
+	Hash   *hasher.Bounded
+	Scope  realmscope.Scope
 }
 
-func (d realmDependencies) validate() error {
-	if d.pool == nil || d.redis == nil || d.log == nil || d.hash == nil || !d.scope.Valid() {
+func (d Dependencies) validate() error {
+	if d.Pool == nil || d.Redis == nil || d.Logger == nil || d.Hash == nil || !d.Scope.Valid() {
 		return errors.New("auth realm requires pool, Redis, logger, shared hasher and explicit scope")
 	}
 	return nil
 }
 
-func New(ctx context.Context, cfg *config.Config) (_ *App, err error) {
-	if err := cfg.ValidatePlatform(); err != nil {
-		return nil, err
-	}
-	owned := &resources{}
-	defer func() {
-		if err != nil {
-			owned.close()
-		}
-	}()
-	pool, rdb, log, err := owned.open(ctx, cfg)
-	if err != nil {
-		return nil, err
-	}
-	if cfg.Capacity.HashConcurrency < 1 {
-		return nil, errors.New("password hash concurrency must be positive")
-	}
-	deps := realmDependencies{
-		pool: pool, redis: rdb, log: log,
-		scope: realmscope.Legacy(),
-		hash:  hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), cfg.Capacity.HashConcurrency),
-	}
-	var assembled *realm
-	if cfg.Platform.Enabled {
-		deps.scope, err = realmscope.New("platform", cfg.Platform.RealmID)
-		if err != nil {
-			return nil, err
-		}
-		assembled, err = assembleOperator(ctx, cfg, deps, mailer.New(cfg.MailSender))
-	} else {
-		assembled, err = assembleRealm(ctx, cfg, deps)
-	}
-	if err != nil {
-		return nil, err
-	}
-	owned.add(assembled.resources.close)
-	return standalone(assembled, owned, log, cfg.Server), nil
-}
-
-func standalone(assembled *realm, owned *resources, log *zap.Logger, cfg httpserver.Config) *App {
-	return &App{
-		Access: assembled.Access, Provisioning: assembled.Provisioning, TemporaryPasswords: assembled.TemporaryPasswords,
-		resources: owned,
-		serve: func(ctx context.Context) error {
-			return assembled.run(ctx, log, func(ctx context.Context) error {
-				return httpserver.Run(ctx, log, cfg, assembled.handler)
-			})
-		},
-	}
-}
-
-type realm struct {
+type Runtime struct {
 	Access             *accessapp.App
 	Provisioning       *accountprovisioning.ProvisionService
 	TemporaryPasswords *passwordprovisioning.TemporaryPasswordService
-	handler            http.Handler
+	Handler            http.Handler
 	drainHTTP          func()
 	retention          retentionWorker
 	workers            []deliveryWorker
-	resources          *resources
+	resources          *Resources
 }
 
-func (r *resources) open(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, *redis.Client, *zap.Logger, error) {
-	log := logger.CreateLogger(cfg.Logger)
-	r.add(func() {
-		if err := log.Sync(); err != nil {
-			return // stdout/stderr may not support fsync; no buffered logger remains.
-		}
-	})
-	r.add(zap.RedirectStdLog(log))
-
-	pool, err := postgres.New(ctx, cfg.Postgres)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("create postgres pool: %w", err)
+func Assemble(ctx context.Context, cfg *config.Config, deps Dependencies) (*Runtime, error) {
+	if cfg.Platform.Enabled {
+		return assembleOperator(ctx, cfg, deps, mailer.New(cfg.MailSender))
 	}
-	r.add(pool.Close)
-	log.Info("postgres pool created successfully")
-
-	rdb, err := redisclient.New(ctx, cfg.Redis)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("init redis: %w", err)
-	}
-	r.add(func() {
-		if err := rdb.Close(); err != nil {
-			log.Error("failed to close Redis")
-		}
-	})
-	log.Info("redis created successfully")
-	return pool, rdb, log, nil
+	return assembleRealm(ctx, cfg, deps)
 }
+
+func (r *Runtime) Close() { r.resources.Close() }

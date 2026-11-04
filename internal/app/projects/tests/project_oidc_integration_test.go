@@ -12,7 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
+	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	oidcdomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/domain"
 	oidcredis "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/repository/redis"
 	oidcservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/oidc/service"
@@ -22,7 +23,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
-func projectOIDCDrill(t *testing.T, ctx context.Context, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, deps appauth.ProjectSMTPDependencies, sourceUser string, hash *hasher.Bounded) {
+func projectOIDCDrill(t *testing.T, ctx context.Context, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, deps projectapp.ProjectSMTPDependencies, sourceUser string, hash *hasher.Bounded) {
 	t.Helper()
 	configuration, err := deps.Reader.LoadAuthConfiguration(ctx, key, deps.Registry)
 	require.NoError(t, err)
@@ -36,10 +37,10 @@ func projectOIDCDrill(t *testing.T, ctx context.Context, admin, db *pgx.Conn, rd
 		_, err := db.Exec(cleanup, `DELETE FROM auth.auth_settings; INSERT INTO auth.auth_settings SELECT * FROM oidc_policy_before; DELETE FROM auth.provider_settings; INSERT INTO auth.provider_settings SELECT * FROM oidc_providers_before`)
 		require.NoError(t, err)
 	})
-	owners := appauth.NewProjectOIDCClients(ctx)
+	owners := projectmethods.NewProjectOIDCClients(ctx)
 	t.Cleanup(owners.Close)
-	oidcDeps := appauth.ProjectOIDCDependencies{Registry: deps.Registry, Reader: deps.Reader, Redis: rdb, Clients: owners}
-	services := map[string]*appauth.ProjectOIDC{}
+	oidcDeps := projectmethods.ProjectOIDCDependencies{Registry: deps.Registry, Reader: deps.Reader, Redis: rdb, Clients: owners}
+	services := map[string]*projectmethods.ProjectOIDC{}
 	ciphers := map[string]*secretbox.Cipher{}
 	prefixes := map[string]string{}
 	keys := []string{}
@@ -73,7 +74,7 @@ func projectOIDCDrill(t *testing.T, ctx context.Context, admin, db *pgx.Conn, rd
 		require.NoError(t, err)
 		prefixes[name] = strings.TrimSuffix(prefix, ":")
 		keys = append(keys, prefixes[name]+":limit:"+ciphers[name].Digest(ip), prefixes[name]+":limit:global")
-		services[name], err = appauth.NewProjectOIDC(ctx, key, appauth.ProjectOIDCConfig{Provider: name, Enabled: true, RedirectURI: "https://project-oidc.example.test/api/v1/auth/" + name + "/callback", IPLimit: 30, GlobalLimit: 1000, Session: projectPasswordFixtureConfig().Session, Timeout: 10 * time.Second}, oidcDeps)
+		services[name], err = projectmethods.NewProjectOIDC(ctx, key, projectmethods.ProjectOIDCConfig{Provider: name, Enabled: true, RedirectURI: "https://project-oidc.example.test/api/v1/auth/" + name + "/callback", IPLimit: 30, GlobalLimit: 1000, Session: projectPasswordFixtureConfig().Session, Timeout: 10 * time.Second}, oidcDeps)
 		require.NoError(t, err)
 	}
 	_, err = db.Exec(ctx, `UPDATE auth.auth_settings SET google_enabled=true,telegram_enabled=true`)

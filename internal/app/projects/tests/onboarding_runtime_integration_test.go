@@ -17,7 +17,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	preparationpostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/preparation/repository/postgres"
 	schemapostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/schema/postgres"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectonboarding "github.com/Inforberi/financial-intelligence/internal/app/projects/onboarding"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
@@ -98,12 +98,12 @@ func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, env func(string) s
 	admin, err := pgxpool.NewWithConfig(ctx, adminConfig)
 	require.NoError(t, err)
 	defer admin.Close()
-	deps := appauth.ProjectOnboardingDependencies{
+	deps := projectonboarding.ProjectOnboardingDependencies{
 		Pool: pool, Redis: rdb, Logger: zap.NewNop(),
 		Hash:    hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), 1),
 		Catalog: api,
 	}
-	cfg := appauth.ProjectOnboardingConfig{
+	cfg := projectonboarding.ProjectOnboardingConfig{
 		Project: domain.Project{
 			ID: r.ProjectID, Slug: "test-project", Origin: "https://test.example.test",
 			DesiredState: domain.Enabled, Phase: domain.Provisioning, Version: r.Version, Generation: r.Generation,
@@ -113,7 +113,7 @@ func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, env func(string) s
 		HTTP:        requestmiddleware.CapacityConfig{MaxInFlight: 2, RequestTimeout: time.Second},
 	}
 	onboardingAdmissionDrill(t, admin, api, pool, repo, cfg.Project, r, binding, codec)
-	handler, err := appauth.NewProjectOnboarding(ctx, cfg, deps)
+	handler, err := projectonboarding.NewProjectOnboarding(ctx, cfg, deps)
 	require.ErrorIs(t, err, settingsdomain.ErrNotInitialized)
 	require.Nil(t, handler, "must not fall back to platform/environment SMTP")
 	scope, err := realmscope.New("project", string(r.ProjectID))
@@ -130,7 +130,7 @@ func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, env func(string) s
 		}}, Password: password,
 	})
 	require.NoError(t, err)
-	handler, err = appauth.NewProjectOnboarding(ctx, cfg, deps)
+	handler, err = projectonboarding.NewProjectOnboarding(ctx, cfg, deps)
 	require.NoError(t, err)
 	require.NotNil(t, handler)
 	_, err = admin.Exec(ctx, `UPDATE platform.project_preparations SET onboarding_admitted=false WHERE project_id=$1`, r.ProjectID)
@@ -147,14 +147,14 @@ func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, env func(string) s
 	require.NoError(t, repo.PermitOnboarding(ctx, r, binding, codec, pool))
 	denied := cfg
 	denied.SMTPAllowedTargets = []string{"other.example.test:587"}
-	handler, err = appauth.NewProjectOnboarding(ctx, denied, deps)
+	handler, err = projectonboarding.NewProjectOnboarding(ctx, denied, deps)
 	require.ErrorIs(t, err, settingsdomain.ErrInvalidSMTP)
 	require.Nil(t, handler)
 	tampered := append([]byte{}, stored.Password...)
 	tampered[len(tampered)-1] ^= 1
 	_, err = privileged.Exec(ctx, `UPDATE auth.smtp_settings SET password=$1`, tampered)
 	require.NoError(t, err)
-	handler, err = appauth.NewProjectOnboarding(ctx, cfg, deps)
+	handler, err = projectonboarding.NewProjectOnboarding(ctx, cfg, deps)
 	require.Error(t, err)
 	require.Nil(t, handler)
 	_, err = privileged.Exec(ctx, `UPDATE auth.smtp_settings SET password=$1`, stored.Password)

@@ -15,7 +15,7 @@ import (
 
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
@@ -29,7 +29,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
 
-func projectRegistrationDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, base appauth.ProjectPasswordConfig, deps appauth.ProjectPasswordDependencies) {
+func projectRegistrationDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, base projectmethods.ProjectPasswordConfig, deps projectmethods.ProjectPasswordDependencies) {
 	t.Helper()
 	ctx := t.Context()
 	const ip = "192.0.2.91"
@@ -75,12 +75,12 @@ func projectRegistrationDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Clie
 		require.NoError(t, rdb.Del(cleanup, redisKeys...).Err())
 	})
 	cfg := base
-	cfg.RegistrationVerification = &appauth.ProjectRegistrationVerification{Origin: "https://registration.example.test", Config: accountservice.Config{
+	cfg.RegistrationVerification = &projectmethods.ProjectRegistrationVerification{Origin: "https://registration.example.test", Config: accountservice.Config{
 		URL: "https://registration.example.test/verify-email", TTL: 30 * time.Minute, ResendInterval: time.Minute, RegistrationIPLimit: 100, RegistrationGlobalLimit: 1000,
 	}}
-	service, err := appauth.NewProjectPassword(ctx, key, cfg, deps)
+	service, err := projectmethods.NewProjectPassword(ctx, key, cfg, deps)
 	require.NoError(t, err)
-	bare, err := appauth.NewProjectPassword(ctx, key, base, deps)
+	bare, err := projectmethods.NewProjectPassword(ctx, key, base, deps)
 	require.NoError(t, err)
 	setPolicy := func(mode string) {
 		_, err := db.Exec(ctx, `UPDATE auth.auth_settings SET password_enabled=true,registration_enabled=true,password_email_verification=$1`, mode)
@@ -197,7 +197,7 @@ func projectRegistrationDrill(t *testing.T, admin, db *pgx.Conn, rdb *redis.Clie
 		// Admit both hashes so this case exercises the database uniqueness race, not capacity rejection.
 		concurrentDeps := deps
 		concurrentDeps.Hash = hasher.NewBounded(hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), 2)
-		concurrentService, err := appauth.NewProjectPassword(ctx, key, cfg, concurrentDeps)
+		concurrentService, err := projectmethods.NewProjectPassword(ctx, key, cfg, concurrentDeps)
 		require.NoError(t, err)
 		var before int
 		require.NoError(t, db.QueryRow(ctx, `SELECT count(*) FROM auth.users`).Scan(&before))
@@ -277,13 +277,13 @@ func (h *blockingRegistrationHash) GenerateHash(password []byte) (string, error)
 	return h.Argon2idHash.GenerateHash(password)
 }
 
-func registrationDuringHash(t *testing.T, ctx context.Context, key projectruntime.Key, cfg appauth.ProjectPasswordConfig, deps appauth.ProjectPasswordDependencies, email, password, ip string, change func()) (*passwordservice.RegisterResult, error) {
+func registrationDuringHash(t *testing.T, ctx context.Context, key projectruntime.Key, cfg projectmethods.ProjectPasswordConfig, deps projectmethods.ProjectPasswordDependencies, email, password, ip string, change func()) (*passwordservice.RegisterResult, error) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	hash := &blockingRegistrationHash{Argon2idHash: hasher.NewArgon2idHash(3, 32, 64*1024, 4, 32), started: make(chan struct{}), release: make(chan struct{})}
 	deps.Hash = hasher.NewBounded(hash, 1)
-	service, err := appauth.NewProjectPassword(ctx, key, cfg, deps)
+	service, err := projectmethods.NewProjectPassword(ctx, key, cfg, deps)
 	require.NoError(t, err)
 	var once sync.Once
 	release := func() { once.Do(func() { close(hash.release) }) }

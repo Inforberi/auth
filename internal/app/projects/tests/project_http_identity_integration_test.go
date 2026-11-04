@@ -17,7 +17,11 @@ import (
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
+	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
@@ -29,8 +33,8 @@ type projectIdentityHTTPFixture struct {
 	admin, db  *pgx.Conn
 	rdb        *redis.Client
 	key        projectruntime.Key
-	deps       appauth.ProjectSMTPDependencies
-	clients    *appauth.ProjectOIDCClients
+	deps       projectapp.ProjectSMTPDependencies
+	clients    *projectmethods.ProjectOIDCClients
 	ciphers    map[string]*secretbox.Cipher
 	prefixes   map[string]string
 	keys       *[]string
@@ -60,15 +64,15 @@ UPDATE auth.auth_settings SET password_enabled=$2,google_enabled=$3,telegram_ena
 	require.NoError(t, err)
 	passwordConfig := projectPasswordFixtureConfig()
 	session := passwordConfig.Session
-	provider := func(name string) *appauth.ProjectOIDCConfig {
-		return &appauth.ProjectOIDCConfig{Provider: name, Enabled: true, RedirectURI: origin + "/api/v1/auth/" + name + "/callback", IPLimit: 30, GlobalLimit: 1000, Session: session, Timeout: 10 * time.Second}
+	provider := func(name string) *projectmethods.ProjectOIDCConfig {
+		return &projectmethods.ProjectOIDCConfig{Provider: name, Enabled: true, RedirectURI: origin + "/api/v1/auth/" + name + "/callback", IPLimit: 30, GlobalLimit: 1000, Session: session, Timeout: 10 * time.Second}
 	}
-	handler, err := appauth.NewProjectHTTP(appauth.ProjectHTTPConfig{
+	handler, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-identity.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 20 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &session,
-	}, appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, OIDCClients: f.clients}, func(_ context.Context, key projectruntime.Key, selected string) (appauth.ProjectProfileConfig, error) {
+	}, projectprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, OIDCClients: f.clients}, func(_ context.Context, key projectruntime.Key, selected string) (projectprofile.ProjectProfileConfig, error) {
 		require.Equal(t, f.key, key)
 		require.Equal(t, origin, selected)
-		return appauth.ProjectProfileConfig{BrowserEnabled: true, Password: &passwordConfig, Google: provider("google"), Telegram: provider("telegram"), Timeout: 10 * time.Second}, nil
+		return projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &passwordConfig, Google: provider("google"), Telegram: provider("telegram"), Timeout: 10 * time.Second}, nil
 	}, nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)

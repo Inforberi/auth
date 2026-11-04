@@ -18,7 +18,9 @@ import (
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	tokensettings "github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
 	"github.com/Inforberi/financial-intelligence/internal/config"
@@ -31,7 +33,7 @@ func (f projectProfileFixture) httpProfile(t *testing.T, ctx context.Context, or
 	t.Helper()
 	_, err := f.db.Exec(ctx, `UPDATE auth.auth_settings SET version=version+1,password_enabled=true,registration_enabled=false,password_email_verification='disabled',email_otp_enabled=false,google_enabled=false,telegram_enabled=false,token_session_exchange_enabled=true,token_native_enabled=false`)
 	require.NoError(t, err)
-	issuance, err := appauth.NewProjectTokenRedis(f.rdb)
+	issuance, err := projectnative.NewProjectTokenRedis(f.rdb)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, issuance.Close()) })
 	password := projectPasswordFixtureConfig()
@@ -45,13 +47,13 @@ func (f projectProfileFixture) httpProfile(t *testing.T, ctx context.Context, or
 	deploymentConfig.Platform.HTTP.ManifestFile = filepath.Join(t.TempDir(), "project-auth.json")
 	manifest := fmt.Sprintf(`{"version":1,"projects":[{"id":%q,"browser":true,"jwt":{"native":true,"password":true,"permissions":[{"key":"reports.read","name":"Read reports"}],"resources":[{"audience":"reports","permissions":["reports.read"]}],"clients":[{"id":"consumer","secretHashes":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],"audiences":["reports"]}]}}]}`, string(f.key.Binding.ProjectID))
 	require.NoError(t, os.WriteFile(deploymentConfig.Platform.HTTP.ManifestFile, []byte(manifest), 0o600))
-	deployment, err := appauth.LoadProjectAuthDeployment(deploymentConfig)
+	deployment, err := projectprofile.LoadProjectAuthDeployment(deploymentConfig)
 	require.NoError(t, err)
-	deps := appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, IssuanceRedis: issuance, Hash: f.hash}}
+	deps := projectprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, IssuanceRedis: issuance, Hash: f.hash}}
 	var builds atomic.Int32
-	handler, err := appauth.NewProjectHTTP(appauth.ProjectHTTPConfig{
+	handler, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 20 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &password.Session,
-	}, deps, func(ctx context.Context, key projectruntime.Key, origin string) (appauth.ProjectProfileConfig, error) {
+	}, deps, func(ctx context.Context, key projectruntime.Key, origin string) (projectprofile.ProjectProfileConfig, error) {
 		builds.Add(1)
 		return deployment.Profile(ctx, key, origin)
 	}, nil)

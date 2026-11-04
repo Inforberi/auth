@@ -85,7 +85,7 @@ func operatorRecoveryPools(t *testing.T, admin *pgxpool.Pool) (*pgxpool.Pool, *p
 	return open("platform_password_test"), open("platform_mfa_test")
 }
 
-func operatorRecoveryDrill(t *testing.T, admin *pgxpool.Pool, deps realmDependencies, cfg *config.Config, mail *operatorMailbox, h *operatorHTTPS, user accountdomain.UserID, old *http.Cookie, oldRecoveryCode string) *http.Cookie {
+func operatorRecoveryDrill(t *testing.T, admin *pgxpool.Pool, deps Dependencies, cfg *config.Config, mail *operatorMailbox, h *operatorHTTPS, user accountdomain.UserID, old *http.Cookie, oldRecoveryCode string) *http.Cookie {
 	t.Helper()
 	ctx := t.Context()
 	notReady := *cfg
@@ -107,7 +107,7 @@ func operatorRecoveryDrill(t *testing.T, admin *pgxpool.Pool, deps realmDependen
 	realm := operatordomain.RealmID(cfg.Platform.RealmID)
 	guard(passwordPool, realm, false, true)
 	guard(mfaPool, realm, true, true)
-	guard(deps.pool, realm, false, false)
+	guard(deps.Pool, realm, false, false)
 	guard(admin, realm, false, false)
 	guard(passwordPool, "11111111-1111-4111-8111-111111111111", false, false)
 	guard(passwordPool, realm, true, false)
@@ -130,7 +130,7 @@ func operatorRecoveryDrill(t *testing.T, admin *pgxpool.Pool, deps realmDependen
 	if _, err := admin.Exec(ctx, `GRANT auth_recovery_operator TO auth_platform_operator_test`); err != nil {
 		t.Fatal(err)
 	}
-	runtimeGuard, err := operatorpostgres.New(deps.pool, realm)
+	runtimeGuard, err := operatorpostgres.New(deps.Pool, realm)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +155,7 @@ func operatorRecoveryDrill(t *testing.T, admin *pgxpool.Pool, deps realmDependen
 	if err := passwordPool.QueryRow(ctx, `SELECT secret FROM auth.mfa_totp WHERE user_id=$1`, user).Scan(new([]byte)); err == nil {
 		t.Fatal("offline password login read the factor")
 	}
-	reset := passwordrecovery.NewOperatorRecovery(passwordpostgres.New(passwordPool), deps.hash)
+	reset := passwordrecovery.NewOperatorRecovery(passwordpostgres.New(passwordPool), deps.Hash)
 	target, err := reset.Preview(ctx, user)
 	if err != nil {
 		t.Fatal(err)
@@ -182,8 +182,8 @@ func operatorRecoveryDrill(t *testing.T, admin *pgxpool.Pool, deps realmDependen
 	if err != nil {
 		t.Fatal("recovery-enabled assembly", err)
 	}
-	t.Cleanup(assembled.resources.close)
-	h = newOperatorHTTPS(t, assembled.handler, cfg.Platform.Origin)
+	t.Cleanup(assembled.resources.Close)
+	h = newOperatorHTTPS(t, assembled.Handler, cfg.Platform.Origin)
 	loginInput := map[string]string{"email": "operator@example.test", "password": password}
 	login, cookies := h.call("POST", "/api/v1/admin/auth/login/email", loginInput, nil, 202)
 	binding := operatorCookie(t, cookies, "__Host-mfa-login")
@@ -239,7 +239,7 @@ func operatorRecoveryDrill(t *testing.T, admin *pgxpool.Pool, deps realmDependen
 		EXISTS(SELECT 1 FROM auth.mfa_audit WHERE user_id=$2 AND event='recovery_completed')`, realm, user).Scan(&markerUnchanged, &audited); err != nil || !markerUnchanged || !audited {
 		t.Fatal("recovery marker/audit", err)
 	}
-	security := realmSecurity{scope: deps.scope}
+	security := realmSecurity{scope: deps.Scope}
 	cipher, err := security.cipher(cfg.Account.EncryptionKey, "mfa:v1")
 	if err != nil {
 		t.Fatal(err)

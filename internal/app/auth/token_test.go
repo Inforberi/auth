@@ -33,7 +33,7 @@ import (
 )
 
 func TestDisabledTokensDoNotOpenResources(t *testing.T) {
-	owned := &resources{}
+	owned := &Resources{}
 	handler, err := (realmSecurity{scope: realmscope.Legacy()}).assembleTokens(context.Background(), nil, nil, &config.Config{JWT: settings.Config{PrivateKeyFile: "/not-readable", KeySetFile: "/not-readable", ResourceFile: "/not-readable", IntrospectionClientFile: "/not-readable"}},
 		nativeLoginDependencies{}, accesssettings.Catalog{}, "", owned, zap.NewNop())
 	if err != nil || (handler.handler != nil || handler.service != nil || handler.native != nil || handler.introspection != nil) || len(owned.closers) != 0 {
@@ -57,7 +57,7 @@ func TestNativeTokenAssemblyRejectsDeploymentBeforeResources(t *testing.T) {
 		if !enabled {
 			want = "JWT_ENABLED"
 		}
-		owned := &resources{}
+		owned := &Resources{}
 		handler, err := (realmSecurity{scope: realmscope.Legacy()}).assembleTokens(t.Context(), nil, nil, &cfg, nativeLoginDependencies{}, accesssettings.Catalog{}, "", owned, zap.NewNop())
 		if (handler.handler != nil || handler.service != nil || handler.native != nil) || err == nil || !strings.Contains(err.Error(), want) || len(owned.closers) != 0 {
 			t.Fatal("invalid native deployment reached JWT files/Redis", handler, err)
@@ -116,8 +116,8 @@ func TestTokenAssemblyRedis(t *testing.T) {
 		Session:   sessionservice.Config{SessionTTL: time.Hour, AbsoluteSessionTTL: 2 * time.Hour, AdminIdleTimeout: 30 * time.Minute, AdminAbsoluteTTL: 12 * time.Hour, AdminActivityInterval: time.Minute},
 		Retention: accountservice.RetentionConfig{EmailReservationDays: 30, SessionDays: 30, SecurityAuditDays: 180, BatchSize: 130, Interval: time.Minute},
 	}
-	owned := &resources{}
-	t.Cleanup(owned.close)
+	owned := &Resources{}
+	t.Cleanup(owned.Close)
 	handler, err := (realmSecurity{scope: realmscope.Legacy()}).assembleTokens(t.Context(), nil, base, deployment, nativeLoginDependencies{password: &passwordservice.PasswordService{}, mfa: &mfaApp{login: &mfalogin.Login{}}, email: &emailOTPApp{}}, catalog, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", owned, zap.NewNop())
 	if err != nil || handler.handler == nil || handler.native == nil || handler.introspection == nil || len(owned.closers) != 1 {
 		t.Fatal("JWT assembly failed", err)
@@ -139,8 +139,8 @@ func TestTokenAssemblyRedis(t *testing.T) {
 	if _, err := assembleNativeTokens(&handler, &passwordservice.PasswordService{}, &mfaApp{login: &mfalogin.Login{}}, &emailOTPApp{}, deployment, zap.NewNop()); err == nil {
 		t.Fatal("native email enabled without adapter")
 	}
-	owned.close()
-	owned.close()
+	owned.Close()
+	owned.Close()
 	if err := base.Ping(t.Context()).Err(); err != nil {
 		t.Fatal("JWT closed the shared Auth Redis client", err)
 	}

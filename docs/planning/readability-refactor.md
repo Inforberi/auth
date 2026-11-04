@@ -411,13 +411,25 @@ migrations/
 
 ### R7. Завершение сборки приложения и lifecycle
 
-- [ ] После стабилизации контрактов фич завершить root app/app.go/run.go и app/auth/admin/projects. Сначала сверить сделанное в R3–R6; повторно не переносить уже упорядоченные adapters.
-- [ ] Упорядочить оставшиеся mixed browser wrappers/profile configuration и scoped adapters. В app оставить только сборку, trusted context, ресурсы и связывание сервисов.
-- [ ] Сохранить startup failure cleanup, общий порядок shutdown, bounded pools/hash/Bot budgets и lifetime leases; config и server/http самостоятельны.
-- [ ] Удалить только подтверждённые unused/duplicate fragments. Проверить направление imports, отсутствие массового экспорта private fields и необходимость всех новых пакетов.
-- [ ] Синхронизировать архитектуру, фактическую карту путей, команды и документацию startup/shutdown.
+- [x] После стабилизации контрактов фич завершить root app/app.go/run.go и app/auth/admin/projects. Сначала сверить сделанное в R3–R6; повторно не переносить уже упорядоченные adapters.
+- [x] Упорядочить оставшиеся mixed browser wrappers/profile configuration и scoped adapters. В app оставить только сборку, trusted context, ресурсы и связывание сервисов.
+- [x] Сохранить startup failure cleanup, общий порядок shutdown, bounded pools/hash/Bot budgets и lifetime leases; config и server/http самостоятельны.
+- [x] Удалить только подтверждённые unused/duplicate fragments. Проверить направление imports, отсутствие массового экспорта private fields и необходимость всех новых пакетов.
+- [x] Синхронизировать архитектуру, фактическую карту путей, команды и документацию startup/shutdown.
 
 Результат: понятная итоговая сборка приложения поверх готовых фич. R7 не переопределяет их контракты и не начинает повторный рефакторинг ранее завершённых блоков.
+
+4 ноября: весь R7 реализован и принят Luna по итоговому V5. Частичные core/V1–V4 результаты не использовались как полная приёмка.
+
+- Root `internal/app/{app,run,server,resources}.go` создаёт process SQL/Redis/logger/shared hasher и запускает HTTP. `auth.Assemble` получает borrowed Dependencies и возвращает Runtime с Handler/Run/Close; workers/drain находятся в Auth lifecycle. Startup failure cleanup и LIFO освобождение ресурсов сохраняются.
+- `app/projects/runtime` собирает registry/private reader/scoped SMTP; Binding содержит только ключ поколения, registry и reader. Настройки, Access и управление пользователями не держат весь ProjectProfile.
+- Проектные адаптеры находятся в `app/projects/{methods,account,mfa,native,access,settings}`. `profile` собирает конфигурацию, готовность и таблицу маршрутов; `browser` владеет dispatcher/cache/lifetime. `delivery` обслуживает bounded доставку, `onboarding` — закрытый setup. Сборка не добавляет business rules в repositories.
+- Password/registration/temporary остаются связной группой. Общие операции сборки registration/setup переиспользуются из `app/auth/{registration,setup}`, без копирования сценариев. Pure token deployment read model находится у `auth/token/settings`.
+- OIDC сам проверяет stored credentials; MFA отдаёт непрозрачную factory и операции привязки факторов. Native связывает email MFA через операцию владельца. Поля cipher/limiter/config не экспортированы ради переноса.
+- Сохраняются те же ресурсы, KDF purposes, SQL/Redis authority, current guards, leases, primary/factor policy, route contracts и shared hash/SMTP/Bot budgets. Новых schema/routes/ENV/dependencies нет.
+- Все 148 корневых App tests сохранены по статической сверке. Private assertions остаются у владельца; публичные account-сценарии отделены в локальный tests, без циклического импорта. Статическая сверка не заменяет исполняемые проверки.
+
+Приёмка: V5 `task check` PASS (полные tests и lint0), affected race PASS, 15 SQL roots и RealmRedisIsolation actual RUN/PASS без skips, API PASS. После V3 повторены только проверки затронутых исправлений; unchanged evidence переиспользовано. Main сверил рабочее дерево с V5 manifest: расхождений нет. [Evidence/ограничения](../operations/acceptance-summary.md#r7-сборка-приложения--приёмка-4-ноября-2026). Далее R8; UI не начинать.
 
 ### R8. Сквозное ревью и закрытие рефакторинга
 

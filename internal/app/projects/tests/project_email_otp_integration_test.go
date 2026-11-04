@@ -15,7 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
+	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
@@ -35,14 +36,14 @@ type projectOTPFixture struct {
 	db     *pgx.Conn
 	rdb    *redis.Client
 	key    projectruntime.Key
-	deps   appauth.ProjectSMTPDependencies
+	deps   projectapp.ProjectSMTPDependencies
 	scope  realmscope.Scope
 	cipher *secretbox.Cipher
 	root   string
-	cfg    appauth.ProjectEmailOTPConfig
+	cfg    projectmethods.ProjectEmailOTPConfig
 }
 
-func projectEmailOTPDrill(t *testing.T, ctx context.Context, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, deps appauth.ProjectSMTPDependencies, sourceUser string) {
+func projectEmailOTPDrill(t *testing.T, ctx context.Context, db *pgx.Conn, rdb *redis.Client, key projectruntime.Key, deps projectapp.ProjectSMTPDependencies, sourceUser string) {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -64,7 +65,7 @@ func projectEmailOTPDrill(t *testing.T, ctx context.Context, db *pgx.Conn, rdb *
 	require.NoError(t, err)
 	cipher, err := secretbox.NewScoped(configuration.EncryptionKey(), purpose)
 	require.NoError(t, err)
-	f := projectOTPFixture{db: db, rdb: rdb, key: key, deps: deps, scope: scope, cipher: cipher, root: configuration.EncryptionKey(), cfg: appauth.ProjectEmailOTPConfig{
+	f := projectOTPFixture{db: db, rdb: rdb, key: key, deps: deps, scope: scope, cipher: cipher, root: configuration.EncryptionKey(), cfg: projectmethods.ProjectEmailOTPConfig{
 		OTP:     otpservice.Config{Enabled: true, ReauthenticationEnabled: true, TTL: 5 * time.Minute, ResendInterval: time.Minute, RequestGlobalLimit: 100, ConfirmGlobalLimit: 1000},
 		Session: projectPasswordFixtureConfig().Session, Timeout: 10 * time.Second,
 	}}
@@ -88,7 +89,7 @@ func projectEmailOTPDrill(t *testing.T, ctx context.Context, db *pgx.Conn, rdb *
 			require.NoError(t, err)
 		}
 	}
-	svc, err := appauth.NewProjectEmailOTP(ctx, key, f.cfg, []string{listener.Addr().String()}, deps)
+	svc, err := projectmethods.NewProjectEmailOTP(ctx, key, f.cfg, []string{listener.Addr().String()}, deps)
 	require.NoError(t, err)
 	request, err := svc.Request(ctx, otpFixtureEmails[0], otpFixtureIP)
 	require.NoError(t, err)
@@ -116,7 +117,7 @@ func projectEmailOTPDrill(t *testing.T, ctx context.Context, db *pgx.Conn, rdb *
 	f.mfa(t, ctx, listener)
 	// A caller hook must never replace the current stored project policy.
 	f.cfg.OTP.CheckPolicy = func(context.Context) error { return nil }
-	svc, err = appauth.NewProjectEmailOTP(ctx, key, f.cfg, []string{listener.Addr().String()}, deps)
+	svc, err = projectmethods.NewProjectEmailOTP(ctx, key, f.cfg, []string{listener.Addr().String()}, deps)
 	require.NoError(t, err)
 	_, err = db.Exec(ctx, `UPDATE auth.auth_settings SET email_otp_enabled=false`)
 	require.NoError(t, err)
@@ -139,7 +140,7 @@ func (f projectOTPFixture) code(t *testing.T, ctx context.Context, binding, purp
 	return match[1]
 }
 
-func (f projectOTPFixture) reauthentication(t *testing.T, ctx context.Context, svc *appauth.ProjectEmailOTP) {
+func (f projectOTPFixture) reauthentication(t *testing.T, ctx context.Context, svc *projectmethods.ProjectEmailOTP) {
 	t.Helper()
 	user := otpFixtureUsers[1]
 	hash := tokengenerate.New().Hash(user)

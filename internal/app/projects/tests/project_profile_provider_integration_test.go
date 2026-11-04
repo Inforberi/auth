@@ -7,7 +7,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
+	projectnative "github.com/Inforberi/financial-intelligence/internal/app/projects/native"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
@@ -16,12 +18,12 @@ func (f projectProfileFixture) providerProfile(t *testing.T, ctx context.Context
 	t.Helper()
 	_, err := f.db.Exec(ctx, `UPDATE auth.auth_settings SET version=version+1,password_enabled=false,registration_enabled=false,google_enabled=true,password_email_verification='optional'`)
 	require.NoError(t, err)
-	owners := appauth.NewProjectOIDCClients(ctx)
+	owners := projectmethods.NewProjectOIDCClients(ctx)
 	t.Cleanup(owners.Close)
-	google := appauth.ProjectOIDCConfig{Provider: "google", Enabled: true, RedirectURI: origin + "/api/v1/auth/google/callback", IPLimit: 30, GlobalLimit: 1000, Session: projectPasswordFixtureConfig().Session, Timeout: 5 * time.Second}
-	cfg := appauth.ProjectProfileConfig{BrowserEnabled: true, Google: &google, Timeout: 10 * time.Second}
-	deps := appauth.ProjectProfileDependencies{ProjectTokenDependencies: appauth.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb}, OIDCClients: owners}
-	missing, err := appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+	google := projectmethods.ProjectOIDCConfig{Provider: "google", Enabled: true, RedirectURI: origin + "/api/v1/auth/google/callback", IPLimit: 30, GlobalLimit: 1000, Session: projectPasswordFixtureConfig().Session, Timeout: 5 * time.Second}
+	cfg := projectprofile.ProjectProfileConfig{BrowserEnabled: true, Google: &google, Timeout: 10 * time.Second}
+	deps := projectprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb}, OIDCClients: owners}
+	missing, err := projectprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.False(t, missing.Readiness().Ready)
 	require.Len(t, missing.RoutePlan(), 7)
@@ -42,14 +44,14 @@ func (f projectProfileFixture) providerProfile(t *testing.T, ctx context.Context
 	_, err = f.db.Exec(ctx, `INSERT INTO auth.provider_settings(provider,version,client_id,secret,secret_set) VALUES('google',1,'profile.apps.googleusercontent.com',$1,true)
  ON CONFLICT(provider) DO UPDATE SET version=auth.provider_settings.version+1,client_id=EXCLUDED.client_id,secret=EXCLUDED.secret,secret_set=true`, secret)
 	require.NoError(t, err)
-	ready, err := appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+	ready, err := projectprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.True(t, ready.Readiness().Ready)
 	require.Len(t, ready.RoutePlan(), 11)
 	// A missing password config must not remove an independently assembled Google flow.
 	_, err = f.db.Exec(ctx, `UPDATE auth.auth_settings SET version=version+1,password_enabled=true,password_email_verification='disabled'`)
 	require.NoError(t, err)
-	partial, err := appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+	partial, err := projectprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.False(t, partial.Readiness().Ready)
 	require.Len(t, partial.RoutePlan(), 11)
@@ -58,7 +60,7 @@ func (f projectProfileFixture) providerProfile(t *testing.T, ctx context.Context
 	foreign := google
 	foreign.RedirectURI = "https://foreign.example.test/api/v1/auth/google/callback"
 	cfg.Google = &foreign
-	blocked, err := appauth.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+	blocked, err := projectprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.Len(t, blocked.RoutePlan(), 7)
 	for _, route := range blocked.RoutePlan() {

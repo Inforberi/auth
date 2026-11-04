@@ -10,7 +10,8 @@ import (
 	"github.com/pquerna/otp/totp"
 	"github.com/stretchr/testify/require"
 
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectdelivery "github.com/Inforberi/financial-intelligence/internal/app/projects/delivery"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	mfalogin "github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
@@ -31,7 +32,7 @@ func (f projectOTPFixture) mfa(t *testing.T, ctx context.Context, listener net.L
 		require.NoError(t, err)
 	}
 	f.cfg.MFA = mfaservice.Config{Enabled: true, Issuer: "Project OTP fixture", ChallengeTTL: time.Minute, UserLimitPerMinute: 100, IPLimitPerMinute: 100, GlobalLimitPerMinute: 100}
-	svc, err := appauth.NewProjectEmailOTP(ctx, f.key, f.cfg, []string{listener.Addr().String()}, f.deps)
+	svc, err := projectmethods.NewProjectEmailOTP(ctx, f.key, f.cfg, []string{listener.Addr().String()}, f.deps)
 	require.NoError(t, err)
 	requested, err := svc.Request(ctx, otpFixtureEmails[2], otpFixtureIP)
 	require.NoError(t, err)
@@ -63,7 +64,7 @@ func (f projectOTPFixture) mfa(t *testing.T, ctx context.Context, listener net.L
 	require.Error(t, err)
 	require.Nil(t, completed)
 	f.cfg.MFA = mfaservice.Config{}
-	svc, err = appauth.NewProjectEmailOTP(ctx, f.key, f.cfg, []string{listener.Addr().String()}, f.deps)
+	svc, err = projectmethods.NewProjectEmailOTP(ctx, f.key, f.cfg, []string{listener.Addr().String()}, f.deps)
 	require.NoError(t, err)
 	requested, err = svc.Request(ctx, otpFixtureEmails[3], otpFixtureIP)
 	require.NoError(t, err)
@@ -76,7 +77,7 @@ func (f projectOTPFixture) mfa(t *testing.T, ctx context.Context, listener net.L
 
 func (f projectOTPFixture) delivery(t *testing.T, ctx context.Context, listener net.Listener, binding string) {
 	t.Helper()
-	runner, err := appauth.NewProjectDelivery(appauth.ProjectDeliveryConfig{Parallelism: 1, PageSize: 1, Interval: time.Second, SMTPAllowedTargets: []string{listener.Addr().String()}}, f.deps)
+	runner, err := projectdelivery.NewProjectDelivery(projectdelivery.ProjectDeliveryConfig{Parallelism: 1, PageSize: 1, Interval: time.Second, SMTPAllowedTargets: []string{listener.Addr().String()}}, f.deps)
 	require.NoError(t, err)
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()

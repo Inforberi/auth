@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
+	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsredis "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/redis"
@@ -34,7 +35,7 @@ func (s realmSecurity) assembleSMTP(ctx context.Context, pool *pgxpool.Pool, rdb
 	}
 	svc, err := settingssmtp.NewSMTP(settingspostgres.New(pool), cipher,
 		func(ctx context.Context, c settingsdomain.SMTPConfig, password string) error {
-			return mailer.CheckContext(ctx, smtpMailerConfig(c, password))
+			return mailer.CheckContext(ctx, projectapp.MailConfig(c, password))
 		}, limits, allowed, cfg.Logger.Env == "prod")
 	if err != nil {
 		return nil, nil, err
@@ -55,14 +56,7 @@ func (s realmSecurity) assembleSMTP(ctx context.Context, pool *pgxpool.Pool, rdb
 		if err != nil {
 			return mailer.Config{}, err
 		}
-		return smtpMailerConfig(c, password), nil
+		return projectapp.MailConfig(c, password), nil
 	})
 	return mail, settingssmtphttp.NewSMTP(svc, log), nil
-}
-
-func smtpMailerConfig(c settingsdomain.SMTPConfig, password string) mailer.Config {
-	return mailer.Config{
-		SMTPHost: c.Host, SMTPPort: strconv.Itoa(c.Port), SMTPUsername: c.Username,
-		SMTPPassword: password, SMTPFrom: c.From, SMTPDomain: c.Domain, RequireTLS: c.RequireTLS,
-	}
 }

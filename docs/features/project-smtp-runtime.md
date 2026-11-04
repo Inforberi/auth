@@ -13,7 +13,7 @@ MP4.1d, 25 октября2026. Решение зафиксировано до р
 
 ## Реализация
 
-`internal/app/auth/project_smtp.go`: `NewProjectMailer(ctx, key, allowedTargets, dependencies)` возвращает existing `mailer.Mailer`. Shared registry/reader/Redis принадлежат процессу; factory не закрывает их и не создаёт pool/worker. Allowlist копируется при сборке. Конструктор проверяет сохранённые credentials без сети; `ErrNotInitialized` означает, что выбранный email consumer пока нельзя собрать. Password/TOTP собираются независимо.
+`internal/app/projects/runtime/smtp.go`: `NewProjectMailer(ctx, key, allowedTargets, dependencies)` возвращает existing `mailer.Mailer`. Shared registry/reader/Redis принадлежат процессу; factory не закрывает их и не создаёт pool/worker. Allowlist копируется при сборке. Конструктор проверяет сохранённые credentials без сети; `ErrNotInitialized` означает, что выбранный email consumer пока нельзя собрать. Password/TOTP собираются независимо.
 
 Каждый SendContext заново читает/расшифровывает запись через existing SMTP service под UsePool и трёхсекундным deadline. За callback выходит только mailer.Config, не repository/service/pool. Existing mailer ограничивает общую отправку20s, dial5s, проверяет STARTTLS и сертификат сервера до AUTH/письма. Данные читаются без Initialize, кеширования пароля или management probe. Scoped Redis limiter передаётся существующему service; чтение credentials не расходует лимиты административной SMTP-проверки.
 

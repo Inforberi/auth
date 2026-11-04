@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 )
 
 var directoryExclusiveIDs = [2]string{"f8a00000-0000-4000-8000-000000000001", "f8a00000-0000-4000-8000-000000000002"}
@@ -49,6 +49,6 @@ func TestTwoProjectDirectoryIsolationSQL(t *testing.T) {
 			require.NoError(t, err)
 		}
 	})
-	webs, _, _ := f.serve(t, appauth.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, UserDirectoryEnabled: true, Timeout: 5 * time.Second})
+	webs, _, _ := f.serve(t, projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, UserDirectoryEnabled: true, Timeout: 5 * time.Second})
 	checkProjectDirectoryIsolation(t, ctx, f, webs)
 }

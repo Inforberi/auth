@@ -10,7 +10,7 @@ import (
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
-	tokenintrospectionhttp "github.com/Inforberi/financial-intelligence/internal/auth/token/introspection/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/token/introspection/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/token/native/transport/http"
 	tokenpostgres "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/postgres"
 	tokenredis "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/redis"
@@ -30,7 +30,7 @@ type tokenApp struct {
 	deployment    settingsdomain.TokenDeployment
 }
 
-func (s realmSecurity) assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client, deployment *config.Config, login nativeLoginDependencies, catalog accesssettings.Catalog, root string, owned *resources, log *zap.Logger) (tokenApp, error) {
+func (s realmSecurity) assembleTokens(ctx context.Context, pool *pgxpool.Pool, base *redis.Client, deployment *config.Config, login nativeLoginDependencies, catalog accesssettings.Catalog, root string, owned *Resources, log *zap.Logger) (tokenApp, error) {
 	native, err := deployment.NativeJWTPolicy()
 	if err != nil {
 		return tokenApp{}, err
@@ -60,7 +60,7 @@ func (s realmSecurity) assembleTokens(ctx context.Context, pool *pgxpool.Pool, b
 	opts.PoolSize, opts.MaxActiveConns, opts.MinIdleConns, opts.MaxIdleConns = 8, 8, 0, 8
 	opts.PoolTimeout, opts.DialTimeout, opts.ReadTimeout, opts.WriteTimeout = time.Second, time.Second, time.Second, time.Second
 	client := redis.NewClient(&opts)
-	owned.add(func() {
+	owned.Add(func() {
 		if err := client.Close(); err != nil {
 			log.Warn("JWT Redis client close failed")
 		}
@@ -90,6 +90,6 @@ func (s realmSecurity) assembleTokens(ctx context.Context, pool *pgxpool.Pool, b
 	if err != nil {
 		return tokenApp{}, err
 	}
-	assembly.deployment = tokenDeployment(cfg, definitions, assembly.native != nil, assembly.introspection != nil)
+	assembly.deployment = settings.Deployment(cfg, definitions, assembly.native != nil, assembly.introspection != nil)
 	return assembly, nil
 }

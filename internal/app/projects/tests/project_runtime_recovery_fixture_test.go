@@ -11,24 +11,25 @@ import (
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectbrowser "github.com/Inforberi/financial-intelligence/internal/app/projects/browser"
+	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 )
 
-func serveRecoveryProjects(t *testing.T, f projectIsolationHTTP) ([2]isolationHTTP, *appauth.ProjectHTTP) {
+func serveRecoveryProjects(t *testing.T, f projectIsolationHTTP) ([2]isolationHTTP, *projectbrowser.ProjectHTTP) {
 	t.Helper()
-	h, err := appauth.NewProjectHTTP(appauth.ProjectHTTPConfig{
+	h, err := projectbrowser.NewProjectHTTP(projectprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test",
 		Residents:      projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute},
 		Capacity:       middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &f.password.Session,
-	}, f.deps, func(_ context.Context, key projectruntime.Key, origin string) (appauth.ProjectProfileConfig, error) {
+	}, f.deps, func(_ context.Context, key projectruntime.Key, origin string) (projectprofile.ProjectProfileConfig, error) {
 		for i, expected := range f.projects {
 			// Revisions change on resume; the project binding and its origin stay independent.
 			if key.Binding == expected.Binding && origin == f.origins[i] {
-				return appauth.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, Timeout: 5 * time.Second}, nil
+				return projectprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, Timeout: 5 * time.Second}, nil
 			}
 		}
-		return appauth.ProjectProfileConfig{}, projectdomain.ErrConflict
+		return projectprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
 	}, nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(h)

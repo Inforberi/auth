@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	_ "github.com/Inforberi/financial-intelligence/docs/api/generated"
-	authapp "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	app "github.com/Inforberi/financial-intelligence/internal/app"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
@@ -31,7 +31,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	app, err := authapp.New(ctx, cfg)
+	app, err := app.New(ctx, cfg)
 	if err != nil {
 		return err
 	}

@@ -16,13 +16,15 @@ import (
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
-	appauth "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectaccount "github.com/Inforberi/financial-intelligence/internal/app/projects/account"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/app/projects/methods"
+	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
-	accountprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
-	passwordprovisioninghttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/transport/http"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
@@ -37,9 +39,9 @@ type projectAccountFixture struct {
 	db         *pgx.Conn
 	rdb        *redis.Client
 	key        projectruntime.Key
-	deps       appauth.ProjectSMTPDependencies
+	deps       projectapp.ProjectSMTPDependencies
 	hash       *hasher.Bounded
-	cfg        appauth.ProjectEmailConfig
+	cfg        projectaccount.ProjectEmailConfig
 	listener   net.Listener
 	ciphers    []*secretbox.Cipher
 }
@@ -166,7 +168,7 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	cfg.Binding = accountemail.EmailBindingConfig{Enabled: true, TTL: 5 * time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 1000}
 	cfg.Change = accountemail.EmailChangeConfig{Enabled: true, ConfirmURL: cfg.Origin + "/change", ReportURL: cfg.Origin + "/report", RecoveryURL: cfg.Origin + "/recover", TTL: 30 * time.Minute, ProtectionTTL: 24 * time.Hour, RecoveryTTL: 30 * time.Minute}
 	cfg.FreshAuthTTL = 5 * time.Minute
-	service, err := appauth.NewProjectEmail(ctx, f.key, cfg, []string{f.listener.Addr().String()}, appauth.ProjectEmailDependencies{ProjectSMTPDependencies: f.deps, Hash: f.hash})
+	service, err := projectaccount.NewProjectEmail(ctx, f.key, cfg, []string{f.listener.Addr().String()}, projectaccount.ProjectEmailDependencies{ProjectSMTPDependencies: f.deps, Hash: f.hash})
 	require.NoError(t, err)
 	temporaryCfg := projectPasswordFixtureConfig()
 	temporaryCfg.TemporaryPassword = passwordprovisioning.TemporaryPasswordConfig{Enabled: true, TTL: time.Hour, SetupTTL: 5 * time.Minute, ReissueCooldown: time.Second, IssueActorAttemptsPerMinute: 30, IssueProjectAttemptsPerMinute: 100, SetupProjectAttemptsPerMinute: 100}
@@ -257,7 +259,7 @@ func (f projectAccountFixture) run(t *testing.T, ctx context.Context) {
 	require.Equal(t, oldEmail, restored)
 	require.Equal(t, "active", accountStatus)
 	require.NoError(t, f.hash.Compare(ctx, recoveredPassword, restoredHash))
-	passwords, err := appauth.NewProjectPassword(ctx, f.key, temporaryCfg, appauth.ProjectPasswordDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash})
+	passwords, err := projectmethods.NewProjectPassword(ctx, f.key, temporaryCfg, projectmethods.ProjectPasswordDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash})
 	require.NoError(t, err)
 	var temporary passwordprovisioninghttp.TemporaryIssueResponse
 	temporaryRequest := passwordprovisioninghttp.TemporaryProvisionRequest{IdempotencyKey: "f8300000-0000-4000-8000-000000000021", Email: tempEmail}

@@ -11,12 +11,14 @@ import (
 	projectservice "github.com/Inforberi/financial-intelligence/internal/admin/projects/service"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
 	adminapp "github.com/Inforberi/financial-intelligence/internal/app/admin"
+	setupapp "github.com/Inforberi/financial-intelligence/internal/app/auth/setup"
+	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
-	passwordrecoveryhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/transport/http"
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
-	passwordhttp "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/transport/http"
 	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
@@ -28,23 +30,23 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/router"
 )
 
-func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDependencies, mail accountservice.Mailer) (*realm, error) {
+func assembleOperator(ctx context.Context, cfg *config.Config, deps Dependencies, mail accountservice.Mailer) (*Runtime, error) {
 	operator, security, err := administrationAuthority(ctx, cfg, deps)
 	if err != nil {
 		return nil, err
 	}
-	owned := &resources{}
+	owned := &Resources{}
 	assembled := false
 	defer func() {
 		if !assembled {
-			owned.close()
+			owned.Close()
 		}
 	}()
-	runtime, err := openProjectRuntime(ctx, cfg.Platform, owned)
+	runtime, err := projectapp.Open(ctx, cfg.Platform, owned)
 	if err != nil {
 		return nil, err
 	}
-	delivery, err := assembleProjectDelivery(cfg.Platform, runtime, deps.redis)
+	delivery, err := assembleProjectDelivery(cfg.Platform, runtime, deps.Redis)
 	if err != nil {
 		return nil, err
 	}
@@ -52,43 +54,43 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 	if runtime != nil {
 		observer = runtime
 	}
-	accountRuntime, err := security.assembleAccount(deps.pool, deps.redis, mail, cfg.Account, postgres.DeliveryConfig{})
+	accountRuntime, err := security.assembleAccount(deps.Pool, deps.Redis, mail, cfg.Account, postgres.DeliveryConfig{})
 	if err != nil {
 		return nil, err
 	}
 	account, repo := accountRuntime.verification, accountRuntime.repository
-	setup, err := security.assembleSetup(operator, deps.redis, mail, deps.hash, cfg, deps.log)
+	setup, err := setupapp.Assemble(security.scope, operator, deps.Redis, mail, deps.Hash, cfg, deps.Logger)
 	if err != nil {
 		return nil, err
 	}
-	sessions := sessionpostgres.New(deps.pool)
+	sessions := sessionpostgres.New(deps.Pool)
 	tokens := tokengenerate.New()
 	svc := sessionservice.New(clock.UTCClock{}, sessions, tokens, cfg.Session)
-	mfa, err := security.assembleMFA(ctx, deps.pool, deps.redis, svc, tokens, mail, cfg, deps.log)
+	mfa, err := security.assembleMFA(ctx, deps.Pool, deps.Redis, svc, tokens, mail, cfg, deps.Logger)
 	if err != nil {
 		return nil, err
 	}
-	credentials := passwordpostgres.New(deps.pool)
-	policy := settingsservice.New(settingspostgres.New(deps.pool))
-	password, err := security.assemblePassword(credentials, deps.redis, mfa.sessions, deps.hash, policy, mail, cfg)
+	credentials := passwordpostgres.New(deps.Pool)
+	policy := settingsservice.New(settingspostgres.New(deps.Pool))
+	password, err := security.assemblePassword(credentials, deps.Redis, mfa.sessions, deps.Hash, policy, mail, cfg)
 	if err != nil {
 		return nil, err
 	}
-	projects, err := projectpostgres.NewManaged(deps.pool, operator, cfg.Session.FreshAuthTTL, projectdomain.CreationPolicy{
+	projects, err := projectpostgres.NewManaged(deps.Pool, operator, cfg.Session.FreshAuthTTL, projectdomain.CreationPolicy{
 		AuthDomain: cfg.Platform.ProjectAuthDomain, StorageTarget: cfg.Platform.StorageTarget, PlatformOrigin: cfg.Platform.Origin,
 	})
 	if err != nil {
 		return nil, err
 	}
-	capacity, err := admission.New(deps.redis, projectdomain.ID(cfg.Platform.RealmID), cfg.Platform.Operations)
+	capacity, err := admission.New(deps.Redis, projectdomain.ID(cfg.Platform.RealmID), cfg.Platform.Operations)
 	if err != nil {
 		return nil, err
 	}
 	var registry *projectruntime.Registry
 	if runtime != nil {
-		registry = runtime.registry
+		registry = runtime.Registry
 	}
-	roles, err := adminapp.ProjectRoles(cfg, registry, projects, deps.log)
+	roles, err := adminapp.ProjectRoles(cfg, registry, projects, deps.Logger)
 	if err != nil {
 		return nil, err
 	}
@@ -101,20 +103,20 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 		readiness = projectHTTP.Assess
 	}
 	handler, err := router.NewOperator(router.Handlers{
-		Config: cfg, Logger: deps.log, Setup: setup, MFA: mfa.handler, MFALogin: mfa.loginHandler, MFARecovery: mfa.recoveryHandler,
-		Projects:          projecthttp.New(projectservice.NewWithRuntime(projects, operator, observer), deps.log),
+		Config: cfg, Logger: deps.Logger, Setup: setup, MFA: mfa.handler, MFALogin: mfa.loginHandler, MFARecovery: mfa.recoveryHandler,
+		Projects:          projecthttp.New(projectservice.NewWithRuntime(projects, operator, observer), deps.Logger),
 		ProjectRoles:      roles,
-		ProjectUsers:      adminapp.ProjectUsers(registry, projects, deps.log),
-		ProjectAuthPolicy: adminapp.ProjectAuthPolicy(registry, projects, readiness, deps.log),
+		ProjectUsers:      adminapp.ProjectUsers(registry, projects, deps.Logger),
+		ProjectAuthPolicy: adminapp.ProjectAuthPolicy(registry, projects, readiness, deps.Logger),
 		ProjectCapacity:   projecthttp.Capacity(capacity),
-		MFASettings:       adminapp.MFASettings(operator, cfg.MFA.Enabled, deps.log),
-		PasswordHandler:   passwordhttp.New(password.service, deps.log),
-		Recovery:          passwordrecoveryhttp.NewRecovery(password.recovery, deps.log),
-		Middleware:        sessionhttp.New(svc, deps.log),
-		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessions), deps.log),
-		Activity:          sessionhttp.NewActivity(sessionservice.NewActivity(sessions), deps.log),
-		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessions, tokens), deps.log),
-		Reauthentication:  passwordhttp.NewReauthentication(passwordservice.NewReauthentication(credentials, sessions, deps.hash, password.loginLimit, tokens, cfg.Session.FreshAuthTTL), deps.log),
+		MFASettings:       adminapp.MFASettings(operator, cfg.MFA.Enabled, deps.Logger),
+		PasswordHandler:   passwordhttp.New(password.service, deps.Logger),
+		Recovery:          passwordrecoveryhttp.NewRecovery(password.recovery, deps.Logger),
+		Middleware:        sessionhttp.New(svc, deps.Logger),
+		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessions), deps.Logger),
+		Activity:          sessionhttp.NewActivity(sessionservice.NewActivity(sessions), deps.Logger),
+		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessions, tokens), deps.Logger),
+		Reauthentication:  passwordhttp.NewReauthentication(passwordservice.NewReauthentication(credentials, sessions, deps.Hash, password.loginLimit, tokens, cfg.Session.FreshAuthTTL), deps.Logger),
 		ReadyCheck:        operatorReadyCheck(deps, runtime),
 	})
 	if err != nil {
@@ -123,24 +125,24 @@ func assembleOperator(ctx context.Context, cfg *config.Config, deps realmDepende
 	workers := realmDeliveryWorkers(password.recovery, account, mfa.delivery, nil, delivery)
 	handler = projectHostRouter(cfg.Platform.Origin, handler, projectHTTP)
 	assembled = true
-	return &realm{
-		handler: handler, resources: owned,
+	return &Runtime{
+		Handler: handler, resources: owned,
 		drainHTTP: drainHTTP,
 		retention: accountservice.NewRetention(repo, cfg.Retention),
 		workers:   workers,
 	}, nil
 }
 
-func operatorReadyCheck(deps realmDependencies, runtime *projectRuntime) func(context.Context) error {
+func operatorReadyCheck(deps Dependencies, runtime *projectapp.Runtime) func(context.Context) error {
 	return func(ctx context.Context) error {
-		if err := deps.pool.Ping(ctx); err != nil {
+		if err := deps.Pool.Ping(ctx); err != nil {
 			return err
 		}
 		if runtime != nil {
-			if err := runtime.reader.CheckRuntime(ctx); err != nil {
+			if err := runtime.Reader.CheckRuntime(ctx); err != nil {
 				return err
 			}
 		}
-		return deps.redis.Ping(ctx).Err()
+		return deps.Redis.Ping(ctx).Err()
 	}
 }
