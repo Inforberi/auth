@@ -1,0 +1,43 @@
+package profile
+
+import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
+	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
+	mfamanagement "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/service"
+	projectaccount "github.com/Inforberi/financial-intelligence/internal/auth/project/account"
+	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
+	projectmfa "github.com/Inforberi/financial-intelligence/internal/auth/project/mfa"
+	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
+)
+
+func projectEmailMFAFixtureConfig() projectmfa.ProjectEmailMFAConfig {
+	return projectmfa.ProjectEmailMFAConfig{Preparation: otpservice.EmailPreparationConfig{TTL: 3 * time.Minute, ResendInterval: time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 100}, Factors: mfamanagement.EmailFactorConfig{UserMutationsPerMinute: 5, ProjectMutationsPerMinute: 500}}
+}
+
+func TestProjectEmailMFAReadiness(t *testing.T) {
+	profile := &profileAssembly{states: map[string]runtimeprofile.ProjectFeatureState{}}
+	profile.buildProfileEmailMFA(runtimeprofile.ProjectProfileConfig{})
+	require.Empty(t, profile.states)
+	invalid := projectmfa.ProjectEmailMFAConfig{}
+	profile.buildProfileEmailMFA(runtimeprofile.ProjectProfileConfig{EmailMFA: &invalid})
+	require.False(t, profile.featureReady("email_mfa"))
+	valid := projectEmailMFAFixtureConfig()
+	cfg := runtimeprofile.ProjectProfileConfig{BrowserEnabled: true, EmailMFA: &valid, Password: &projectmethods.ProjectPasswordConfig{}}
+	profile.buildProfileEmailMFA(cfg)
+	require.Equal(t, "password_mfa_recovery_required", profile.states["email_mfa"].Reason)
+	cfg.Password.MFA.Enabled, cfg.Password.MFA.RecoveryEnabled = true, true
+	profile.buildProfileEmailMFA(cfg)
+	require.Equal(t, "mfa_recovery_unavailable", profile.states["email_mfa"].Reason)
+	profile.mfaManagement = &projectmfa.ProjectMFA{}
+	profile.mfaRecovery = projectmfa.NewProjectMFARecovery(profile.mfaManagement, &projectaccount.ProjectEmailRuntime{})
+	profile.buildProfileEmailMFA(cfg)
+	require.True(t, profile.featureReady("email_mfa"))
+	require.False(t, profile.featureReady("email_mfa_login"), "owner management must not enable a disabled primary")
+	profile.state("password", "")
+	profile.buildProfileEmailMFA(cfg)
+	require.True(t, profile.featureReady("email_mfa_login"))
+}

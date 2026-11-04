@@ -28,7 +28,7 @@ func (p *binding) telegramMFAHandlers(handlers map[string]http.HandlerFunc, log 
 	h := mfatelegramhttp.NewTelegram(p.TelegramMFA, log)
 	handlers["/api/v1/auth/mfa/telegram/preparation"], handlers["/api/v1/auth/mfa/telegram/preparation/confirm"] = p.requireHTTPDelivery(h.Request), h.Confirm
 	handlers["GET /api/v1/auth/mfa/telegram"], handlers["POST /api/v1/auth/mfa/telegram"], handlers["DELETE /api/v1/auth/mfa/telegram"] = h.Read, p.requireHTTPDelivery(h.Enable), h.Disable
-	handlers["/api/v1/auth/mfa/telegram/webhook"] = p.TelegramMFA.WebhookHTTP
+	handlers["/api/v1/auth/mfa/telegram/webhook"] = telegramWebhookHandler(p.TelegramMFA)
 	settings := settingstelegramhttp.NewTelegram(p.TelegramMFA, log)
 	handlers["GET /api/v1/admin/auth/settings/mfa/telegram/bot"], handlers["POST /api/v1/admin/auth/settings/mfa/telegram/bot"] = settings.ReadBot, settings.UpdateBot
 	handlers["GET /api/v1/admin/auth/settings/mfa/telegram"], handlers["POST /api/v1/admin/auth/settings/mfa/telegram"] = settings.ReadPolicy, settings.UpdatePolicy

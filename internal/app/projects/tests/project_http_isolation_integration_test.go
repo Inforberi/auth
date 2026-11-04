@@ -19,6 +19,7 @@ import (
 	runtimepostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime/repository/postgres"
 	schemapostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/schema/postgres"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
+	profilefactory "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
@@ -148,7 +149,7 @@ func (f projectIsolationHTTP) serve(t *testing.T, features runtimeprofile.Projec
 		PlatformOrigin: "https://platform-http.example.test",
 		Residents:      projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute},
 		Capacity:       middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &f.password.Session,
-	}, f.deps,
+	}, f.deps.Reader, profilefactory.NewFactory(f.deps,
 		func(_ context.Context, key projectruntime.Key, origin string) (runtimeprofile.ProjectProfileConfig, error) {
 			for i, expected := range f.projects {
 				if key == expected && origin == f.origins[i] {
@@ -157,7 +158,7 @@ func (f projectIsolationHTTP) serve(t *testing.T, features runtimeprofile.Projec
 				}
 			}
 			return runtimeprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
-		}, nil)
+		}), nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)
 	server.Client().Timeout = 10 * time.Second

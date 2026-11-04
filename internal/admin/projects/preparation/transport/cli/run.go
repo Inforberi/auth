@@ -7,10 +7,19 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/credentials"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
-	preparationapp "github.com/Inforberi/financial-intelligence/internal/app/projects/preparation"
+	preparationservice "github.com/Inforberi/financial-intelligence/internal/admin/projects/preparation/service"
 )
 
-func Run(ctx context.Context, args []string, env func(string) string, output, diagnostics io.Writer) error {
+// Connections contains CLI configuration only; the runner owns connection
+// validation and the application resources used for preparation.
+type Connections struct {
+	CatalogURL, StorageURL string
+	Codec                  *credentials.Codec
+}
+
+type Runner func(context.Context, preparationservice.Input, Connections) (preparationservice.Result, error)
+
+func Run(ctx context.Context, args []string, env func(string) string, output, diagnostics io.Writer, runner Runner) error {
 	input, err := parseCommand(args, env, diagnostics)
 	if err != nil {
 		return err
@@ -22,15 +31,9 @@ func Run(ctx context.Context, args []string, env func(string) string, output, di
 			return err
 		}
 	}
-	catalogConfig, err := preparationapp.ConnectionConfig(env("PROVISIONER_CATALOG_URL"))
-	if err != nil {
-		return err
-	}
-	storageConfig, err := preparationapp.ConnectionConfig(env("PROVISIONER_STORAGE_URL"))
-	if err != nil {
-		return err
-	}
-	result, err := preparationapp.Run(ctx, input.options(), preparationapp.Connections{Catalog: catalogConfig, Storage: storageConfig, Codec: codec})
+	result, err := runner(ctx, input.options(), Connections{
+		CatalogURL: env("PROVISIONER_CATALOG_URL"), StorageURL: env("PROVISIONER_STORAGE_URL"), Codec: codec,
+	})
 	if err != nil {
 		return err
 	}

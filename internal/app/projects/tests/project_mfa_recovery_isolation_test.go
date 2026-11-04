@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 
+	profileapp "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/transport/http"
@@ -55,14 +56,14 @@ func TestTwoProjectMFARecoverySQL(t *testing.T) {
 	cfg := runtimeprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &f.password, Timeout: 10 * time.Second}
 	withoutDelivery := f.deps
 	withoutDelivery.Delivery = nil
-	profile, err := runtimeprofile.BuildProjectProfile(t.Context(), f.projects[0], f.origins[0], cfg, withoutDelivery)
+	profile, err := profileapp.BuildProjectProfile(t.Context(), f.projects[0], f.origins[0], cfg, withoutDelivery)
 	require.NoError(t, err)
 	for _, route := range profile.RoutePlan() {
 		require.NotEqual(t, "mfa_recovery", route.Feature, "no public recovery without delivery")
 	}
 	_, err = f.databases[1].Exec(t.Context(), `REVOKE EXECUTE ON FUNCTION auth.decide_mfa_recovery(uuid,uuid,bigint,boolean,text,text) FROM auth_mfa_recovery_operator`)
 	require.NoError(t, err)
-	profile, err = runtimeprofile.BuildProjectProfile(t.Context(), f.projects[1], f.origins[1], cfg, f.deps)
+	profile, err = profileapp.BuildProjectProfile(t.Context(), f.projects[1], f.origins[1], cfg, f.deps)
 	require.NoError(t, err)
 	for _, route := range profile.RoutePlan() {
 		require.NotEqual(t, "mfa_recovery", route.Feature, "no public recovery without independent operator grants")

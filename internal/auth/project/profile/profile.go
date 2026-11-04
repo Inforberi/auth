@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
 
 	projectaccess "github.com/Inforberi/financial-intelligence/internal/access/project"
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
@@ -55,63 +54,6 @@ type ProjectProfile struct {
 	mfaSettings              *projectsettings.ProjectMFASettings
 }
 
-func BuildProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies) (*ProjectProfile, error) {
-	return buildProjectProfile(ctx, key, origin, cfg, deps, false)
-}
-
-func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies, assess bool) (*ProjectProfile, error) {
-	if deps.Registry == nil || deps.Reader == nil || cfg.Timeout <= 0 || cfg.Timeout > 30*time.Second {
-		return nil, projectdomain.ErrUnavailable
-	}
-	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
-	defer cancel()
-	resolved, err := deps.Reader.ResolveRuntime(ctx, origin)
-	if err != nil {
-		return nil, err
-	}
-	if resolved != key {
-		return nil, projectdomain.ErrConflict
-	}
-	configuration, err := deps.Reader.LoadAuthConfiguration(ctx, key, deps.Registry)
-	if err != nil {
-		return nil, err
-	}
-	p := &ProjectProfile{key: key, origin: origin, policy: configuration.Policy(), deps: deps, states: make(map[string]ProjectFeatureState)}
-	observed := p.policy
-	if assess {
-		p.selectAssessmentPolicy(cfg)
-	}
-	redisReady := !profileNeedsRedis(cfg, p.policy.Policy) || profileRedisReady(ctx, deps.Redis)
-	p.buildProfileEmail(ctx, cfg, redisReady)
-	p.buildProfileMethods(ctx, cfg, redisReady)
-	p.buildProfileTokens(ctx, cfg, redisReady)
-	p.bindProfileMFA(configuration.EncryptionKey())
-	p.buildProfileMFAManagement(cfg, configuration.EncryptionKey(), redisReady)
-	p.buildProfileMFARecovery(ctx, cfg, configuration.EncryptionKey(), redisReady)
-	p.buildProfileEmailMFA(cfg)
-	p.buildProfileTelegramMFA(cfg, configuration.EncryptionKey())
-	p.bindFactorSelection()
-	p.buildProfileEmailManagement(ctx, cfg, redisReady)
-	p.finishProfileRegistration(cfg)
-	p.buildProfileProvisioning(ctx, cfg, redisReady)
-	p.buildProfileUserDirectory(cfg)
-	p.buildProfileUserLifecycle(cfg)
-	p.buildProfileAccess(ctx, cfg)
-	p.buildProfileAuthSettings(cfg)
-	p.buildProfileSMTPSettings(cfg, configuration.EncryptionKey(), redisReady)
-	p.buildProfileProviderSettings(cfg, configuration.EncryptionKey())
-	p.buildProfileRetentionSettings(cfg)
-	p.buildProfileMFASettings(cfg)
-	if err := p.checkMFACapability(ctx, cfg); err != nil {
-		return nil, err
-	}
-	if err := p.checkSnapshotCurrent(ctx, observed); err != nil {
-		return nil, err
-	}
-	p.observedAt = time.Now().UTC()
-	return p, nil
-}
-
 // CheckCurrent rejects a stale route plan; the caller must rebuild it after a conflict.
 func (p *ProjectProfile) CheckCurrent(ctx context.Context) error {
 	return p.checkSnapshotCurrent(ctx, p.policy)
@@ -145,37 +87,4 @@ func (p *ProjectProfile) checkPolicySnapshot(ctx context.Context, observed setti
 		}
 		return projectbinding.RequireCurrent(ctx, p.deps.Reader, p.key)
 	})
-}
-
-func profileRedisReady(ctx context.Context, client *redis.Client) bool {
-	if client == nil {
-		return false
-	}
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-	return client.Ping(ctx).Err() == nil
-}
-
-func profileNeedsRedis(cfg ProjectProfileConfig, policy settingsdomain.Policy) bool {
-	if cfg.BrowserEnabled {
-		if cfg.SMTPSettings != nil {
-			return true
-		}
-		for _, view := range configuredBrowserPolicies(cfg) {
-			if view.MFA.Enabled {
-				return true
-			}
-		}
-		if cfg.EmailManagement != nil && (cfg.EmailManagement.Binding.Enabled || cfg.EmailManagement.Change.Enabled || cfg.EmailManagement.Invitations.Enabled) {
-			return true
-		}
-		methods := policy.Methods
-		if methods.Password || methods.EmailOTP || methods.Google || methods.Telegram {
-			return true
-		}
-		if cfg.EmailOTP != nil && cfg.EmailOTP.OTP.ReauthenticationEnabled {
-			return true
-		}
-	}
-	return cfg.Verification != nil || cfg.Recovery != nil || cfg.Tokens != nil && cfg.Tokens.Enabled && cfg.Tokens.Tokens.Native != nil
 }

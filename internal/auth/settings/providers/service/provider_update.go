@@ -40,3 +40,22 @@ func (s *Providers) Update(ctx context.Context, input ProviderUpdateInput) (doma
 	}
 	return s.repo.UpdateProvider(ctx, update)
 }
+
+// Replacement resolves encrypted credentials against the current locked snapshot.
+// A nil Secret preserves credentials only for the same client.
+func (input ProviderUpdate) Replacement(before ProviderStored, enabled bool) ([]byte, bool, error) {
+	secret, set := input.Secret, input.SecretSet
+	if secret == nil {
+		if before.ClientID != input.ClientID {
+			return nil, false, domain.ErrInvalidProvider
+		}
+		secret, set = before.Secret, before.SecretSet
+	}
+	if enabled && (!set || input.ClientID == "" || before.ClientID != input.ClientID) {
+		return nil, false, domain.ErrMethodNotReady
+	}
+	if set && input.ClientID == "" {
+		return nil, false, domain.ErrInvalidProvider
+	}
+	return secret, set, nil
+}

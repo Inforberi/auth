@@ -38,13 +38,9 @@ func Transition(ctx context.Context, tx pgx.Tx, command domain.Transition) (doma
 	if current.Version != command.ExpectedVersion || current.Generation != command.ExpectedGeneration {
 		return domain.TransitionReceipt{}, domain.ErrConflict
 	}
-	next, err := current.Next(command.Action)
+	next, err := current.NextWithBinding(command.Action, bindingPresent)
 	if err != nil {
 		return domain.TransitionReceipt{}, err
-	}
-	// Binding metadata is necessary, not sufficient proof of real storage readiness.
-	if command.Action == domain.FinishPreparation && !bindingPresent {
-		return domain.TransitionReceipt{}, domain.ErrInvalidTransition
 	}
 	var result domain.TransitionReceipt
 	result.ProjectID = command.ProjectID

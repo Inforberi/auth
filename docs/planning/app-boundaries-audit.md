@@ -1,6 +1,8 @@
 # Аудит границ app — 4 ноября 2026
 
-Статус: согласованный план реализован и принят по V5 4 ноября 2026. Main сверил исходники рабочего дерева с проверенным snapshot: расхождений нет. [Результаты и границы приёмки](../operations/acceptance-summary.md#границы-app-и-корректировка-слоёв--приёмка-v5-4-ноября-2026). Ниже сохранены исходные находки и решения; промежуточные FAIL устранены и не выдаются за PASS.
+Статус: основной V5, перенос фабрики и корректирующий блок остальных слоёв приняты. Итоговая приёмка Luna V2 и границы оставшихся release gates — в [аудите слоёв](layer-boundaries-audit.md#приёмка-v2).
+
+Повторный аудит всего app и остальных слоёв выявил оставшиеся нарушения и перегруженный composition package. Полный корректирующий список и порядок выполнения — [аудит слоёв](layer-boundaries-audit.md). Перенос фабрики сам по себе не закрывает эти задачи и читаемость `app/projects/profile`.
 
 ## Ответ на основной вопрос
 
@@ -155,3 +157,13 @@ HTTP bindings, feature handler construction, request guards и session HTTP bind
 - [x] Документация и source пути обновлены; affected tests/lint/race/SQL/Redis приняты по V5, без повторов несвязанных наборов.
 
 План закрыт. Следующий этап — MP7 по основному плану; MP8 нагрузка/память/GC затем. Подключение UI требует отдельного согласования. Код закоммичен по запросу пользователя: `f0cefe8 refactor(app): разделил сборку и проектные сценарии`.
+
+## Полное соответствие пункту3: фабрика в app
+
+`app/projects/profile/assembly.go` содержит фактическую последовательность создания и связывания email/password/OIDC/token/MFA/account/Access/settings adapters. Самостоятельные construction helpers и их private тесты перенесены вместе. `profileAssembly` — закрытое промежуточное состояние сборки; `runtimeSnapshot` передаёт собранные компоненты через реальный constructor input `auth/project/profile.Definition`. Это не wrapper над прежней фабрикой runtime: нижний BuildProjectProfile удалён.
+
+Runtime сохраняет ProjectProfile с закрытыми полями, RoutePlan/Readiness/Endpoints/session/current guards. `New` принимает собранные компоненты и клонирует feature-state map; `Publish` выполняет прежнюю окончательную проверку observed policy/scope и только после успеха ставит observedAt. Не добавлены SQL round trips, clients, goroutines или новые зависимости. Структура Definition — trusted constructor input, а не API response или getters private fields. Runtime не импортирует app.
+
+`app/projects/profile.NewFactory` замыкает deployment source и заимствованные зависимости, создаёт общий SMTP probe gate один раз. HTTP принимает reader и `profile.Factory{Build,Assess}` вместо полного project dependency graph. Dispatcher/cache/leases повторно не создаются. Assessment сохраняет before/after dependency-version checks у runtime и получает app builder через callback. Порядок проверок/ошибок и межфичевых bindings сохраняется.
+
+Новые проверки: инъекция assessment factory без построения routable profile; копия feature snapshot при переходе от construction к runtime. Все прежние internal Test roots сохранены по source inventory. Formatter и source review выполнены, executable checks только Luna. Завершение этого дополнительного delta — по отдельному receipt после реального PASS.

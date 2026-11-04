@@ -63,7 +63,7 @@ func prepareHTTPPeer(t *testing.T, ctx context.Context, admin *pgx.Conn, env fun
 	})
 	// Commands leave a sealed managed database; publication below is fixture-only, as in the existing runtime drill.
 	args := []string{"-project", string(r.ProjectID), "-operation", string(r.OperationID), "-version", "1", "-generation", "1", "-schema", "-secrets", "-password", "-managed"}
-	require.NoError(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard))
+	require.NoError(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard, runPreparationCommand))
 	require.NoError(t, admin.QueryRow(ctx, `SELECT prep.reservation_id,p.version,p.generation FROM platform.project_preparations prep JOIN platform.projects p ON p.id=prep.project_id WHERE p.id=$1`, r.ProjectID).Scan(&r.ReservationID, &r.Version, &r.Generation))
 	actualDatabase, actualOwner, err := r.ResourceNames()
 	require.NoError(t, err)

@@ -31,21 +31,19 @@ func (r *Repository) UpdateMFAPolicy(ctx context.Context, input service.MFAUpdat
 // ApplyMFAPolicyChange requires caller-owned Access and actor authority locks through commit.
 // It persists configuration only; publishing optional flows requires the complete MFA enforcement stage.
 func ApplyMFAPolicyChange(ctx context.Context, tx pgx.Tx, actor accountdomain.UserID, input service.MFAChange, ready bool) (domain.MFASnapshot, error) {
-	if input.ExpectedVersion < 1 || input.Policy.Validate() != nil {
-		return domain.MFASnapshot{}, domain.ErrInvalidMFAPolicy
+	if err := input.Policy.ValidateChange(input.ExpectedVersion); err != nil {
+		return domain.MFASnapshot{}, err
 	}
 	before, err := scanMFA(tx.QueryRow(ctx, `SELECT `+mfaColumns+` FROM auth.mfa_settings WHERE singleton FOR UPDATE`))
 	if err != nil {
 		return domain.MFASnapshot{}, err
 	}
-	if before.Version != input.ExpectedVersion {
-		return domain.MFASnapshot{}, domain.ErrPolicyConflict
+	changed, err := before.CheckChange(input.ExpectedVersion, input.Policy, ready)
+	if err != nil {
+		return domain.MFASnapshot{}, err
 	}
-	if before.Policy == input.Policy {
+	if !changed {
 		return before, nil
-	}
-	if input.Policy.Mode != domain.MFAOptional && !ready {
-		return domain.MFASnapshot{}, domain.ErrMethodNotReady
 	}
 	result, err := scanMFA(tx.QueryRow(ctx, `UPDATE auth.mfa_settings SET mode=$1,version=version+1,
 		session_revision=session_revision+CASE WHEN $2 THEN 1 ELSE 0 END

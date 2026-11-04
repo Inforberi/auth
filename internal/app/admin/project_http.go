@@ -3,10 +3,10 @@ package admin
 import (
 	"context"
 	"errors"
-	"net/http"
 
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
 	authapp "github.com/Inforberi/financial-intelligence/internal/app/auth"
+	projectdeployment "github.com/Inforberi/financial-intelligence/internal/app/projects/deployment"
 	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	projectdelivery "github.com/Inforberi/financial-intelligence/internal/auth/project/delivery"
@@ -31,7 +31,7 @@ func openProjectHTTP(ctx context.Context, cfg *config.Config, runtime *projectap
 	if err := cfg.ValidatePlatform(); err != nil {
 		return nil, nil, err
 	}
-	deployment, err := projectprofile.LoadProjectAuthDeployment(cfg)
+	deployment, err := projectdeployment.LoadProjectAuthDeployment(cfg)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -65,7 +65,7 @@ func openProjectHTTP(ctx context.Context, cfg *config.Config, runtime *projectap
 		Residents:      projecthttp.RuntimeDispatcherConfig{MaxProfiles: c.MaxProfiles, MaxBuilding: c.MaxBuilding, BuildTimeout: c.BuildTimeout, MaxAge: c.MaxAge},
 		Capacity:       middleware.CapacityConfig{MaxInFlight: c.MaxInFlight, RequestTimeout: cfg.HTTP.RequestTimeout}, Proxy: cfg.Proxy,
 		SessionValidation: &cfg.Session,
-	}, dependencies, deployment.Profile, deps.Logger)
+	}, dependencies.Reader, projectprofile.NewFactory(dependencies, deployment.Profile), deps.Logger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -76,17 +76,4 @@ func openProjectHTTP(ctx context.Context, cfg *config.Config, runtime *projectap
 	}
 	owned.Add(drain)
 	return profile, drain, nil
-}
-
-func projectHostRouter(platformOrigin string, operator http.Handler, project *projectbrowser.ProjectHTTP) http.Handler {
-	if project == nil {
-		return operator
-	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if "https://"+r.Host == platformOrigin {
-			operator.ServeHTTP(w, r)
-			return
-		}
-		project.ServeHTTP(w, r)
-	})
 }

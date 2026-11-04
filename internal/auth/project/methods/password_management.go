@@ -52,3 +52,7 @@ func (p *ProjectPassword) ConfirmReauthentication(ctx context.Context, user acco
 	}
 	return result, nil
 }
+
+func (p *ProjectPassword) AllowUser(ctx context.Context, user accountdomain.UserID, ip string) error {
+	return p.limits.AllowUser(ctx, user, ip)
+}

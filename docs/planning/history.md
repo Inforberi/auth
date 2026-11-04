@@ -2697,3 +2697,7 @@ Default Docker named-volume вариант заблокирован заполн
 Согласованный [app-boundary план](app-boundaries-audit.md) закрыт по `/private/tmp/auth-app-boundaries-v5-9ljmu5zm`, base8e3f7de. Compile/fixture/линтер ошибки предыдущих V1–V4 исправлены. Targeted tests, lint0, affected race,11 SQL roots и2 Redis roots — PASS; source рабочего дерева совпадает с V5. Проверки affected-only, успешное неизменившееся reuse. [Evidence и ограничения](../operations/acceptance-summary.md#границы-app-и-корректировка-слоёв--приёмка-v5-4-ноября-2026). MP6R корректировка закрыта; MP7/MP8 и UI не выполнялись. Коммит пока не запрошен.
 
 Реализация принятого V5 закоммичена по запросу пользователя: `f0cefe8 refactor(app): разделил сборку и проектные сценарии`; после V5 изменялась только документация.
+
+## Границы слоёв и middleware — 4 ноября 2026, V2
+
+Принят полный корректирующий блок [плана](layer-boundaries-audit.md#приёмка-v2): composition/deployment/readiness, SQL и HTTP owners, CLI runner, domain rules и tests. Luna receipt `/private/tmp/auth-layer-boundaries-v2-summary.json`: targeted/security tests, lint0, race и 11 actual SQL/HTTP roots PASS; Redis webhook PASS. Main сверил manifest drift0/extra0 и 17 exit evidence0. Никакого повторного full task check/load/pentest; deployment gates отдельно. Неуспешный V1 (unused import) заменён исправленным V2.

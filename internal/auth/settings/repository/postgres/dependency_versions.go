@@ -36,3 +36,13 @@ func checkDependencyVersions(ctx context.Context, tx pgx.Tx, next domain.Policy,
 	}
 	return nil
 }
+
+// DependencyVersions reads the readiness dependencies in one statement snapshot.
+// Missing settings retain version zero; storage/context errors are returned as-is.
+func (r *Repository) DependencyVersions(ctx context.Context) (domain.DependencyVersions, error) {
+	var versions domain.DependencyVersions
+	err := r.db.QueryRow(ctx, `SELECT COALESCE((SELECT version FROM auth.smtp_settings WHERE singleton),0),
+   COALESCE((SELECT version FROM auth.provider_settings WHERE provider='google'),0),
+   COALESCE((SELECT version FROM auth.provider_settings WHERE provider='telegram'),0)`).Scan(&versions.SMTP, &versions.Google, &versions.Telegram)
+	return versions, err
+}

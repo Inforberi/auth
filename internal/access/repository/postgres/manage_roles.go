@@ -72,22 +72,17 @@ func (r *Repository) UpdateRole(ctx context.Context, input service.UpdateRoleInp
 		if err := requireDelegation(ctx, tx, input.Actor, settings.RolesManage, permissions); err != nil {
 			return err
 		}
-		role = current
-		if input.MFARequired != nil {
-			role.MFARequired = *input.MFARequired
+		var changed, elevated bool
+		role, changed, elevated, err = (domain.RoleChange{
+			Key: input.Key, Name: input.Name, Description: input.Description,
+			Permissions: input.Permissions, MFARequired: input.MFARequired,
+		}).Apply(current, r.mfaReady)
+		if err != nil {
+			return err
 		}
-		if role.MFARequired && !r.mfaReady {
-			return domain.ErrMFANotReady
-		}
-		requested := slices.Clone(input.Permissions)
-		slices.Sort(requested)
-		if current.Key == input.Key && current.Name == input.Name && current.Description == input.Description && current.MFARequired == role.MFARequired && slices.Equal(current.Permissions, requested) {
+		if !changed {
 			return nil
 		}
-		role.Key, role.Name, role.Description, role.Permissions = input.Key, input.Name, input.Description, requested
-		elevated := (!current.MFARequired && role.MFARequired) || slices.ContainsFunc(requested, func(key domain.PermissionKey) bool {
-			return !slices.Contains(current.Permissions, key)
-		})
 		if err := tx.QueryRow(ctx, `UPDATE auth.roles SET key=$2,name=$3,description=$4,version=version+1,mfa_required=$6,
 			session_revision=session_revision+CASE WHEN $5 THEN 1 ELSE 0 END WHERE id=$1 RETURNING version`, role.ID, role.Key, role.Name, role.Description, elevated, role.MFARequired).Scan(&role.Version); err != nil {
 			return err

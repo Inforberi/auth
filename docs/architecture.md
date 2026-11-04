@@ -145,6 +145,8 @@ Taskfile.yml
 | integrations | Протокол внешней системы, без ролей и пользовательских сценариев |
 | infra | Технические подключения и общая инфраструктура |
 
+Конкретные нарушения и оставшиеся переносы фиксирует [актуальный аудит слоёв](planning/layer-boundaries-audit.md). Целевая таблица не является подтверждением полного соответствия реализации. Service использует узкие persistence ports; SQL/Redis clients и HTTP DTO ему не передаются. Repository вправе применять domain-правило или переданный scenario check над locked snapshot внутри своей atomic operation: locks, CAS, audit/outbox/receipt и повторная проверка authority остаются там же. Межфичевая security-транзакция не разбивается на CRUD-вызовы ради формального разделения.
+
 Account владеет UUID, профилем, email и привязками внешних аккаунтов. Методы входа проверяют свои доказательства, session общая для всех методов, MFA выполняется до выдачи требуемой сессии. JWT сохраняет разделение authority/signing/public verification по [ADR004](adr/004-jwt-access-profiles.md). Совпадение email не объединяет внешние личности автоматически.
 
 ### Когда разделять большой пакет
@@ -511,3 +513,17 @@ Application root создаёт и связывает зависимости, в
 ### HTTP-контракт проектного профиля
 
 `auth/project/profile.ProjectProfile` хранит закрытое runtime-состояние; `Endpoints` передаёт transport готовые сценарии и текущие capability callbacks. Маршруты/handlers/middleware и context origin/key guards находятся в `transport/http/projects`; сессии работают через SessionRuntime, который сохраняет прежние pool leases и SQL guards. Transport не импортирует repository/pgx/app. Deployment config/source остаётся `app/projects/profile`. Приёмка нового разделения отдельно от старых receipts.
+
+### Фабрика проекта и runtime-профиль
+
+Фактическое создание графа находится в `app/projects/profile/{assembly,builder,profile_*}.go`, deployment source/manifest — там же. `auth/project/profile` владеет только собранным runtime-состоянием, его публикацией/актуальностью, read models, endpoints и session adapters. `Definition` — input конструктора из готовых компонентов; state map копируется. `Publish` сохраняет окончательную проверку перед выдачей профиля. HTTP получает `profile.Factory` через constructor dependency; импорта app и прямого вызова сборки в HTTP нет. Assessment использует тот же app builder через callback, сохраняя проверку версий до/после у runtime. Старое упоминание runtime BuildProjectProfile относится к предыдущему layout.
+
+### Корректировка слоёв после сквозного аудита
+
+Сборка остаётся в `app/{auth,admin,access,projects}`. Deployment source проектного Auth — `app/projects/deployment`, фабрика и соединение компонентов — `app/projects/profile`. Предметная доступность возможностей принадлежит Auth policy/readiness; публикация runtime-профиля сохраняет проверку актуальности после сборки. Настройки и пользовательские сборочные функции сгруппированы по смыслу, без пакета на каждую ручку.
+
+HTTP host routing — `transport/http/router.ProjectHosts`. Project HTTP использует `RuntimeResolver` и `Factory`, а не конкретный repository. Password change handler и Telegram webhook HTTP находятся в `transport/http/projects`; проектные адаптеры предоставляют операции и bounded lease. Webhook callback декодирует запрос только после проверки лимита и получения текущих scoped credentials; секреты не покидают адаптер.
+
+Адаптация административных MFA-настроек — `admin/administrators/service`; запись и проверка актуальных полномочий остаются атомарной repository operation. CLI подготовки проекта получает runner из `cmd/project-prepare`; transport не импортирует app. В app остаётся открытие/закрытие ресурсов и вызов preparation service.
+
+Чистые решения изменения роли, MFA, credentials провайдера и project transition выделены в domain/service. Repository применяет их к locked snapshot и сохраняет текущие locks/CAS/replay/revisions/audit в одной транзакции. SQL чтения dependency versions — settings repository, project lease — `auth/project/settings`. Полные результаты и статус приёмки — [план слоёв](planning/layer-boundaries-audit.md).

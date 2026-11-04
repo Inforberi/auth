@@ -29,7 +29,7 @@ func (r *Repository) UpdateProvider(ctx context.Context, input settingsproviders
 			return domain.ErrPolicyConflict
 		}
 		enabled := input.Provider == "google" && policy.Methods.Google || input.Provider == "telegram" && policy.Methods.Telegram
-		secret, secretSet, err := providerReplacement(before, input, enabled)
+		secret, secretSet, err := input.Replacement(before, enabled)
 		if err != nil {
 			return err
 		}
@@ -58,22 +58,3 @@ func (r *Repository) UpdateProvider(ctx context.Context, input settingsproviders
 	})
 	return result, err
 }
-
-func providerReplacement(before settingsproviders.ProviderStored, input settingsproviders.ProviderUpdate, enabled bool) ([]byte, bool, error) {
-	secret, set := input.Secret, input.SecretSet
-	if secret == nil {
-		if before.ClientID != input.ClientID {
-			return nil, false, domain.ErrInvalidProvider
-		}
-		secret, set = before.Secret, before.SecretSet
-	}
-	if enabled && (!set || input.ClientID == "" || before.ClientID != input.ClientID) {
-		return nil, false, domain.ErrMethodNotReady
-	}
-	if set && input.ClientID == "" {
-		return nil, false, domain.ErrInvalidProvider
-	}
-	return secret, set, nil
-}
-
-// Access mutations serialize this readiness read with credential changes.

@@ -12,6 +12,7 @@ import (
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
+	profilefactory "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	mfamanagement "github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/service"
 	projectmfa "github.com/Inforberi/financial-intelligence/internal/auth/project/mfa"
@@ -87,7 +88,7 @@ func prepareMFAHTTP(t *testing.T, bot projectmfa.ProjectTelegramClient) emailMFA
 	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute},
 		Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &projects.password.Session,
-	}, projects.deps, source, nil)
+	}, projects.deps.Reader, profilefactory.NewFactory(projects.deps, source), nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)
 	t.Cleanup(func() {

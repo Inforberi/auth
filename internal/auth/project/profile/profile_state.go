@@ -4,7 +4,6 @@ import (
 	"slices"
 	"time"
 
-	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
@@ -37,19 +36,8 @@ func (p *ProjectProfile) Readiness() ProjectReadiness {
 
 func (p *ProjectProfile) featureReady(feature string) bool { return p.states[feature].Ready }
 
-func (p *ProjectProfile) feature(feature string, err error) {
-	reason := ""
-	if err != nil {
-		reason = "component_unavailable"
-	}
-	p.state(feature, reason)
-}
+func (p *ProjectProfile) deliveryReady() bool { return DeliveryReady(p.deps) }
 
 func (p *ProjectProfile) state(feature, reason string) {
 	p.states[feature] = ProjectFeatureState{Feature: feature, Ready: reason == "", Reason: reason}
-}
-
-func (p *ProjectProfile) deliveryReady() bool {
-	d := p.deps.Delivery
-	return d != nil && d.ActiveFor(projectbinding.ProjectSMTPDependencies{Registry: p.deps.Registry, Reader: p.deps.Reader, Redis: p.deps.Redis})
 }

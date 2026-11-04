@@ -17,6 +17,7 @@ import (
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
+	profilefactory "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/login/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
@@ -80,11 +81,11 @@ DELETE FROM auth.auth_settings; INSERT INTO auth.auth_settings SELECT * FROM mfa
 	require.NoError(t, admin.QueryRow(ctx, `SELECT origin FROM platform.projects WHERE id=$1`, key.Binding.ProjectID).Scan(&origin))
 	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-mfa.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 20 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &cfg.Session,
-	}, runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: deps.Registry, Reader: deps.Reader, Redis: rdb, Hash: deps.Hash}}, func(_ context.Context, selected projectruntime.Key, selectedOrigin string) (runtimeprofile.ProjectProfileConfig, error) {
+	}, runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: deps.Registry, Reader: deps.Reader, Redis: rdb, Hash: deps.Hash}}.Reader, profilefactory.NewFactory(runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: deps.Registry, Reader: deps.Reader, Redis: rdb, Hash: deps.Hash}}, func(_ context.Context, selected projectruntime.Key, selectedOrigin string) (runtimeprofile.ProjectProfileConfig, error) {
 		require.Equal(t, key, selected)
 		require.Equal(t, origin, selectedOrigin)
 		return runtimeprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &cfg, Timeout: 10 * time.Second}, nil
-	}, nil)
+	}), nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)
 	t.Cleanup(func() {

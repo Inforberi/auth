@@ -14,6 +14,7 @@ import (
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
+	profilefactory "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
 	projectnative "github.com/Inforberi/financial-intelligence/internal/auth/project/token"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
@@ -52,11 +53,11 @@ func (f projectProfileFixture) httpUserDirectory(t *testing.T, ctx context.Conte
 	session := projectPasswordFixtureConfig().Session
 	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-directory.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 5 * time.Second}, SessionValidation: &session,
-	}, runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader}}, func(_ context.Context, key projectruntime.Key, selected string) (runtimeprofile.ProjectProfileConfig, error) {
+	}, runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader}}.Reader, profilefactory.NewFactory(runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader}}, func(_ context.Context, key projectruntime.Key, selected string) (runtimeprofile.ProjectProfileConfig, error) {
 		require.Equal(t, f.key, key)
 		require.Equal(t, origin, selected)
 		return runtimeprofile.ProjectProfileConfig{BrowserEnabled: true, UserDirectoryEnabled: true, Timeout: 5 * time.Second}, nil
-	}, nil)
+	}), nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)
 	t.Cleanup(func() {

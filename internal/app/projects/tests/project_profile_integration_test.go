@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	profileapp "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
 	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
@@ -46,7 +47,7 @@ func (f projectProfileFixture) run(t *testing.T, ctx context.Context) {
 	cfg := runtimeprofile.ProjectProfileConfig{Timeout: 10 * time.Second}
 	deps := runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader}}
 	t.Run("MFA capability compatibility", func(t *testing.T) { f.mfaCapabilityProfile(t, ctx, origin, deps) })
-	closed, err := runtimeprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+	closed, err := profileapp.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.True(t, closed.Readiness().Ready)
 	require.Empty(t, closed.RoutePlan())
@@ -57,14 +58,14 @@ func (f projectProfileFixture) run(t *testing.T, ctx context.Context) {
 	deps.Hash = f.hash
 	_, err = f.db.Exec(ctx, `UPDATE auth.auth_settings SET version=version+1,password_enabled=true,registration_enabled=true`)
 	require.NoError(t, err)
-	login, err := runtimeprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+	login, err := profileapp.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.True(t, login.Readiness().Ready)
 	require.Len(t, login.RoutePlan(), 11)
 	_, err = f.db.Exec(ctx, `UPDATE auth.auth_settings SET version=version+1,password_email_verification='required'`)
 	require.NoError(t, err)
 	require.ErrorIs(t, login.CheckCurrent(ctx), settingsdomain.ErrPolicyConflict)
-	missingMail, err := runtimeprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+	missingMail, err := profileapp.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.False(t, missingMail.Readiness().Ready)
 	require.Len(t, missingMail.RoutePlan(), 7)

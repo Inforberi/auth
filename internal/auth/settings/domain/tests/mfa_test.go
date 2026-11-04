@@ -30,3 +30,37 @@ func TestMFAPolicyStrengthening(t *testing.T) {
 		}
 	}
 }
+
+func TestMFAPolicyChangeOrder(t *testing.T) {
+	before := settingsdomain.MFASnapshot{Version: 4, Policy: settingsdomain.MFAPolicy{Mode: settingsdomain.MFARequired}}
+	for _, tc := range []struct {
+		name           string
+		version        int64
+		next           settingsdomain.MFAMode
+		ready, changed bool
+		err            error
+	}{
+		{"version before no-op", 3, settingsdomain.MFARequired, false, false, settingsdomain.ErrPolicyConflict},
+		{"no-op before readiness", 4, settingsdomain.MFARequired, false, false, nil},
+		{"restricted change needs readiness", 4, settingsdomain.MFAAdministrators, false, false, settingsdomain.ErrMethodNotReady},
+		{"optional without readiness", 4, settingsdomain.MFAOptional, false, true, nil},
+		{"restricted change ready", 4, settingsdomain.MFAAdministrators, true, true, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			changed, err := before.CheckChange(tc.version, settingsdomain.MFAPolicy{Mode: tc.next}, tc.ready)
+			if changed != tc.changed || !errors.Is(err, tc.err) {
+				t.Fatalf("changed=%v err=%v", changed, err)
+			}
+		})
+	}
+	for _, tc := range []struct {
+		version int64
+		mode    settingsdomain.MFAMode
+	}{
+		{0, settingsdomain.MFAOptional}, {4, "invalid"}, {-1, "invalid"},
+	} {
+		if err := (settingsdomain.MFAPolicy{Mode: tc.mode}).ValidateChange(tc.version); !errors.Is(err, settingsdomain.ErrInvalidMFAPolicy) {
+			t.Fatal("invalid transaction input accepted", err)
+		}
+	}
+}

@@ -16,6 +16,7 @@ import (
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
+	profilefactory "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
 	projectnative "github.com/Inforberi/financial-intelligence/internal/auth/project/token"
 	tokenredis "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/redis"
@@ -78,14 +79,14 @@ func prepareTokenIsolation(t *testing.T, projects projectIsolationHTTP) tokenIso
 	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute},
 		Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &projects.password.Session,
-	}, projects.deps, func(_ context.Context, key projectruntime.Key, origin string) (runtimeprofile.ProjectProfileConfig, error) {
+	}, projects.deps.Reader, profilefactory.NewFactory(projects.deps, func(_ context.Context, key projectruntime.Key, origin string) (runtimeprofile.ProjectProfileConfig, error) {
 		for i, expected := range projects.projects {
 			if key == expected && origin == projects.origins[i] {
 				return runtimeprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &projects.password, Tokens: &f.configs[i], Timeout: 5 * time.Second}, nil
 			}
 		}
 		return runtimeprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
-	}, nil)
+	}), nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)
 	t.Cleanup(func() {

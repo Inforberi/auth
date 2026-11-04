@@ -3,38 +3,21 @@ package profile
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	projectsettings "github.com/Inforberi/financial-intelligence/internal/auth/project/settings"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	tokensettings "github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
 )
 
-func (p *ProjectProfile) selectAssessmentPolicy(cfg ProjectProfileConfig) {
-	native := cfg.Tokens != nil && cfg.Tokens.Enabled && cfg.Tokens.Tokens.Native != nil
-	password, email := false, false
-	if native {
-		password, email = cfg.Tokens.Native.PasswordEnabled, cfg.Tokens.Native.EmailOTP.Enabled
-	}
-	p.policy.Policy.Methods = settingsdomain.PublicMethods{
-		Password: cfg.BrowserEnabled && cfg.Password != nil || password,
-		EmailOTP: cfg.BrowserEnabled && cfg.EmailOTP != nil && cfg.EmailOTP.OTP.Enabled || email,
-		Google:   cfg.BrowserEnabled && cfg.Google != nil && cfg.Google.Enabled,
-		Telegram: cfg.BrowserEnabled && cfg.Telegram != nil && cfg.Telegram.Enabled,
-	}
-	p.policy.Policy.PasswordEmailVerification = settingsdomain.VerificationDisabled
-	p.policy.Policy.TokenIssuance = settingsdomain.TokenIssuance{SessionExchange: cfg.Tokens != nil && cfg.Tokens.Enabled, Native: native}
-}
-
-func AssessProjectProfile(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies) (projectdomain.AuthPolicyReadiness, error) {
+func AssessWithBuilder(ctx context.Context, key projectruntime.Key, origin string, cfg ProjectProfileConfig, deps ProjectProfileDependencies, build BuildProfile) (projectdomain.AuthPolicyReadiness, error) {
 	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
 	defer cancel()
 	before, err := profileDependencyVersions(ctx, key, deps)
 	if err != nil {
 		return projectdomain.AuthPolicyReadiness{}, err
 	}
-	profile, err := buildProjectProfile(ctx, key, origin, cfg, deps, true)
+	profile, err := build(ctx, key, origin, cfg, deps, true)
 	if err != nil {
 		return projectdomain.AuthPolicyReadiness{}, err
 	}
@@ -62,11 +45,5 @@ func AssessProjectProfile(ctx context.Context, key projectruntime.Key, origin st
 }
 
 func profileDependencyVersions(ctx context.Context, key projectruntime.Key, deps ProjectProfileDependencies) (settingsdomain.DependencyVersions, error) {
-	var versions settingsdomain.DependencyVersions
-	err := deps.Registry.UsePool(ctx, key, func(ctx context.Context, pool *pgxpool.Pool) error {
-		return pool.QueryRow(ctx, `SELECT COALESCE((SELECT version FROM auth.smtp_settings WHERE singleton),0),
-		 COALESCE((SELECT version FROM auth.provider_settings WHERE provider='google'),0),
-		 COALESCE((SELECT version FROM auth.provider_settings WHERE provider='telegram'),0)`).Scan(&versions.SMTP, &versions.Google, &versions.Telegram)
-	})
-	return versions, err
+	return projectsettings.DependencyVersions(ctx, deps.Registry, key)
 }

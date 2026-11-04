@@ -38,7 +38,7 @@ func secretsPreparationDrill(t *testing.T, admin, physical *pgx.Conn, env func(s
 	args := append(append([]string{}, schemaArgs...), "-secrets")
 	_, err := admin.Exec(ctx, `ALTER TABLE platform.project_preparations ADD CONSTRAINT fail_secret_flag CHECK(NOT secrets_created)`)
 	require.NoError(t, err)
-	require.Error(t, preparationcli.Run(ctx, args, protected, io.Discard, io.Discard))
+	require.Error(t, preparationcli.Run(ctx, args, protected, io.Discard, io.Discard, runPreparationCommand))
 	var clean bool
 	require.NoError(t, admin.QueryRow(ctx, `SELECT NOT secrets_created AND NOT EXISTS(SELECT 1 FROM platform.project_secrets)
 		FROM platform.project_preparations`).Scan(&clean))
@@ -96,7 +96,7 @@ func secretsPreparationDrill(t *testing.T, admin, physical *pgx.Conn, env func(s
 		require.Equal(t, expectedXmin, actualXmin, "replay and wrong roots must not rewrite ciphertext")
 	}
 	var response bytes.Buffer
-	require.NoError(t, preparationcli.Run(ctx, args, protected, &response, io.Discard))
+	require.NoError(t, preparationcli.Run(ctx, args, protected, &response, io.Discard, runPreparationCommand))
 	assertUnchanged(xmin)
 	require.Contains(t, response.String(), `"stage":"secrets_stored"`)
 	require.NotContains(t, response.String(), root)
@@ -122,7 +122,7 @@ func secretsPreparationDrill(t *testing.T, admin, physical *pgx.Conn, env func(s
 			}
 			return protected(key)
 		}
-		require.ErrorIs(t, preparationcli.Run(ctx, args, wrong, io.Discard, io.Discard), credentials.ErrUnavailable)
+		require.ErrorIs(t, preparationcli.Run(ctx, args, wrong, io.Discard, io.Discard, runPreparationCommand), credentials.ErrUnavailable)
 		assertUnchanged(xmin)
 	}
 
@@ -136,7 +136,7 @@ func secretsPreparationDrill(t *testing.T, admin, physical *pgx.Conn, env func(s
 	missing, err = repo.ReadDatabaseCredential(ctx, reservation, binding, codec)
 	require.ErrorIs(t, err, domain.ErrConflict)
 	require.Empty(t, missing.Password())
-	require.ErrorIs(t, preparationcli.Run(ctx, args, protected, io.Discard, io.Discard), domain.ErrConflict, "lost ciphertext must not regenerate secrets")
+	require.ErrorIs(t, preparationcli.Run(ctx, args, protected, io.Discard, io.Discard, runPreparationCommand), domain.ErrConflict, "lost ciphertext must not regenerate secrets")
 	require.NoError(t, admin.QueryRow(ctx, `SELECT secrets_created AND NOT EXISTS(SELECT 1 FROM platform.project_secrets)
 		FROM platform.project_preparations`).Scan(&clean))
 	require.True(t, clean)

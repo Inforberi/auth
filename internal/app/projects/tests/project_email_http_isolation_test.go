@@ -11,6 +11,7 @@ import (
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
+	profilefactory "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
@@ -63,7 +64,7 @@ func serveEmailHTTPIsolation(t *testing.T, f *emailIsolationFixture) [2]isolatio
 		management[i] = f.configs[i]
 		management[i].Binding = accountemail.EmailBindingConfig{Enabled: true, TTL: 5 * time.Minute, RequestsPerMinute: 100, ConfirmationsPerMinute: 1000}
 	}
-	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &password.Session}, deps,
+	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &password.Session}, deps.Reader, profilefactory.NewFactory(deps,
 		func(_ context.Context, key projectruntime.Key, origin string) (runtimeprofile.ProjectProfileConfig, error) {
 			for i, expected := range f.projects.projects {
 				if key == expected && origin == f.projects.origins[i] {
@@ -71,7 +72,7 @@ func serveEmailHTTPIsolation(t *testing.T, f *emailIsolationFixture) [2]isolatio
 				}
 			}
 			return runtimeprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
-		}, nil)
+		}), nil)
 	require.NoError(t, err)
 	for i, key := range f.projects.projects {
 		require.Eventually(t, func() bool {

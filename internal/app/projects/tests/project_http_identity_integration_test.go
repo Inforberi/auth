@@ -17,6 +17,7 @@ import (
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
+	profilefactory "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
 	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
@@ -69,11 +70,11 @@ UPDATE auth.auth_settings SET password_enabled=$2,google_enabled=$3,telegram_ena
 	}
 	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-identity.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 20 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &session,
-	}, runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, OIDCClients: f.clients}, func(_ context.Context, key projectruntime.Key, selected string) (runtimeprofile.ProjectProfileConfig, error) {
+	}, runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, OIDCClients: f.clients}.Reader, profilefactory.NewFactory(runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, OIDCClients: f.clients}, func(_ context.Context, key projectruntime.Key, selected string) (runtimeprofile.ProjectProfileConfig, error) {
 		require.Equal(t, f.key, key)
 		require.Equal(t, origin, selected)
 		return runtimeprofile.ProjectProfileConfig{BrowserEnabled: true, Password: &passwordConfig, Google: provider("google"), Telegram: provider("telegram"), Timeout: 10 * time.Second}, nil
-	}, nil)
+	}), nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)
 	t.Cleanup(func() {

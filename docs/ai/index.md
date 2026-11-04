@@ -1,5 +1,7 @@
 # Карта проекта
 
+Текущий корректирующий аудит domain/service/repository/transport/app и его последовательность — [границы слоёв](../planning/layer-boundaries-audit.md). Это план устранения конкретных находок, не отметка о завершённом рефакторинге.
+
 Начать с [текущего шага](current-task.md), затем выбрать нужную строку ниже. Это навигация, не список обязательного чтения: статусы — в плане, поведение — в коде, доказательства — в history. Правила — [AGENTS.md](../../AGENTS.md).
 
 Пути к исходникам относительно корня репозитория; Auth = `internal/auth`, Project = `internal/admin/projects`.
@@ -96,3 +98,7 @@ R7: `cmd/auth` → `internal/app.New`; process resources/HTTP lifecycle — root
 Текущие переносы app: project adapters — `Auth/project/{account,methods,mfa,token,settings,runtime,delivery}`, Access — `internal/access/project`; runtime profile — `Auth/project/profile`, HTTP facade — `internal/transport/http/projects`. Deployment source остаётся `app/projects/profile`; preparation sequence — `Project/preparation/service`. Остаток HTTP/profile разделения — в current-task.
 
 HTTP/profile boundary: `Auth/project/profile/{endpoints,sessions,session_management}.go` — runtime контракт и SQL-backed adapters; `internal/transport/http/projects/{http_routes,http_contract,session_handlers,http_*}.go` — routes/middleware/handler wiring. Исходные compile errors Luna исправлены, фактический PASS смотреть в current-task/receipt.
+
+Фактическая project factory — `internal/app/projects/profile/{assembly,factory,builder,runtime_snapshot}.go`; runtime input/guard — `Auth/project/profile/{definition,factory,profile,settings_readiness}.go`. HTTP constructor принимает reader+Factory, не полный dependency graph. Construction-private tests у app/profile; runtime snapshot test — Auth/project/profile/tests. Новый статус приёмки в current-task.
+
+Корректировка слоёв: deployment manifest/source — `app/projects/deployment`; graph factory — `app/projects/profile`; SQL versions — `Auth/settings/repository/postgres/dependency_versions.go` через `Auth/project/settings/dependency_versions.go`. Host dispatch — `transport/http/router/project_hosts.go`; Telegram webhook HTTP — `transport/http/projects/http_telegram_webhook.go`; runtime lease/receive — `Auth/project/mfa/telegram_webhook.go`. Administrative MFA adapter — `admin/administrators/service/mfa_settings.go`; CLI runner связывается в `cmd/project-prepare/command.go`. Старые app/profile пути deployment/Swagger выше — историческая навигация; актуальны новые владельцы. Проверки — по current-task.

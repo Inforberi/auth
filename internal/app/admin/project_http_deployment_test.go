@@ -18,7 +18,7 @@ import (
 	appfixtures "github.com/Inforberi/financial-intelligence/internal/app/tests/fixtures"
 	projectdelivery "github.com/Inforberi/financial-intelligence/internal/auth/project/delivery"
 	"github.com/Inforberi/financial-intelligence/internal/config"
-	projectbrowser "github.com/Inforberi/financial-intelligence/internal/transport/http/projects"
+	"github.com/Inforberi/financial-intelligence/internal/transport/http/router"
 )
 
 func TestProjectHTTPDisabledDoesNotCreateOwners(t *testing.T) {
@@ -29,19 +29,6 @@ func TestProjectHTTPDisabledDoesNotCreateOwners(t *testing.T) {
 	require.Nil(t, drain)
 	require.Zero(t, owned.added)
 	require.Empty(t, authapp.DeliveryWorkers(nil, nil, nil, nil, (*projectdelivery.ProjectDelivery)(nil)))
-}
-
-func TestProjectHostRoutingHasNoOperatorFallback(t *testing.T) {
-	operator := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(201) })
-	project := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(404) })
-	h := projectHostRouter("https://platform.example.test", operator, &projectbrowser.ProjectHTTP{Handler: project})
-	for host, want := range map[string]int{"platform.example.test": 201, "project.example.test": 404, "Platform.example.test": 404, "platform.example.test.attacker.test": 404} {
-		r := httptest.NewRequest("GET", "https://"+host+"/api/v1/projects", nil)
-		r.Header.Set("X-Forwarded-Host", "platform.example.test")
-		w := httptest.NewRecorder()
-		h.ServeHTTP(w, r)
-		require.Equal(t, want, w.Code)
-	}
 }
 
 type deploymentRetention struct{ stopped chan struct{} }
@@ -93,7 +80,7 @@ func projectHTTPDeploymentDrill(t *testing.T, runtimeConfig config.PlatformConfi
 	profile, drain, err := openProjectHTTP(t.Context(), cfg, runtime, nil, authapp.Dependencies{Redis: rdb, Logger: zap.NewNop()}, owned)
 	require.NoError(t, err)
 	require.NotNil(t, drain)
-	server := httptest.NewTLSServer(projectHostRouter(cfg.Platform.Origin, operator, profile))
+	server := httptest.NewTLSServer(router.ProjectHosts(cfg.Platform.Origin, operator, profile))
 	t.Cleanup(server.Close)
 	for host, want := range map[string]int{"console.auth.example": 204, "unknown.auth.example": 404} {
 		r, err := http.NewRequestWithContext(t.Context(), "GET", server.URL+"/api/v1/projects", nil)

@@ -55,12 +55,12 @@ func TestSecretsModeFailsBeforeConnections(t *testing.T) {
 	require.ErrorContains(t, err, "-password requires -secrets")
 	_, err = parseCommand(append(args[:len(args)-1:len(args)-1], "-schema", "-secrets", "-onboarding"), env, io.Discard)
 	require.ErrorContains(t, err, "-onboarding requires -password")
-	err = Run(t.Context(), append(args, "-schema"), env, io.Discard, io.Discard)
+	err = Run(t.Context(), append(args, "-schema"), env, io.Discard, io.Discard, nil)
 	require.ErrorIs(t, err, credentials.ErrUnavailable)
 }
 
 func TestRunRejectsInvalidIntentBeforeConnections(t *testing.T) {
-	err := Run(context.Background(), []string{"-project", "not-a-uuid"}, func(string) string { return "secret" }, io.Discard, io.Discard)
+	err := Run(context.Background(), []string{"-project", "not-a-uuid"}, func(string) string { return "secret" }, io.Discard, io.Discard, nil)
 	require.ErrorContains(t, err, "required")
 	require.NotContains(t, err.Error(), "secret")
 }

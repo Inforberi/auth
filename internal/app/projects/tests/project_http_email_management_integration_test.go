@@ -15,6 +15,7 @@ import (
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
+	profilefactory "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
@@ -63,11 +64,11 @@ func (f projectAccountFixture) httpAccountManagement(t *testing.T, ctx context.C
 	t.Cleanup(stopDelivery)
 	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-account.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 20 * time.Second, MaxAge: time.Minute}, Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &password.Session,
-	}, runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, Delivery: delivery}, func(_ context.Context, key projectruntime.Key, selected string) (runtimeprofile.ProjectProfileConfig, error) {
+	}, runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, Delivery: delivery}.Reader, profilefactory.NewFactory(runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, Redis: f.rdb, Hash: f.hash}, Delivery: delivery}, func(_ context.Context, key projectruntime.Key, selected string) (runtimeprofile.ProjectProfileConfig, error) {
 		require.Equal(t, f.key, key)
 		require.Equal(t, origin, selected)
 		return runtimeprofile.ProjectProfileConfig{BrowserEnabled: true, UserLifecycleEnabled: true, AuthSettingsEnabled: true, ProviderSettingsEnabled: true, RetentionSettingsEnabled: true, MFASettingsEnabled: true, SMTPSettings: &projectsettings.ProjectSMTPSettingsConfig{AllowedTargets: []string{f.listener.Addr().String()}}, Access: &catalog, Password: &password, EmailOTP: &otp, EmailManagement: &management, Timeout: 10 * time.Second}, nil
-	}, nil)
+	}), nil)
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {
 		assessment, err := handler.Assess(ctx, f.key, origin)

@@ -95,3 +95,16 @@ func (p Project) Next(action Action) (Project, error) {
 }
 
 func canAdvance(version int64) bool { return version > 0 && version < math.MaxInt64 }
+
+// NextWithBinding applies lifecycle rules to a locked catalog snapshot.
+// Binding metadata is necessary, not sufficient proof of storage readiness.
+func (p Project) NextWithBinding(action Action, bindingPresent bool) (Project, error) {
+	next, err := p.Next(action)
+	if err != nil {
+		return Project{}, err
+	}
+	if action == FinishPreparation && !bindingPresent {
+		return Project{}, ErrInvalidTransition
+	}
+	return next, nil
+}

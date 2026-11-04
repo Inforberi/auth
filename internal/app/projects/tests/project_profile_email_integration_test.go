@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	profileapp "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	otpservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/emailotp/service"
 	projectdelivery "github.com/Inforberi/financial-intelligence/internal/auth/project/delivery"
@@ -43,7 +44,7 @@ func (f projectProfileFixture) verificationProfile(t *testing.T, ctx context.Con
 	var profile *runtimeprofile.ProjectProfile
 	var buildErr error
 	require.Eventually(t, func() bool {
-		profile, buildErr = runtimeprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+		profile, buildErr = profileapp.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 		return buildErr == nil && profile.Readiness().Ready
 	}, 3*time.Second, 20*time.Millisecond)
 	require.NoError(t, buildErr)
@@ -57,7 +58,7 @@ func (f projectProfileFixture) verificationProfile(t *testing.T, ctx context.Con
 		},
 		Timeout: 10 * time.Second,
 	}
-	reauth, err := runtimeprofile.BuildProjectProfile(ctx, f.key, origin, reauthentication, deps)
+	reauth, err := profileapp.BuildProjectProfile(ctx, f.key, origin, reauthentication, deps)
 	require.NoError(t, err)
 	require.True(t, reauth.Readiness().Ready)
 	require.True(t, profileFeature(t, reauth, "reauthentication").Ready)
@@ -70,7 +71,7 @@ func (f projectProfileFixture) verificationProfile(t *testing.T, ctx context.Con
 	case <-time.After(5 * time.Second):
 		t.Fatal("profile delivery did not stop")
 	}
-	stopped, err := runtimeprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+	stopped, err := profileapp.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.False(t, stopped.Readiness().Ready)
 	require.Empty(t, stopped.RoutePlan())

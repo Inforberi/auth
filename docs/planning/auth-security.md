@@ -104,3 +104,7 @@ AS6b-local ниже закрывает permission edit через immutable role
 Блокирующие дефекты: обход session/permission/MFA, acceptance отозванного/просроченного credential после своей strict authority boundary, resurrection после restore, утечка credentials, fail-open/CSRF sensitive mutation. Browser cookie race, ведущий только к повторному входу, фиксировать отдельно как availability defect; не маскировать его опасным grace. Независимый targeted security review и внешний pentest перед публичным production rollout дополняют тесты, а не дают обещание абсолютной защищённости.
 
 Источники для дальнейшей приёмки: [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [Authentication](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html), [Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html), [CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html). Конкретные AS-решения и наблюдения выше — проектный анализ репозитория, не утверждение, что OWASP требует каждую выбранную реализацию.
+
+## Повторный source review middleware — 4 ноября
+
+[Матрица механизмов и границы проверки](../operations/middleware-security-review.md). Подтверждённого auth/CSRF обхода в прочитанных цепочках не найдено; runtime security gates этим не закрыты. Deployment TLS topology и negative middleware/session/JWT cases принимаются отдельно у Luna.

@@ -10,14 +10,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	projectprofile "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
+	projectdeployment "github.com/Inforberi/financial-intelligence/internal/app/projects/deployment"
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
 	tokensettings "github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
-func loadEmailMFADeployment(t *testing.T, f emailMFAHTTPFixture, smtpTargets []string) *projectprofile.ProjectAuthDeployment {
+func loadEmailMFADeployment(t *testing.T, f emailMFAHTTPFixture, smtpTargets []string) *projectdeployment.ProjectAuthDeployment {
 	t.Helper()
 	projects := f.projects
 	cfg := &config.Config{
@@ -48,7 +48,7 @@ func loadEmailMFADeployment(t *testing.T, f emailMFAHTTPFixture, smtpTargets []s
 	require.NoError(t, err)
 	cfg.Platform.HTTP.ManifestFile = filepath.Join(t.TempDir(), "project-auth.json")
 	require.NoError(t, os.WriteFile(cfg.Platform.HTTP.ManifestFile, manifest, 0o600))
-	deployment, err := projectprofile.LoadProjectAuthDeployment(cfg)
+	deployment, err := projectdeployment.LoadProjectAuthDeployment(cfg)
 	require.NoError(t, err)
 	require.False(t, cfg.MFA.RecoveryEnabled, "project email opt-in must not enable operator recovery")
 	return deployment

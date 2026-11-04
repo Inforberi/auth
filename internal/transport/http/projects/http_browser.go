@@ -30,7 +30,7 @@ func (p *binding) browserHandlers(log *zap.Logger) map[string]http.HandlerFunc {
 	if p.Password != nil {
 		h := passwordhttp.NewPublic(p.Password, log).WithEmailMFACookie(mfaloginhttp.EmailLoginCookie + "-" + string(p.Key.Binding.ProjectID))
 		handlers["/api/v1/auth/login/email"], handlers["/api/v1/auth/register/email"] = h.LoginByEmail, h.Register
-		handlers["/api/v1/auth/change-password"] = p.Password.ChangePasswordHandler(log)
+		handlers["/api/v1/auth/change-password"] = passwordhttp.NewChangePassword(p.Password, p.Password, log).ChangePassword
 		handlers["/api/v1/auth/reauthenticate/password"] = passwordhttp.NewReauthentication(projectmethods.ProjectPasswordReauthenticationHTTP{ProjectPassword: p.Password}, log).Confirm
 		if p.Available("verification") && p.EmailVerificationPolicy != settingsdomain.VerificationDisabled {
 			handlers["/api/v1/auth/register/email"] = p.requireHTTPDelivery(h.Register)

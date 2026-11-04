@@ -173,6 +173,8 @@ Config и HTTP server/shutdown остаются самостоятельными
 
 Domain определяет допустимые состояния/переходы и чистые правила; service координирует use case и применяет эти правила. Repository читает/сохраняет данные, отображает SQL errors и реализует атомарные persistence operations. Он не выбирает продуктовую политику самостоятельно.
 
+Актуальный сквозной список нарушений и транзакционных исключений — [аудит слоёв от 4 ноября](layer-boundaries-audit.md). Приведённые ниже ранние кандидаты MFA уже исправлены: выбор метода находится в domain/service, Disable принимает правило и применяет его внутри transaction. Повторный перенос этих двух операций не требуется. Общая архитектурная корректировка остаётся открытой по новому списку.
+
 Подтверждённые кандидаты:
 
 - `mfa/repository/postgres/selection.go: SelectMFAMethod`: помимо SQL lookup содержит приоритет TOTP/email/Telegram, влияние preference/admin/primary и отказ fallback. Возвращать согласованное состояние selection, решение принимать в domain/service; повторные SQL current guards перед issuance сохраняются. Не заменять один lookup на N+1 queries.

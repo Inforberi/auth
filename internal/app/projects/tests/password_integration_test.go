@@ -28,7 +28,7 @@ func passwordPreparationDrill(t *testing.T, physical *pgx.Conn, env func(string)
 	args := append(append([]string{}, secretsArgs...), "-password")
 	_, err := physical.Exec(ctx, `ALTER TABLE provisioning.resources ADD CONSTRAINT fail_password_record CHECK(password_fingerprint IS NULL)`)
 	require.NoError(t, err)
-	require.Error(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard))
+	require.Error(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard, runPreparationCommand))
 	var rolledBack bool
 	require.NoError(t, physical.QueryRow(ctx, `SELECT r.rolpassword IS NULL AND s.runtime_oid IS NULL AND s.password_fingerprint IS NULL
 		FROM provisioning.resources s JOIN pg_authid r ON r.oid=$1`, binding.RuntimeOID).Scan(&rolledBack))
@@ -78,7 +78,7 @@ func passwordPreparationDrill(t *testing.T, physical *pgx.Conn, env func(string)
 	require.NoError(t, physical.QueryRow(ctx, `SELECT r.rolpassword,s.xmin::text FROM pg_authid r JOIN provisioning.resources s ON s.runtime_oid=r.oid
 		WHERE r.oid=$1`, binding.RuntimeOID).Scan(&verifier, &xmin))
 	var response bytes.Buffer
-	require.NoError(t, preparationcli.Run(ctx, args, env, &response, io.Discard))
+	require.NoError(t, preparationcli.Run(ctx, args, env, &response, io.Discard, runPreparationCommand))
 	require.Contains(t, response.String(), `"stage":"password_installed"`)
 	require.NotContains(t, response.String(), value.Password())
 	require.NotContains(t, response.String(), verifier)
@@ -88,7 +88,7 @@ func passwordPreparationDrill(t *testing.T, physical *pgx.Conn, env func(string)
 	require.True(t, same, "replay must not rotate a password or rewrite its receipt")
 	_, err = physical.Exec(ctx, `UPDATE provisioning.resources SET password_fingerprint=decode(repeat('00',32),'hex')`)
 	require.NoError(t, err)
-	require.ErrorIs(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard), domain.ErrConflict)
+	require.ErrorIs(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard, runPreparationCommand), domain.ErrConflict)
 	// Restoring only this synthetic fingerprint does not change the PostgreSQL password.
 	fingerprint := sha256.Sum256([]byte(value.Password()))
 	_, err = physical.Exec(ctx, `UPDATE provisioning.resources SET password_fingerprint=$1`, fingerprint[:])

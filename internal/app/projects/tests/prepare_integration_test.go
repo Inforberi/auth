@@ -98,9 +98,9 @@ func TestPrepareCommandSQL(t *testing.T) {
 	}
 	args := []string{"-project", "a2000000-0000-4000-8000-000000000001", "-operation", "b2000000-0000-4000-8000-000000000001", "-version", "1", "-generation", "1"}
 	var first, second bytes.Buffer
-	require.NoError(t, preparationcli.Run(ctx, args, env, &first, io.Discard))
+	require.NoError(t, preparationcli.Run(ctx, args, env, &first, io.Discard, runPreparationCommand))
 	require.Contains(t, first.String(), `"stage":"database_sealed"`)
-	require.NoError(t, preparationcli.Run(ctx, args, env, &second, io.Discard))
+	require.NoError(t, preparationcli.Run(ctx, args, env, &second, io.Discard, runPreparationCommand))
 	require.Equal(t, first.String(), second.String())
 	projectConfig := physical.Config().Copy()
 	projectConfig.Database = "authp_a2000000000040008000000000000001"
@@ -123,7 +123,7 @@ func TestPrepareCommandSQL(t *testing.T) {
 		require.NoError(t, err)
 	})
 	schemaArgs := append(append([]string{}, args...), "-schema")
-	require.Error(t, preparationcli.Run(ctx, schemaArgs, env, io.Discard, io.Discard))
+	require.Error(t, preparationcli.Run(ctx, schemaArgs, env, io.Discard, io.Discard, runPreparationCommand))
 	inspect(func(conn *pgx.Conn) {
 		var absent bool
 		require.NoError(t, conn.QueryRow(ctx, `SELECT NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname IN ('auth','project_meta'))
@@ -133,10 +133,10 @@ func TestPrepareCommandSQL(t *testing.T) {
 		require.NoError(t, err)
 	})
 	var installed, replayed bytes.Buffer
-	require.NoError(t, preparationcli.Run(ctx, schemaArgs, env, &installed, io.Discard))
+	require.NoError(t, preparationcli.Run(ctx, schemaArgs, env, &installed, io.Discard, runPreparationCommand))
 	require.Contains(t, installed.String(), `"stage":"schema_prepared"`)
 	require.Contains(t, installed.String(), `"schemaVersion":1`)
-	require.NoError(t, preparationcli.Run(ctx, schemaArgs, env, &replayed, io.Discard))
+	require.NoError(t, preparationcli.Run(ctx, schemaArgs, env, &replayed, io.Discard, runPreparationCommand))
 	require.Equal(t, installed.String(), replayed.String())
 	operatorSecretsProfileDrill(t, admin, env, read)
 	secretsPreparationDrill(t, admin, physical, env, schemaArgs)
@@ -177,7 +177,7 @@ func TestPrepareCommandSQL(t *testing.T) {
 		_, err = conn.Exec(ctx, `UPDATE project_meta.identity SET project_id='a2000000-0000-4000-8000-000000000099'`)
 		require.NoError(t, err)
 	})
-	require.ErrorIs(t, preparationcli.Run(ctx, schemaArgs, env, io.Discard, io.Discard), domain.ErrConflict, "wrong schema marker must not be adopted")
+	require.ErrorIs(t, preparationcli.Run(ctx, schemaArgs, env, io.Discard, io.Discard, runPreparationCommand), domain.ErrConflict, "wrong schema marker must not be adopted")
 	require.NoError(t, physical.QueryRow(ctx, `SELECT NOT datallowconn FROM pg_database WHERE datname='authp_a2000000000040008000000000000001'`).Scan(&closed))
 	require.True(t, closed, "failure cleanup must reseal the database")
 	var phase string
@@ -194,7 +194,9 @@ func TestPrepareCommandSQL(t *testing.T) {
 		_, err = locked.Exec(ctx, `LOCK TABLE project_meta.identity IN ACCESS EXCLUSIVE MODE`)
 		require.NoError(t, err)
 		finished := make(chan error, 1)
-		go func() { finished <- preparationcli.Run(ctx, schemaArgs, env, io.Discard, io.Discard) }()
+		go func() {
+			finished <- preparationcli.Run(ctx, schemaArgs, env, io.Discard, io.Discard, runPreparationCommand)
+		}()
 		ticker := time.NewTicker(10 * time.Millisecond)
 		defer ticker.Stop()
 		wait, stop := context.WithTimeout(ctx, 5*time.Second)
@@ -221,5 +223,5 @@ func TestPrepareCommandSQL(t *testing.T) {
 		require.NoError(t, physical.QueryRow(ctx, `SELECT NOT datallowconn FROM pg_database WHERE datname='authp_a2000000000040008000000000000001'`).Scan(&closed))
 		require.True(t, closed)
 	})
-	require.Error(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard), "stale catalog receipt cannot start storage")
+	require.Error(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard, runPreparationCommand), "stale catalog receipt cannot start storage")
 }

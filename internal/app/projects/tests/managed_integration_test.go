@@ -40,7 +40,7 @@ func managedPreparationDrill(t *testing.T, physical *pgx.Conn, env func(string) 
 	})
 	args := append(append([]string{}, passwordArgs...), "-managed")
 	var response bytes.Buffer
-	require.NoError(t, preparationcli.Run(ctx, args, env, &response, io.Discard))
+	require.NoError(t, preparationcli.Run(ctx, args, env, &response, io.Discard, runPreparationCommand))
 	require.Contains(t, response.String(), `"stage":"managed_configuration_prepared"`)
 	require.NotContains(t, response.String(), proof.Digest())
 	t.Cleanup(func() {
@@ -68,9 +68,9 @@ func managedPreparationDrill(t *testing.T, physical *pgx.Conn, env func(string) 
 			p.xmin::text,m.xmin::text,s.xmin::text FROM project_meta.identity m CROSS JOIN auth.auth_settings p CROSS JOIN auth.initial_setup s`, proof.Digest()).Scan(&safe, &policyXmin, &markerXmin, &setupXmin))
 		require.True(t, safe)
 	})
-	require.NoError(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard))
+	require.NoError(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard, runPreparationCommand))
 	legacy := append(append([]string{}, passwordArgs...), "-onboarding")
-	require.ErrorIs(t, preparationcli.Run(ctx, legacy, env, io.Discard, io.Discard), domain.ErrConflict)
+	require.ErrorIs(t, preparationcli.Run(ctx, legacy, env, io.Discard, io.Discard, runPreparationCommand), domain.ErrConflict)
 	inspect(func(db *pgx.Conn) {
 		var same bool
 		require.NoError(t, db.QueryRow(ctx, `SELECT p.xmin::text=$1 AND m.xmin::text=$2 AND s.xmin::text=$3

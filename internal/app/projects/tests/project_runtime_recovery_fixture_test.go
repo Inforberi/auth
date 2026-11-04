@@ -11,6 +11,7 @@ import (
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
+	profilefactory "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 	projectbrowser "github.com/Inforberi/financial-intelligence/internal/transport/http/projects"
@@ -22,7 +23,7 @@ func serveRecoveryProjects(t *testing.T, f projectIsolationHTTP) ([2]isolationHT
 		PlatformOrigin: "https://platform-http.example.test",
 		Residents:      projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute},
 		Capacity:       middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &f.password.Session,
-	}, f.deps, func(_ context.Context, key projectruntime.Key, origin string) (runtimeprofile.ProjectProfileConfig, error) {
+	}, f.deps.Reader, profilefactory.NewFactory(f.deps, func(_ context.Context, key projectruntime.Key, origin string) (runtimeprofile.ProjectProfileConfig, error) {
 		for i, expected := range f.projects {
 			// Revisions change on resume; the project binding and its origin stay independent.
 			if key.Binding == expected.Binding && origin == f.origins[i] {
@@ -30,7 +31,7 @@ func serveRecoveryProjects(t *testing.T, f projectIsolationHTTP) ([2]isolationHT
 			}
 		}
 		return runtimeprofile.ProjectProfileConfig{}, projectdomain.ErrConflict
-	}, nil)
+	}), nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(h)
 	server.Client().Timeout = 10 * time.Second

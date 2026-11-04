@@ -9,6 +9,7 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
+	profileapp "github.com/Inforberi/financial-intelligence/internal/app/projects/profile"
 	runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
 	projectnative "github.com/Inforberi/financial-intelligence/internal/auth/project/token"
 	tokenredis "github.com/Inforberi/financial-intelligence/internal/auth/token/repository/redis"
@@ -28,7 +29,7 @@ func (f projectProfileFixture) tokenProfile(t *testing.T, ctx context.Context, o
 	cfg := runtimeprofile.ProjectProfileConfig{Tokens: &tokens, Timeout: 10 * time.Second}
 	// Exchange-only needs the issuance Redis owner, not the ordinary password/MFA client.
 	deps := runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: f.deps.Registry, Reader: f.deps.Reader, IssuanceRedis: client}}
-	profile, err := runtimeprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+	profile, err := profileapp.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.True(t, profile.Readiness().Ready)
 	require.True(t, profileFeature(t, profile, "exchange").Ready)
@@ -36,10 +37,10 @@ func (f projectProfileFixture) tokenProfile(t *testing.T, ctx context.Context, o
 	bad := tokens
 	bad.Issuer = "https://foreign-issuer.example.test"
 	cfg.Tokens = &bad
-	rejected, err := runtimeprofile.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
+	rejected, err := profileapp.BuildProjectProfile(ctx, f.key, origin, cfg, deps)
 	require.NoError(t, err)
 	require.Empty(t, rejected.RoutePlan())
 	require.Equal(t, "origin_mismatch", profileFeature(t, rejected, "tokens").Reason)
-	_, err = runtimeprofile.BuildProjectProfile(ctx, f.key, "https://foreign-origin.example.test", cfg, deps)
+	_, err = profileapp.BuildProjectProfile(ctx, f.key, "https://foreign-origin.example.test", cfg, deps)
 	require.Error(t, err)
 }

@@ -108,8 +108,7 @@ func NewProjectOnboarding(ctx context.Context, cfg ProjectOnboardingConfig, deps
 
 func (cfg ProjectOnboardingConfig) validate() error {
 	p := cfg.Project
-	if !projectdomain.ValidID(p.ID) || !projectdomain.ValidSlug(p.Slug) || !projectdomain.ValidOrigin(p.Origin) ||
-		p.DesiredState != projectdomain.Enabled || p.Phase != projectdomain.Provisioning || p.Version < 1 || p.Generation < 1 ||
+	if !p.AllowsOnboarding() ||
 		cfg.Keys.Binding().ProjectID != p.ID || cfg.Keys.EncryptionKey() == "" || cfg.Keys.SetupSecret() == "" {
 		return errors.New("incomplete project onboarding configuration")
 	}

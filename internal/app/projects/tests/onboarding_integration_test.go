@@ -55,7 +55,7 @@ func onboardingPreparationDrill(t *testing.T, physical *pgx.Conn, env func(strin
 		_, err := conn.Exec(ctx, `ALTER TABLE project_meta.identity ADD CONSTRAINT fail_onboarding CHECK(NOT configuration_prepared)`)
 		require.NoError(t, err)
 	})
-	require.Error(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard))
+	require.Error(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard, runPreparationCommand))
 	inspect(func(conn *pgx.Conn) {
 		var clean bool
 		require.NoError(t, conn.QueryRow(ctx, `SELECT NOT configuration_prepared AND NOT EXISTS(SELECT 1 FROM auth.auth_settings)
@@ -65,7 +65,7 @@ func onboardingPreparationDrill(t *testing.T, physical *pgx.Conn, env func(strin
 			INSERT INTO auth.initial_setup(singleton) VALUES(true)`)
 		require.NoError(t, err)
 	})
-	require.ErrorIs(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard), domain.ErrConflict, "must not adopt unmarked setup state")
+	require.ErrorIs(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard, runPreparationCommand), domain.ErrConflict, "must not adopt unmarked setup state")
 	inspect(func(conn *pgx.Conn) {
 		_, err := conn.Exec(ctx, `DELETE FROM auth.initial_setup`)
 		require.NoError(t, err)
@@ -108,11 +108,11 @@ func onboardingPreparationDrill(t *testing.T, physical *pgx.Conn, env func(strin
 		require.True(t, clean, "authority loss before commit must roll back initialization")
 	})
 	var response bytes.Buffer
-	require.NoError(t, preparationcli.Run(ctx, args, env, &response, io.Discard))
+	require.NoError(t, preparationcli.Run(ctx, args, env, &response, io.Discard, runPreparationCommand))
 	require.Contains(t, response.String(), `"stage":"onboarding_prepared"`)
 	require.NotContains(t, response.String(), proof.Digest())
 	managedArgs := append(append([]string{}, passwordArgs...), "-managed")
-	require.ErrorIs(t, preparationcli.Run(ctx, managedArgs, env, io.Discard, io.Discard), domain.ErrConflict)
+	require.ErrorIs(t, preparationcli.Run(ctx, managedArgs, env, io.Discard, io.Discard, runPreparationCommand), domain.ErrConflict)
 	var markerXmin, policyXmin, setupXmin string
 	var policyBefore []byte
 	inspect(func(conn *pgx.Conn) {
@@ -142,7 +142,7 @@ func onboardingPreparationDrill(t *testing.T, physical *pgx.Conn, env func(strin
 		require.NoError(t, conn.QueryRow(ctx, `SELECT xmin::text,to_jsonb(p)=$1::jsonb FROM auth.auth_settings p`, policyBefore).Scan(&policyXmin, &restored))
 		require.True(t, restored, "administrative drills must restore the exact prepared policy")
 	})
-	require.NoError(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard))
+	require.NoError(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard, runPreparationCommand))
 	inspect(func(conn *pgx.Conn) {
 		var same bool
 		require.NoError(t, conn.QueryRow(ctx, `SELECT m.xmin::text=$1 AND p.xmin::text=$2 AND s.xmin::text=$3
@@ -151,19 +151,19 @@ func onboardingPreparationDrill(t *testing.T, physical *pgx.Conn, env func(strin
 		_, err := conn.Exec(ctx, `UPDATE auth.initial_setup SET operator_hash=repeat('0',64)`)
 		require.NoError(t, err)
 	})
-	require.ErrorIs(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard), domain.ErrConflict)
+	require.ErrorIs(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard, runPreparationCommand), domain.ErrConflict)
 	inspect(func(conn *pgx.Conn) {
 		_, err := conn.Exec(ctx, `UPDATE auth.initial_setup SET operator_hash=$1`, proof.Digest())
 		require.NoError(t, err)
 		_, err = conn.Exec(ctx, `UPDATE auth.auth_settings SET google_enabled=true`)
 		require.NoError(t, err)
 	})
-	require.ErrorIs(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard), domain.ErrConflict)
+	require.ErrorIs(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard, runPreparationCommand), domain.ErrConflict)
 	inspect(func(conn *pgx.Conn) {
 		_, err := conn.Exec(ctx, `UPDATE auth.auth_settings SET google_enabled=false; DELETE FROM auth.initial_setup`)
 		require.NoError(t, err)
 	})
-	require.ErrorIs(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard), domain.ErrConflict, "lost setup must not be recreated")
+	require.ErrorIs(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard, runPreparationCommand), domain.ErrConflict, "lost setup must not be recreated")
 	inspect(func(conn *pgx.Conn) {
 		var missing bool
 		require.NoError(t, conn.QueryRow(ctx, `SELECT configuration_prepared AND NOT EXISTS(SELECT 1 FROM auth.initial_setup)

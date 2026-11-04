@@ -126,7 +126,9 @@ func Assemble(ctx context.Context, cfg *config.Config, deps authapp.Dependencies
 		return nil, err
 	}
 	workers := authapp.DeliveryWorkers(password.Recovery, account, mfa.Delivery, nil, delivery)
-	handler = projectHostRouter(cfg.Platform.Origin, handler, projectHTTP)
+	if projectHTTP != nil {
+		handler = router.ProjectHosts(cfg.Platform.Origin, handler, projectHTTP)
+	}
 	assembled = true
 	return authapp.NewRuntime(handler, accountservice.NewRetention(repo, cfg.Retention), workers, owned, drainHTTP), nil
 }

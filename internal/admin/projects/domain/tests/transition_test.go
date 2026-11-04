@@ -104,3 +104,24 @@ func TestTransitionBounds(t *testing.T) {
 		}
 	}
 }
+
+func TestFinishPreparationBindingAndErrorOrder(t *testing.T) {
+	for _, state := range []domain.DesiredState{domain.Enabled, domain.Suspended} {
+		p := domain.Project{DesiredState: state, Phase: domain.Provisioning, Version: 2, Generation: 3}
+		if _, err := p.NextWithBinding(domain.FinishPreparation, false); !errors.Is(err, domain.ErrInvalidTransition) {
+			t.Fatal("unbound project became ready", err)
+		}
+		next, err := p.NextWithBinding(domain.FinishPreparation, true)
+		if err != nil || next.Phase != domain.Ready || next.DesiredState != state || next.Version != 3 || next.Generation != 4 {
+			t.Fatal("bound transition failed", next, err)
+		}
+		p.Version = math.MaxInt64
+		if _, err := p.NextWithBinding(domain.FinishPreparation, false); !errors.Is(err, domain.ErrConflict) {
+			t.Fatal("missing binding masked counter conflict", err)
+		}
+	}
+	p := domain.Project{DesiredState: domain.Enabled, Phase: domain.Pending, Version: 1, Generation: 1}
+	if _, err := p.NextWithBinding(domain.BeginPreparation, false); err != nil {
+		t.Fatal("binding required before preparation", err)
+	}
+}
