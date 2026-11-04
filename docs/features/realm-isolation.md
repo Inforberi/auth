@@ -33,9 +33,9 @@ Scoped prefix имеет вид `auth:{realm:<kind>:<uuid>:<purpose>}:`. Realm �
 
 ## Шифрование и HMAC
 
-`app/auth/realm_security.go` создаёт прежний `secretbox.Cipher` с purpose `realm:<kind>:<uuid>:<feature-purpose>`. Realm входит в AEAD additional authenticated data и HMAC namespace. Даже при одинаковом root key ciphertext одного realm не открывается в другом, digest одинакового значения различается. Legacy purpose/digest остаются прежними, включая особый namespace email verification.
+`infra/secretbox/scope.go` создаёт прежний `secretbox.Cipher` с purpose `realm:<kind>:<uuid>:<feature-purpose>`. Realm входит в AEAD additional authenticated data и HMAC namespace. Даже при одинаковом root key ciphertext одного realm не открывается в другом, digest одинакового значения различается. Legacy purpose/digest остаются прежними, включая особый namespace email verification.
 
-Область передаётся в verification/outbox, binding, initial setup, password reset/temporary/login limits, TOTP/recovery, email OTP, SMTP/provider settings, OIDC flow и JWT limiter digest. Password assembly сгруппирована в `app/auth/password.go`, чтобы связанные сервисы/лимиты/cipher не смешивались с остальной assembly.
+Область передаётся в verification/outbox, binding, initial setup, password reset/temporary/login limits, TOTP/recovery, email OTP, SMTP/provider settings, OIDC flow и JWT limiter digest. Password assembly сгруппирована в `app/auth/methods/password.go`, чтобы связанные сервисы/лимиты/cipher не смешивались с остальной assembly.
 
 Namespace **не заменяет независимые deployment keys**, issuer/signing keys, SQL storage marker, runtime grants или exact origin/cookie/CSRF guards. Provisioning/key ownership и host routing ещё впереди. Existing operational recovery tools пока legacy-only; для нового operator profile нужен явный scoped recovery и drill. Автоматический re-encryption, legacy decrypt fallback и смена настоящих ключей не добавлены.
 

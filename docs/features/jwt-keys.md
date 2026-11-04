@@ -11,7 +11,7 @@
 
 Existing go-jose/v4 v4.1.6 стал прямой dependency, новой библиотеки нет. Криптография и JSON/JWS parser библиотечные; поверх них — ограничения собственного typed-контракта. Formatter/architecture checks теперь включают pkg.
 
-`signing.Load(KeyConfig)` подключён из app/auth/token.go только при JWT_ENABLED=true. Disabled не читает файлы. Enabled требует HTTPS issuer/kid, private PKCS#8 PEM и public JWKS; автогенерации/перезаписи/fallback нет. Runtime paths/ENV/secret mounts описаны в [session exchange](jwt-exchange.md).
+`signing.Load(KeyConfig)` подключён из app/auth/token/assembly.go только при JWT_ENABLED=true. Disabled не читает файлы. Enabled требует HTTPS issuer/kid, private PKCS#8 PEM и public JWKS; автогенерации/перезаписи/fallback нет. Runtime paths/ENV/secret mounts описаны в [session exchange](jwt-exchange.md).
 
 Private key — один PKCS#8 PEM block PRIVATE KEY, ECDSA P-256, ≤16 KiB, без preamble/второго block/trailing data. Regular file с permissions без group/other (0600/0400). Deployment paths и родители доверенные, недоступные на запись посторонним; это не API загрузки ключа и не filesystem sandbox. Symlinks допустимы только в operator-managed дереве. Ошибки не раскрывают путь/ключ/токен.
 

@@ -500,7 +500,7 @@ Scope — изменения R1–R7 и их границы доверия на 
 
 ## Дополнительная проверка границ после R8 — 4 ноября 2026
 
-По новому запросу пользователя проверены app/Auth, project storage/catalog repositories и разделение SQL/правил. Приёмка R7/R8 подтверждает конкретные snapshots и проверки, но не означает, что оставшиеся широкие пакеты уже соответствуют желаемой читаемости. Следующие архитектурные исправления ещё не реализованы; до их завершения MP6R в части границ не считать окончательно закрытым. Не запускать MP7 вместо устранения этого смешения.
+По новому запросу пользователя проверены app/Auth, project storage/catalog repositories и разделение SQL/правил. Приёмка R7/R8 подтверждает конкретные snapshots и проверки, но не означает, что оставшиеся широкие пакеты уже соответствуют желаемой читаемости. Корректирующие source-изменения реализованы; до приёмки нового снимка MP6R в части границ не считать окончательно закрытым. Не запускать MP7 вместо устранения этого смешения.
 
 ### Фактические находки
 
@@ -562,4 +562,21 @@ internal/admin/projects/
 
 Дополнительный просмотр остальных auth/access/administrators repositories не обнаружил прямых repository imports в app/HTTP/SMTP/external clients и не подтвердил новых самостоятельных orchestration hotspots. Service imports контрактных типов, SMTP credential rebinding guards и MFA authority callbacks сами по себе не нарушения. Это ограниченный source-review, а не доказательство отсутствия всех ошибок.
 
-Вывод текущего просмотра — конкретные нарушения границ и план их устранения, не production/security certification и не выполненный рефакторинг этого target. Текущий executable deployment gate рассматривается отдельно на `/private/tmp/auth-deployment-v1-y0nko35e`.
+### Реализация корректирующего блока
+
+- Разделены реальные entrypoints `app/auth.Assemble` и `app/admin.Assemble`; режим выбирает root App. Builders account/methods/MFA/token/settings выделены по совместным зависимостям, без экспорта cipher/лимитеров. Общие ресурсы и порядок shutdown сохранены.
+- Operator API/SQL tests перенесены одной closure в `app/admin/tests`; private project-host/runtime tests — в `app/admin`. Private token/MFA tests следуют за builder, crypto/Redis scope isolation — в `infra/realmscope/tests`. Token deployment read-model test — у token/settings. Fixture roots исправлены для новой глубины.
+- Physical storage переименован в `preparation/database/postgres`; callers/CLI/imports и текущая документация обновлены.
+- Чистые `Role.RequireCapabilities` и `PolicyRuntime.CheckChange` выделены в domain. Порядок ошибок сохранён, актуальность обеспечивается прежним вызовом внутри locked SQL transaction.
+- Проектные SQL role/assignment/policy mutations и receipts находятся у фич в `repository/postgres/mutation`; общий admission/authority transaction envelope остаётся в catalog repository. Межбазовая сверка результата принадлежит role service, payload подтверждённого receipt остаётся private у persistence owner.
+- По source diff все 702 прежних Test roots сохранены; добавлены пять сценариев для чистых правил и нового service-port protocol. SQL literal bodies без изменений; HTTP/ENV/schema/dependencies не менялись. Это source review, не результат исполнения тестов.
+
+Gate: один законченный immutable snapshot Луне, `task check` один раз из-за общего переноса пакетов; targeted race/SQL/Redis для изменённых assembly/reconciliation/authority/cleanup. Без повторного image/security/load прогона при отсутствии соответствующего delta. До получения PASS статус — NOT RUN, MP7/UI не начинать. Deployment V4 остаётся отдельной принятой работой с оговоркой о default named-volume capacity.
+
+### Уточнение границ app/projects после корректирующего блока
+
+[Отдельный аудит и четыре блока предлагаемой корректировки](app-boundaries-audit.md): constructors оставить в app; project runtime adapters, delivery loop, preparation use case и HTTP binding разделить по фактическим владельцам. Предложение ещё не реализовано и требует согласования; ранее переданный Luna snapshot этого разделения не содержит.
+
+### Закрытие корректировки слоёв и app — V5, 4 ноября
+
+Дополнительные нарушения границ после R8 и согласованный app-boundary план исправлены и приняты. MP6R.2–.3 в пределах этой корректировки закрыты; прежние формулировки об открытых пунктах относятся к состоянию до V5. Отдельные Auth/admin builders, physical preparation owner, feature-local SQL mutations, service role reconciliation, project runtime adapters и HTTP/profile контракт реализованы. [Закрытый план](app-boundaries-audit.md#закрытие-плана), [проверки и ограничения](../operations/acceptance-summary.md#границы-app-и-корректировка-слоёв--приёмка-v5-4-ноября-2026). Далее MP7, не UI; MP8 не объявляется выполненным.

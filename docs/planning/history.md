@@ -2691,3 +2691,9 @@ Deploy разделён на Compose/Docker/Postgres/examples/scripts, test runn
 Default Docker named-volume вариант заблокирован заполненным Docker storage; behavior проверен с own temporary bind-volume fixture при том же service model, это не named-volume capacity PASS. Cleanup своих данных выполнен, R5 сохранён. [Receipt и ограничения](../operations/acceptance-summary.md#deployment-cleanup-приёмка-v4--4-ноября2026), `/private/tmp/auth-deployment-v4-summary.json`. Пользователь разрешил коммиты; новая корректировка границ app/repository ещё не реализована, не подменяется этой приёмкой. В AGENTS/workflow закреплены только changed-delta checks и reuse неизменившихся PASS.
 
 Выполненные deployment source/config изменения зафиксированы `119898b` — `fix(deploy): разделил секреты и упорядочил запуск`. Документация о границах и scope проверок выделена отдельно; запланированный app/repository refactor не выдаётся за реализованный.
+
+## 4 ноября 2026 — принята корректировка слоёв и app
+
+Согласованный [app-boundary план](app-boundaries-audit.md) закрыт по `/private/tmp/auth-app-boundaries-v5-9ljmu5zm`, base8e3f7de. Compile/fixture/линтер ошибки предыдущих V1–V4 исправлены. Targeted tests, lint0, affected race,11 SQL roots и2 Redis roots — PASS; source рабочего дерева совпадает с V5. Проверки affected-only, успешное неизменившееся reuse. [Evidence и ограничения](../operations/acceptance-summary.md#границы-app-и-корректировка-слоёв--приёмка-v5-4-ноября-2026). MP6R корректировка закрыта; MP7/MP8 и UI не выполнялись. Коммит пока не запрошен.
+
+Реализация принятого V5 закоммичена по запросу пользователя: `f0cefe8 refactor(app): разделил сборку и проектные сценарии`; после V5 изменялась только документация.

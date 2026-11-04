@@ -729,7 +729,7 @@ Template не содержит identities/SSO/RBAC: эти задачи реал
 
 По пользовательским примерам подтверждены оставшиеся архитектурные проблемы: wide app/auth (22 source/26 test files), смешанная Auth/admin assembly, cross-DB role reconciliation в repository и pure policy проверки среди SQL. Физический storage отделён от catalog persistence обоснованно, но название требует уточнения. [Находки, target и единый корректирующий блок](readability-refactor.md#дополнительная-проверка-границ-после-r8--4-ноября-2026). MP6R.2–.3 возвращены в открытые; MP7 не подменяет эти исправления.
 
-Это source audit и план, app/repository/storage код в рамках него ещё не переписывался. Массовый экспорт private state и перенос SQL authority за транзакцию запрещены. Ранее принятые R3–R8 evidence сохраняются с исходными границами; формулировку «рефакторинг полностью завершён» применять пока нельзя.
+Корректирующий source-блок выполнен: отдельные Auth/admin builders и test owners, physical preparation/database, чистые domain правила, feature-local SQL mutations и service-owned role reconciliation. Новый executable gate ещё открыт; это не утверждение о завершении приёмки. Массовый экспорт private state и перенос SQL authority за транзакцию запрещены. Ранее принятые R3–R8 evidence сохраняются с исходными границами; формулировку «рефакторинг полностью завершён» применять пока нельзя.
 
 ## Подготовка production deployment после MP6R — 4 ноября
 
@@ -755,3 +755,7 @@ Template не содержит identities/SSO/RBAC: эти задачи реал
 
 После исправления повторять затронутые проверки; ранее успешные несвязанные проверки не перезапускать без причины. Логи ограничивать без потери exit status и причины ошибки, оставшиеся непроверенные гарантии указывать явно. CI отдельно выполняет `task check`, `task check:api`, `task check:security` и production image build; integration/race не запускаются автоматически на каждый push. Новые scripts для выбора проверок не нужны.
 
+
+## Приёмка корректировки app и слоёв — 4 ноября
+
+Согласованный [план app](app-boundaries-audit.md#закрытие-плана) завершён по V5. MP6R.2–.3 корректировки закрыты: targeted tests, lint0, affected race,11 SQL roots и2 Redis roots actual PASS. Main подтвердил source equality со snapshot; после приёмки только итоговые docs. [Receipt/scope/ограничения](../operations/acceptance-summary.md#границы-app-и-корректировка-слоёв--приёмка-v5-4-ноября-2026). Не новый full task-check PASS и не нагрузочная/эксплуатационная приёмка. Следующий шаг MP7, MP8 затем; UI отдельно согласовать.

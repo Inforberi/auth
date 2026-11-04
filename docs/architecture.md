@@ -1,6 +1,6 @@
 # Архитектура универсального Auth
 
-Целевая структура согласована 1 ноября 2026 для планируемого MP6R. Сейчас меняется только документация; перенос исходников не начат. Карта конкретных переносов и интерфейсов уточняется в R1 [плана рефакторинга](planning/readability-refactor.md). Фактические пути — в [карте проекта](ai/index.md), текущее состояние — в [текущем шаге](ai/current-task.md).
+Структура согласована 1 ноября 2026; 4 ноября выполнено дополнительное разделение сборки и SQL-владельцев. Ниже описано текущее размещение исходников. Приёмка корректирующего блока ещё открыта; прежние R7/R8 receipts относятся к прежним snapshots. Карта модулей — [здесь](ai/index.md), статус — в [текущем шаге](ai/current-task.md), решения — в [плане рефакторинга](planning/readability-refactor.md).
 
 ## Структура кода и правила пакетов
 
@@ -16,8 +16,13 @@ internal/
 ├── app/
 │   ├── app.go                    # общие ресурсы и сборка приложения
 │   ├── run.go                    # запуск, остановка и cleanup
-│   ├── auth/                     # сборка Auth-сервисов
-│   ├── admin/                    # сборка общей панели управления
+│   ├── auth/                     # сборка Auth, без выбора режима общей админки
+│   │   ├── assembly.go, app.go, lifecycle.go, resources.go
+│   │   ├── account/, methods/, mfa/, token/, settings/
+│   │   ├── registration/, setup/
+│   │   └── tests/               # публичные сценарии; private tests рядом с владельцем
+│   ├── admin/                    # сборка общей панели и проектного HTTP/runtime
+│   │   └── tests/               # operator API/SQL suite
 │   └── projects/                 # подключение Auth выбранного проекта
 ├── config/                       # конфигурация запуска
 ├── server/http/                  # HTTP server, timeouts, graceful shutdown
@@ -79,7 +84,11 @@ internal/
 │       ├── transport/http/
 │       ├── runtime/              # bounded pools/leases проектов
 │       ├── credentials/          # защита технических credentials
-│       └── storage/postgres/     # подготовка БД и технических ролей
+│       ├── roles/{service,repository/postgres/}
+│       ├── policy/{service,repository/postgres/}
+│       └── preparation/
+│           ├── service/, repository/postgres/, transport/cli/
+│           └── database/postgres/ # physical DDL, SQL-роли, schema
 ├── access/                       # роли, permissions и назначения
 ├── audit/
 ├── integrations/                 # протокольные клиенты
@@ -241,11 +250,11 @@ MP2.7 SQL registry: `internal/platform/project/runtime` владеет огра�
 
 MP3 onboarding: [контракт](features/project-onboarding-preparation.md), opt-in -onboarding использует scoped SetupProof и общие settings/setup transaction-owned SQL operations, не новый Auth stack. Safe defaults/setup pin/private identity marker атомарны; общий schema/onboarding executor-only connection lifecycle сохраняет attestation/reseal. Ни users/roles, ни LOGIN/CONNECT/project ready не создаются этим stage. Raw setup secret не экспортируется; operator bridge/runtime/setup admission ещё впереди.
 
-MP3 credentials: [контракт](features/project-secrets-preparation.md), `project/credentials` использует existing AES-GCM с realm/project/reservation/target/OIDs/schema/format/key-ID binding. Catalog EnsureSecrets/ReadDatabaseCredential — immutable row/flag и bounded current authority locks, typed reader возвращает snapshot после commit. `storage/postgres/password{,_verifier}`/opt-in CLI -password устанавливает SCRAM через согласованную xdg-go/scram v1.2.0; password+target receipt атомарны, replay без перезаписи. Root key только protected executor ENV, ordinary API не имеет ciphertext SELECT/SCRAM dependency. БД sealed/runtime NOLOGIN; LOGIN/CONNECT/runtime registry/configuration/admin/binding/ready впереди. UI не включён.
+MP3 credentials: [контракт](features/project-secrets-preparation.md), `project/credentials` использует existing AES-GCM с realm/project/reservation/target/OIDs/schema/format/key-ID binding. Catalog EnsureSecrets/ReadDatabaseCredential — immutable row/flag и bounded current authority locks, typed reader возвращает snapshot после commit. `preparation/database/postgres/password{,_verifier}`/opt-in CLI -password устанавливает SCRAM через согласованную xdg-go/scram v1.2.0; password+target receipt атомарны, replay без перезаписи. Root key только protected executor ENV, ordinary API не имеет ciphertext SELECT/SCRAM dependency. БД sealed/runtime NOLOGIN; LOGIN/CONNECT/runtime registry/configuration/admin/binding/ready впереди. UI не включён.
 
 MP3-schema: [opt-in schema stage](features/project-schema-preparation.md) в существующем project-prepare. Встроенные initial Auth SQL/runtime grants остаются одним источником; отдельная NOLOGIN runtime role, schema и version/checksum/realm/project/OID marker коммитятся в project transaction. Persisted schema intent + exclusive CONNECT executor/shared marker, проверка новой connection до DDL, target session lock и project transaction lock; success только после reseal/current catalog check. Secrets/LOGIN/initial admin/binding/ready ещё не выпущены; обычный Auth API по-прежнему без DDL.
 
-MP3-storage: [отдельный one-shot executor](features/project-storage-preparation.md), `cmd/project-prepare` → existing catalog Reserve + `platform/project/storage/postgres`. Две отдельные credentials, authoritative maintenance-БД с ownership journal и session lock, atomic role+owner OID record, закрытая physical DB и проверка реальных owner/database OID. Auth API не импортирует executor и не получает DDL privileges. Schema/runtime/keys/onboarding/ready и background scheduling ещё не реализованы; network connections требуют verified TLS.
+MP3-storage: [отдельный one-shot executor](features/project-storage-preparation.md), `cmd/project-prepare` → existing catalog Reserve + `platform/project/preparation/database/postgres`. Две отдельные credentials, authoritative maintenance-БД с ownership journal и session lock, atomic role+owner OID record, закрытая physical DB и проверка реальных owner/database OID. Auth API не импортирует executor и не получает DDL privileges. Schema/runtime/keys/onboarding/ready и background scheduling ещё не реализованы; network connections требуют verified TLS.
 
 MP3 reservation foundation: [внутренняя подготовка](features/project-preparation.md) — отдельный catalog SQL credential/profile, existing begin transition + one durable reservation, generation/target/replay guards в одной bounded transaction. Technical names по project UUID, nonce неизменяемый. HTTP/worker не запускают этот port; ручная CLI добавлена в MP3-storage, ready не публикуется.
 
@@ -287,7 +296,7 @@ Physical cleanup принадлежит существующему account reten
 | Verification scenarios/config/encrypted delivery | `internal/auth/account/service` |
 | Verification/audit/outbox SQL, Redis limits | `internal/auth/account/repository` |
 | Verify/resend JSON API, verified-email gate | `internal/auth/account/transport/http` |
-| Account assembly | `internal/app/auth/account.go` |
+| Account assembly | `internal/app/auth/account/assembly.go` |
 | Registration transaction composition | `internal/app/auth/app.go` |
 | Resource lifecycle / delivery workers | `internal/app/auth/run.go` |
 | AES-GCM payload / HMAC keys, bounded SMTP | `internal/infra/secretbox`, `internal/infra/mailer` |
@@ -449,14 +458,15 @@ SessionService, Management, Activity и Rotation остаются в session/ser
 
 ### R7: сборка приложения и проектные границы
 
-`cmd/auth` вызывает `internal/app.New`. Root App владеет process SQL/Redis/logger/shared hasher, HTTP запуском, startup cleanup и завершением. `app/auth.Assemble` получает заимствованные Dependencies и возвращает Runtime с Handler/Run/Close. Runtime владеет своими workers; teardown выполняется в прежнем порядке через небольшую LIFO Resources-группу. Общая конфигурация и `server/http` самостоятельны.
+`cmd/auth` вызывает `internal/app.New`. Root App владеет process SQL/Redis/logger/shared hasher, HTTP запуском, startup cleanup и завершением. Root App выбирает `app/auth.Assemble` или `app/admin.Assemble`. Обе сборки получают заимствованные Dependencies и возвращает Runtime с Handler/Run/Close. Runtime владеет своими workers; teardown выполняется в прежнем порядке через небольшую LIFO Resources-группу. Общая конфигурация и `server/http` самостоятельны.
 
 ```text
 internal/app/
 ├── app.go, run.go, server.go, resources.go
-├── auth/                   # общая Auth сборка и lifecycle
-│   ├── registration/      # сборка регистрации с email-outbox
-│   └── setup/             # сборка первого администратора
+├── auth/                   # обычный Auth и общий Runtime lifecycle
+│   ├── account/, methods/, mfa/, token/, settings/
+│   ├── registration/, setup/
+│   └── tests/              # публичные Auth API/SQL сценарии
 ├── admin/                  # сборка административных сценариев
 └── projects/
     ├── runtime/            # registry, reader, scoped SMTP и Binding
@@ -490,8 +500,14 @@ Production API читает `.env.prod.app`, а не owner Compose `.env.prod`. 
 
 ### Каталог проектов и физическая подготовка БД
 
-Текущий `admin/projects/repository/postgres` сохраняет каталог/переходы/результаты. `admin/projects/preparation/repository/postgres` сохраняет reservations и этапы подготовки. Текущий `admin/projects/storage/postgres` создаёт физическую БД, SQL-роли, grants и схему на trusted target; он использует привилегированное отдельное соединение и advisory lock, а не runtime CRUD-пул. Поэтому наличие двух SQL-adapters оправдано разными данными и полномочиями; название storage требует уточнения до preparation/database/postgres.
+Текущий `admin/projects/repository/postgres` сохраняет каталог/переходы/результаты. `admin/projects/preparation/repository/postgres` сохраняет reservations и этапы подготовки. `admin/projects/preparation/database/postgres` создаёт физическую БД, SQL-роли, grants и схему на trusted target; он использует привилегированное отдельное соединение и advisory lock, а не runtime CRUD-пул. Catalog repository и physical preparation имеют разные данные и полномочия; привилегированный DDL не смешивается с API-пулом.
 
-Продуктовые правила и orchestration принадлежат domain/service. Repository читает актуальный state, держит locks, вызывает чистое правило в атомарном сценарии, пишет изменения/audit/receipt и преобразует SQL errors. Запретить ему WHERE/constraints/current authority — значит ослабить транзакционную гарантию; это не цель разделения. Межбазовая последовательность role reconciliation не должна скрываться за именем repository.
+Продуктовые правила и orchestration принадлежат domain/service. Repository читает актуальный state, держит locks, вызывает чистое правило в атомарном сценарии, пишет изменения/audit/receipt и преобразует SQL errors. Запретить ему WHERE/constraints/current authority — значит ослабить транзакционную гарантию; это не цель разделения. Межбазовая сверка принадлежит `roles/service/reconcile.go`: чтение известного outcome → bounded receipt lookup → сохранение подтверждённого результата → окончательное чтение с актуальной authority. Узкий порт RoleReconciliation скрывает receipt payload. SQL source проверяет binding/receipt в прежней read-only транзакции; runtime lease освобождается до записи каталога. Только repository может сформировать и сохранить подтверждённый snapshot.
 
-Application root создаёт и связывает зависимости, выбирает доверенный режим и управляет ресурсами. Сервисные решения о роли, доступе, policy transitions и recovery не должны реализовываться в app. Текущие constructors app/auth по большей части соответствуют этому правилу, но их смешение с admin assembly и root-level test fixtures требует дополнительного разделения. [Фактические находки и ещё не реализованный target](planning/readability-refactor.md#дополнительная-проверка-границ-после-r8--4-ноября-2026). Ранее принятые snapshots не заменяют эту корректировку.
+`roles/repository/postgres/mutation` и `policy/repository/postgres/mutation` содержат проектные SQL-операции и receipts. Общий catalog transaction/admission envelope остаётся в `projects/repository/postgres`: его выделение по файлам не должно разрывать locks, authority, replay и audit. Дочерний mutation-пакет не импортирует parent facade. Чистые `Role.RequireCapabilities` и `PolicyRuntime.CheckChange` принадлежат domain и вызываются по актуальному состоянию внутри исходной транзакции.
+
+Application root создаёт и связывает зависимости, выбирает доверенный режим и управляет ресурсами. Сервисные решения о роли, доступе, policy transitions и recovery не должны реализовываться в app. `app/auth` собирает обычный Auth через feature builders, `app/admin` — общую админку, управление проектами и проектный HTTP. Crypto/лимитеры остаются private в builders; общие account/password resources не пересоздаются ради управления пользователем. Operator black-box suite находится в `app/admin/tests`; private lifecycle/host/token assertions остаются рядом с их владельцами. Pure token deployment test находится в `auth/token/settings/tests`, realm crypto/Redis isolation — в `infra/realmscope/tests`. [Корректирующий блок и gate](planning/readability-refactor.md#дополнительная-проверка-границ-после-r8--4-ноября-2026). Старый PASS не закрывает новый снимок.
+
+### HTTP-контракт проектного профиля
+
+`auth/project/profile.ProjectProfile` хранит закрытое runtime-состояние; `Endpoints` передаёт transport готовые сценарии и текущие capability callbacks. Маршруты/handlers/middleware и context origin/key guards находятся в `transport/http/projects`; сессии работают через SessionRuntime, который сохраняет прежние pool leases и SQL guards. Transport не импортирует repository/pgx/app. Deployment config/source остаётся `app/projects/profile`. Приёмка нового разделения отдельно от старых receipts.
