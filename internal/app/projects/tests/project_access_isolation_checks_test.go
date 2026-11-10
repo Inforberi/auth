@@ -9,6 +9,7 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accesshttp "github.com/Inforberi/financial-intelligence/internal/access/transport/http"
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
@@ -17,6 +18,16 @@ func checkProjectAccessIsolation(t *testing.T, ctx context.Context, f projectIso
 	const roles = "/api/v1/admin/roles"
 	owners := [2]string{isolationAdminLogin(t, ctx, webs[0], httpOwnerEmail), isolationAdminLogin(t, ctx, webs[1], httpOwnerEmail)}
 	manager := isolationAdminLogin(t, ctx, webs[0], httpManagerEmail)
+	var managerAuthVersion accountdomain.AuthVersion
+	var managerAccessVersion, systemRoleVersion int64
+	require.NoError(t, f.databases[0].QueryRow(ctx, `SELECT auth_version,access_version FROM auth.users WHERE id=$1`, httpManagerID).Scan(&managerAuthVersion, &managerAccessVersion))
+	require.NoError(t, f.databases[0].QueryRow(ctx, `SELECT version FROM auth.roles WHERE key='super_admin'`).Scan(&systemRoleVersion))
+	selfPromotion := accesshttp.AdministratorRequest{ExpectedAuthVersion: managerAuthVersion, ExpectedAccessVersion: managerAccessVersion, ExpectedRoleVersion: systemRoleVersion}
+	promotionResponse := webs[0].call(t, ctx, "POST", "/api/v1/admin/users/"+httpManagerID+"/administrator", webs[0].origin, manager, selfPromotion)
+	require.Equal(t, 403, promotionResponse.status, "%s", promotionResponse.body)
+	var managerPromoted bool
+	require.NoError(t, f.databases[0].QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM auth.user_roles ur JOIN auth.roles r ON r.id=ur.role_id WHERE ur.user_id=$1 AND r.key='super_admin')`, httpManagerID).Scan(&managerPromoted))
+	require.False(t, managerPromoted, "a non-system project manager cannot promote itself")
 	create := accesshttp.CreateRoleRequest{Key: "http_cross_reader", Name: "Reader", Permissions: []accessdomain.PermissionKey{"reports.read"}}
 	var local [2]accesshttp.RoleResponse
 	for i, web := range webs {

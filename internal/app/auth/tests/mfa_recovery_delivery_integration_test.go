@@ -33,9 +33,11 @@ func checkMFARecoveryDelivery(t *testing.T, db *pgxpool.Pool, ctx context.Contex
 	}
 	claims := make(chan *domain.SecurityDelivery, 16)
 	var group sync.WaitGroup
-	for range 16 {
+	workers := [2]*mfapostgres.Repository{mfapostgres.New(db), mfapostgres.New(db)}
+	for i := range 16 {
+		worker := workers[i%len(workers)]
 		group.Go(func() {
-			job, err := repo.ClaimSecurityDelivery(ctx)
+			job, err := worker.ClaimSecurityDelivery(ctx)
 			if err != nil {
 				t.Error(err)
 			}

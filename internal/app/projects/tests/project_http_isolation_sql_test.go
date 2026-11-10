@@ -29,6 +29,7 @@ func TestTwoProjectHTTPIsolationSQL(t *testing.T) {
 type preparedHTTPProjects struct {
 	admin  *pgx.Conn
 	reader *runtimepostgres.RuntimeCredentialReader
+	root   string
 	a, b   projectruntime.Key
 	target projectruntime.Target
 }
@@ -132,5 +133,5 @@ func prepareHTTPProjects(t *testing.T) preparedHTTPProjects {
 	require.NoError(t, reader.CheckRuntime(ctx))
 	target, err := projectruntime.NewTarget("127.0.0.1", physical.Config().Port, &tls.Config{RootCAs: ca, ServerName: "127.0.0.1", MinVersion: tls.VersionTLS12})
 	require.NoError(t, err)
-	return preparedHTTPProjects{admin: admin, reader: reader, a: a, b: b, target: target}
+	return preparedHTTPProjects{admin: admin, reader: reader, root: master, a: a, b: b, target: target}
 }

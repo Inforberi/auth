@@ -343,3 +343,7 @@ Luna очистила свои БД/роли/Redis15, временные directo
 Приёмка affected-only по выбору пользователя. Полный `task check`/`go test ./...` повторно не запускался; новый global-suite PASS не заявляется. Незатронутые security/image/load проверки не повторялись. Два дополнительных host/TCP race replay (Prepare и Operator) не приняты как SQL gates: этот режим стенда требует SCRAM и несовместим с passwordless synthetic runtime roles. Обязательные корни успешно прошли через предусмотренный Unix socket; race closure независимо PASS. Это ограничение дополнительных replay, не скрытый PASS этих двух команд.
 
 Retained fixture сохранён, роли не менялись; test cleanup оставил Redis DB15 пустым и не оставил synthetic project roles/DB. Две выделенные fixture DB остались пустыми без auth/platform schema. Запрещённый auto-review broad reset/flush не выполнялся, вместо него использовались read-only preflight и собственный cleanup тестов. Production ENV/data и чужие Docker ресурсы не затрагивались. RPS/GC/утечки и внешняя эксплуатационная MP7/MP8 приёмка остаются отдельными задачами. UI не начат, коммит в рамках закрытия не запрошен.
+
+## MP7 local acceptance — 5 ноября2026
+
+[Итог и пределы](mp7-acceptance.md#итог-локальной-приёмки--5-ноября2026): Luna LOCAL PASS, final `/private/tmp/auth-mp7-final-summary.json`. Source drift0,23exit evidence0 проверены main. Реальные внешние провайдеры/SMTP/browser/ingress/fleet и MP8 нагрузка NOT RUN; полной production acceptance не заявлено. Retained own R5 сохранён, synthetic task data очищены.

@@ -37,6 +37,7 @@ type tokenIsolationFixture struct {
 func TestTwoProjectTokenIsolationSQL(t *testing.T) {
 	pair := prepareHTTPProjects(t)
 	projects := newProjectIsolationHTTP(t, pair.admin, pair.reader, pair.a, pair.b, pair.target)
+	setProjectTokenFixtureKID(t, projects, pair.root, "p1-AAAAAAAAAAAAAAAAAAAAAA")
 	f := prepareTokenIsolation(t, projects)
 	browser := checkProjectTokenIsolation(t, t.Context(), f)
 	checkProjectNativeIsolation(t, t.Context(), f, browser)

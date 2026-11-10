@@ -28,8 +28,17 @@ func checkProjectTokenIsolation(t *testing.T, ctx context.Context, f tokenIsolat
 	var browser tokenIsolationBrowser
 	var public [2][]byte
 	var etags [2]string
+	var kids [2]string
 	for i, web := range f.webs {
 		public[i], etags[i] = readIsolationJWKS(t, ctx, web, "", 200)
+		var jwks struct {
+			Keys []struct {
+				ID string `json:"kid"`
+			} `json:"keys"`
+		}
+		require.NoError(t, json.Unmarshal(public[i], &jwks))
+		require.Len(t, jwks.Keys, 1)
+		kids[i] = jwks.Keys[0].ID
 		keys, err := authjwt.ParsePublicKeys(public[i])
 		require.NoError(t, err)
 		browser.verifiers[i], err = authjwt.NewVerifier(authjwt.Expectations{Issuer: web.origin, Audience: "reports", Mode: authjwt.Strict}, keys, time.Now())
@@ -48,6 +57,8 @@ func checkProjectTokenIsolation(t *testing.T, ctx context.Context, f tokenIsolat
 		require.True(t, own.Active)
 		require.Equal(t, httpIsolationUser, own.Subject)
 	}
+	require.NotEmpty(t, kids[0])
+	require.Equal(t, kids[0], kids[1], "fixture must exercise the same kid across independent project keys")
 	require.NotEqual(t, public[0], public[1], "projects must publish independent signing keys")
 	require.NotEqual(t, etags[0], etags[1])
 	for i, web := range f.webs {

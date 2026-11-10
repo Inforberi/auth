@@ -42,6 +42,7 @@ func projectHTTPIsolationDrill(t *testing.T, admin *pgx.Conn, reader *runtimepos
 }
 
 type projectIsolationHTTP struct {
+	admin          *pgx.Conn
 	databases      [2]*pgx.Conn
 	origins        [2]string
 	projects       [2]projectruntime.Key
@@ -135,6 +136,7 @@ func newProjectIsolationHTTP(t *testing.T, admin *pgx.Conn, reader *runtimepostg
 	password := projectPasswordFixtureConfig()
 	password.MFA = mfaservice.Config{Enabled: true, Issuer: "HTTP isolation", ChallengeTTL: time.Minute, UserLimitPerMinute: 100, IPLimitPerMinute: 100, GlobalLimitPerMinute: 100}
 	return projectIsolationHTTP{
+		admin:     admin,
 		databases: databases, origins: origins, projects: [2]projectruntime.Key{a, b}, traces: traces,
 		passwordCipher: passwordCiphers, passwordPrefix: passwordPrefixes, redisKeys: keys, password: password,
 		deps: runtimeprofile.ProjectProfileDependencies{ProjectTokenDependencies: projectnative.ProjectTokenDependencies{Registry: registry, Reader: reader, Redis: rdb, Hash: hash}},
