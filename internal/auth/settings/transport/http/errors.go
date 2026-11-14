@@ -12,6 +12,7 @@ import (
 )
 
 var settingsErrors = []httpx.ErrorRule{
+	httpx.MatchError(domain.ErrSourceReadOnly, 409, "settings_source_read_only", "settings are managed by deployment configuration"),
 	httpx.MatchError(domain.ErrInvalidPolicy, 400, "invalid_auth_policy", "invalid authentication policy"),
 	httpx.MatchError(domain.ErrPolicyConflict, 409, "auth_policy_conflict", "authentication policy changed; reload and retry"),
 	httpx.MatchError(domain.ErrMethodNotReady, 409, "auth_method_not_ready", "login adapter not ready on this instance"),

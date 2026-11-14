@@ -9,6 +9,7 @@ import (
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
+	configuration "github.com/Inforberi/financial-intelligence/internal/auth/settings/configuration/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
@@ -38,6 +39,15 @@ func (r *Repository) Read(ctx context.Context, actor accessservice.Principal) (d
 		actor.UserID, actor.TokenHash, settings.AuthSettingsManage))
 	if errors.Is(err, domain.ErrNotInitialized) {
 		return domain.Snapshot{}, accessdomain.ErrForbidden
+	}
+	if err == nil {
+		err = r.db.QueryRow(ctx, `SELECT mode FROM auth.settings_source WHERE singleton`).Scan(&result.Source)
+	}
+	if result.Source == domain.SourceAPI {
+		result.Source = ""
+	}
+	if err == nil && configuration.EnvironmentOwned(ctx) {
+		result.Source = domain.SourceENV
 	}
 	return result, err
 }

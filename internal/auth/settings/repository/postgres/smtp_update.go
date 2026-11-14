@@ -18,6 +18,9 @@ func (r *Repository) UpdateSMTP(ctx context.Context, input settingssmtp.SMTPUpda
 		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, input.Actor, "", settings.AuthSettingsManage); err != nil {
 			return err
 		}
+		if err := RequireAPISettings(ctx, tx); err != nil {
+			return err
+		}
 		before, err := scanSMTP(tx.QueryRow(ctx, `SELECT `+smtpColumns+`,password FROM auth.smtp_settings WHERE singleton FOR UPDATE`), true)
 		if err != nil {
 			return err

@@ -44,6 +44,7 @@ type Policy struct {
 }
 
 type Snapshot struct {
+	Source  SourceMode
 	Version int64
 	Policy  Policy
 }

@@ -54,6 +54,21 @@ func migrateFixture(t *testing.T, db *pgxpool.Pool, ctx context.Context, directi
 	if err != nil {
 		t.Fatal(err)
 	}
+	switch direction {
+	case "down":
+		// This fixture owns the whole database. Release ENV ownership only for teardown.
+		down, err := os.ReadFile(filepath.Join(filepath.Dir(path), "000002_settings_source.down.sql"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		sql = append(append([]byte("UPDATE auth.settings_source SET initialized=false;\n"), down...), sql...)
+	case "up":
+		extra, readErr := os.ReadFile(filepath.Join("..", "..", "..", "..", "migrations", "auth", "000002_settings_source.up.sql"))
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		sql = append(sql, extra...)
+	}
 	if _, err := db.Exec(ctx, string(sql)); err != nil {
 		t.Fatalf("%s migration: %v", direction, err)
 	}

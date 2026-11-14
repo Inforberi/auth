@@ -12,6 +12,8 @@ import (
 
 func (cfg Config) Validate() error {
 	checks := []func() error{
+		cfg.SettingsSource.Validate,
+		cfg.validateSettingsPool,
 		cfg.ValidatePlatform,
 		cfg.validateLogger,
 		cfg.Browser.Validate,

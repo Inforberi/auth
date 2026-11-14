@@ -10123,6 +10123,9 @@ const docTemplate = `{
                 "readiness": {
                     "$ref": "#/definitions/http.ReadinessResponse"
                 },
+                "source": {
+                    "$ref": "#/definitions/domain.SourceMetadata"
+                },
                 "tokenProfiles": {
                     "$ref": "#/definitions/auth_settings_http.TokenProfilesResponse"
                 },
@@ -10309,6 +10312,21 @@ const docTemplate = `{
                 "EmailCode",
                 "TelegramCode"
             ]
+        },
+        "domain.SourceMetadata": {
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "type": "string",
+                    "enum": [
+                        "api",
+                        "env"
+                    ]
+                },
+                "readOnly": {
+                    "type": "boolean"
+                }
+            }
         },
         "emailotp_http.ConfirmCodeRequest": {
             "type": "object",

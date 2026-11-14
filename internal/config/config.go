@@ -28,6 +28,7 @@ import (
 )
 
 type Config struct {
+	SettingsSource     SettingsSourceConfig
 	Platform           PlatformConfig
 	Access             accesssettings.Config
 	Browser            requestmiddleware.OriginConfig

@@ -11,6 +11,7 @@ import (
 	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/internal/sqlerrors"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 )
 
 type MutationAuthority interface {
@@ -56,6 +57,11 @@ func (r *Repository) mutate(ctx context.Context, actor operatordomain.Principal,
 	deadline, err := r.authority.AuthorizeMutation(ctx, tx, actor, permission, r.freshFor)
 	if err != nil {
 		return err
+	}
+	if permission == operatordomain.SettingsManage {
+		if err := settingspostgres.RequireAPISettings(ctx, tx); err != nil {
+			return err
+		}
 	}
 	if err := apply(ctx, tx, deadline); err != nil {
 		return err

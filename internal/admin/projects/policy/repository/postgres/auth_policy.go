@@ -10,6 +10,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/internal/sqlerrors"
 	catalogpostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/repository/postgres"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	configuration "github.com/Inforberi/financial-intelligence/internal/auth/settings/configuration/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 )
@@ -42,6 +43,9 @@ func (r *RuntimeAuthPolicy) ReadAuthPolicy(ctx context.Context, actor operatordo
 	})
 	if err != nil {
 		return settingsdomain.Snapshot{}, err
+	}
+	if configuration.EnvironmentOwned(ctx) {
+		snapshot.Source = settingsdomain.SourceENV
 	}
 	return snapshot, nil
 }

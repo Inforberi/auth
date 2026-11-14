@@ -31,6 +31,9 @@ func (r *Repository) UpdateEmailMFAPolicy(ctx context.Context, input service.Ema
 		if err != nil {
 			return err
 		}
+		if err := RequireAPISettings(ctx, tx); err != nil {
+			return err
+		}
 		if input.ExpectedVersion < 1 {
 			return domain.ErrInvalidMFAPolicy
 		}

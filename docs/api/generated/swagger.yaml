@@ -394,6 +394,8 @@ definitions:
         $ref: '#/definitions/auth_settings_http.PolicyResponse'
       readiness:
         $ref: '#/definitions/http.ReadinessResponse'
+      source:
+        $ref: '#/definitions/domain.SourceMetadata'
       tokenProfiles:
         $ref: '#/definitions/auth_settings_http.TokenProfilesResponse'
       version:
@@ -521,6 +523,16 @@ definitions:
     - RecoveryCode
     - EmailCode
     - TelegramCode
+  domain.SourceMetadata:
+    properties:
+      mode:
+        enum:
+        - api
+        - env
+        type: string
+      readOnly:
+        type: boolean
+    type: object
   emailotp_http.ConfirmCodeRequest:
     properties:
       code:

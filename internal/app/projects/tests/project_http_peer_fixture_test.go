@@ -21,6 +21,7 @@ import (
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	schemapostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/schema/postgres"
 	preparationapp "github.com/Inforberi/financial-intelligence/internal/app/projects/preparation"
+	authschema "github.com/Inforberi/financial-intelligence/migrations/auth"
 )
 
 const httpPeerProject domain.ID = "a2000000-0000-4000-8000-000000000088"
@@ -69,7 +70,7 @@ func prepareHTTPPeer(t *testing.T, ctx context.Context, admin *pgx.Conn, env fun
 	require.NoError(t, err)
 	require.Equal(t, database, actualDatabase)
 	require.Equal(t, owner, actualOwner)
-	b := credentials.Binding{RealmID: domain.ID(env("PROVISIONER_REALM_ID")), ProjectID: r.ProjectID, ReservationID: r.ReservationID, StorageTarget: r.StorageTarget, SchemaVersion: 1}
+	b := credentials.Binding{RealmID: domain.ID(env("PROVISIONER_REALM_ID")), ProjectID: r.ProjectID, ReservationID: r.ReservationID, StorageTarget: r.StorageTarget, SchemaVersion: authschema.AuthVersion}
 	require.NoError(t, physical.QueryRow(ctx, `SELECT d.oid,d.datdba,r.oid FROM pg_database d CROSS JOIN pg_roles r WHERE d.datname=$1 AND r.rolname=$2`, database, runtime).Scan(&b.DatabaseOID, &b.OwnerOID, &b.RuntimeOID))
 	prepCfg, err := pgxpool.ParseConfig(env("PROVISIONER_CATALOG_URL"))
 	require.NoError(t, err)
@@ -104,7 +105,7 @@ func prepareHTTPPeer(t *testing.T, ctx context.Context, admin *pgx.Conn, env fun
 	err = schemapostgres.CheckRuntimeConnection(ctx, conn.Conn(), b)
 	conn.Release()
 	require.NoError(t, err)
-	_, err = admin.Exec(ctx, `UPDATE platform.projects SET phase='ready',database_name=$2,credential_ref='project:http-peer:db:v1',schema_version=1 WHERE id=$1`, r.ProjectID, database)
+	_, err = admin.Exec(ctx, `UPDATE platform.projects SET phase='ready',database_name=$2,credential_ref='project:http-peer:db:v1',schema_version=$3 WHERE id=$1`, r.ProjectID, database, authschema.AuthVersion)
 	require.NoError(t, err)
 	return projectruntime.Key{Binding: b, Version: r.Version, Generation: r.Generation}
 }

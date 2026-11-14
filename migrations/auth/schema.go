@@ -5,6 +5,9 @@ import _ "embed"
 //go:embed 000001_init.up.sql
 var initialAuth string
 
-const AuthVersion = 1
+//go:embed 000002_settings_source.up.sql
+var settingsSource string
 
-func InitialAuth() string { return initialAuth }
+const AuthVersion = 2
+
+func InitialAuth() string { return initialAuth + "\n" + settingsSource }

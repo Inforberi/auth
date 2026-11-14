@@ -23,6 +23,9 @@ func (r *Repository) AuthorizeTelegramBotUpdate(ctx context.Context, actor acces
 		if err != nil {
 			return err
 		}
+		if err := RequireAPISettings(ctx, tx); err != nil {
+			return err
+		}
 		stored, err = scanTelegramBot(tx.QueryRow(ctx, `SELECT `+telegramBotColumns+telegramBotEncryptedColumns+telegramBotFrom+` FOR SHARE OF m`), true)
 		if err != nil {
 			return err
@@ -42,6 +45,9 @@ func (r *Repository) UpdateTelegramBot(ctx context.Context, input settingstelegr
 	err := r.transaction(ctx, func(tx pgx.Tx) error {
 		deadline, err := accesspostgres.AuthorizeMutation(ctx, tx, input.Actor, "", settings.AuthSettingsManage)
 		if err != nil {
+			return err
+		}
+		if err := RequireAPISettings(ctx, tx); err != nil {
 			return err
 		}
 		before, err := scanTelegramBot(tx.QueryRow(ctx, `SELECT `+telegramBotColumns+telegramBotFrom+` FOR UPDATE OF m`), false)

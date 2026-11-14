@@ -31,6 +31,9 @@ func (r *Repository) UpdateMFAPolicy(ctx context.Context, input service.MFAUpdat
 // ApplyMFAPolicyChange requires caller-owned Access and actor authority locks through commit.
 // It persists configuration only; publishing optional flows requires the complete MFA enforcement stage.
 func ApplyMFAPolicyChange(ctx context.Context, tx pgx.Tx, actor accountdomain.UserID, input service.MFAChange, ready bool) (domain.MFASnapshot, error) {
+	if err := RequireAPISettings(ctx, tx); err != nil {
+		return domain.MFASnapshot{}, err
+	}
 	if err := input.Policy.ValidateChange(input.ExpectedVersion); err != nil {
 		return domain.MFASnapshot{}, err
 	}

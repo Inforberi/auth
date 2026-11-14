@@ -18,6 +18,9 @@ func (r *Repository) ConfirmTelegramWebhook(ctx context.Context, actor accessser
 		if err != nil {
 			return err
 		}
+		if err := RequireAPISettings(ctx, tx); err != nil {
+			return err
+		}
 		before, err := scanTelegramBot(tx.QueryRow(ctx, `SELECT `+telegramBotColumns+telegramBotFrom+` FOR UPDATE OF m`), false)
 		if err != nil {
 			return err

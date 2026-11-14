@@ -31,6 +31,9 @@ func (r *Repository) UpdateTelegramMFAPolicy(ctx context.Context, input service.
 		if err != nil {
 			return err
 		}
+		if err := RequireAPISettings(ctx, tx); err != nil {
+			return err
+		}
 		var before domain.TelegramMFASnapshot
 		var credentials bool
 		if err := tx.QueryRow(ctx, `SELECT version,telegram_factor_allowed,EXISTS(

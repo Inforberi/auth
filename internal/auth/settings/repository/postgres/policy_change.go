@@ -9,6 +9,9 @@ import (
 )
 
 func CheckPolicyChange(ctx context.Context, tx pgx.Tx, before domain.Snapshot, expected int64, next domain.Policy, runtime domain.PolicyRuntime) error {
+	if err := RequireAPISettings(ctx, tx); err != nil {
+		return err
+	}
 	if err := runtime.CheckChange(before, expected, next); err != nil {
 		return err
 	}

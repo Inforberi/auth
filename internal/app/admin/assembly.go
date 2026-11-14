@@ -14,6 +14,7 @@ import (
 	accountapp "github.com/Inforberi/financial-intelligence/internal/app/auth/account"
 	methodapp "github.com/Inforberi/financial-intelligence/internal/app/auth/methods"
 	mfaapp "github.com/Inforberi/financial-intelligence/internal/app/auth/mfa"
+	settingsapp "github.com/Inforberi/financial-intelligence/internal/app/auth/settings"
 	setupapp "github.com/Inforberi/financial-intelligence/internal/app/auth/setup"
 	projectapp "github.com/Inforberi/financial-intelligence/internal/app/projects/runtime"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
@@ -26,6 +27,7 @@ import (
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	settingsservice "github.com/Inforberi/financial-intelligence/internal/auth/settings/service"
+	settingshttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
@@ -44,6 +46,11 @@ func Assemble(ctx context.Context, cfg *config.Config, deps authapp.Dependencies
 			owned.Close()
 		}
 	}()
+	configuration, err := settingsapp.AssembleConfiguration(ctx, scope, deps.Pool, cfg)
+	if err != nil {
+		return nil, err
+	}
+	owned.Add(configuration.Close)
 	runtime, err := projectapp.Open(ctx, cfg.Platform, owned)
 	if err != nil {
 		return nil, err
@@ -120,7 +127,12 @@ func Assemble(ctx context.Context, cfg *config.Config, deps authapp.Dependencies
 		Activity:          sessionhttp.NewActivity(sessionservice.NewActivity(sessions), deps.Logger),
 		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessions, tokens), deps.Logger),
 		Reauthentication:  password.Reauthentication(credentials, sessions, deps.Hash, tokens, cfg.Session.FreshAuthTTL, deps.Logger),
-		ReadyCheck:        operatorReadyCheck(deps, runtime),
+		ReadyCheck: func(ctx context.Context) error {
+			if err := configuration.Check(ctx); err != nil {
+				return err
+			}
+			return operatorReadyCheck(deps, runtime)(ctx)
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -130,5 +142,5 @@ func Assemble(ctx context.Context, cfg *config.Config, deps authapp.Dependencies
 		handler = router.ProjectHosts(cfg.Platform.Origin, handler, projectHTTP)
 	}
 	assembled = true
-	return authapp.NewRuntime(handler, accountservice.NewRetention(repo, cfg.Retention), workers, owned, drainHTTP), nil
+	return authapp.NewRuntime(settingshttp.WithConfigurationSource(handler, cfg.SettingsSource.Mode), accountservice.NewRetention(repo, cfg.Retention), workers, owned, drainHTTP), nil
 }

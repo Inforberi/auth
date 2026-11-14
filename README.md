@@ -14,6 +14,14 @@
 
 Dev запускает Air `v1.67.4` через `.air.toml`: пересборка `./cmd/auth` при изменении Go/HTML, tests и временные каталоги исключены. `task dev:up` собирает dev-образ; `task dev:logs` показывает build/restart. Go caches и бинарник в `tmp` используют отдельные volumes. Изменения `.env`, `go.mod/go.sum` или конфигурации Air требуют явного restart через `task dev:down` → `task dev:up`; Air не загружает новое окружение приложения автоматически. Production Air не использует.
 
+## Источник настроек
+
+`AUTH_SETTINGS_MODE=api` (по умолчанию) сохраняет управление через существующие settings API: restart не перезаписывает политики из ENV. Наша панель для использования API не требуется.
+
+`AUTH_SETTINGS_MODE=env` выбирает startup-конфигурацию для существующих Auth/SMTP/provider/retention групп; settings mutations через HTTP возвращают `409 settings_source_read_only`, пользователи и назначения ролей продолжают управляться обычными API. Например, закрытый парольный профиль: `AUTH_REGISTRATION_ENABLED=false`, `AUTH_PASSWORD_EMAIL_VERIFICATION=disabled`. При изменении профиля требуется остановить все экземпляры прежней конфигурации и запустить с согласованным новым ENV.
+
+Перед обновлением существующей БД применить миграцию Auth 000002 в согласованном maintenance окне; runtime требует `MAX_CONNS>=2`. Нельзя переключать установленную API-базу в ENV одним флагом или сбрасывать данные. [Совместимость, ограничения и точный scope](docs/features/settings-source.md). Установка без ручного ENV, переключение режимов через installer и UI пока запланированы, не реализованы этим блоком.
+
 ## Проверки
 
 Изолированный HTTPS-стенд с отдельными PostgreSQL/Redis/Mailpit и проверками API находится в [sandbox](sandbox/README.md). Запуск и остановка — `task sandbox:up` / `task sandbox:down`; live-сценарии требуют отдельного opt-in и подготовки тестовых пользователей. Нагрузочные прогоны запускаются отдельно.

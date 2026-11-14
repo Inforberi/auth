@@ -49,6 +49,11 @@ func Assemble(ctx context.Context, cfg *config.Config, deps Dependencies) (_ *Ru
 	}
 	pool, rdb, log, argonHash := deps.Pool, deps.Redis, deps.Logger, deps.Hash
 	scope := deps.Scope
+	configuration, err := settingsapp.AssembleConfiguration(ctx, scope, pool, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("assemble settings source: %w", err)
+	}
+	owned.Add(configuration.Close)
 	access, policy, providers, err := settingsapp.AssemblePolicy(ctx, scope, pool, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("assemble access and auth policy: %w", err)
@@ -155,6 +160,9 @@ func Assemble(ctx context.Context, cfg *config.Config, deps Dependencies) (_ *Ru
 		Config:            cfg,
 		Logger:            log,
 		ReadyCheck: func(ctx context.Context) error {
+			if err := configuration.Check(ctx); err != nil {
+				return err
+			}
 			if err := pool.Ping(ctx); err != nil {
 				return err
 			}
@@ -166,7 +174,7 @@ func Assemble(ctx context.Context, cfg *config.Config, deps Dependencies) (_ *Ru
 		Provisioning:       management.Provisioning,
 		TemporaryPasswords: temporary.Service,
 		resources:          owned,
-		Handler:            handler,
+		Handler:            settingshttp.WithConfigurationSource(handler, cfg.SettingsSource.Mode),
 		retention:          retentionSvc,
 		workers:            DeliveryWorkers(password.Recovery, accountSvc, mfa.Delivery, emailOTP.Delivery),
 	}, nil

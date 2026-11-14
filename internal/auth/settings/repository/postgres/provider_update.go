@@ -17,6 +17,9 @@ func (r *Repository) UpdateProvider(ctx context.Context, input settingsproviders
 		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, input.Actor, "", settings.AuthSettingsManage); err != nil {
 			return err
 		}
+		if err := RequireAPISettings(ctx, tx); err != nil {
+			return err
+		}
 		policy, err := LockPublicPolicy(ctx, tx)
 		if err != nil {
 			return err

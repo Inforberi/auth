@@ -74,6 +74,7 @@ type TokenIssuanceResponse struct {
 } // @name auth_settings_http.TokenIssuanceResponse
 
 type SettingsResponse struct {
+	Source           domain.SourceMetadata `json:"source"`
 	Version          int64                 `json:"version"`
 	Policy           PolicyResponse        `json:"policy"`
 	AvailableMethods MethodsResponse       `json:"availableMethods"`
@@ -112,6 +113,7 @@ func SettingsResponseFrom(snapshot domain.Snapshot, available domain.PublicMetho
 	policy := snapshot.Policy
 	return SettingsResponse{
 		Version: snapshot.Version,
+		Source:  snapshot.Source.Metadata(),
 		Policy: PolicyResponse{
 			Methods:                   methodsResponse(policy.Methods),
 			Registration:              RegistrationResponse{Enabled: policy.Registration.Enabled, Google: policy.Registration.Google, Telegram: policy.Registration.Telegram},

@@ -17,6 +17,9 @@ func (r *Repository) UpdateRetention(ctx context.Context, input settingsretentio
 		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, input.Actor, "", settings.AuthSettingsManage); err != nil {
 			return err
 		}
+		if err := RequireAPISettings(ctx, tx); err != nil {
+			return err
+		}
 		before, err := scanRetention(tx.QueryRow(ctx, `SELECT `+retentionColumns+` FROM auth.retention_settings WHERE singleton FOR UPDATE`))
 		if err != nil {
 			return err

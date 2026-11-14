@@ -19,6 +19,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	catalog "github.com/Inforberi/financial-intelligence/internal/admin/projects/repository/postgres"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	authschema "github.com/Inforberi/financial-intelligence/migrations/auth"
 )
 
 func roleAdmissionDrill(t *testing.T, physical *pgx.Conn, project *pgxpool.Pool, env func(string) string, reservation domain.PreparationReservation, binding credentials.Binding, codec *credentials.Codec) {
@@ -64,7 +65,7 @@ func roleAdmissionDrill(t *testing.T, physical *pgx.Conn, project *pgxpool.Pool,
 		VALUES($1,$2,1,statement_timestamp(),statement_timestamp()+interval '1 hour',statement_timestamp()+interval '2 hours',
 		'password',statement_timestamp(),statement_timestamp(),statement_timestamp(),'totp','bridge SQL fixture','192.0.2.1')`, actor.TokenHash, actor.UserID)
 	require.NoError(t, err)
-	_, err = admin.Exec(ctx, `UPDATE platform.projects SET phase='ready',database_name=$1,credential_ref='project:bridge:db:v1',schema_version=1`, projectCfg.Database)
+	_, err = admin.Exec(ctx, `UPDATE platform.projects SET phase='ready',database_name=$1,credential_ref='project:bridge:db:v1',schema_version=$2`, projectCfg.Database, authschema.AuthVersion)
 	require.NoError(t, err)
 	apiCfg, err := pgxpool.ParseConfig(strings.Replace(env("PROVISIONER_CATALOG_URL"), "auth_platform_preparation_test:catalog-fixture-only@", "auth_platform_api_secrets_test:api-fixture-only@", 1))
 	require.NoError(t, err)
