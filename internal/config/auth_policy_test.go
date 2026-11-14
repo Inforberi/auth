@@ -24,3 +24,11 @@ func TestInitialAuthPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestManagedInstallationStartsClosed(t *testing.T) {
+	cfg := Config{SettingsSource: SettingsSourceConfig{InstallClosedProfile: true}}
+	policy := cfg.InitialAuthPolicy()
+	if !policy.Methods.Password || policy.Registration.Enabled || policy.PasswordEmailVerification != domain.VerificationDisabled {
+		t.Fatal("unexpected managed bootstrap policy", policy)
+	}
+}

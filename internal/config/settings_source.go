@@ -7,6 +7,7 @@ import (
 )
 
 type SettingsSourceConfig struct {
+	InstallClosedProfile       bool                     `env:"AUTH_INSTALL_CLOSED_PROFILE" env-default:"false"`
 	ConfirmRetentionShortening bool                     `env:"AUTH_ENV_CONFIRM_RETENTION_SHORTENING" env-default:"false"`
 	Mode                       domain.SourceMode        `env:"AUTH_SETTINGS_MODE" env-default:"api"`
 	PasswordEnabled            bool                     `env:"AUTH_PASSWORD_ENABLED" env-default:"true"`

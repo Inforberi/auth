@@ -15,5 +15,9 @@ func (cfg Config) InitialAuthPolicy() domain.Policy {
 		policy.Registration.Enabled = cfg.SettingsSource.RegistrationEnabled
 		policy.PasswordEmailVerification = cfg.SettingsSource.Verification
 	}
+	if cfg.SettingsSource.InstallClosedProfile && cfg.SettingsSource.Mode.Effective() == domain.SourceAPI {
+		policy.Registration = domain.PublicRegistration{}
+		policy.PasswordEmailVerification = domain.VerificationDisabled
+	}
 	return policy
 }
