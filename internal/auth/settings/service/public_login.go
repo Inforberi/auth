@@ -18,3 +18,10 @@ func (s *Service) CheckPublic(ctx context.Context, method string, registration b
 	}
 	return snapshot.Policy.RequireMethod(method, registration)
 }
+
+func (s *Service) PublicPolicy(ctx context.Context) (domain.Policy, error) {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	snapshot, err := s.repo.Load(ctx)
+	return snapshot.Policy, err
+}

@@ -62,6 +62,13 @@ func (s *EmailBindingService) Request(ctx context.Context, input EmailBindingInp
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+	projectLimit := s.cfg.RequestsPerMinute
+	if s.cfg.BudgetSource != nil {
+		projectLimit, _, _, err = s.cfg.BudgetSource(ctx)
+		if err != nil {
+			return time.Time{}, err
+		}
+	}
 	for _, limit := range []struct {
 		key    string
 		count  int
@@ -69,7 +76,7 @@ func (s *EmailBindingService) Request(ctx context.Context, input EmailBindingInp
 	}{
 		{"request:actor:" + string(input.Actor.UserID), 30, time.Minute},
 		{"request:ip:" + input.IP, 30, time.Minute},
-		{"request:project", s.cfg.RequestsPerMinute, time.Minute},
+		{"request:project", projectLimit, time.Minute},
 	} {
 		if err := s.admit(ctx, limit.key, limit.count, limit.window); err != nil {
 			return time.Time{}, err
@@ -96,7 +103,14 @@ func (s *EmailBindingService) Request(ctx context.Context, input EmailBindingInp
 	if err != nil {
 		return time.Time{}, err
 	}
-	return s.repo.IssueEmailBinding(ctx, EmailBindingCommand{Actor: input.Actor, UserID: input.UserID, Email: email.String(), Verifier: s.verifier(input.UserID, code), Payload: payload, TTL: s.cfg.TTL})
+	ttl := s.cfg.TTL
+	if s.cfg.TTLSource != nil {
+		ttl, err = s.cfg.TTLSource(ctx)
+		if err != nil {
+			return time.Time{}, err
+		}
+	}
+	return s.repo.IssueEmailBinding(ctx, EmailBindingCommand{Actor: input.Actor, UserID: input.UserID, Email: email.String(), Verifier: s.verifier(input.UserID, code), Payload: payload, TTL: ttl})
 }
 
 func (s *EmailBindingService) verifier(user domain.UserID, code string) string {

@@ -32,7 +32,14 @@ func (s *TemporaryPasswordService) Complete(ctx context.Context, token, password
 	if err := s.limit(ctx, "temporary-password-setup-ip:"+ip, 10); err != nil {
 		return err
 	}
-	if err := s.limit(ctx, "temporary-password-setup-project", s.cfg.SetupProjectAttemptsPerMinute); err != nil {
+	projectLimit := s.cfg.SetupProjectAttemptsPerMinute
+	if s.cfg.BudgetSource != nil {
+		_, _, projectLimit, err = s.cfg.BudgetSource(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	if err := s.limit(ctx, "temporary-password-setup-project", projectLimit); err != nil {
 		return err
 	}
 	credential, err := s.repo.CheckTemporarySetup(ctx, passwordservice.TokenDigest(token))

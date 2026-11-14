@@ -52,7 +52,15 @@ func (s *ActivationService) Activate(ctx context.Context, token, password, confi
 	if err := passwordservice.LimitAttempts(ctx, s.limiter, s.digest, "activation-ip:"+ip, 10, time.Minute); err != nil {
 		return err
 	}
-	if err := passwordservice.LimitAttempts(ctx, s.limiter, s.digest, "activation-global", s.cfg.ActivationGlobalLimit, time.Minute); err != nil {
+	projectLimit := s.cfg.ActivationGlobalLimit
+	if s.cfg.BudgetSource != nil {
+		var err error
+		_, _, projectLimit, err = s.cfg.BudgetSource(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	if err := passwordservice.LimitAttempts(ctx, s.limiter, s.digest, "activation-global", projectLimit, time.Minute); err != nil {
 		return err
 	}
 	sum := sha256.Sum256([]byte(token))

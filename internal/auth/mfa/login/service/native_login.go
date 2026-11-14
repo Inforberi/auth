@@ -54,7 +54,7 @@ func (s *Login) PrepareNativeCompletion(ctx context.Context, input CompleteLogin
 	if err != nil {
 		return attempt, err
 	}
-	if err := mfaservice.AdmitFactorUser(ctx, s.cipher, s.limit, s.cfg.UserLimitPerMinute, user); err != nil {
+	if err := s.cfg.AdmitFactorUser(ctx, s.cipher, s.limit, user); err != nil {
 		return attempt, err
 	}
 	attempt.UserID, attempt.Factor, attempt.AllowPrimary = user, s.loginFactor(input.Code, input.Recovery), s.cfg.AllowPrimary

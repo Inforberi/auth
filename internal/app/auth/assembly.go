@@ -64,13 +64,20 @@ func Assemble(ctx context.Context, cfg *config.Config, deps Dependencies) (_ *Ru
 	if err != nil {
 		return nil, fmt.Errorf("assemble SMTP settings: %w", err)
 	}
-	accountRepo := accountpostgres.NewWithDelivery(pool, accountpostgres.DeliveryConfig{EmailChanges: cfg.EmailChange.Enabled, Invitations: cfg.Invitation.Enabled, EmailBinding: cfg.EmailBinding.Enabled})
+	standalone, err := assembleStandaloneSettings(ctx, pool, cfg, log)
+	if err != nil {
+		return nil, err
+	}
+	accountRepo := accountpostgres.NewWithDelivery(pool, accountpostgres.DeliveryConfig{
+		EmailChanges: cfg.EmailChange.Enabled, Invitations: cfg.Invitation.Enabled, EmailBinding: cfg.EmailBinding.Enabled,
+		StandalonePolicyAudit: true,
+	})
 	accountRuntime, err := accountapp.Assemble(scope, accountRepo, rdb, mail, cfg.Account)
 	if err != nil {
 		return nil, fmt.Errorf("assemble account: %w", err)
 	}
 	accountSvc := accountRuntime.Verification
-	passwordRepo := registrationapp.Assemble(pool, accountSvc, accountRepo)
+	passwordRepo := registrationapp.Assemble(pool, accountSvc, accountRepo, settingsapp.RegistrationLinkTTL(cfg), settingsapp.RegistrationFrontendURL(cfg))
 	emailBinding, err := accountapp.AssembleEmailBinding(scope, accountRepo, rdb, cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble email binding: %w", err)
@@ -84,14 +91,14 @@ func Assemble(ctx context.Context, cfg *config.Config, deps Dependencies) (_ *Ru
 	if err != nil {
 		return nil, fmt.Errorf("assemble setup: %w", err)
 	}
-	sessionRepo := sessionpostgres.New(pool)
+	sessionRepo := sessionpostgres.NewWithBrowserPolicy(pool)
 	sessionSvc := sessionservice.New(now, sessionRepo, tokenGen, cfg.Session)
 	mfa, err := mfaapp.Assemble(ctx, scope, pool, rdb, sessionSvc, tokenGen, mail, cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble MFA: %w", err)
 	}
 	loginSvc := mfa.Sessions
-	emailOTP, err := methodapp.AssembleEmailOTP(scope, pool, rdb, mail, loginSvc, tokenGen, cfg, log)
+	emailOTP, err := methodapp.AssembleEmailOTP(ctx, scope, pool, rdb, mail, loginSvc, tokenGen, cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("assemble email OTP: %w", err)
 	}
@@ -133,6 +140,7 @@ func Assemble(ctx context.Context, cfg *config.Config, deps Dependencies) (_ *Ru
 		Provisioning:      management.ProvisioningHandler,
 		TemporaryAdmin:    temporary.Admin,
 		Access:            accesshttp.New(access.Service, log),
+		PublicAuthPolicy:  policy.PublicPolicy,
 		AuthSettings:      settingshttp.NewWithTokenDeployment(policy, cfg.AvailableAuthMethods(), tokens.Deployment, log),
 		SMTPSettings:      smtpSettings,
 		ProviderSettings:  settingsprovidershttp.NewProviders(providers, log),
@@ -141,24 +149,31 @@ func Assemble(ctx context.Context, cfg *config.Config, deps Dependencies) (_ *Ru
 		Setup:             setup,
 		EmailBinding:      emailBinding,
 		MFA:               mfa.Handler, MFALogin: mfa.LoginHandler, MFARecovery: mfa.RecoveryHandler,
-		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
-		Activity:          sessionhttp.NewActivity(sessionservice.NewActivity(sessionRepo), log),
-		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessionRepo, tokenGen), log),
-		Reauthentication:  password.Reauthentication(passwordRepo, sessionRepo, argonHash, tokenGen, cfg.Session.FreshAuthTTL, log),
-		Recovery:          passwordrecoveryhttp.NewRecovery(password.Recovery, log),
-		Account:           accountemailhttp.New(accountSvc, log),
-		EmailChange:       management.EmailChange,
-		ProtectedRecovery: management.ProtectedRecovery,
-		Activation:        activation,
-		TemporaryPassword: temporary.Handler,
-		Telegram:          telegram,
-		Google:            google,
-		EmailOTP:          emailOTP.Handler,
-		PasswordHandler:   passwordHandler,
-		Middleware:        middleware,
-		MailTest:          mailTest,
-		Config:            cfg,
-		Logger:            log,
+		Session:                  sessionhttp.NewHandler(sessionservice.NewManagement(sessionRepo), log),
+		Activity:                 sessionhttp.NewActivity(sessionservice.NewActivity(sessionRepo), log),
+		Rotation:                 sessionhttp.NewRotation(sessionservice.NewRotation(sessionRepo, tokenGen), log),
+		Reauthentication:         password.Reauthentication(passwordRepo, sessionRepo, argonHash, tokenGen, cfg.Session.FreshAuthTTL, cfg.Session.FreshAuthSource, log),
+		Recovery:                 passwordrecoveryhttp.NewRecovery(password.Recovery, log),
+		Account:                  accountemailhttp.New(accountSvc, log),
+		EmailChange:              management.EmailChange,
+		ProtectedRecovery:        management.ProtectedRecovery,
+		Activation:               activation,
+		TemporaryPassword:        temporary.Handler,
+		Telegram:                 telegram,
+		Google:                   google,
+		EmailOTP:                 emailOTP.Handler,
+		EmailOTPPolicy:           emailOTP.Policy,
+		BrowserSessionPolicy:     standalone.sessions,
+		LinkLifetimePolicy:       standalone.links,
+		CredentialLifetimePolicy: standalone.credentials,
+		LoginBudgetPolicy:        standalone.budgets,
+		OperationBudgetsPolicy:   standalone.operationBudgets,
+		FrontendPolicy:           standalone.frontend,
+		PasswordHandler:          passwordHandler,
+		Middleware:               middleware,
+		MailTest:                 mailTest,
+		Config:                   cfg,
+		Logger:                   log,
 		ReadyCheck: func(ctx context.Context) error {
 			if err := configuration.Check(ctx); err != nil {
 				return err

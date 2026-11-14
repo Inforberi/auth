@@ -31,13 +31,27 @@ func (r *RecoveryService) Forgot(ctx context.Context, input, ip string) error {
 	if err := r.limit(ctx, "forgot-email:"+email.String(), 3, 15*time.Minute); err != nil {
 		return err
 	}
+	ttl := r.cfg.ResetTokenTTL
+	if r.cfg.TTLSource != nil {
+		ttl, err = r.cfg.TTLSource(ctx)
+		if err != nil {
+			return err
+		}
+	}
 	var raw [32]byte
 	if _, err := rand.Read(raw[:]); err != nil {
 		return err
 	}
 	token := base64.RawURLEncoding.EncodeToString(raw[:])
 	now := time.Now().UTC()
-	body, err := templates.RenderResetPassword(r.cfg.ResetURL, token, r.cfg.ResetTokenTTL, now)
+	address := r.cfg.ResetURL
+	if r.cfg.URLSource != nil {
+		address, err = r.cfg.URLSource(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	body, err := templates.RenderResetPassword(address, token, ttl, now)
 	if err != nil {
 		return err
 	}
@@ -49,5 +63,5 @@ func (r *RecoveryService) Forgot(ctx context.Context, input, ip string) error {
 	if err != nil {
 		return err
 	}
-	return r.repo.IssueReset(ctx, email.String(), domain.ResetChallenge{Digest: passwordservice.TokenDigest(token), Payload: payload, ExpiresAt: now.Add(r.cfg.ResetTokenTTL)})
+	return r.repo.IssueReset(ctx, email.String(), domain.ResetChallenge{Digest: passwordservice.TokenDigest(token), Payload: payload, ExpiresAt: now.Add(ttl)})
 }

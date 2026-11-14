@@ -71,7 +71,15 @@ func (s *Service) admit(ctx context.Context, ip string) error {
 	if !s.cfg.Enabled {
 		return domain.ErrDisabled
 	}
-	allowed, err := s.flows.Allow(ctx, ip, s.cfg.IPLimit, s.cfg.GlobalLimit)
+	ipLimit, globalLimit := s.cfg.IPLimit, s.cfg.GlobalLimit
+	if s.cfg.BudgetSource != nil {
+		var err error
+		ipLimit, globalLimit, err = s.cfg.BudgetSource(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	allowed, err := s.flows.Allow(ctx, ip, ipLimit, globalLimit)
 	if err != nil {
 		return err
 	}

@@ -126,7 +126,7 @@ func Assemble(ctx context.Context, cfg *config.Config, deps authapp.Dependencies
 		Session:           sessionhttp.NewHandler(sessionservice.NewManagement(sessions), deps.Logger),
 		Activity:          sessionhttp.NewActivity(sessionservice.NewActivity(sessions), deps.Logger),
 		Rotation:          sessionhttp.NewRotation(sessionservice.NewRotation(sessions, tokens), deps.Logger),
-		Reauthentication:  password.Reauthentication(credentials, sessions, deps.Hash, tokens, cfg.Session.FreshAuthTTL, deps.Logger),
+		Reauthentication:  password.Reauthentication(credentials, sessions, deps.Hash, tokens, cfg.Session.FreshAuthTTL, nil, deps.Logger),
 		ReadyCheck: func(ctx context.Context) error {
 			if err := configuration.Check(ctx); err != nil {
 				return err

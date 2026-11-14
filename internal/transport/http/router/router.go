@@ -29,6 +29,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/management/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/recovery/transport/http"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingsprovidershttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/transport/http"
 	settingsretentionhttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/transport/http"
 	settingssmtphttp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/transport/http"
@@ -42,48 +43,56 @@ import (
 )
 
 type Handlers struct {
-	ProjectRoles      *roleshttp.RoleHandler
-	ProjectUsers      *directoryhttp.UserHandler
-	ProjectAuthPolicy *policyhttp.AuthPolicyHandler
-	ProjectCapacity   func(http.Handler) http.Handler
-	Projects          *projecthttp.Handler
-	Introspection     *tokenintrospectionhttp.IntrospectionHandler
-	NativeTokens      *tokennativehttp.NativeHandler
-	Tokens            *tokenhttp.Handler
-	UserLifecycle     *accounthttp.UserLifecycleHandler
-	UserDirectory     *accounthttp.UserDirectoryHandler
-	Provisioning      *accountprovisioninghttp.ProvisioningHandler
-	TemporaryAdmin    *passwordprovisioninghttp.TemporaryAdminHandler
-	Access            *accesshttp.Handler
-	AuthSettings      *settingshttp.Handler
-	SMTPSettings      *settingssmtphttp.SMTPHandler
-	ProviderSettings  *settingsprovidershttp.ProviderHandler
-	RetentionSettings *settingsretentionhttp.RetentionHandler
-	MFASettings       *settingshttp.MFAHandler
-	Setup             *accountsetuphttp.SetupHandler
-	MFA               *mfamanagementhttp.Handler
-	MFALogin          *mfaloginhttp.Handler
-	MFARecovery       *mfarecoveryhttp.Handler
-	Session           *sessionhttp.Handler
-	Activity          *sessionhttp.ActivityHandler
-	Rotation          *sessionhttp.RotationHandler
-	Reauthentication  *passwordhttp.ReauthenticationHandler
-	Recovery          *passwordrecoveryhttp.RecoveryHandler
-	Account           *accountemailhttp.Handler
-	EmailChange       *accountemailhttp.EmailChangeHandler
-	EmailBinding      *accountemailhttp.EmailBindingHandler
-	ProtectedRecovery *passwordrecoveryhttp.ProtectedRecoveryHandler
-	Activation        *passwordprovisioninghttp.ActivationHandler
-	TemporaryPassword *passwordprovisioninghttp.TemporaryPasswordHandler
-	Telegram          *telegramhttp.Handler
-	Google            *googlehttp.Handler
-	EmailOTP          *otphttp.Handler
-	PasswordHandler   *passwordhttp.PasswordHandler
-	Middleware        *sessionhttp.Middleware
-	MailTest          *dev.MailTestHandler
-	Config            *config.Config
-	Logger            *zap.Logger
-	ReadyCheck        func(context.Context) error
+	ProjectRoles             *roleshttp.RoleHandler
+	ProjectUsers             *directoryhttp.UserHandler
+	ProjectAuthPolicy        *policyhttp.AuthPolicyHandler
+	ProjectCapacity          func(http.Handler) http.Handler
+	Projects                 *projecthttp.Handler
+	Introspection            *tokenintrospectionhttp.IntrospectionHandler
+	NativeTokens             *tokennativehttp.NativeHandler
+	Tokens                   *tokenhttp.Handler
+	UserLifecycle            *accounthttp.UserLifecycleHandler
+	UserDirectory            *accounthttp.UserDirectoryHandler
+	Provisioning             *accountprovisioninghttp.ProvisioningHandler
+	TemporaryAdmin           *passwordprovisioninghttp.TemporaryAdminHandler
+	Access                   *accesshttp.Handler
+	AuthSettings             *settingshttp.Handler
+	EmailOTPPolicy           *settingshttp.EmailOTPPolicyHandler
+	BrowserSessionPolicy     *settingshttp.BrowserSessionPolicyHandler
+	LinkLifetimePolicy       *settingshttp.LinkLifetimePolicyHandler
+	CredentialLifetimePolicy *settingshttp.CredentialLifetimePolicyHandler
+	LoginBudgetPolicy        *settingshttp.LoginBudgetPolicyHandler
+	OperationBudgetsPolicy   *settingshttp.OperationBudgetsPolicyHandler
+	FrontendPolicy           *settingshttp.FrontendPolicyHandler
+	PublicAuthPolicy         func(context.Context) (settingsdomain.Policy, error)
+	SMTPSettings             *settingssmtphttp.SMTPHandler
+	ProviderSettings         *settingsprovidershttp.ProviderHandler
+	RetentionSettings        *settingsretentionhttp.RetentionHandler
+	MFASettings              *settingshttp.MFAHandler
+	Setup                    *accountsetuphttp.SetupHandler
+	MFA                      *mfamanagementhttp.Handler
+	MFALogin                 *mfaloginhttp.Handler
+	MFARecovery              *mfarecoveryhttp.Handler
+	Session                  *sessionhttp.Handler
+	Activity                 *sessionhttp.ActivityHandler
+	Rotation                 *sessionhttp.RotationHandler
+	Reauthentication         *passwordhttp.ReauthenticationHandler
+	Recovery                 *passwordrecoveryhttp.RecoveryHandler
+	Account                  *accountemailhttp.Handler
+	EmailChange              *accountemailhttp.EmailChangeHandler
+	EmailBinding             *accountemailhttp.EmailBindingHandler
+	ProtectedRecovery        *passwordrecoveryhttp.ProtectedRecoveryHandler
+	Activation               *passwordprovisioninghttp.ActivationHandler
+	TemporaryPassword        *passwordprovisioninghttp.TemporaryPasswordHandler
+	Telegram                 *telegramhttp.Handler
+	Google                   *googlehttp.Handler
+	EmailOTP                 *otphttp.Handler
+	PasswordHandler          *passwordhttp.PasswordHandler
+	Middleware               *sessionhttp.Middleware
+	MailTest                 *dev.MailTestHandler
+	Config                   *config.Config
+	Logger                   *zap.Logger
+	ReadyCheck               func(context.Context) error
 }
 
 func baseRouter(h Handlers) *chi.Mux {
@@ -130,6 +139,8 @@ func New(h Handlers) *chi.Mux {
 		administrativeLoginRoutes(r, h)
 		accessRoutes(r, h)
 		authSettingsRoutes(r, h)
+		timingSettingsRoutes(r, h)
+		runtimeSettingsRoutes(r, h)
 		userDirectoryRoutes(r, h)
 		userLifecycleRoutes(r, h)
 		provisioningRoutes(r, h)
@@ -138,6 +149,7 @@ func New(h Handlers) *chi.Mux {
 		nativeTokenRoutes(r, h)
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(browserProtection(h))
+			publicAuthMethodsRoute(r, h)
 			tokenExchangeRoutes(r, h)
 			mfaRoutes(r, h)
 			emailOTPRoutes(r, h)

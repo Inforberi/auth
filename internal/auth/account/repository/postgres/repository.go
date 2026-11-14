@@ -13,11 +13,12 @@ import (
 )
 
 type Repository struct {
-	db                   *pgxpool.Pool
-	deliveryTurn         atomic.Uint64
-	emailChangeDelivery  bool
-	invitationDelivery   bool
-	emailBindingDelivery bool
+	db                    *pgxpool.Pool
+	deliveryTurn          atomic.Uint64
+	emailChangeDelivery   bool
+	invitationDelivery    bool
+	emailBindingDelivery  bool
+	standalonePolicyAudit bool
 }
 
 func New(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
@@ -27,13 +28,14 @@ func NewWithEmailChanges(db *pgxpool.Pool) *Repository {
 }
 
 type DeliveryConfig struct {
-	EmailChanges bool
-	Invitations  bool
-	EmailBinding bool
+	EmailChanges          bool
+	Invitations           bool
+	EmailBinding          bool
+	StandalonePolicyAudit bool
 }
 
 func NewWithDelivery(db *pgxpool.Pool, cfg DeliveryConfig) *Repository {
-	return &Repository{db: db, emailChangeDelivery: cfg.EmailChanges, invitationDelivery: cfg.Invitations, emailBindingDelivery: cfg.EmailBinding}
+	return &Repository{db: db, emailChangeDelivery: cfg.EmailChanges, invitationDelivery: cfg.Invitations, emailBindingDelivery: cfg.EmailBinding, standalonePolicyAudit: cfg.StandalonePolicyAudit}
 }
 
 func (r *Repository) transaction(ctx context.Context, fn func(pgx.Tx) error) error {

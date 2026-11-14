@@ -51,7 +51,7 @@ func NewRecovery(repo RecoveryRepository, cipher mfaservice.Cipher, code mfaserv
 	if allowPrimary == nil {
 		allowPrimary = func(method, _ string) bool { return method == "password" }
 	}
-	admission := mfaservice.LoginConfig{AllowPrimary: allowPrimary, UserLimitPerMinute: cfg.UserLimitPerMinute, IPLimitPerMinute: cfg.IPLimitPerMinute, GlobalLimitPerMinute: cfg.GlobalLimitPerMinute}
+	admission := mfaservice.LoginConfig{BudgetSource: cfg.BudgetSource, AllowPrimary: allowPrimary, UserLimitPerMinute: cfg.UserLimitPerMinute, IPLimitPerMinute: cfg.IPLimitPerMinute, GlobalLimitPerMinute: cfg.GlobalLimitPerMinute}
 	return &Recovery{repo: repo, cipher: cipher, code: code, limit: limit, issuer: cfg.Issuer, cfg: admission, enabled: cfg.Enabled && cfg.RecoveryEnabled}, nil
 }
 
@@ -76,7 +76,11 @@ func (s *Recovery) Start(ctx context.Context, input StartRecoveryInput) (*Recove
 	if err != nil {
 		return nil, err
 	}
-	allowed, err := s.limit.Allow(ctx, s.cipher.Digest("user:"+string(user)), s.cfg.UserLimitPerMinute, time.Minute)
+	userLimit, _, _, err := s.cfg.Budget(ctx)
+	if err != nil {
+		return nil, err
+	}
+	allowed, err := s.limit.Allow(ctx, s.cipher.Digest("user:"+string(user)), userLimit, time.Minute)
 	if err != nil {
 		return nil, domain.ErrUnavailable
 	}

@@ -7,13 +7,15 @@ import (
 
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
 type CapacityConfig struct {
-	HashConcurrency  int `env:"PASSWORD_HASH_CONCURRENCY" env-default:"2"`
-	LoginIPLimit     int `env:"LOGIN_IP_LIMIT" env-default:"30"`
-	LoginEmailLimit  int `env:"LOGIN_EMAIL_LIMIT" env-default:"10"`
-	LoginGlobalLimit int `env:"LOGIN_GLOBAL_LIMIT" env-default:"1000"`
+	HashConcurrency   int                                                             `env:"PASSWORD_HASH_CONCURRENCY" env-default:"2"`
+	LoginIPLimit      int                                                             `env:"LOGIN_IP_LIMIT" env-default:"30"`
+	LoginEmailLimit   int                                                             `env:"LOGIN_EMAIL_LIMIT" env-default:"10"`
+	LoginGlobalLimit  int                                                             `env:"LOGIN_GLOBAL_LIMIT" env-default:"1000"`
+	LoginBudgetSource func(context.Context) (settingsdomain.LoginBudgetPolicy, error) `env:"-"`
 }
 
 func (s *PasswordService) admitLogin(ctx context.Context, email, ip string, administrative bool) error {
@@ -64,13 +66,21 @@ func (l *LoginLimit) AllowUser(ctx context.Context, user accountdomain.UserID, i
 func (l *LoginLimit) allow(ctx context.Context, identityKey, ip string) error {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
+	policy := settingsdomain.LoginBudgetPolicy{IPPerMinute: l.cfg.LoginIPLimit, IdentityPerMinute: l.cfg.LoginEmailLimit, GlobalPerMinute: l.cfg.LoginGlobalLimit}
+	if l.cfg.LoginBudgetSource != nil {
+		var err error
+		policy, err = l.cfg.LoginBudgetSource(ctx)
+		if err != nil {
+			return fmt.Errorf("%w: %w", domain.ErrLoginUnavailable, err)
+		}
+	}
 	for _, budget := range []struct {
 		key   string
 		limit int
 	}{
-		{"login-ip:" + ip, l.cfg.LoginIPLimit},
-		{identityKey, l.cfg.LoginEmailLimit},
-		{"login-global", l.cfg.LoginGlobalLimit},
+		{"login-ip:" + ip, policy.IPPerMinute},
+		{identityKey, policy.IdentityPerMinute},
+		{"login-global", policy.GlobalPerMinute},
 	} {
 		allowed, err := l.limiter.Allow(ctx, l.cipher.Digest(budget.key), budget.limit, time.Minute)
 		if err != nil {

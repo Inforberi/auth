@@ -22,6 +22,15 @@ import (
 
 func assembleOIDC(scope realmscope.Scope, cfg *config.Config, flow oidcservice.Config, client *oidcclient.Client, accounts *accountpostgres.Repository, rdb *redis.Client, sessions *sessionservice.Login, policy *settingsservice.Service, providers *settingsproviders.Providers) (*oidcservice.Service, error) {
 	method := settingsdomain.PrimaryMethod("oidc", flow.Issuer)
+	if load := cfg.OperationBudgetsSource; load != nil {
+		flow.BudgetSource = func(ctx context.Context) (int, int, error) {
+			p, err := load(ctx)
+			if method == "google" {
+				return p.GoogleIP, p.GoogleGlobal, err
+			}
+			return p.TelegramIP, p.TelegramGlobal, err
+		}
+	}
 	cipher, err := secretbox.ForScope(scope, cfg.Account.EncryptionKey, method+"-login:v1")
 	if err != nil {
 		client.Close()
@@ -35,7 +44,7 @@ func assembleOIDC(scope realmscope.Scope, cfg *config.Config, flow oidcservice.C
 	}
 	service := oidcservice.New(flow, repo, client,
 		accountservice.NewIdentityResolution(accounts), sessions, tokengenerate.New(),
-		accountservice.NewIdentityManagement(accounts, cfg.Session.FreshAuthTTL))
+		accountservice.NewIdentityManagement(accounts, cfg.Session.FreshAuthTTL).WithFreshAuthSource(cfg.Session.FreshAuthSource))
 	return service.WithProviderSource(func(ctx context.Context) (oidcservice.Provider, int64, error) {
 		stored, secret, err := providers.Credentials(ctx, method)
 		if err != nil {

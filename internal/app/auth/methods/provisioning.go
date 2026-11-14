@@ -1,6 +1,7 @@
 package methods
 
 import (
+	"context"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -41,7 +42,7 @@ func (p *Password) AssembleActivation(accounts *accountpostgres.Repository, hash
 	return passwordprovisioninghttp.NewActivation(svc, log)
 }
 
-func (p *Password) Reauthentication(credentials *passwordpostgres.PasswordRepo, sessions *sessionpostgres.Repository, hash *hasher.Bounded, tokens *tokengenerate.TokenManager, ttl time.Duration, log *zap.Logger) *passwordhttp.ReauthenticationHandler {
-	svc := passwordservice.NewReauthentication(credentials, sessions, hash, p.loginLimit, tokens, ttl)
+func (p *Password) Reauthentication(credentials *passwordpostgres.PasswordRepo, sessions *sessionpostgres.Repository, hash *hasher.Bounded, tokens *tokengenerate.TokenManager, ttl time.Duration, source func(context.Context) (time.Duration, error), log *zap.Logger) *passwordhttp.ReauthenticationHandler {
+	svc := passwordservice.NewReauthentication(credentials, sessions, hash, p.loginLimit, tokens, ttl).WithFreshAuthSource(source)
 	return passwordhttp.NewReauthentication(svc, log)
 }

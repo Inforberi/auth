@@ -18,7 +18,7 @@ func (r *RecoveryService) Reset(ctx context.Context, token, password, confirmati
 	if err := r.limit(ctx, "reset-ip:"+ip, 10, time.Minute); err != nil {
 		return err
 	}
-	if err := r.limit(ctx, "reset-global", r.cfg.ResetGlobalLimit, time.Minute); err != nil {
+	if err := r.limitGlobalReset(ctx); err != nil {
 		return err
 	}
 	if len(token) != 43 {

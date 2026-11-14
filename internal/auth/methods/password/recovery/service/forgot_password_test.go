@@ -94,9 +94,16 @@ func TestRecovery(t *testing.T) {
 	repo := &recoveryRepo{}
 	limits := &recoveryLimit{allow: true}
 	mail := &recoveryMail{}
-	service := NewRecovery(repo, cipher, limits, mail, recoveryHash{}, Config{ResetURL: "https://example.com/reset", ResetTokenTTL: time.Hour})
+	service := NewRecovery(repo, cipher, limits, mail, recoveryHash{}, Config{
+		ResetURL:      "https://example.com/reset",
+		ResetTokenTTL: time.Hour,
+		TTLSource:     func(context.Context) (time.Duration, error) { return 15 * time.Minute, nil },
+	})
 	if err := service.Forgot(context.Background(), "USER@example.com", "ip"); err != nil {
 		t.Fatal(err)
+	}
+	if delta := time.Until(repo.challenge.ExpiresAt); delta < 14*time.Minute || delta > 15*time.Minute {
+		t.Fatal("reset expiry did not use configured lifetime", delta)
 	}
 	plain, err := cipher.Open(repo.challenge.Payload)
 	if err != nil {

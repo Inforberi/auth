@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"net/url"
@@ -8,12 +9,15 @@ import (
 )
 
 type Config struct {
-	URL                     string        `env:"EMAIL_VERIFICATION_URL" env-required:"true"`
-	EncryptionKey           string        `env:"EMAIL_OUTBOX_KEY" env-required:"true"`
-	TTL                     time.Duration `env:"EMAIL_VERIFICATION_TTL" env-default:"30m"`
-	ResendInterval          time.Duration `env:"EMAIL_VERIFICATION_RESEND_INTERVAL" env-default:"1m"`
-	RegistrationIPLimit     int           `env:"REGISTER_IP_LIMIT" env-default:"5"`
-	RegistrationGlobalLimit int           `env:"REGISTER_GLOBAL_LIMIT" env-default:"100"`
+	URL                      string                                       `env:"EMAIL_VERIFICATION_URL" env-required:"true"`
+	EncryptionKey            string                                       `env:"EMAIL_OUTBOX_KEY" env-required:"true"`
+	TTL                      time.Duration                                `env:"EMAIL_VERIFICATION_TTL" env-default:"30m"`
+	TTLSource                func(context.Context) (time.Duration, error) `env:"-"`
+	URLSource                func(context.Context) (string, error)        `env:"-"`
+	ResendInterval           time.Duration                                `env:"EMAIL_VERIFICATION_RESEND_INTERVAL" env-default:"1m"`
+	RegistrationIPLimit      int                                          `env:"REGISTER_IP_LIMIT" env-default:"5"`
+	RegistrationGlobalLimit  int                                          `env:"REGISTER_GLOBAL_LIMIT" env-default:"100"`
+	RegistrationBudgetSource func(context.Context) (int, int, error)      `env:"-"`
 }
 
 func (c Config) Validate(production bool) error {

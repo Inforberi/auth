@@ -26,6 +26,7 @@ type IntrospectionConfig struct {
 	Clients           []IntrospectionClientConfig
 	ConsumerPerMinute int
 	ProjectPerMinute  int
+	BudgetSource      func(context.Context) (int, int, error)
 }
 
 type Introspection struct {
@@ -73,7 +74,15 @@ func (s *Introspection) Inspect(ctx context.Context, client *IntrospectionClient
 		return inactive, authjwt.ErrBusy
 	}
 	defer func() { <-s.admission }()
-	if err := s.limiter.AllowIntrospection(ctx, client.id, s.config.ConsumerPerMinute, s.config.ProjectPerMinute); err != nil {
+	consumerLimit, projectLimit := s.config.ConsumerPerMinute, s.config.ProjectPerMinute
+	if s.config.BudgetSource != nil {
+		var err error
+		consumerLimit, projectLimit, err = s.config.BudgetSource(ctx)
+		if err != nil {
+			return inactive, domain.ErrUnavailable
+		}
+	}
+	if err := s.limiter.AllowIntrospection(ctx, client.id, consumerLimit, projectLimit); err != nil {
 		return inactive, err
 	}
 	claims, err := s.verifier.VerifySignature(ctx, raw, time.Now())

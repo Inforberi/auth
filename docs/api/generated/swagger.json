@@ -249,6 +249,226 @@
                 }
             }
         },
+        "/api/v1/admin/auth/settings/credential-lifetimes": {
+            "get": {
+                "summary": "Read standalone credential lifetime policy",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.CredentialLifetimePolicyView"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "summary": "Change standalone credential lifetime policy",
+                "parameters": [
+                    {
+                        "description": "Complete policy and current version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.CredentialLifetimePolicyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.CredentialLifetimePolicyView"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.PolicyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/auth/settings/email-otp": {
+            "get": {
+                "summary": "Read standalone email OTP policy",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.EmailOTPPolicyView"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "summary": "Change standalone email OTP policy",
+                "parameters": [
+                    {
+                        "description": "Complete policy and current version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.EmailOTPPolicyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.EmailOTPPolicyView"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.PolicyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/auth/settings/frontend": {
+            "get": {
+                "summary": "Read standalone frontend policy",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.FrontendPolicyView"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "summary": "Change standalone frontend policy",
+                "parameters": [
+                    {
+                        "description": "Complete policy and current version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.FrontendPolicyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.FrontendPolicyView"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.PolicyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/auth/settings/link-lifetimes": {
+            "get": {
+                "summary": "Read standalone link lifetime policy",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.LinkLifetimePolicyView"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "summary": "Change standalone link lifetime policy",
+                "parameters": [
+                    {
+                        "description": "Complete policy and current version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.LinkLifetimePolicyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.LinkLifetimePolicyView"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.PolicyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/auth/settings/login-budgets": {
+            "get": {
+                "summary": "Read standalone login policy",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.LoginBudgetPolicyView"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "summary": "Change standalone login policy",
+                "parameters": [
+                    {
+                        "description": "Complete policy and current version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.LoginBudgetPolicyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.LoginBudgetPolicyView"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.PolicyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/auth/settings/mfa": {
             "get": {
                 "description": "Requires a live browser session and allowed HTTPS Origin. Local endpoint requires auth.settings.manage; platform endpoint uses independent platform.project_settings.manage authority. No fresh proof is required for reading. Policy applies only to this realm database.",
@@ -791,6 +1011,50 @@
                 }
             }
         },
+        "/api/v1/admin/auth/settings/operation-budgets": {
+            "get": {
+                "summary": "Read standalone login policy",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.OperationBudgetsPolicyView"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "summary": "Change standalone login policy",
+                "parameters": [
+                    {
+                        "description": "Complete policy and current version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.OperationBudgetsPolicyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.OperationBudgetsPolicyView"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.PolicyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/auth/settings/providers/{provider}": {
             "get": {
                 "description": "Live session, HTTPS Origin and auth.settings.manage; no fresh proof for reading. Presence is not a live provider test. Redirect URI and fixed issuer/endpoints remain deployment configuration.",
@@ -1046,6 +1310,50 @@
                         "description": "Service Unavailable",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/auth/settings/sessions": {
+            "get": {
+                "summary": "Read standalone browser session policy",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.BrowserSessionPolicyView"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "summary": "Change standalone browser session policy",
+                "parameters": [
+                    {
+                        "description": "Complete policy and current version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.BrowserSessionPolicyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.BrowserSessionPolicyView"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/settingshttp.PolicyErrorResponse"
                         }
                     }
                 }
@@ -4018,6 +4326,38 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/methods": {
+            "get": {
+                "description": "Returns standalone login and registration choices for this API instance. No account data is read. Login still performs its own checks.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth settings"
+                ],
+                "summary": "Read public authentication methods",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth_settings_http.PublicMethodsResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -10075,6 +10415,34 @@
                 }
             }
         },
+        "auth_settings_http.PublicMethodsResponse": {
+            "type": "object",
+            "properties": {
+                "login": {
+                    "$ref": "#/definitions/auth_settings_http.MethodsResponse"
+                },
+                "passwordVerificationRequired": {
+                    "type": "boolean"
+                },
+                "registration": {
+                    "$ref": "#/definitions/auth_settings_http.PublicRegistrationResponse"
+                }
+            }
+        },
+        "auth_settings_http.PublicRegistrationResponse": {
+            "type": "object",
+            "properties": {
+                "google": {
+                    "type": "boolean"
+                },
+                "password": {
+                    "type": "boolean"
+                },
+                "telegram": {
+                    "type": "boolean"
+                }
+            }
+        },
         "auth_settings_http.RegistrationRequest": {
             "type": "object",
             "required": [
@@ -11821,6 +12189,401 @@
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "settingshttp.BrowserSessionPolicyDTO": {
+            "type": "object",
+            "properties": {
+                "absoluteSeconds": {
+                    "type": "integer"
+                },
+                "adminAbsoluteSeconds": {
+                    "type": "integer"
+                },
+                "adminActivitySeconds": {
+                    "type": "integer"
+                },
+                "adminIdleSeconds": {
+                    "type": "integer"
+                },
+                "idleSeconds": {
+                    "type": "integer"
+                },
+                "refreshThresholdSeconds": {
+                    "type": "integer"
+                }
+            }
+        },
+        "settingshttp.BrowserSessionPolicyRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/settingshttp.BrowserSessionPolicyDTO"
+                }
+            }
+        },
+        "settingshttp.BrowserSessionPolicyView": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/settingshttp.BrowserSessionPolicyDTO"
+                },
+                "source": {
+                    "$ref": "#/definitions/domain.SourceMetadata"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "settingshttp.CredentialLifetimePolicyDTO": {
+            "type": "object",
+            "properties": {
+                "emailBindingSeconds": {
+                    "type": "integer"
+                },
+                "emailChangeProtectionSeconds": {
+                    "type": "integer"
+                },
+                "emailChangeRecoverySeconds": {
+                    "type": "integer"
+                },
+                "emailChangeSeconds": {
+                    "type": "integer"
+                },
+                "freshAuthSeconds": {
+                    "type": "integer"
+                },
+                "invitationCooldownSeconds": {
+                    "type": "integer"
+                },
+                "invitationSeconds": {
+                    "type": "integer"
+                },
+                "mfaChallengeSeconds": {
+                    "type": "integer"
+                },
+                "temporaryPasswordSeconds": {
+                    "type": "integer"
+                },
+                "temporaryReissueCooldownSeconds": {
+                    "type": "integer"
+                },
+                "temporarySetupSeconds": {
+                    "type": "integer"
+                }
+            }
+        },
+        "settingshttp.CredentialLifetimePolicyRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/settingshttp.CredentialLifetimePolicyDTO"
+                }
+            }
+        },
+        "settingshttp.CredentialLifetimePolicyView": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/settingshttp.CredentialLifetimePolicyDTO"
+                },
+                "source": {
+                    "$ref": "#/definitions/domain.SourceMetadata"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "settingshttp.EmailOTPPolicyDTO": {
+            "type": "object",
+            "properties": {
+                "confirmationsPerMinute": {
+                    "type": "integer"
+                },
+                "requestsPerMinute": {
+                    "type": "integer"
+                },
+                "resendSeconds": {
+                    "type": "integer"
+                },
+                "ttlSeconds": {
+                    "type": "integer"
+                }
+            }
+        },
+        "settingshttp.EmailOTPPolicyRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/settingshttp.EmailOTPPolicyDTO"
+                }
+            }
+        },
+        "settingshttp.EmailOTPPolicyView": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/settingshttp.EmailOTPPolicyDTO"
+                },
+                "source": {
+                    "$ref": "#/definitions/domain.SourceMetadata"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "settingshttp.FrontendPolicyDTO": {
+            "type": "object",
+            "properties": {
+                "corsEnabled": {
+                    "type": "boolean"
+                },
+                "emailChangeRecoveryUrl": {
+                    "type": "string"
+                },
+                "emailChangeReportUrl": {
+                    "type": "string"
+                },
+                "emailChangeUrl": {
+                    "type": "string"
+                },
+                "invitationUrl": {
+                    "type": "string"
+                },
+                "origins": {
+                    "type": "string"
+                },
+                "resetUrl": {
+                    "type": "string"
+                },
+                "verificationUrl": {
+                    "type": "string"
+                }
+            }
+        },
+        "settingshttp.FrontendPolicyRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/settingshttp.FrontendPolicyDTO"
+                }
+            }
+        },
+        "settingshttp.FrontendPolicyView": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/settingshttp.FrontendPolicyDTO"
+                },
+                "source": {
+                    "$ref": "#/definitions/domain.SourceMetadata"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "settingshttp.LinkLifetimePolicyDTO": {
+            "type": "object",
+            "properties": {
+                "resetSeconds": {
+                    "type": "integer"
+                },
+                "verificationSeconds": {
+                    "type": "integer"
+                }
+            }
+        },
+        "settingshttp.LinkLifetimePolicyRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/settingshttp.LinkLifetimePolicyDTO"
+                }
+            }
+        },
+        "settingshttp.LinkLifetimePolicyView": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/settingshttp.LinkLifetimePolicyDTO"
+                },
+                "source": {
+                    "$ref": "#/definitions/domain.SourceMetadata"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "settingshttp.LoginBudgetPolicyDTO": {
+            "type": "object",
+            "properties": {
+                "globalPerMinute": {
+                    "type": "integer"
+                },
+                "identityPerMinute": {
+                    "type": "integer"
+                },
+                "ipPerMinute": {
+                    "type": "integer"
+                },
+                "registrationGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "registrationIpPerMinute": {
+                    "type": "integer"
+                },
+                "resetGlobalPerMinute": {
+                    "type": "integer"
+                }
+            }
+        },
+        "settingshttp.LoginBudgetPolicyRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/settingshttp.LoginBudgetPolicyDTO"
+                }
+            }
+        },
+        "settingshttp.LoginBudgetPolicyView": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/settingshttp.LoginBudgetPolicyDTO"
+                },
+                "source": {
+                    "$ref": "#/definitions/domain.SourceMetadata"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "settingshttp.OperationBudgetsPolicyDTO": {
+            "type": "object",
+            "properties": {
+                "activationGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "bindingConfirmPerMinute": {
+                    "type": "integer"
+                },
+                "bindingRequestPerMinute": {
+                    "type": "integer"
+                },
+                "googleGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "googleIPPerMinute": {
+                    "type": "integer"
+                },
+                "invitationActorPerMinute": {
+                    "type": "integer"
+                },
+                "invitationGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "jwtActorPerMinute": {
+                    "type": "integer"
+                },
+                "jwtConsumerPerMinute": {
+                    "type": "integer"
+                },
+                "jwtGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "jwtIPPerMinute": {
+                    "type": "integer"
+                },
+                "jwtIntrospectionPerMinute": {
+                    "type": "integer"
+                },
+                "jwtSessionPerMinute": {
+                    "type": "integer"
+                },
+                "mfaGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "mfaIPPerMinute": {
+                    "type": "integer"
+                },
+                "mfaUserPerMinute": {
+                    "type": "integer"
+                },
+                "telegramGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "telegramIPPerMinute": {
+                    "type": "integer"
+                },
+                "temporaryActorPerMinute": {
+                    "type": "integer"
+                },
+                "temporaryGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "temporarySetupPerMinute": {
+                    "type": "integer"
+                }
+            }
+        },
+        "settingshttp.OperationBudgetsPolicyRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/settingshttp.OperationBudgetsPolicyDTO"
+                }
+            }
+        },
+        "settingshttp.OperationBudgetsPolicyView": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/settingshttp.OperationBudgetsPolicyDTO"
+                },
+                "source": {
+                    "$ref": "#/definitions/domain.SourceMetadata"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "settingshttp.PolicyErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "message": {
                     "type": "string"
                 }
             }

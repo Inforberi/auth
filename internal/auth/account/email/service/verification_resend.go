@@ -20,7 +20,21 @@ func (s *Verification) Resend(ctx context.Context, input, ip string) error {
 	if err := s.limit(ctx, "resend-email:"+email.String(), 3, 15*time.Minute); err != nil {
 		return err
 	}
-	prepared, err := s.PrepareVerification(email.String())
+	ttl := s.cfg.TTL
+	if s.cfg.TTLSource != nil {
+		ttl, err = s.cfg.TTLSource(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	address := s.cfg.URL
+	if s.cfg.URLSource != nil {
+		address, err = s.cfg.URLSource(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	prepared, err := s.PrepareVerificationLink(email.String(), address, ttl)
 	if err != nil {
 		return err
 	}

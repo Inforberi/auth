@@ -64,7 +64,7 @@ func (s *Login) Complete(ctx context.Context, input CompleteLoginInput) (*LoginS
 		return nil, err
 	}
 	// This counter spans all primary logins: replacing a challenge cannot reset guessing admission.
-	if err := mfaservice.AdmitFactorUser(ctx, s.cipher, s.limit, s.cfg.UserLimitPerMinute, user); err != nil {
+	if err := s.cfg.AdmitFactorUser(ctx, s.cipher, s.limit, user); err != nil {
 		return nil, err
 	}
 	raw, err := s.tokens.GenerateToken()

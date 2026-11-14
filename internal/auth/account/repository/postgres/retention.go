@@ -71,7 +71,7 @@ func (r *Repository) PurgeRetention(ctx context.Context, cfg service.RetentionCo
 			return err
 		}
 		removed += sessions
-		for _, table := range []string{
+		auditTables := []string{
 			"email_verification_audit", "password_audit", "account_status_audit",
 			"account_deletion_audit", "email_change_audit", "invitation_audit",
 			"identity_audit",
@@ -83,11 +83,16 @@ func (r *Repository) PurgeRetention(ctx context.Context, cfg service.RetentionCo
 			"telegram_bot_settings_audit",
 			"retention_settings_audit",
 			"settings_source_audit",
+			"email_otp_policy_audit",
 			"email_login_audit",
 			"mfa_audit",
 			"token_issuance_audit",
 			"refresh_audit",
-		} {
+		}
+		if r.standalonePolicyAudit {
+			auditTables = append(auditTables, "browser_session_policy_audit", "link_lifetime_policy_audit", "credential_lifetime_policy_audit", "login_budget_policy_audit", "frontend_policy_audit", "operation_budgets_policy_audit")
+		}
+		for _, table := range auditTables {
 			// Identifiers come only from this fixed list, never from configuration/input.
 			name := pgx.Identifier{"auth", table}.Sanitize()
 			result, err := tx.Exec(ctx, `WITH due AS MATERIALIZED (

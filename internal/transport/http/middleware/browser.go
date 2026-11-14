@@ -2,12 +2,17 @@ package middleware
 
 import (
 	"net/http"
+	"slices"
 	"strings"
+	"sync"
 
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/httpx"
 )
 
 func BrowserProtection(cfg OriginConfig) func(http.Handler) http.Handler {
+	if cfg.PolicySource != nil {
+		return dynamicBrowserProtection(cfg)
+	}
 	return func(next http.Handler) http.Handler {
 		trusted := RequireOrigin(cfg)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if cfg.CORSEnabled {
@@ -57,4 +62,28 @@ func validPreflight(r *http.Request) bool {
 		}
 	}
 	return true
+}
+
+func dynamicBrowserProtection(cfg OriginConfig) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		var mu sync.Mutex
+		var current OriginConfig
+		var handler http.Handler
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			policy, err := cfg.PolicySource(r.Context())
+			if err != nil {
+				w.Header().Set("Cache-Control", "no-store")
+				httpx.Error(w, http.StatusServiceUnavailable, "temporarily_unavailable", "temporarily unavailable")
+				return
+			}
+			mu.Lock()
+			if handler == nil || policy.CORSEnabled != current.CORSEnabled || !slices.Equal(policy.AllowedOrigins, current.AllowedOrigins) {
+				current = policy
+				handler = BrowserProtection(policy)(next)
+			}
+			active := handler
+			mu.Unlock()
+			active.ServeHTTP(w, r)
+		})
+	}
 }

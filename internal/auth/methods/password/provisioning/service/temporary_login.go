@@ -47,7 +47,14 @@ func (s *TemporaryPasswordService) Login(ctx context.Context, rawEmail, password
 	if err != nil {
 		return nil, err
 	}
-	expires, err := s.repo.BeginTemporary(ctx, *credential, passwordservice.TokenDigest(token), s.cfg.SetupTTL)
+	ttl := s.cfg.SetupTTL
+	if s.cfg.SetupTTLSource != nil {
+		ttl, err = s.cfg.SetupTTLSource(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	expires, err := s.repo.BeginTemporary(ctx, *credential, passwordservice.TokenDigest(token), ttl)
 	if err != nil {
 		return nil, err
 	}

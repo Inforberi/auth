@@ -15,14 +15,19 @@ func AdmitFactorUser(ctx context.Context, cipher Cipher, limit Limiter, operatio
 }
 
 func AdmitLogin(ctx context.Context, cipher Cipher, limit Limiter, cfg LoginConfig, purpose, subject, ip string, count int) error {
+	userLimit, ipLimit, projectLimit, err := cfg.Budget(ctx)
+	if err != nil {
+		return err
+	}
 	subjectKey := "login:" + purpose + ":subject:" + cipher.Digest(subject)
 	if purpose == "start" {
+		count = userLimit
 		subjectKey = cipher.Digest("user:" + subject)
 	}
 	return AdmitBudgets(ctx, limit, []Budget{
 		{Key: subjectKey, Count: count},
-		{Key: "login:ip:" + cipher.Digest(ip), Count: cfg.IPLimitPerMinute},
-		{Key: "project", Count: cfg.GlobalLimitPerMinute},
+		{Key: "login:ip:" + cipher.Digest(ip), Count: ipLimit},
+		{Key: "project", Count: projectLimit},
 	})
 }
 
@@ -35,4 +40,23 @@ func AdmitBudgets(ctx context.Context, limit Limiter, budgets []Budget) error {
 		return domain.ErrLimited
 	}
 	return nil
+}
+
+func (cfg LoginConfig) Budget(ctx context.Context) (int, int, int, error) {
+	if cfg.BudgetSource != nil {
+		user, ip, project, err := cfg.BudgetSource(ctx)
+		if err != nil {
+			return 0, 0, 0, domain.ErrUnavailable
+		}
+		return user, ip, project, nil
+	}
+	return cfg.UserLimitPerMinute, cfg.IPLimitPerMinute, cfg.GlobalLimitPerMinute, nil
+}
+
+func (cfg LoginConfig) AdmitFactorUser(ctx context.Context, cipher Cipher, limit Limiter, user accountdomain.UserID) error {
+	operations, _, _, err := cfg.Budget(ctx)
+	if err != nil {
+		return err
+	}
+	return AdmitFactorUser(ctx, cipher, limit, operations, user)
 }

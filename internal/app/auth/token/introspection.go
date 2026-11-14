@@ -1,6 +1,8 @@
 package token
 
 import (
+	"context"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	accesssettings "github.com/Inforberi/financial-intelligence/internal/access/settings"
@@ -11,7 +13,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/pkg/authjwt"
 )
 
-func assembleIntrospection(pool *pgxpool.Pool, limiter service.IntrospectionLimiter, public []byte, cfg settings.Config, resources []service.Resource, catalog accesssettings.Catalog) (*tokenintrospectionhttp.IntrospectionHandler, error) {
+func assembleIntrospection(pool *pgxpool.Pool, limiter service.IntrospectionLimiter, public []byte, cfg settings.Config, resources []service.Resource, catalog accesssettings.Catalog, source func(context.Context) (int, int, error)) (*tokenintrospectionhttp.IntrospectionHandler, error) {
 	if cfg.IntrospectionClientFile == "" {
 		return nil, nil
 	}
@@ -25,7 +27,7 @@ func assembleIntrospection(pool *pgxpool.Pool, limiter service.IntrospectionLimi
 	}
 	svc, err := service.NewIntrospection(tokenpostgres.New(pool), limiter, keys, service.IntrospectionConfig{
 		Issuer: cfg.Issuer, Resources: resources, Clients: clients,
-		ConsumerPerMinute: cfg.IntrospectionConsumerPerMinute, ProjectPerMinute: cfg.IntrospectionProjectPerMinute,
+		ConsumerPerMinute: cfg.IntrospectionConsumerPerMinute, ProjectPerMinute: cfg.IntrospectionProjectPerMinute, BudgetSource: source,
 	}, catalog)
 	if err != nil {
 		return nil, err

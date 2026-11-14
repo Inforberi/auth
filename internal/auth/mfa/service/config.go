@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -9,13 +10,15 @@ import (
 )
 
 type Config struct {
-	Enabled              bool          `env:"MFA_ENABLED" env-default:"false"`
-	RecoveryEnabled      bool          `env:"MFA_RECOVERY_ENABLED" env-default:"false"`
-	Issuer               string        `env:"MFA_ISSUER" env-default:"Auth"`
-	ChallengeTTL         time.Duration `env:"MFA_LOGIN_CHALLENGE_TTL" env-default:"5m"`
-	UserLimitPerMinute   int           `env:"MFA_USER_OPERATIONS_PER_MINUTE" env-default:"5"`
-	IPLimitPerMinute     int           `env:"MFA_IP_OPERATIONS_PER_MINUTE" env-default:"10"`
-	GlobalLimitPerMinute int           `env:"MFA_PROJECT_OPERATIONS_PER_MINUTE" env-default:"500"`
+	Enabled              bool                                         `env:"MFA_ENABLED" env-default:"false"`
+	RecoveryEnabled      bool                                         `env:"MFA_RECOVERY_ENABLED" env-default:"false"`
+	Issuer               string                                       `env:"MFA_ISSUER" env-default:"Auth"`
+	ChallengeTTL         time.Duration                                `env:"MFA_LOGIN_CHALLENGE_TTL" env-default:"5m"`
+	ChallengeTTLSource   func(context.Context) (time.Duration, error) `env:"-"`
+	BudgetSource         func(context.Context) (int, int, int, error) `env:"-"`
+	UserLimitPerMinute   int                                          `env:"MFA_USER_OPERATIONS_PER_MINUTE" env-default:"5"`
+	IPLimitPerMinute     int                                          `env:"MFA_IP_OPERATIONS_PER_MINUTE" env-default:"10"`
+	GlobalLimitPerMinute int                                          `env:"MFA_PROJECT_OPERATIONS_PER_MINUTE" env-default:"500"`
 }
 
 func (c Config) Validate() error {
@@ -38,6 +41,8 @@ type LoginConfig struct {
 	Issuer                string
 	AllowPrimary          func(method, issuer string) bool
 	ChallengeTTL          time.Duration
+	ChallengeTTLSource    func(context.Context) (time.Duration, error) `env:"-"`
+	BudgetSource          func(context.Context) (int, int, int, error) `env:"-"`
 	SessionTTL            time.Duration
 	AbsoluteSessionTTL    time.Duration
 	AdminIdleTimeout      time.Duration

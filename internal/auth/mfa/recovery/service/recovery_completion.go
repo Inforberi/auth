@@ -41,7 +41,7 @@ func (s *Recovery) Complete(ctx context.Context, input CompleteRecoveryInput) (*
 	if err != nil {
 		return nil, err
 	}
-	if err := mfaservice.AdmitFactorUser(ctx, s.cipher, s.limit, s.cfg.UserLimitPerMinute, user); err != nil {
+	if err := s.cfg.AdmitFactorUser(ctx, s.cipher, s.limit, user); err != nil {
 		return nil, err
 	}
 	codes, digests, err := mfaservice.GenerateRecoveryCodes(s.cipher, user)

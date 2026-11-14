@@ -34,10 +34,16 @@ type Reauthentication struct {
 	limit       reauthenticationLimiter
 	tokens      reauthenticationTokens
 	freshFor    time.Duration
+	freshSource func(context.Context) (time.Duration, error)
 }
 
 func NewReauthentication(credentials reauthenticationRepository, sessions passwordConfirmationRepository, hash Hasher, limit reauthenticationLimiter, tokens reauthenticationTokens, freshFor time.Duration) *Reauthentication {
 	return &Reauthentication{credentials: credentials, sessions: sessions, hash: hash, limit: limit, tokens: tokens, freshFor: freshFor}
+}
+
+func (s *Reauthentication) WithFreshAuthSource(source func(context.Context) (time.Duration, error)) *Reauthentication {
+	s.freshSource = source
+	return s
 }
 
 type ReauthenticationResult struct {
@@ -72,11 +78,18 @@ func (s *Reauthentication) Confirm(ctx context.Context, user accountdomain.UserI
 	if err != nil {
 		return nil, err
 	}
+	freshFor := s.freshFor
+	if s.freshSource != nil {
+		freshFor, err = s.freshSource(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
 	proof, err := s.sessions.ConfirmPassword(ctx, user, sessionHash, credential.PasswordHash, credential.AuthVersion, s.tokens.Hash(token))
 	if err != nil {
 		return nil, err
 	}
-	until := proof.VerifiedAt.Add(s.freshFor)
+	until := proof.VerifiedAt.Add(freshFor)
 	if until.After(proof.ExpiresAt) {
 		until = proof.ExpiresAt
 	}

@@ -67,10 +67,22 @@ func Assemble(ctx context.Context, scope realmscope.Scope, pool *pgxpool.Pool, b
 			log.Warn("JWT Redis client close failed")
 		}
 	})
-	limiter, err := tokenredis.NewScoped(client, digest, tokenredis.Limits{
+	limits := tokenredis.Limits{
 		ActorPerMinute:   cfg.ActorPerMinute,
 		SessionPerMinute: cfg.SessionPerMinute, IPPerMinute: cfg.IPPerMinute, ProjectPerMinute: cfg.ProjectPerMinute,
-	}, scope)
+	}
+	var introspectionBudget func(context.Context) (int, int, error)
+	if load := deployment.OperationBudgetsSource; load != nil {
+		limits.Source = func(ctx context.Context) (tokenredis.Limits, error) {
+			p, err := load(ctx)
+			return tokenredis.Limits{ActorPerMinute: p.JWTActor, SessionPerMinute: p.JWTSession, IPPerMinute: p.JWTIP, ProjectPerMinute: p.JWTGlobal}, err
+		}
+		introspectionBudget = func(ctx context.Context) (int, int, error) {
+			p, err := load(ctx)
+			return p.JWTConsumer, p.JWTIntrospection, err
+		}
+	}
+	limiter, err := tokenredis.NewScoped(client, digest, limits, scope)
 	if err != nil {
 		return App{}, err
 	}
@@ -84,7 +96,7 @@ func Assemble(ctx context.Context, scope realmscope.Scope, pool *pgxpool.Pool, b
 		return App{}, err
 	}
 	assembly := App{service: svc, Handler: tokenhttp.New(svc, signer.PublicJWKS(), log)}
-	assembly.Introspection, err = assembleIntrospection(pool, limiter, signer.PublicJWKS(), cfg, definitions, catalog)
+	assembly.Introspection, err = assembleIntrospection(pool, limiter, signer.PublicJWKS(), cfg, definitions, catalog, introspectionBudget)
 	if err != nil {
 		return App{}, err
 	}

@@ -22,16 +22,22 @@ type passwordVerifier interface {
 }
 
 type EmailChangeService struct {
-	repo     emailChangeRepository
-	hash     passwordVerifier
-	limiter  accountservice.Limiter
-	cipher   accountservice.Cipher
-	cfg      EmailChangeConfig
-	freshFor time.Duration
+	repo        emailChangeRepository
+	hash        passwordVerifier
+	limiter     accountservice.Limiter
+	cipher      accountservice.Cipher
+	cfg         EmailChangeConfig
+	freshFor    time.Duration
+	freshSource func(context.Context) (time.Duration, error)
 }
 
 func NewEmailChange(repo emailChangeRepository, hash passwordVerifier, limiter accountservice.Limiter, cipher accountservice.Cipher, cfg EmailChangeConfig, freshFor time.Duration) *EmailChangeService {
 	return &EmailChangeService{repo: repo, hash: hash, limiter: limiter, cipher: cipher, cfg: cfg, freshFor: freshFor}
+}
+
+func (s *EmailChangeService) WithFreshAuthSource(source func(context.Context) (time.Duration, error)) *EmailChangeService {
+	s.freshSource = source
+	return s
 }
 
 func (s *EmailChangeService) Request(ctx context.Context, user domain.UserID, session, rawEmail, password, ip string) error {
@@ -66,11 +72,18 @@ func (s *EmailChangeService) Request(ctx context.Context, user domain.UserID, se
 	if email.String() == snapshot.Email {
 		return domain.ErrInvalidEmailChange
 	}
-	prepared, err := s.prepareChange(snapshot.Email, email.String())
+	prepared, err := s.prepareChange(ctx, snapshot.Email, email.String())
 	if err != nil {
 		return err
 	}
-	return s.repo.RequestEmailChange(ctx, snapshot, session, email.String(), prepared, passwordVerified, s.freshFor)
+	freshFor := s.freshFor
+	if s.freshSource != nil {
+		freshFor, err = s.freshSource(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	return s.repo.RequestEmailChange(ctx, snapshot, session, email.String(), prepared, passwordVerified, freshFor)
 }
 
 func (s *EmailChangeService) Confirm(ctx context.Context, token, ip string) error {

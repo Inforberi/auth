@@ -19,6 +19,7 @@ type Limits struct {
 	SessionPerMinute int
 	IPPerMinute      int
 	ProjectPerMinute int
+	Source           func(context.Context) (Limits, error)
 }
 
 func DefaultLimits() Limits {
@@ -76,6 +77,10 @@ return 1`
 func (l *Limiter) Allow(ctx context.Context, input service.ExchangeInput) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
+	limits, err := l.currentLimits(ctx)
+	if err != nil {
+		return fmt.Errorf("%w: %w", domain.ErrUnavailable, err)
+	}
 	// One slot and one bounded script: rejected budgets do not allocate more keys or prolong TTLs.
 	prefix := l.issuancePrefix
 	keys := []string{
@@ -84,8 +89,8 @@ func (l *Limiter) Allow(ctx context.Context, input service.ExchangeInput) error 
 		prefix + "ip:" + l.digest.Digest(input.IP),
 		prefix + "project",
 	}
-	allowed, err := l.client.Eval(ctx, issuanceBudget, keys, l.limits.ActorPerMinute,
-		l.limits.SessionPerMinute, l.limits.IPPerMinute, l.limits.ProjectPerMinute).Int64()
+	allowed, err := l.client.Eval(ctx, issuanceBudget, keys, limits.ActorPerMinute,
+		limits.SessionPerMinute, limits.IPPerMinute, limits.ProjectPerMinute).Int64()
 	if err != nil {
 		return fmt.Errorf("%w: %w", domain.ErrUnavailable, err)
 	}
@@ -99,8 +104,12 @@ func (l *Limiter) Allow(ctx context.Context, input service.ExchangeInput) error 
 func (l *Limiter) AllowCredentialLookup(ctx context.Context, ip string) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
+	limits, err := l.currentLimits(ctx)
+	if err != nil {
+		return fmt.Errorf("%w: %w", domain.ErrUnavailable, err)
+	}
 	prefix := l.lookupPrefix
-	allowed, err := l.client.Eval(ctx, issuanceBudget, []string{prefix + "ip:" + l.digest.Digest(ip), prefix + "project"}, l.limits.IPPerMinute, l.limits.ProjectPerMinute).Int64()
+	allowed, err := l.client.Eval(ctx, issuanceBudget, []string{prefix + "ip:" + l.digest.Digest(ip), prefix + "project"}, limits.IPPerMinute, limits.ProjectPerMinute).Int64()
 	if err != nil {
 		return fmt.Errorf("%w: %w", domain.ErrUnavailable, err)
 	}
@@ -113,9 +122,13 @@ func (l *Limiter) AllowCredentialLookup(ctx context.Context, ip string) error {
 func (l *Limiter) AllowNative(ctx context.Context, user accountdomain.UserID, ip string) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
+	limits, err := l.currentLimits(ctx)
+	if err != nil {
+		return fmt.Errorf("%w: %w", domain.ErrUnavailable, err)
+	}
 	prefix := l.issuancePrefix
 	keys := []string{prefix + "actor:" + l.digest.Digest(string(user)), prefix + "ip:" + l.digest.Digest(ip), prefix + "project"}
-	allowed, err := l.client.Eval(ctx, issuanceBudget, keys, l.limits.ActorPerMinute, l.limits.IPPerMinute, l.limits.ProjectPerMinute).Int64()
+	allowed, err := l.client.Eval(ctx, issuanceBudget, keys, limits.ActorPerMinute, limits.IPPerMinute, limits.ProjectPerMinute).Int64()
 	if err != nil {
 		return fmt.Errorf("%w: %w", domain.ErrUnavailable, err)
 	}
@@ -123,4 +136,11 @@ func (l *Limiter) AllowNative(ctx context.Context, user accountdomain.UserID, ip
 		return domain.ErrRateLimited
 	}
 	return nil
+}
+
+func (l *Limiter) currentLimits(ctx context.Context) (Limits, error) {
+	if l.limits.Source != nil {
+		return l.limits.Source(ctx)
+	}
+	return l.limits, nil
 }

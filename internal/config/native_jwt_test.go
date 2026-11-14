@@ -1,6 +1,7 @@
 package config
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -28,10 +29,10 @@ func TestNativeJWTDeployment(t *testing.T) {
 	}
 	before := cfg
 	policy, err := cfg.NativeJWTPolicy()
-	if err != nil || policy == nil || policy.IdleTTL != cfg.JWT.RefreshIdleTTL || policy.AbsoluteTTL != cfg.JWT.RefreshAbsoluteTTL || policy.Sessions != cfg.Session {
+	if err != nil || policy == nil || policy.IdleTTL != cfg.JWT.RefreshIdleTTL || policy.AbsoluteTTL != cfg.JWT.RefreshAbsoluteTTL || !reflect.DeepEqual(policy.Sessions, cfg.Session) {
 		t.Fatal("policy not assembled", policy, err)
 	}
-	if cfg.JWT != before.JWT || cfg.Retention != before.Retention || cfg.Session != before.Session {
+	if cfg.JWT != before.JWT || cfg.Retention != before.Retention || !reflect.DeepEqual(cfg.Session, before.Session) {
 		t.Fatal("deployment budgets or lifetimes were changed automatically")
 	}
 	cfg.Session.AdminIdleTimeout = time.Minute

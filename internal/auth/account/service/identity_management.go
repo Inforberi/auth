@@ -14,12 +14,25 @@ type identityManagementRepository interface {
 }
 
 type IdentityManagement struct {
-	repo     identityManagementRepository
-	freshFor time.Duration
+	repo        identityManagementRepository
+	freshFor    time.Duration
+	freshSource func(context.Context) (time.Duration, error)
 }
 
 func NewIdentityManagement(repo identityManagementRepository, freshFor time.Duration) *IdentityManagement {
 	return &IdentityManagement{repo: repo, freshFor: freshFor}
+}
+
+func (s *IdentityManagement) WithFreshAuthSource(source func(context.Context) (time.Duration, error)) *IdentityManagement {
+	s.freshSource = source
+	return s
+}
+
+func (s *IdentityManagement) freshness(ctx context.Context) (time.Duration, error) {
+	if s.freshSource == nil {
+		return s.freshFor, nil
+	}
+	return s.freshSource(ctx)
 }
 
 func (s *IdentityManagement) RequireFresh(ctx context.Context, user domain.UserID, session string) error {
@@ -28,7 +41,11 @@ func (s *IdentityManagement) RequireFresh(ctx context.Context, user domain.UserI
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	return s.repo.RequireIdentityFreshAuth(ctx, user, session, s.freshFor)
+	freshFor, err := s.freshness(ctx)
+	if err != nil {
+		return err
+	}
+	return s.repo.RequireIdentityFreshAuth(ctx, user, session, freshFor)
 }
 
 func (s *IdentityManagement) Link(ctx context.Context, user domain.UserID, session string, key domain.IdentityKey) error {
@@ -40,7 +57,11 @@ func (s *IdentityManagement) Link(ctx context.Context, user domain.UserID, sessi
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	return s.repo.LinkIdentity(ctx, user, session, key, s.freshFor)
+	freshFor, err := s.freshness(ctx)
+	if err != nil {
+		return err
+	}
+	return s.repo.LinkIdentity(ctx, user, session, key, freshFor)
 }
 
 func (s *IdentityManagement) Unlink(ctx context.Context, user domain.UserID, session, issuer string) error {
@@ -52,7 +73,11 @@ func (s *IdentityManagement) Unlink(ctx context.Context, user domain.UserID, ses
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	return s.repo.UnlinkIdentity(ctx, user, session, issuer, s.freshFor)
+	freshFor, err := s.freshness(ctx)
+	if err != nil {
+		return err
+	}
+	return s.repo.UnlinkIdentity(ctx, user, session, issuer, freshFor)
 }
 
 func (s *IdentityManagement) validateSession(user domain.UserID, session string) error {

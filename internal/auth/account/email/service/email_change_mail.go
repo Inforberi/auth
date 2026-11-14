@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"html"
@@ -10,7 +11,23 @@ import (
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 )
 
-func (s *EmailChangeService) prepareChange(oldEmail, newEmail string) (domain.EmailChangeIntent, error) {
+func (s *EmailChangeService) prepareChange(ctx context.Context, oldEmail, newEmail string) (domain.EmailChangeIntent, error) {
+	ttl, recoveryTTL, protectionTTL := s.cfg.TTL, s.cfg.RecoveryTTL, s.cfg.ProtectionTTL
+	if s.cfg.LifetimeSource != nil {
+		var err error
+		ttl, recoveryTTL, protectionTTL, err = s.cfg.LifetimeSource(ctx)
+		if err != nil {
+			return domain.EmailChangeIntent{}, err
+		}
+	}
+	confirmURL, reportURL, recoveryURL := s.cfg.ConfirmURL, s.cfg.ReportURL, s.cfg.RecoveryURL
+	if s.cfg.URLSource != nil {
+		var err error
+		confirmURL, reportURL, recoveryURL, err = s.cfg.URLSource(ctx)
+		if err != nil {
+			return domain.EmailChangeIntent{}, err
+		}
+	}
 	confirm, err := accountservice.NewEmailToken()
 	if err != nil {
 		return domain.EmailChangeIntent{}, err
@@ -19,11 +36,11 @@ func (s *EmailChangeService) prepareChange(oldEmail, newEmail string) (domain.Em
 	if err != nil {
 		return domain.EmailChangeIntent{}, err
 	}
-	confirmLink, err := accountservice.EmailTokenLink(s.cfg.ConfirmURL, confirm)
+	confirmLink, err := accountservice.EmailTokenLink(confirmURL, confirm)
 	if err != nil {
 		return domain.EmailChangeIntent{}, err
 	}
-	reportLink, err := accountservice.EmailTokenLink(s.cfg.ReportURL, report)
+	reportLink, err := accountservice.EmailTokenLink(reportURL, report)
 	if err != nil {
 		return domain.EmailChangeIntent{}, err
 	}
@@ -51,7 +68,7 @@ func (s *EmailChangeService) prepareChange(oldEmail, newEmail string) (domain.Em
 	if err != nil {
 		return domain.EmailChangeIntent{}, err
 	}
-	recoveryLink, err := accountservice.EmailTokenLink(s.cfg.RecoveryURL, recovery)
+	recoveryLink, err := accountservice.EmailTokenLink(recoveryURL, recovery)
 	if err != nil {
 		return domain.EmailChangeIntent{}, err
 	}
@@ -60,7 +77,7 @@ func (s *EmailChangeService) prepareChange(oldEmail, newEmail string) (domain.Em
 		return domain.EmailChangeIntent{}, err
 	}
 	now := time.Now().UTC()
-	return domain.EmailChangeIntent{ConfirmDigest: accountservice.TokenDigest(confirm), ReportDigest: accountservice.TokenDigest(report), ConfirmPayload: confirmPayload, NoticePayload: notice, CompletionPayload: completion, RecoveryDigest: accountservice.TokenDigest(recovery), RecoveryPayload: recoveryPayload, RecoveryTTL: s.cfg.RecoveryTTL, ExpiresAt: now.Add(s.cfg.TTL), ProtectUntil: now.Add(s.cfg.ProtectionTTL)}, nil
+	return domain.EmailChangeIntent{ConfirmDigest: accountservice.TokenDigest(confirm), ReportDigest: accountservice.TokenDigest(report), ConfirmPayload: confirmPayload, NoticePayload: notice, CompletionPayload: completion, RecoveryDigest: accountservice.TokenDigest(recovery), RecoveryPayload: recoveryPayload, RecoveryTTL: recoveryTTL, ExpiresAt: now.Add(ttl), ProtectUntil: now.Add(protectionTTL)}, nil
 }
 
 func validChangeToken(token string) bool {

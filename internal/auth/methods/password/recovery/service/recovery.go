@@ -38,3 +38,15 @@ func NewRecovery(repo RecoveryRepo, cipher passwordservice.RecoveryCipher, limit
 func (r *RecoveryService) limit(ctx context.Context, key string, limit int, window time.Duration) error {
 	return passwordservice.LimitAttempts(ctx, r.limiter, r.cipher.Digest, key, limit, window)
 }
+
+func (r *RecoveryService) limitGlobalReset(ctx context.Context) error {
+	limit := r.cfg.ResetGlobalLimit
+	if r.cfg.ResetBudgetSource != nil {
+		var err error
+		limit, err = r.cfg.ResetBudgetSource(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	return r.limit(ctx, "reset-global", limit, time.Minute)
+}

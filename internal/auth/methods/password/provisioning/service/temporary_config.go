@@ -1,18 +1,23 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
 
 type TemporaryPasswordConfig struct {
-	Enabled                       bool          `env:"TEMPORARY_PASSWORD_ENABLED" env-default:"false"`
-	TTL                           time.Duration `env:"TEMPORARY_PASSWORD_TTL" env-default:"24h"`
-	SetupTTL                      time.Duration `env:"TEMPORARY_PASSWORD_SETUP_TTL" env-default:"10m"`
-	ReissueCooldown               time.Duration `env:"TEMPORARY_PASSWORD_REISSUE_COOLDOWN" env-default:"1m"`
-	IssueActorAttemptsPerMinute   int           `env:"TEMPORARY_PASSWORD_ISSUE_ACTOR_ATTEMPTS_PER_MINUTE" env-default:"30"`
-	IssueProjectAttemptsPerMinute int           `env:"TEMPORARY_PASSWORD_ISSUE_PROJECT_ATTEMPTS_PER_MINUTE" env-default:"100"`
-	SetupProjectAttemptsPerMinute int           `env:"TEMPORARY_PASSWORD_SETUP_PROJECT_ATTEMPTS_PER_MINUTE" env-default:"100"`
+	Enabled                       bool                                                        `env:"TEMPORARY_PASSWORD_ENABLED" env-default:"false"`
+	TTL                           time.Duration                                               `env:"TEMPORARY_PASSWORD_TTL" env-default:"24h"`
+	TTLSource                     func(context.Context) (time.Duration, error)                `env:"-"`
+	SetupTTL                      time.Duration                                               `env:"TEMPORARY_PASSWORD_SETUP_TTL" env-default:"10m"`
+	SetupTTLSource                func(context.Context) (time.Duration, error)                `env:"-"`
+	ReissueCooldown               time.Duration                                               `env:"TEMPORARY_PASSWORD_REISSUE_COOLDOWN" env-default:"1m"`
+	ReissuePolicySource           func(context.Context) (time.Duration, time.Duration, error) `env:"-"`
+	IssueActorAttemptsPerMinute   int                                                         `env:"TEMPORARY_PASSWORD_ISSUE_ACTOR_ATTEMPTS_PER_MINUTE" env-default:"30"`
+	IssueProjectAttemptsPerMinute int                                                         `env:"TEMPORARY_PASSWORD_ISSUE_PROJECT_ATTEMPTS_PER_MINUTE" env-default:"100"`
+	SetupProjectAttemptsPerMinute int                                                         `env:"TEMPORARY_PASSWORD_SETUP_PROJECT_ATTEMPTS_PER_MINUTE" env-default:"100"`
+	BudgetSource                  func(context.Context) (int, int, int, error)                `env:"-"`
 }
 
 func (c TemporaryPasswordConfig) Validate() error {

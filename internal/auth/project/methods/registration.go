@@ -78,7 +78,7 @@ func (p *ProjectPassword) Register(ctx context.Context, email, password, userAge
 		}
 		var repo *passwordpostgres.PasswordRepo
 		if p.registration.configured {
-			repo = registrationapp.Assemble(pool, verifier, account)
+			repo = registrationapp.Assemble(pool, verifier, account, nil)
 		} else {
 			// SQL calls this only for optional/required verification, then rolls back all account writes.
 			repo = passwordpostgres.NewWithRegistration(pool, func(context.Context, pgx.Tx, accountdomain.UserID, accountdomain.AddressID, string) error {

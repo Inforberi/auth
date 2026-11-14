@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"html"
 
@@ -8,12 +9,19 @@ import (
 	accountservice "github.com/Inforberi/financial-intelligence/internal/auth/account/service"
 )
 
-func (s *ProvisionService) prepareInvitation(email string) (domain.Invitation, error) {
+func (s *ProvisionService) prepareInvitation(ctx context.Context, email string) (domain.Invitation, error) {
 	token, err := accountservice.NewEmailToken()
 	if err != nil {
 		return domain.Invitation{}, err
 	}
-	link, err := accountservice.EmailTokenLink(s.cfg.URL, token)
+	address := s.cfg.URL
+	if s.cfg.URLSource != nil {
+		address, err = s.cfg.URLSource(ctx)
+		if err != nil {
+			return domain.Invitation{}, err
+		}
+	}
+	link, err := accountservice.EmailTokenLink(address, token)
 	if err != nil {
 		return domain.Invitation{}, err
 	}

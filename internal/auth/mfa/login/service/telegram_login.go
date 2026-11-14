@@ -111,7 +111,7 @@ func (s *TelegramLogin) start(ctx context.Context, proof mfaservice.PrimaryProof
 		Proof: proof, Target: target, Channel: channel, Digest: digest, BindingHash: s.cipher.Digest(boundPrefix + binding),
 		Verifier: TelegramLoginVerifier(s.cipher, string(proof.UserID), digest, code),
 	}
-	state, err := s.repo.SaveTelegramLoginChallenge(ctx, intent, s.cfg.ChallengeTTL)
+	state, err := s.saveChallenge(ctx, intent)
 	if err != nil {
 		return nil, err
 	}
@@ -127,4 +127,16 @@ func (s *TelegramLogin) start(ctx context.Context, proof mfaservice.PrimaryProof
 
 func TelegramLoginVerifier(cipher mfaservice.Cipher, user, digest, code string) string {
 	return cipher.Digest("telegram-login:" + user + ":" + digest + ":" + code)
+}
+
+func (s *TelegramLogin) saveChallenge(ctx context.Context, intent TelegramLoginIntent) (*LoginChallengeState, error) {
+	ttl := s.cfg.ChallengeTTL
+	if s.cfg.ChallengeTTLSource != nil {
+		var err error
+		ttl, err = s.cfg.ChallengeTTLSource(ctx)
+		if err != nil {
+			return nil, domain.ErrUnavailable
+		}
+	}
+	return s.repo.SaveTelegramLoginChallenge(ctx, intent, ttl)
 }

@@ -11,9 +11,16 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 )
 
-type Repository struct{ db *pgxpool.Pool }
+type Repository struct {
+	db            *pgxpool.Pool
+	browserPolicy bool
+}
 
 func New(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
+
+func NewWithBrowserPolicy(db *pgxpool.Pool) *Repository {
+	return &Repository{db: db, browserPolicy: true}
+}
 
 func (r *Repository) transaction(ctx context.Context, fn func(context.Context, pgx.Tx) error) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)

@@ -71,7 +71,7 @@ func (s *Login) confirmRequiredEnrollment(ctx context.Context, input ConfirmLogi
 	if err != nil {
 		return nil, err
 	}
-	if err := mfaservice.AdmitFactorUser(ctx, s.cipher, s.limit, s.cfg.UserLimitPerMinute, user); err != nil {
+	if err := s.cfg.AdmitFactorUser(ctx, s.cipher, s.limit, user); err != nil {
 		return nil, err
 	}
 	params.EnrollmentDigest = s.cipher.Digest("enrollment:" + input.Token)

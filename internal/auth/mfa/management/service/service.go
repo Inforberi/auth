@@ -29,6 +29,7 @@ type Service struct {
 	issuer                 string
 	tokens                 mfaservice.Tokens
 	userLimit, globalLimit int
+	budgetSource           func(context.Context) (int, int, int, error)
 }
 
 func New(repo Repository, cipher mfaservice.Cipher, code mfaservice.Authenticator, limit mfaservice.Limiter, issuer string) *Service {
@@ -44,6 +45,7 @@ func NewConfigured(repo Repository, cipher mfaservice.Cipher, code mfaservice.Au
 	}
 	s := New(repo, cipher, code, limit, cfg.Issuer)
 	s.tokens, s.userLimit, s.globalLimit = tokens, cfg.UserLimitPerMinute, cfg.GlobalLimitPerMinute
+	s.budgetSource = cfg.BudgetSource
 	return s, nil
 }
 
@@ -51,7 +53,15 @@ func (s *Service) admit(ctx context.Context, user accountdomain.UserID) error {
 	if s.limit == nil {
 		return domain.ErrUnavailable
 	}
+	userLimit, globalLimit := s.userLimit, s.globalLimit
+	if s.budgetSource != nil {
+		var err error
+		userLimit, _, globalLimit, err = s.budgetSource(ctx)
+		if err != nil {
+			return domain.ErrUnavailable
+		}
+	}
 	return mfaservice.AdmitBudgets(ctx, s.limit, []mfaservice.Budget{
-		{Key: s.cipher.Digest("user:" + string(user)), Count: s.userLimit}, {Key: "project", Count: s.globalLimit},
+		{Key: s.cipher.Digest("user:" + string(user)), Count: userLimit}, {Key: "project", Count: globalLimit},
 	})
 }

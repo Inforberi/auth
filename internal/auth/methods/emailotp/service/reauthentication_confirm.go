@@ -30,12 +30,16 @@ func (s *Service) ConfirmReauthentication(ctx context.Context, input Reauthentic
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+	policy, err := s.currentPolicy(ctx)
+	if err != nil {
+		return nil, err
+	}
 	for _, budget := range []struct {
 		key   string
 		count int
 	}{
 		{"confirm:ip:" + input.IP, 10},
-		{"confirm:project", s.cfg.ConfirmGlobalLimit},
+		{"confirm:project", policy.ConfirmationsPerMinute},
 		{"reauth:confirm:user:" + string(input.Proof.UserID), domain.MaxAttempts},
 	} {
 		if err := s.limit(ctx, budget.key, budget.count, time.Minute); err != nil {

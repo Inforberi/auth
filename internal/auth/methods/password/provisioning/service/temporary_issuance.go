@@ -58,7 +58,14 @@ func (s *TemporaryPasswordService) Provision(ctx context.Context, input Temporar
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.repo.ProvisionTemporary(ctx, command, credential, s.cfg.TTL)
+	ttl := s.cfg.TTL
+	if s.cfg.TTLSource != nil {
+		ttl, err = s.cfg.TTLSource(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	result, err := s.repo.ProvisionTemporary(ctx, command, credential, ttl)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +94,14 @@ func (s *TemporaryPasswordService) Reissue(ctx context.Context, input TemporaryR
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.repo.ReissueTemporary(ctx, input, credential, s.cfg.TTL, s.cfg.ReissueCooldown)
+	ttl, cooldown := s.cfg.TTL, s.cfg.ReissueCooldown
+	if s.cfg.ReissuePolicySource != nil {
+		ttl, cooldown, err = s.cfg.ReissuePolicySource(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	result, err := s.repo.ReissueTemporary(ctx, input, credential, ttl, cooldown)
 	if err != nil {
 		return nil, err
 	}
@@ -110,8 +124,16 @@ func (s *TemporaryPasswordService) prepareTemporary(ctx context.Context) (string
 }
 
 func (s *TemporaryPasswordService) limitIssue(ctx context.Context, actor accountdomain.UserID) error {
-	if err := s.limit(ctx, "temporary-password-issue-actor:"+string(actor), s.cfg.IssueActorAttemptsPerMinute); err != nil {
+	actorLimit, projectLimit := s.cfg.IssueActorAttemptsPerMinute, s.cfg.IssueProjectAttemptsPerMinute
+	if s.cfg.BudgetSource != nil {
+		var err error
+		actorLimit, projectLimit, _, err = s.cfg.BudgetSource(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	if err := s.limit(ctx, "temporary-password-issue-actor:"+string(actor), actorLimit); err != nil {
 		return err
 	}
-	return s.limit(ctx, "temporary-password-issue-project", s.cfg.IssueProjectAttemptsPerMinute)
+	return s.limit(ctx, "temporary-password-issue-project", projectLimit)
 }

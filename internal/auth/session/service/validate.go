@@ -52,8 +52,13 @@ func (s *SessionService) validateSession(ctx context.Context, rawToken string, r
 	timeLeft := session.ExpiresAt.Sub(now)
 	extended := false
 
-	if refresh && session.IdleTimeoutSeconds == 0 && timeLeft <= s.cfg.SessionRefreshThreshold {
-		candidate := now.Add(s.cfg.SessionTTL)
+	idleTTL, threshold := s.cfg.SessionTTL, s.cfg.SessionRefreshThreshold
+	if session.BrowserIdleSeconds > 0 {
+		idleTTL = time.Duration(session.BrowserIdleSeconds) * time.Second
+		threshold = time.Duration(session.BrowserRefreshSeconds) * time.Second
+	}
+	if refresh && session.IdleTimeoutSeconds == 0 && timeLeft <= threshold {
+		candidate := now.Add(idleTTL)
 		if candidate.After(absoluteTime) {
 			candidate = absoluteTime
 		}

@@ -25,10 +25,14 @@ func (s *Service) RequestReauthentication(ctx context.Context, proof mfaservice.
 	if err := s.limit(ctx, "reauth:request:user:"+string(proof.UserID), 3, 15*time.Minute); err != nil {
 		return nil, err
 	}
-	if err := s.requestLimits(ctx, email.String(), ip); err != nil {
+	policy, err := s.currentPolicy(ctx)
+	if err != nil {
 		return nil, err
 	}
-	result, challenge, err := prepareCode(s.cipher, s.tokens, s.cfg.TTL, email.String(), "подтверждения управления MFA", "reauth:")
+	if err := s.requestLimits(ctx, email.String(), ip, policy); err != nil {
+		return nil, err
+	}
+	result, challenge, err := prepareCode(s.cipher, s.tokens, time.Duration(policy.TTLSeconds)*time.Second, email.String(), "подтверждения управления MFA", "reauth:")
 	if err != nil {
 		return nil, err
 	}

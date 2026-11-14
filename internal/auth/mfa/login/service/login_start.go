@@ -32,11 +32,18 @@ func (s *Login) startLogin(ctx context.Context, proof mfaservice.PrimaryProof, i
 	if err != nil {
 		return nil, err
 	}
+	ttl := s.cfg.ChallengeTTL
+	if s.cfg.ChallengeTTLSource != nil {
+		ttl, err = s.cfg.ChallengeTTLSource(ctx)
+		if err != nil {
+			return nil, domain.ErrUnavailable
+		}
+	}
 	var state *LoginChallengeState
 	if target == nil {
-		state, err = s.repo.SaveLoginChallenge(ctx, proof, s.cipher.Digest("login:"+token), s.cipher.Digest("browser:"+binding), s.cfg.ChallengeTTL)
+		state, err = s.repo.SaveLoginChallenge(ctx, proof, s.cipher.Digest("login:"+token), s.cipher.Digest("browser:"+binding), ttl)
 	} else {
-		state, err = s.repo.SaveNativeLoginChallenge(ctx, proof, *target, s.cipher.Digest("native-login:"+token), s.cipher.Digest("native-binding:"+binding), s.cfg.ChallengeTTL)
+		state, err = s.repo.SaveNativeLoginChallenge(ctx, proof, *target, s.cipher.Digest("native-login:"+token), s.cipher.Digest("native-binding:"+binding), ttl)
 	}
 	if err != nil {
 		return nil, err

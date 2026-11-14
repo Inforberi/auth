@@ -1,19 +1,24 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"time"
 )
 
 type InvitationConfig struct {
-	Enabled                       bool          `env:"INVITATIONS_ENABLED" env-default:"false"`
-	URL                           string        `env:"INVITATION_URL"`
-	TTL                           time.Duration `env:"INVITATION_TTL" env-default:"24h"`
-	ActivationGlobalLimit         int           `env:"ACTIVATION_GLOBAL_LIMIT" env-default:"100"`
-	ReissueCooldown               time.Duration `env:"INVITATION_REISSUE_COOLDOWN" env-default:"1m"`
-	IssueActorAttemptsPerMinute   int           `env:"INVITATION_ISSUE_ACTOR_ATTEMPTS_PER_MINUTE" env-default:"30"`
-	IssueProjectAttemptsPerMinute int           `env:"INVITATION_ISSUE_PROJECT_ATTEMPTS_PER_MINUTE" env-default:"100"`
+	Enabled                       bool                                                        `env:"INVITATIONS_ENABLED" env-default:"false"`
+	URL                           string                                                      `env:"INVITATION_URL"`
+	TTL                           time.Duration                                               `env:"INVITATION_TTL" env-default:"24h"`
+	TTLSource                     func(context.Context) (time.Duration, error)                `env:"-"`
+	URLSource                     func(context.Context) (string, error)                       `env:"-"`
+	ActivationGlobalLimit         int                                                         `env:"ACTIVATION_GLOBAL_LIMIT" env-default:"100"`
+	ReissueCooldown               time.Duration                                               `env:"INVITATION_REISSUE_COOLDOWN" env-default:"1m"`
+	ReissuePolicySource           func(context.Context) (time.Duration, time.Duration, error) `env:"-"`
+	IssueActorAttemptsPerMinute   int                                                         `env:"INVITATION_ISSUE_ACTOR_ATTEMPTS_PER_MINUTE" env-default:"30"`
+	IssueProjectAttemptsPerMinute int                                                         `env:"INVITATION_ISSUE_PROJECT_ATTEMPTS_PER_MINUTE" env-default:"100"`
+	BudgetSource                  func(context.Context) (int, int, int, error)                `env:"-"`
 }
 
 func (c InvitationConfig) Validate(production bool) error {

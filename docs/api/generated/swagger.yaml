@@ -364,6 +364,24 @@ definitions:
       tokenIssuance:
         $ref: '#/definitions/auth_settings_http.TokenIssuanceResponse'
     type: object
+  auth_settings_http.PublicMethodsResponse:
+    properties:
+      login:
+        $ref: '#/definitions/auth_settings_http.MethodsResponse'
+      passwordVerificationRequired:
+        type: boolean
+      registration:
+        $ref: '#/definitions/auth_settings_http.PublicRegistrationResponse'
+    type: object
+  auth_settings_http.PublicRegistrationResponse:
+    properties:
+      google:
+        type: boolean
+      password:
+        type: boolean
+      telegram:
+        type: boolean
+    type: object
   auth_settings_http.RegistrationRequest:
     properties:
       enabled:
@@ -1511,6 +1529,262 @@ definitions:
       name:
         type: string
     type: object
+  settingshttp.BrowserSessionPolicyDTO:
+    properties:
+      absoluteSeconds:
+        type: integer
+      adminAbsoluteSeconds:
+        type: integer
+      adminActivitySeconds:
+        type: integer
+      adminIdleSeconds:
+        type: integer
+      idleSeconds:
+        type: integer
+      refreshThresholdSeconds:
+        type: integer
+    type: object
+  settingshttp.BrowserSessionPolicyRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/settingshttp.BrowserSessionPolicyDTO'
+    type: object
+  settingshttp.BrowserSessionPolicyView:
+    properties:
+      policy:
+        $ref: '#/definitions/settingshttp.BrowserSessionPolicyDTO'
+      source:
+        $ref: '#/definitions/domain.SourceMetadata'
+      version:
+        type: integer
+    type: object
+  settingshttp.CredentialLifetimePolicyDTO:
+    properties:
+      emailBindingSeconds:
+        type: integer
+      emailChangeProtectionSeconds:
+        type: integer
+      emailChangeRecoverySeconds:
+        type: integer
+      emailChangeSeconds:
+        type: integer
+      freshAuthSeconds:
+        type: integer
+      invitationCooldownSeconds:
+        type: integer
+      invitationSeconds:
+        type: integer
+      mfaChallengeSeconds:
+        type: integer
+      temporaryPasswordSeconds:
+        type: integer
+      temporaryReissueCooldownSeconds:
+        type: integer
+      temporarySetupSeconds:
+        type: integer
+    type: object
+  settingshttp.CredentialLifetimePolicyRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/settingshttp.CredentialLifetimePolicyDTO'
+    type: object
+  settingshttp.CredentialLifetimePolicyView:
+    properties:
+      policy:
+        $ref: '#/definitions/settingshttp.CredentialLifetimePolicyDTO'
+      source:
+        $ref: '#/definitions/domain.SourceMetadata'
+      version:
+        type: integer
+    type: object
+  settingshttp.EmailOTPPolicyDTO:
+    properties:
+      confirmationsPerMinute:
+        type: integer
+      requestsPerMinute:
+        type: integer
+      resendSeconds:
+        type: integer
+      ttlSeconds:
+        type: integer
+    type: object
+  settingshttp.EmailOTPPolicyRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/settingshttp.EmailOTPPolicyDTO'
+    type: object
+  settingshttp.EmailOTPPolicyView:
+    properties:
+      policy:
+        $ref: '#/definitions/settingshttp.EmailOTPPolicyDTO'
+      source:
+        $ref: '#/definitions/domain.SourceMetadata'
+      version:
+        type: integer
+    type: object
+  settingshttp.FrontendPolicyDTO:
+    properties:
+      corsEnabled:
+        type: boolean
+      emailChangeRecoveryUrl:
+        type: string
+      emailChangeReportUrl:
+        type: string
+      emailChangeUrl:
+        type: string
+      invitationUrl:
+        type: string
+      origins:
+        type: string
+      resetUrl:
+        type: string
+      verificationUrl:
+        type: string
+    type: object
+  settingshttp.FrontendPolicyRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/settingshttp.FrontendPolicyDTO'
+    type: object
+  settingshttp.FrontendPolicyView:
+    properties:
+      policy:
+        $ref: '#/definitions/settingshttp.FrontendPolicyDTO'
+      source:
+        $ref: '#/definitions/domain.SourceMetadata'
+      version:
+        type: integer
+    type: object
+  settingshttp.LinkLifetimePolicyDTO:
+    properties:
+      resetSeconds:
+        type: integer
+      verificationSeconds:
+        type: integer
+    type: object
+  settingshttp.LinkLifetimePolicyRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/settingshttp.LinkLifetimePolicyDTO'
+    type: object
+  settingshttp.LinkLifetimePolicyView:
+    properties:
+      policy:
+        $ref: '#/definitions/settingshttp.LinkLifetimePolicyDTO'
+      source:
+        $ref: '#/definitions/domain.SourceMetadata'
+      version:
+        type: integer
+    type: object
+  settingshttp.LoginBudgetPolicyDTO:
+    properties:
+      globalPerMinute:
+        type: integer
+      identityPerMinute:
+        type: integer
+      ipPerMinute:
+        type: integer
+      registrationGlobalPerMinute:
+        type: integer
+      registrationIpPerMinute:
+        type: integer
+      resetGlobalPerMinute:
+        type: integer
+    type: object
+  settingshttp.LoginBudgetPolicyRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/settingshttp.LoginBudgetPolicyDTO'
+    type: object
+  settingshttp.LoginBudgetPolicyView:
+    properties:
+      policy:
+        $ref: '#/definitions/settingshttp.LoginBudgetPolicyDTO'
+      source:
+        $ref: '#/definitions/domain.SourceMetadata'
+      version:
+        type: integer
+    type: object
+  settingshttp.OperationBudgetsPolicyDTO:
+    properties:
+      activationGlobalPerMinute:
+        type: integer
+      bindingConfirmPerMinute:
+        type: integer
+      bindingRequestPerMinute:
+        type: integer
+      googleGlobalPerMinute:
+        type: integer
+      googleIPPerMinute:
+        type: integer
+      invitationActorPerMinute:
+        type: integer
+      invitationGlobalPerMinute:
+        type: integer
+      jwtActorPerMinute:
+        type: integer
+      jwtConsumerPerMinute:
+        type: integer
+      jwtGlobalPerMinute:
+        type: integer
+      jwtIPPerMinute:
+        type: integer
+      jwtIntrospectionPerMinute:
+        type: integer
+      jwtSessionPerMinute:
+        type: integer
+      mfaGlobalPerMinute:
+        type: integer
+      mfaIPPerMinute:
+        type: integer
+      mfaUserPerMinute:
+        type: integer
+      telegramGlobalPerMinute:
+        type: integer
+      telegramIPPerMinute:
+        type: integer
+      temporaryActorPerMinute:
+        type: integer
+      temporaryGlobalPerMinute:
+        type: integer
+      temporarySetupPerMinute:
+        type: integer
+    type: object
+  settingshttp.OperationBudgetsPolicyRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/settingshttp.OperationBudgetsPolicyDTO'
+    type: object
+  settingshttp.OperationBudgetsPolicyView:
+    properties:
+      policy:
+        $ref: '#/definitions/settingshttp.OperationBudgetsPolicyDTO'
+      source:
+        $ref: '#/definitions/domain.SourceMetadata'
+      version:
+        type: integer
+    type: object
+  settingshttp.PolicyErrorResponse:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+    type: object
   smtp_settings_http.ConfigRequest:
     properties:
       domain:
@@ -2001,6 +2275,146 @@ paths:
       summary: Replace authentication settings
       tags:
       - Auth settings
+  /api/v1/admin/auth/settings/credential-lifetimes:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settingshttp.CredentialLifetimePolicyView'
+      summary: Read standalone credential lifetime policy
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Complete policy and current version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/settingshttp.CredentialLifetimePolicyRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settingshttp.CredentialLifetimePolicyView'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/settingshttp.PolicyErrorResponse'
+      summary: Change standalone credential lifetime policy
+  /api/v1/admin/auth/settings/email-otp:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settingshttp.EmailOTPPolicyView'
+      summary: Read standalone email OTP policy
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Complete policy and current version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/settingshttp.EmailOTPPolicyRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settingshttp.EmailOTPPolicyView'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/settingshttp.PolicyErrorResponse'
+      summary: Change standalone email OTP policy
+  /api/v1/admin/auth/settings/frontend:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settingshttp.FrontendPolicyView'
+      summary: Read standalone frontend policy
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Complete policy and current version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/settingshttp.FrontendPolicyRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settingshttp.FrontendPolicyView'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/settingshttp.PolicyErrorResponse'
+      summary: Change standalone frontend policy
+  /api/v1/admin/auth/settings/link-lifetimes:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settingshttp.LinkLifetimePolicyView'
+      summary: Read standalone link lifetime policy
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Complete policy and current version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/settingshttp.LinkLifetimePolicyRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settingshttp.LinkLifetimePolicyView'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/settingshttp.PolicyErrorResponse'
+      summary: Change standalone link lifetime policy
+  /api/v1/admin/auth/settings/login-budgets:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settingshttp.LoginBudgetPolicyView'
+      summary: Read standalone login policy
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Complete policy and current version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/settingshttp.LoginBudgetPolicyRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settingshttp.LoginBudgetPolicyView'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/settingshttp.PolicyErrorResponse'
+      summary: Change standalone login policy
   /api/v1/admin/auth/settings/mfa:
     get:
       description: Requires a live browser session and allowed HTTPS Origin. Local
@@ -2376,6 +2790,34 @@ paths:
       summary: Register the project-owned HTTPS Telegram webhook
       tags:
       - Auth settings
+  /api/v1/admin/auth/settings/operation-budgets:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settingshttp.OperationBudgetsPolicyView'
+      summary: Read standalone login policy
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Complete policy and current version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/settingshttp.OperationBudgetsPolicyRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settingshttp.OperationBudgetsPolicyView'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/settingshttp.PolicyErrorResponse'
+      summary: Change standalone login policy
   /api/v1/admin/auth/settings/providers/{provider}:
     get:
       description: Live session, HTTPS Origin and auth.settings.manage; no fresh proof
@@ -2563,6 +3005,34 @@ paths:
       summary: Update data retention periods
       tags:
       - Retention settings
+  /api/v1/admin/auth/settings/sessions:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settingshttp.BrowserSessionPolicyView'
+      summary: Read standalone browser session policy
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Complete policy and current version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/settingshttp.BrowserSessionPolicyRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settingshttp.BrowserSessionPolicyView'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/settingshttp.PolicyErrorResponse'
+      summary: Change standalone browser session policy
   /api/v1/admin/auth/settings/smtp:
     get:
       description: Requires a live session, HTTPS Origin and auth.settings.manage.
@@ -4692,6 +5162,28 @@ paths:
       summary: Get authenticated user and current session IDs
       tags:
       - Session
+  /api/v1/auth/methods:
+    get:
+      description: Returns standalone login and registration choices for this API
+        instance. No account data is read. Login still performs its own checks.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth_settings_http.PublicMethodsResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Read public authentication methods
+      tags:
+      - Auth settings
   /api/v1/auth/mfa/email:
     delete:
       description: Requires current primary/factor proofs, allowed Origin and session.

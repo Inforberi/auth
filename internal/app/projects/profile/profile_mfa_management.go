@@ -37,7 +37,7 @@ func (p *profileAssembly) buildProfileMFAManagement(cfg runtimeprofile.ProjectPr
 	}
 	base := views[0]
 	for _, view := range views[1:] {
-		if view.Session != base.Session || view.MFA != base.MFA {
+		if !sameProjectSession(view.Session, base.Session) || !sameProjectMFA(view.MFA, base.MFA) {
 			p.state("mfa_management", "inconsistent_browser_policy")
 			return
 		}

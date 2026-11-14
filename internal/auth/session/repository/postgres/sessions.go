@@ -14,13 +14,22 @@ func (r *Repository) FindSession(ctx context.Context, token string) (*domain.Ses
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	var session domain.Session
-	err := r.db.QueryRow(ctx, `SELECT s.id,s.user_id,s.user_agent,s.ip_address,s.created_at,s.expires_at,s.absolute_expires_at,
-		COALESCE(s.primary_method,''),s.primary_verified_at,s.mfa_verified_at,COALESCE(s.mfa_method,''),s.auth_version,s.idle_timeout_seconds
-		FROM auth.role_bound_sessions s JOIN auth.users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL
+	const selectSession = `SELECT s.id,s.user_id,s.user_agent,s.ip_address,s.created_at,s.expires_at,s.absolute_expires_at,
+		COALESCE(s.primary_method,''),s.primary_verified_at,s.mfa_verified_at,COALESCE(s.mfa_method,''),s.auth_version,s.idle_timeout_seconds`
+	const whereSession = ` JOIN auth.users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL
 		AND s.credential_profile='browser' AND s.auth_version=u.auth_version AND u.status='active' AND u.deleted_at IS NULL
-		AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()`, token).
-		Scan(&session.ID, &session.UserID, &session.UserAgent, &session.IPAddress, &session.CreatedAt, &session.ExpiresAt, &session.AbsoluteExpiresAt,
-			&session.PrimaryMethod, &session.PrimaryVerifiedAt, &session.MFAVerifiedAt, &session.MFAMethod, &session.AuthVersion, &session.IdleTimeoutSeconds)
+		AND s.expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()`
+	query := selectSession + ` FROM auth.role_bound_sessions s` + whereSession
+	dest := []any{
+		&session.ID, &session.UserID, &session.UserAgent, &session.IPAddress, &session.CreatedAt, &session.ExpiresAt, &session.AbsoluteExpiresAt,
+		&session.PrimaryMethod, &session.PrimaryVerifiedAt, &session.MFAVerifiedAt, &session.MFAMethod, &session.AuthVersion, &session.IdleTimeoutSeconds,
+	}
+	if r.browserPolicy {
+		query = selectSession + `,COALESCE(lifetime.browser_idle_seconds,0),COALESCE(lifetime.browser_refresh_seconds,0)
+			FROM auth.role_bound_sessions s JOIN auth.sessions lifetime ON lifetime.token_hash=s.token_hash` + whereSession
+		dest = append(dest, &session.BrowserIdleSeconds, &session.BrowserRefreshSeconds)
+	}
+	err := r.db.QueryRow(ctx, query, token).Scan(dest...)
 	if err != nil {
 		return nil, sessionError(err)
 	}

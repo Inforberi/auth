@@ -81,7 +81,7 @@ func Assemble(ctx context.Context, scope realmscope.Scope, pool *pgxpool.Pool, r
 	login, err := mfalogin.NewLogin(repo, cipher, totp.Authenticator{}, limits, tokens, mfaservice.LoginConfig{
 		Issuer:       cfg.MFA.Issuer,
 		AllowPrimary: allowPrimary,
-		ChallengeTTL: cfg.MFA.ChallengeTTL, SessionTTL: cfg.Session.SessionTTL, AbsoluteSessionTTL: cfg.Session.AbsoluteSessionTTL,
+		ChallengeTTL: cfg.MFA.ChallengeTTL, ChallengeTTLSource: cfg.MFA.ChallengeTTLSource, BudgetSource: cfg.MFA.BudgetSource, SessionTTL: cfg.Session.SessionTTL, AbsoluteSessionTTL: cfg.Session.AbsoluteSessionTTL,
 		AdminIdleTimeout: cfg.Session.AdminIdleTimeout, AdminAbsoluteTTL: cfg.Session.AdminAbsoluteTTL, AdminActivityInterval: cfg.Session.AdminActivityInterval,
 		UserLimitPerMinute: cfg.MFA.UserLimitPerMinute, IPLimitPerMinute: cfg.MFA.IPLimitPerMinute, GlobalLimitPerMinute: cfg.MFA.GlobalLimitPerMinute,
 	})

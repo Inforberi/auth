@@ -38,11 +38,18 @@ func (s *ProvisionService) ReissueInvitation(ctx context.Context, input Invitati
 	if err != nil {
 		return nil, err
 	}
-	invitation, err := s.prepareInvitation(email)
+	invitation, err := s.prepareInvitation(ctx, email)
 	if err != nil {
 		return nil, err
 	}
+	ttl, cooldown := s.cfg.TTL, s.cfg.ReissueCooldown
+	if s.cfg.ReissuePolicySource != nil {
+		ttl, cooldown, err = s.cfg.ReissuePolicySource(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return s.repo.ReissueInvitation(ctx, InvitationReissueCommand{
-		Input: input, Email: email, Invitation: invitation, TTL: s.cfg.TTL, Cooldown: s.cfg.ReissueCooldown,
+		Input: input, Email: email, Invitation: invitation, TTL: ttl, Cooldown: cooldown,
 	})
 }

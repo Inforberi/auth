@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -18,6 +19,7 @@ import (
 	telegramservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/telegram/service"
 	mfaservice "github.com/Inforberi/financial-intelligence/internal/auth/mfa/service"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
+	authsettingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	tokensettings "github.com/Inforberi/financial-intelligence/internal/auth/token/settings"
 	"github.com/Inforberi/financial-intelligence/internal/infra/logger"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
@@ -28,34 +30,35 @@ import (
 )
 
 type Config struct {
-	SettingsSource     SettingsSourceConfig
-	Platform           PlatformConfig
-	Access             accesssettings.Config
-	Browser            requestmiddleware.OriginConfig
-	HTTP               requestmiddleware.CapacityConfig
-	Proxy              requestmiddleware.ProxyConfig
-	Account            accountservice.Config
-	EmailChange        accountemail.EmailChangeConfig
-	EmailBinding       accountemail.EmailBindingConfig
-	InitialSetup       accountsetup.SetupConfig
-	Invitation         accountprovisioning.InvitationConfig
-	TemporaryPassword  passwordprovisioning.TemporaryPasswordConfig
-	EmailOTP           otpservice.Config
-	Telegram           telegramservice.Config
-	Google             googleservice.Config
-	Retention          accountservice.RetentionConfig
-	Postgres           postgres.Config
-	Logger             logger.Config
-	Session            sessionservice.Config
-	JWT                tokensettings.Config
-	MFA                mfaservice.Config
-	Server             httpserver.Config
-	Redis              redisclient.Config
-	MailSender         mailer.Config
-	SMTPAllowedTargets string `env:"SMTP_ALLOWED_TARGETS"`
-	Password           passwordrecovery.Config
-	Capacity           passwordservice.CapacityConfig
-	Swagger            SwaggerConfig
+	OperationBudgetsSource func(context.Context) (authsettingsdomain.OperationBudgetsPolicy, error) `env:"-"`
+	SettingsSource         SettingsSourceConfig
+	Platform               PlatformConfig
+	Access                 accesssettings.Config
+	Browser                requestmiddleware.OriginConfig
+	HTTP                   requestmiddleware.CapacityConfig
+	Proxy                  requestmiddleware.ProxyConfig
+	Account                accountservice.Config
+	EmailChange            accountemail.EmailChangeConfig
+	EmailBinding           accountemail.EmailBindingConfig
+	InitialSetup           accountsetup.SetupConfig
+	Invitation             accountprovisioning.InvitationConfig
+	TemporaryPassword      passwordprovisioning.TemporaryPasswordConfig
+	EmailOTP               otpservice.Config
+	Telegram               telegramservice.Config
+	Google                 googleservice.Config
+	Retention              accountservice.RetentionConfig
+	Postgres               postgres.Config
+	Logger                 logger.Config
+	Session                sessionservice.Config
+	JWT                    tokensettings.Config
+	MFA                    mfaservice.Config
+	Server                 httpserver.Config
+	Redis                  redisclient.Config
+	MailSender             mailer.Config
+	SMTPAllowedTargets     string `env:"SMTP_ALLOWED_TARGETS"`
+	Password               passwordrecovery.Config
+	Capacity               passwordservice.CapacityConfig
+	Swagger                SwaggerConfig
 }
 
 func New() (*Config, error) {

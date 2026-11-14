@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -9,8 +10,9 @@ import (
 )
 
 type OriginConfig struct {
-	AllowedOrigins []string `env:"AUTH_ALLOWED_ORIGINS" env-separator:","`
-	CORSEnabled    bool     `env:"AUTH_CORS_ENABLED" env-default:"false"`
+	AllowedOrigins []string                                    `env:"AUTH_ALLOWED_ORIGINS" env-separator:","`
+	CORSEnabled    bool                                        `env:"AUTH_CORS_ENABLED" env-default:"false"`
+	PolicySource   func(context.Context) (OriginConfig, error) `env:"-"`
 }
 
 func (cfg OriginConfig) Validate() error {

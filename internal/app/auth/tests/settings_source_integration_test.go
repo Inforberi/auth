@@ -63,7 +63,7 @@ func startSourceWithKey(t *testing.T, ctx context.Context, db *pgxpool.Pool, inp
 
 func TestSettingsSourceEnvironmentSchema(t *testing.T) {
 	db, ctx := schemaFixture(t)
-	if _, err := db.Exec(ctx, authschema.InitialAuth()); err != nil {
+	if _, err := db.Exec(ctx, authschema.InitialAuth()+"\n"+authschema.StandaloneMigrations()); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { migrateFixture(t, db, ctx, "down") })

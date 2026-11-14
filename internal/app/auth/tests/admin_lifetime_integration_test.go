@@ -22,6 +22,7 @@ import (
 	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
+	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/clock"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
@@ -71,10 +72,10 @@ func TestAdministrativeSessionLifetime(t *testing.T) {
 		t.Fatal("immediate activity wrote the ledger", result, err)
 	}
 	accessExec(t, db, ctx, `UPDATE auth.sessions SET expires_at=statement_timestamp()+interval '17 minutes',
-		password_verified_at=primary_verified_at,mfa_verified_at=primary_verified_at WHERE token_hash=$1`, p.TokenHash)
-	var beforePrimary, beforePassword, beforeMFA time.Time
-	if err := db.QueryRow(ctx, `SELECT primary_verified_at,password_verified_at,mfa_verified_at FROM auth.sessions WHERE token_hash=$1`, p.TokenHash).
-		Scan(&beforePrimary, &beforePassword, &beforeMFA); err != nil {
+		password_verified_at=primary_verified_at WHERE token_hash=$1`, p.TokenHash)
+	var beforePrimary, beforePassword time.Time
+	if err := db.QueryRow(ctx, `SELECT primary_verified_at,password_verified_at FROM auth.sessions WHERE token_hash=$1`, p.TokenHash).
+		Scan(&beforePrimary, &beforePassword); err != nil {
 		t.Fatal(err)
 	}
 	var wg sync.WaitGroup
@@ -105,8 +106,8 @@ func TestAdministrativeSessionLifetime(t *testing.T) {
 		t.Fatal("concurrent activity was not coalesced", writes)
 	}
 	var unchanged bool
-	if err := db.QueryRow(ctx, `SELECT primary_verified_at=$2 AND password_verified_at=$3 AND mfa_verified_at=$4
-		AND absolute_expires_at=$5 FROM auth.sessions WHERE token_hash=$1`, p.TokenHash, beforePrimary, beforePassword, beforeMFA, session.AbsoluteExpiresAt).Scan(&unchanged); err != nil || !unchanged {
+	if err := db.QueryRow(ctx, `SELECT primary_verified_at=$2 AND password_verified_at=$3 AND mfa_verified_at IS NULL
+		AND absolute_expires_at=$4 FROM auth.sessions WHERE token_hash=$1`, p.TokenHash, beforePrimary, beforePassword, session.AbsoluteExpiresAt).Scan(&unchanged); err != nil || !unchanged {
 		t.Fatal("activity renewed proof/absolute deadline", err)
 	}
 	if _, err := db.Exec(ctx, `UPDATE auth.sessions SET idle_timeout_seconds=1800 WHERE token_hash=$1`, p.TokenHash); err == nil {
@@ -185,6 +186,14 @@ func TestAdministrativeMFALifetime(t *testing.T) {
 	db, ctx := schemaFixture(t)
 	migrateFixture(t, db, ctx, "up")
 	t.Cleanup(func() { migrateFixture(t, db, ctx, "down") })
+	policy := sessionservice.BrowserPolicy{
+		IdleSeconds: 600, AbsoluteSeconds: 1800, RefreshThresholdSeconds: 120,
+		AdminIdleSeconds: 90, AdminAbsoluteSeconds: 300, AdminActivitySeconds: 5,
+	}
+	if err := settingspostgres.New(db).BrowserSessionPolicy().Initialize(ctx, policy); err != nil {
+		t.Fatal(err)
+	}
+	accessExec(t, db, ctx, `UPDATE auth.settings_source SET initialized=true WHERE singleton`)
 	accessExec(t, db, ctx, `WITH r AS (INSERT INTO auth.roles(key,name) VALUES('as5_mfa','Admin') RETURNING id)
 		INSERT INTO auth.role_permissions(role_id,permission_key) SELECT id,'accounts.users.read' FROM r`)
 	for _, administrative := range []bool{false, true} {
@@ -214,9 +223,24 @@ func TestAdministrativeMFALifetime(t *testing.T) {
 				t.Fatal(err)
 			}
 			stored, err := f.sessions.FindSession(ctx, tokengenerate.New().Hash(result.Token))
-			if err != nil || stored.IdleTimeoutSeconds != 1200 || !result.ExpiresAt.Equal(stored.ExpiresAt) ||
-				stored.ExpiresAt.Sub(stored.CreatedAt) != 20*time.Minute || stored.AbsoluteExpiresAt.Sub(stored.CreatedAt) != 8*time.Hour {
+			if err != nil || stored.IdleTimeoutSeconds != 90 || !result.ExpiresAt.Equal(stored.ExpiresAt) ||
+				stored.ExpiresAt.Sub(stored.CreatedAt) != 90*time.Second || stored.AbsoluteExpiresAt.Sub(stored.CreatedAt) != 5*time.Minute {
 				t.Fatal("MFA completion lost the independent configured admin profile", stored, err)
+			}
+			hash := tokengenerate.New().Hash(result.Token)
+			activity, err := f.sessions.RecordActivity(ctx, f.user, hash)
+			if err != nil || activity.Extended {
+				t.Fatal("immediate MFA session activity rewrote the session", activity, err)
+			}
+			accessExec(t, db, ctx, `UPDATE auth.sessions SET expires_at=statement_timestamp()+interval '20 seconds' WHERE token_hash=$1`, hash)
+			activity, err = f.sessions.RecordActivity(ctx, f.user, hash)
+			if err != nil || !activity.Extended {
+				t.Fatal("MFA session activity did not extend idle expiry", activity, err)
+			}
+			after, err := f.sessions.FindSession(ctx, hash)
+			if err != nil || after.MFAVerifiedAt == nil || stored.MFAVerifiedAt == nil ||
+				!after.MFAVerifiedAt.Equal(*stored.MFAVerifiedAt) || !after.AbsoluteExpiresAt.Equal(stored.AbsoluteExpiresAt) {
+				t.Fatal("activity changed MFA proof or absolute lifetime", after, err)
 			}
 		})
 	}

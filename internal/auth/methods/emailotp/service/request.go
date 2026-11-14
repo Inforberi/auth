@@ -28,7 +28,11 @@ func (s *Service) request(ctx context.Context, input, ip string, target *mfaserv
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	if err := s.requestLimits(ctx, email.String(), ip); err != nil {
+	policy, err := s.currentPolicy(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requestLimits(ctx, email.String(), ip, policy); err != nil {
 		return nil, err
 	}
 	if s.cfg.CheckPolicy != nil {
@@ -40,7 +44,7 @@ func (s *Service) request(ctx context.Context, input, ip string, target *mfaserv
 	if target != nil {
 		purpose = "native:"
 	}
-	result, challenge, err := prepareCode(s.cipher, s.tokens, s.cfg.TTL, email.String(), "входа", purpose)
+	result, challenge, err := prepareCode(s.cipher, s.tokens, time.Duration(policy.TTLSeconds)*time.Second, email.String(), "входа", purpose)
 	if err != nil {
 		return nil, err
 	}
@@ -53,16 +57,16 @@ func (s *Service) request(ctx context.Context, input, ip string, target *mfaserv
 	return result, nil
 }
 
-func (s *Service) requestLimits(ctx context.Context, email, ip string) error {
+func (s *Service) requestLimits(ctx context.Context, email, ip string, policy Policy) error {
 	for _, budget := range []struct {
 		key    string
 		count  int
 		window time.Duration
 	}{
 		{"request:ip:" + ip, 10, time.Minute},
-		{"request:project", s.cfg.RequestGlobalLimit, time.Minute},
+		{"request:project", policy.RequestsPerMinute, time.Minute},
 		{"request:email:" + email, 3, 15 * time.Minute},
-		{"request:cooldown:" + email, 1, s.cfg.ResendInterval},
+		{"request:cooldown:" + email, 1, time.Duration(policy.ResendSeconds) * time.Second},
 	} {
 		if err := s.limit(ctx, budget.key, budget.count, budget.window); err != nil {
 			return err

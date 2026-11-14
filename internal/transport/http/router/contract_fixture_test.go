@@ -37,6 +37,7 @@ import (
 	sessiondomain "github.com/Inforberi/financial-intelligence/internal/auth/session/domain"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/providers/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/retention/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/transport/http"
@@ -92,19 +93,27 @@ func readAPI(t *testing.T) apiDocument {
 func contractHandlers(env string) Handlers {
 	log := zap.NewNop()
 	return Handlers{
-		UserLifecycle:     accounthttp.NewUserLifecycle(&contractUserLifecycle{}, log),
-		UserDirectory:     accounthttp.NewUserDirectory(&contractUserDirectory{}, log),
-		Provisioning:      accountprovisioninghttp.NewProvisioning(&contractProvisioning{}, log),
-		TemporaryAdmin:    passwordprovisioninghttp.NewTemporaryAdmin(&contractTemporaryAdmin{}, log),
-		Access:            accesshttp.New(&contractAccess{}, log),
-		AuthSettings:      settingshttp.New(&contractAuthSettings{}, availableSettingsMethods, log),
-		SMTPSettings:      settingssmtphttp.NewSMTP(&contractSMTP{}, log),
-		ProviderSettings:  settingsprovidershttp.NewProviders(&contractProviders{}, log),
-		RetentionSettings: settingsretentionhttp.NewRetention(&contractRetention{}, log),
-		MFASettings:       settingshttp.NewMFA(&contractMFASettings{}, log),
-		Setup:             accountsetuphttp.NewSetup(&contractSetup{}, log),
-		EmailBinding:      accountemailhttp.NewEmailBinding(&contractEmailBinding{}, log),
-		MFA:               mfamanagementhttp.New(&contractMFA{}, log), MFALogin: mfaloginhttp.New(&contractMFA{}, log), MFARecovery: mfarecoveryhttp.New(&contractMFARecovery{}, log),
+		UserLifecycle:            accounthttp.NewUserLifecycle(&contractUserLifecycle{}, log),
+		UserDirectory:            accounthttp.NewUserDirectory(&contractUserDirectory{}, log),
+		Provisioning:             accountprovisioninghttp.NewProvisioning(&contractProvisioning{}, log),
+		TemporaryAdmin:           passwordprovisioninghttp.NewTemporaryAdmin(&contractTemporaryAdmin{}, log),
+		Access:                   accesshttp.New(&contractAccess{}, log),
+		PublicAuthPolicy:         func(context.Context) (settingsdomain.Policy, error) { return settingsdomain.Policy{}, nil },
+		AuthSettings:             settingshttp.New(&contractAuthSettings{}, availableSettingsMethods, log),
+		EmailOTPPolicy:           &settingshttp.EmailOTPPolicyHandler{Log: log},
+		BrowserSessionPolicy:     &settingshttp.BrowserSessionPolicyHandler{Log: log},
+		LinkLifetimePolicy:       &settingshttp.LinkLifetimePolicyHandler{Log: log},
+		CredentialLifetimePolicy: &settingshttp.CredentialLifetimePolicyHandler{Log: log},
+		LoginBudgetPolicy:        &settingshttp.LoginBudgetPolicyHandler{Log: log},
+		OperationBudgetsPolicy:   &settingshttp.OperationBudgetsPolicyHandler{Log: log},
+		FrontendPolicy:           &settingshttp.FrontendPolicyHandler{Log: log},
+		SMTPSettings:             settingssmtphttp.NewSMTP(&contractSMTP{}, log),
+		ProviderSettings:         settingsprovidershttp.NewProviders(&contractProviders{}, log),
+		RetentionSettings:        settingsretentionhttp.NewRetention(&contractRetention{}, log),
+		MFASettings:              settingshttp.NewMFA(&contractMFASettings{}, log),
+		Setup:                    accountsetuphttp.NewSetup(&contractSetup{}, log),
+		EmailBinding:             accountemailhttp.NewEmailBinding(&contractEmailBinding{}, log),
+		MFA:                      mfamanagementhttp.New(&contractMFA{}, log), MFALogin: mfaloginhttp.New(&contractMFA{}, log), MFARecovery: mfarecoveryhttp.New(&contractMFARecovery{}, log),
 		Session:           sessionhttp.NewHandler(contractManagement{}, log),
 		Activity:          sessionhttp.NewActivity(contractActivity{}, log),
 		Rotation:          sessionhttp.NewRotation(contractRotation{}, log),

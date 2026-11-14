@@ -7,6 +7,7 @@ import (
 )
 
 type Config struct {
+	PolicySource            func(context.Context) (Policy, error)
 	CheckPolicy             func(context.Context) error
 	Enabled                 bool          `env:"EMAIL_OTP_ENABLED" env-default:"false"`
 	ReauthenticationEnabled bool          `env:"EMAIL_REAUTHENTICATION_ENABLED" env-default:"false"`

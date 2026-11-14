@@ -8,20 +8,22 @@ import (
 )
 
 type Session struct {
-	AuthVersion        int64                `json:"-"`
-	IdleTimeoutSeconds int64                `json:"-"`
-	ID                 string               `json:"id"`
-	CredentialProfile  string               `json:"credentialProfile"`
-	AbsoluteExpiresAt  time.Time            `json:"absoluteExpiresAt"`
-	UserID             accountdomain.UserID `json:"userId"`
-	UserAgent          string               `json:"userAgent"`
-	IPAddress          string               `json:"ipAddress"`
-	CreatedAt          time.Time            `json:"createdAt"`
-	ExpiresAt          time.Time            `json:"expiresAt"`
-	PrimaryMethod      string               `json:"primaryMethod,omitempty"`
-	PrimaryVerifiedAt  *time.Time           `json:"primaryVerifiedAt,omitempty"`
-	MFAVerifiedAt      *time.Time           `json:"mfaVerifiedAt,omitempty"`
-	MFAMethod          domain.Method        `json:"mfaMethod,omitempty"`
+	AuthVersion           int64                `json:"-"`
+	IdleTimeoutSeconds    int64                `json:"-"`
+	BrowserIdleSeconds    int64                `json:"-"`
+	BrowserRefreshSeconds int64                `json:"-"`
+	ID                    string               `json:"id"`
+	CredentialProfile     string               `json:"credentialProfile"`
+	AbsoluteExpiresAt     time.Time            `json:"absoluteExpiresAt"`
+	UserID                accountdomain.UserID `json:"userId"`
+	UserAgent             string               `json:"userAgent"`
+	IPAddress             string               `json:"ipAddress"`
+	CreatedAt             time.Time            `json:"createdAt"`
+	ExpiresAt             time.Time            `json:"expiresAt"`
+	PrimaryMethod         string               `json:"primaryMethod,omitempty"`
+	PrimaryVerifiedAt     *time.Time           `json:"primaryVerifiedAt,omitempty"`
+	MFAVerifiedAt         *time.Time           `json:"mfaVerifiedAt,omitempty"`
+	MFAMethod             domain.Method        `json:"mfaMethod,omitempty"`
 }
 
 type PasswordConfirmation struct {

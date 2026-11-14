@@ -45,7 +45,7 @@ func (s *ProtectedRecoveryService) Recover(ctx context.Context, token, password,
 		return err
 	}
 	// Both recovery paths share the distributed reset budget.
-	if err := s.recovery.limit(ctx, "reset-global", s.recovery.cfg.ResetGlobalLimit, time.Minute); err != nil {
+	if err := s.recovery.limitGlobalReset(ctx); err != nil {
 		return err
 	}
 	digest := passwordservice.TokenDigest(token)

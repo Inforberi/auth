@@ -79,9 +79,15 @@ func (s *ProvisionService) Provision(ctx context.Context, input ProvisionInput) 
 		Fingerprint: s.cipher.Digest("provision:v1:" + strconv.FormatBool(input.Invite) + ":" + input.Email),
 	}
 	if input.Invite {
-		prepared, err := s.prepareInvitation(input.Email)
+		prepared, err := s.prepareInvitation(ctx, input.Email)
 		if err != nil {
 			return nil, err
+		}
+		if s.cfg.TTLSource != nil {
+			command.TTL, err = s.cfg.TTLSource(ctx)
+			if err != nil {
+				return nil, err
+			}
 		}
 		command.Invitation = prepared
 	}
@@ -89,8 +95,16 @@ func (s *ProvisionService) Provision(ctx context.Context, input ProvisionInput) 
 }
 
 func (s *ProvisionService) limitIssue(ctx context.Context, actor domain.UserID) error {
-	if err := accountservice.Admit(ctx, s.limiter, s.cipher, "invitation-reissue-actor:"+string(actor), s.cfg.IssueActorAttemptsPerMinute, time.Minute); err != nil {
+	actorLimit, projectLimit := s.cfg.IssueActorAttemptsPerMinute, s.cfg.IssueProjectAttemptsPerMinute
+	if s.cfg.BudgetSource != nil {
+		var err error
+		actorLimit, projectLimit, _, err = s.cfg.BudgetSource(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	if err := accountservice.Admit(ctx, s.limiter, s.cipher, "invitation-reissue-actor:"+string(actor), actorLimit, time.Minute); err != nil {
 		return err
 	}
-	return accountservice.Admit(ctx, s.limiter, s.cipher, "invitation-reissue-project", s.cfg.IssueProjectAttemptsPerMinute, time.Minute)
+	return accountservice.Admit(ctx, s.limiter, s.cipher, "invitation-reissue-project", projectLimit, time.Minute)
 }

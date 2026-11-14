@@ -1,19 +1,22 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"time"
 )
 
 type EmailChangeConfig struct {
-	Enabled       bool          `env:"EMAIL_CHANGE_ENABLED" env-default:"false"`
-	ConfirmURL    string        `env:"EMAIL_CHANGE_URL"`
-	ReportURL     string        `env:"EMAIL_CHANGE_REPORT_URL"`
-	RecoveryURL   string        `env:"EMAIL_CHANGE_RECOVERY_URL"`
-	RecoveryTTL   time.Duration `env:"EMAIL_CHANGE_RECOVERY_TTL" env-default:"30m"`
-	TTL           time.Duration `env:"EMAIL_CHANGE_TTL" env-default:"30m"`
-	ProtectionTTL time.Duration `env:"EMAIL_CHANGE_PROTECTION_TTL" env-default:"24h"`
+	Enabled        bool                                                                       `env:"EMAIL_CHANGE_ENABLED" env-default:"false"`
+	ConfirmURL     string                                                                     `env:"EMAIL_CHANGE_URL"`
+	ReportURL      string                                                                     `env:"EMAIL_CHANGE_REPORT_URL"`
+	RecoveryURL    string                                                                     `env:"EMAIL_CHANGE_RECOVERY_URL"`
+	RecoveryTTL    time.Duration                                                              `env:"EMAIL_CHANGE_RECOVERY_TTL" env-default:"30m"`
+	TTL            time.Duration                                                              `env:"EMAIL_CHANGE_TTL" env-default:"30m"`
+	ProtectionTTL  time.Duration                                                              `env:"EMAIL_CHANGE_PROTECTION_TTL" env-default:"24h"`
+	LifetimeSource func(context.Context) (time.Duration, time.Duration, time.Duration, error) `env:"-"`
+	URLSource      func(context.Context) (string, string, string, error)                      `env:"-"`
 }
 
 func (c EmailChangeConfig) Validate(production bool) error {

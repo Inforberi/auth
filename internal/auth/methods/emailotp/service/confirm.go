@@ -51,7 +51,11 @@ func (s *Service) admitConfirmation(ctx context.Context, input ConfirmInput) err
 	if err := s.limit(ctx, "confirm:ip:"+input.IP, 10, time.Minute); err != nil {
 		return err
 	}
-	if err := s.limit(ctx, "confirm:project", s.cfg.ConfirmGlobalLimit, time.Minute); err != nil {
+	policy, err := s.currentPolicy(ctx)
+	if err != nil {
+		return err
+	}
+	if err := s.limit(ctx, "confirm:project", policy.ConfirmationsPerMinute, time.Minute); err != nil {
 		return err
 	}
 	if s.cfg.CheckPolicy != nil {

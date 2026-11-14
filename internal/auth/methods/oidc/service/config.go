@@ -13,5 +13,6 @@ type Config struct {
 	RegistrationEnabled bool
 	IPLimit             int
 	GlobalLimit         int
+	BudgetSource        func(context.Context) (int, int, error)
 	Issuer              string
 }

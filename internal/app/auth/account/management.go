@@ -27,7 +27,7 @@ func (a *App) AssembleManagement(hash *hasher.Bounded, recovery *passwordrecover
 		out.ProvisioningHandler = accountprovisioninghttp.NewProvisioning(out.Provisioning, log)
 	}
 	if cfg.EmailChange.Enabled {
-		svc := accountemail.NewEmailChange(a.repository, hash, a.limits, a.cipher, cfg.EmailChange, cfg.Session.FreshAuthTTL)
+		svc := accountemail.NewEmailChange(a.repository, hash, a.limits, a.cipher, cfg.EmailChange, cfg.Session.FreshAuthTTL).WithFreshAuthSource(cfg.Session.FreshAuthSource)
 		out.EmailChange = accountemailhttp.NewEmailChange(svc, log)
 		out.ProtectedRecovery = passwordrecoveryhttp.NewProtectedRecovery(passwordrecovery.NewProtectedRecovery(a.repository, recovery), log)
 	}
