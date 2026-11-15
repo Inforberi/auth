@@ -23,6 +23,7 @@ const reauthenticationCookie = "__Host-email-reauthentication"
 // @Failure 403 {object} httpx.ErrorResponse "codes: invalid_origin, fresh_auth_required"
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthReauthenticateEmailRequest
 // @Router /api/v1/auth/reauthenticate/email/request [post]
 func (h *Handler) RequestReauthentication(w http.ResponseWriter, r *http.Request) {
 	proof, ok := reauthenticationProof(w, r)

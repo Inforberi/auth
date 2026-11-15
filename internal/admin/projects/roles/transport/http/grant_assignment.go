@@ -27,6 +27,8 @@ import (
 // @Failure 428 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID postPlatformProjectsByIdUsersByUserIdRolesByRoleIdGrant
 // @Router /api/v1/platform/projects/{id}/users/{userId}/roles/{roleId}/grant [post]
 func (h *RoleHandler) Grant(w http.ResponseWriter, r *http.Request) {
 	h.changeAssignment(w, r, domain.RoleGrant)

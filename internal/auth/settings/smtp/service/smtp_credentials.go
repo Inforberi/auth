@@ -73,25 +73,33 @@ func (s *SMTP) Update(ctx context.Context, input SMTPUpdateInput) (domain.SMTPSn
 	if input.Actor.Validate() != nil {
 		return domain.SMTPSnapshot{}, accessdomain.ErrForbidden
 	}
-	if input.ExpectedVersion < 1 {
-		return domain.SMTPSnapshot{}, domain.ErrInvalidSMTP
-	}
-	if err := s.policy.validate(input.Config); err != nil {
+	update, err := s.PrepareUpdate(input)
+	if err != nil {
 		return domain.SMTPSnapshot{}, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
+	return s.repo.UpdateSMTP(ctx, update)
+}
+
+func (s *SMTP) PrepareUpdate(input SMTPUpdateInput) (SMTPUpdate, error) {
+	if input.ExpectedVersion < 1 {
+		return SMTPUpdate{}, domain.ErrInvalidSMTP
+	}
+	if err := s.policy.validate(input.Config); err != nil {
+		return SMTPUpdate{}, err
+	}
 	update := SMTPUpdate{Actor: input.Actor, ExpectedVersion: input.ExpectedVersion, Config: input.Config}
 	if input.Password != nil {
 		if !validSMTPPassword(*input.Password) {
-			return domain.SMTPSnapshot{}, domain.ErrInvalidSMTP
+			return SMTPUpdate{}, domain.ErrInvalidSMTP
 		}
 		var err error
 		update.Password, err = s.cipher.Seal([]byte(*input.Password))
 		if err != nil {
-			return domain.SMTPSnapshot{}, errors.New("SMTP secret cannot be encrypted")
+			return SMTPUpdate{}, errors.New("SMTP secret cannot be encrypted")
 		}
 		update.PasswordSet = *input.Password != ""
 	}
-	return s.repo.UpdateSMTP(ctx, update)
+	return update, nil
 }

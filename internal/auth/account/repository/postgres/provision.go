@@ -77,15 +77,23 @@ func provisionAccount(ctx context.Context, tx pgx.Tx, command accountprovisionin
 		if _, err := tx.Exec(ctx, `UPDATE auth.account_provisions SET last_invited_at=clock_timestamp() WHERE user_id=$1`, result.UserID); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO auth.account_invitations(digest,user_id,email_id,auth_version,expires_at)
-			VALUES($1,$2,$3,1,clock_timestamp()+$4::double precision*interval '1 second')`, command.Invitation.Digest, result.UserID, emailID, command.TTL.Seconds()); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `INSERT INTO auth.invitation_outbox(digest,payload,expires_at)
-			SELECT digest,$2,expires_at FROM auth.account_invitations WHERE digest=$1`, command.Invitation.Digest, command.Invitation.Payload); err != nil {
+		if err := enqueueInvitation(ctx, tx, result.UserID, emailID, command.Invitation, command.TTL); err != nil {
 			return err
 		}
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO auth.invitation_audit(user_id,actor_id,action,auth_version) VALUES($1,$2,'provisioned',1)`, result.UserID, input.Actor.UserID)
 	return err
+}
+
+// ProvisionAuthorizedInvitation is called after the platform owner has been authorized in tx.
+func ProvisionAuthorizedInvitation(ctx context.Context, tx pgx.Tx, command accountprovisioning.ProvisionCommand, actor domain.UserID, operation string) (domain.UserID, error) {
+	command.Input.Actor.UserID = actor
+	command.Input.IdempotencyKey = operation
+	result := &accountprovisioning.ProvisionResult{}
+	err := provisionAccount(ctx, tx, command, result)
+	var sqlErr *pgconn.PgError
+	if errors.As(err, &sqlErr) && sqlErr.Code == "23505" && sqlErr.ConstraintName == "user_emails_email_key" {
+		return "", domain.ErrProvisionEmailExists
+	}
+	return result.UserID, err
 }

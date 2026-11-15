@@ -28,6 +28,7 @@ type RetentionUpdateRequest struct {
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse "retention_settings_conflict, retention_confirmation_required"
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminAuthSettingsRetention
 // @Router /api/v1/admin/auth/settings/retention [post]
 func (h *RetentionHandler) Update(w http.ResponseWriter, r *http.Request) {
 	actor, ok := settingshttp.Principal(w, r)

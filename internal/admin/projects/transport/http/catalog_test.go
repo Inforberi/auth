@@ -129,3 +129,7 @@ func TestProjectReadHTTP(t *testing.T) {
 		}
 	}
 }
+
+func (s *catalogServiceStub) Rename(context.Context, operatordomain.Principal, domain.Rename) (domain.NameReceipt, error) {
+	return domain.NameReceipt{}, nil
+}

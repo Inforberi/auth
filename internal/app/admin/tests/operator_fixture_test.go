@@ -68,7 +68,7 @@ func operatorFixture(t *testing.T) (*pgxpool.Pool, authapp.Dependencies, *config
 		}
 		return string(source)
 	}
-	for _, migration := range []string{"auth/000001_init", "admin/000001_catalog", "admin/000002_operators"} {
+	for _, migration := range []string{"auth/000001_init", "admin/000001_catalog", "admin/000002_operators", "admin/000003_project_names", "admin/000004_operator_management", "admin/000005_project_operations"} {
 		if _, err := admin.Exec(ctx, "BEGIN;"+read("migrations/"+migration+".up.sql")+"COMMIT;"); err != nil {
 			t.Fatal("fixture migration", err)
 		}

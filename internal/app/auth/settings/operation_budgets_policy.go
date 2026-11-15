@@ -17,29 +17,7 @@ func AssembleOperationBudgetsPolicy(ctx context.Context, repo *settingspostgres.
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	mode := cfg.SettingsSource.Mode
-	baseline := domain.OperationBudgetsPolicy{
-		GoogleIP:         cfg.Google.IPLimit,
-		GoogleGlobal:     cfg.Google.GlobalLimit,
-		TelegramIP:       cfg.Telegram.IPLimit,
-		TelegramGlobal:   cfg.Telegram.GlobalLimit,
-		MFAUser:          cfg.MFA.UserLimitPerMinute,
-		MFAIP:            cfg.MFA.IPLimitPerMinute,
-		MFAGlobal:        cfg.MFA.GlobalLimitPerMinute,
-		BindingRequest:   cfg.EmailBinding.RequestsPerMinute,
-		BindingConfirm:   cfg.EmailBinding.ConfirmationsPerMinute,
-		InvitationActor:  cfg.Invitation.IssueActorAttemptsPerMinute,
-		InvitationGlobal: cfg.Invitation.IssueProjectAttemptsPerMinute,
-		ActivationGlobal: cfg.Invitation.ActivationGlobalLimit,
-		TemporaryActor:   cfg.TemporaryPassword.IssueActorAttemptsPerMinute,
-		TemporaryGlobal:  cfg.TemporaryPassword.IssueProjectAttemptsPerMinute,
-		TemporarySetup:   cfg.TemporaryPassword.SetupProjectAttemptsPerMinute,
-		JWTActor:         cfg.JWT.ActorPerMinute,
-		JWTSession:       cfg.JWT.SessionPerMinute,
-		JWTIP:            cfg.JWT.IPPerMinute,
-		JWTGlobal:        cfg.JWT.ProjectPerMinute,
-		JWTConsumer:      cfg.JWT.IntrospectionConsumerPerMinute,
-		JWTIntrospection: cfg.JWT.IntrospectionProjectPerMinute,
-	}
+	baseline := OperationBudgetBaseline(cfg)
 	if err := baseline.Validate(baseline); err != nil {
 		return nil, err
 	}
@@ -47,7 +25,7 @@ func AssembleOperationBudgetsPolicy(ctx context.Context, repo *settingspostgres.
 	if err := store.Initialize(ctx, baseline); err != nil {
 		return nil, err
 	}
-	load, invalidate := cachedPolicy(store.Load)
+	load, invalidate := CachedPolicy(store.Load)
 	if mode.Effective() == domain.SourceAPI {
 		policy, err := store.Load(ctx)
 		if err != nil {
@@ -107,5 +85,31 @@ func bindOperationBudgets(cfg *config.Config) {
 	cfg.TemporaryPassword.BudgetSource = func(ctx context.Context) (int, int, int, error) {
 		p, err := load(ctx)
 		return p.TemporaryActor, p.TemporaryGlobal, p.TemporarySetup, err
+	}
+}
+
+func OperationBudgetBaseline(cfg *config.Config) domain.OperationBudgetsPolicy {
+	return domain.OperationBudgetsPolicy{
+		GoogleIP:         cfg.Google.IPLimit,
+		GoogleGlobal:     cfg.Google.GlobalLimit,
+		TelegramIP:       cfg.Telegram.IPLimit,
+		TelegramGlobal:   cfg.Telegram.GlobalLimit,
+		MFAUser:          cfg.MFA.UserLimitPerMinute,
+		MFAIP:            cfg.MFA.IPLimitPerMinute,
+		MFAGlobal:        cfg.MFA.GlobalLimitPerMinute,
+		BindingRequest:   cfg.EmailBinding.RequestsPerMinute,
+		BindingConfirm:   cfg.EmailBinding.ConfirmationsPerMinute,
+		InvitationActor:  cfg.Invitation.IssueActorAttemptsPerMinute,
+		InvitationGlobal: cfg.Invitation.IssueProjectAttemptsPerMinute,
+		ActivationGlobal: cfg.Invitation.ActivationGlobalLimit,
+		TemporaryActor:   cfg.TemporaryPassword.IssueActorAttemptsPerMinute,
+		TemporaryGlobal:  cfg.TemporaryPassword.IssueProjectAttemptsPerMinute,
+		TemporarySetup:   cfg.TemporaryPassword.SetupProjectAttemptsPerMinute,
+		JWTActor:         cfg.JWT.ActorPerMinute,
+		JWTSession:       cfg.JWT.SessionPerMinute,
+		JWTIP:            cfg.JWT.IPPerMinute,
+		JWTGlobal:        cfg.JWT.ProjectPerMinute,
+		JWTConsumer:      cfg.JWT.IntrospectionConsumerPerMinute,
+		JWTIntrospection: cfg.JWT.IntrospectionProjectPerMinute,
 	}
 }

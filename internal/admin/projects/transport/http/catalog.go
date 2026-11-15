@@ -15,6 +15,7 @@ import (
 )
 
 type catalogService interface {
+	Rename(context.Context, operatordomain.Principal, domain.Rename) (domain.NameReceipt, error)
 	List(context.Context, operatordomain.Principal, service.ListInput) (service.ListResult, error)
 	Read(context.Context, operatordomain.Principal, domain.ID) (domain.Project, error)
 	ChangeState(context.Context, operatordomain.Principal, domain.Action, service.ChangeStateInput) (domain.TransitionReceipt, error)
@@ -22,8 +23,11 @@ type catalogService interface {
 }
 
 type Handler struct {
-	service catalogService
-	log     *zap.Logger
+	preparation     PreparationOperations
+	deletionPreview DeletionPreview
+	deletion        DeletionOperations
+	service         catalogService
+	log             *zap.Logger
 }
 
 func New(service catalogService, log *zap.Logger) *Handler {

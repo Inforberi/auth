@@ -40,3 +40,10 @@ func (s *ProjectSMTPSettings) TestConnection(ctx context.Context, actor accessse
 	}
 	return s.service.TestConnection(ctx, actor, version)
 }
+
+func (s *ProjectSMTPSettings) PrepareUpdate(input settingssmtp.SMTPUpdateInput) (settingssmtp.SMTPUpdate, error) {
+	if s.service == nil {
+		return settingssmtp.SMTPUpdate{}, projectdomain.ErrUnavailable
+	}
+	return s.service.PrepareUpdate(input)
+}

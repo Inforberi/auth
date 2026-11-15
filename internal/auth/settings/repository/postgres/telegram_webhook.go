@@ -18,24 +18,12 @@ func (r *Repository) ConfirmTelegramWebhook(ctx context.Context, actor accessser
 		if err != nil {
 			return err
 		}
-		if err := RequireAPISettings(ctx, tx); err != nil {
-			return err
-		}
-		before, err := scanTelegramBot(tx.QueryRow(ctx, `SELECT `+telegramBotColumns+telegramBotFrom+` FOR UPDATE OF m`), false)
+		before, after, err := ApplyTelegramWebhook(ctx, tx, version)
 		if err != nil {
 			return err
 		}
-		if before.Version != version {
-			return domain.ErrPolicyConflict
-		}
-		if !before.TokenSet || !before.WebhookSecretSet {
-			return domain.ErrMethodNotReady
-		}
-		result = before.TelegramBotSnapshot
-		if err := tx.QueryRow(ctx, `UPDATE auth.mfa_settings SET version=version+1 WHERE singleton RETURNING version`).Scan(&result.Version); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `INSERT INTO auth.mfa_settings_audit(actor_id,version,previous_configuration,next_configuration) VALUES($1,$2,$3,$4)`, actor.UserID, result.Version, before.TelegramBotSnapshot, result); err != nil {
+		result = after
+		if _, err := tx.Exec(ctx, `INSERT INTO auth.mfa_settings_audit(actor_id,version,previous_configuration,next_configuration) VALUES($1,$2,$3,$4)`, actor.UserID, result.Version, before, result); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO auth.mfa_audit(user_id,event) VALUES($1,'telegram_webhook_registered')`, actor.UserID); err != nil {
@@ -44,4 +32,24 @@ func (r *Repository) ConfirmTelegramWebhook(ctx context.Context, actor accessser
 		return checkTelegramSettingsDeadline(ctx, tx, deadline)
 	})
 	return result, err
+}
+
+func ApplyTelegramWebhook(ctx context.Context, tx pgx.Tx, version int64) (before, after domain.TelegramBotSnapshot, err error) {
+	if err := RequireAPISettings(ctx, tx); err != nil {
+		return before, after, err
+	}
+	stored, err := scanTelegramBot(tx.QueryRow(ctx, `SELECT `+telegramBotColumns+telegramBotFrom+` FOR UPDATE OF m`), false)
+	if err != nil {
+		return before, after, err
+	}
+	before = stored.TelegramBotSnapshot
+	if before.Version != version {
+		return before, after, domain.ErrPolicyConflict
+	}
+	if !before.TokenSet || !before.WebhookSecretSet {
+		return before, after, domain.ErrMethodNotReady
+	}
+	after = before
+	err = tx.QueryRow(ctx, `UPDATE auth.mfa_settings SET version=version+1 WHERE singleton RETURNING version`).Scan(&after.Version)
+	return before, after, err
 }

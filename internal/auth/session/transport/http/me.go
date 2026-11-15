@@ -18,6 +18,8 @@ type MeResponse struct {
 // @Success 200 {object} MeResponse
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID getAuthMe
 // @Router /api/v1/auth/me [get]
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	auth, ok := requireAuth(w, r)

@@ -23,6 +23,8 @@ import (
 // @Failure 428 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited; Retry-After: 60"
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID postPlatformProjectsByIdRetry
 // @Router /api/v1/platform/projects/{id}/retry [post]
 func (h *Handler) Retry(w http.ResponseWriter, r *http.Request) {
 	h.changeState(w, r, domain.RetryPreparation)

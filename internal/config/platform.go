@@ -54,7 +54,6 @@ func (cfg Config) ValidatePlatform() error {
 		{"TELEGRAM_LOGIN_ENABLED", cfg.Telegram.Enabled},
 		{"EMAIL_OTP_ENABLED", cfg.EmailOTP.Enabled},
 		{"EMAIL_REAUTHENTICATION_ENABLED", cfg.EmailOTP.ReauthenticationEnabled},
-		{"INVITATIONS_ENABLED", cfg.Invitation.Enabled},
 		{"TEMPORARY_PASSWORD_ENABLED", cfg.TemporaryPassword.Enabled},
 		{"EMAIL_BINDING_ENABLED", cfg.EmailBinding.Enabled},
 		{"EMAIL_CHANGE_ENABLED", cfg.EmailChange.Enabled},
@@ -72,6 +71,15 @@ func (cfg Config) ValidatePlatform() error {
 	reset, err := url.Parse(cfg.Password.ResetURL)
 	if err != nil || reset.Scheme+"://"+reset.Host != cfg.Platform.Origin {
 		return fmt.Errorf("platform PASSWORD_RESET_URL must use PLATFORM_ORIGIN")
+	}
+	if cfg.Invitation.Enabled {
+		if err := cfg.Invitation.Validate(true); err != nil {
+			return err
+		}
+		invitation, err := url.Parse(cfg.Invitation.URL)
+		if err != nil || invitation.Scheme+"://"+invitation.Host != cfg.Platform.Origin {
+			return fmt.Errorf("platform INVITATION_URL must use PLATFORM_ORIGIN")
+		}
 	}
 	if err := cfg.Platform.Runtime.Validate(); err != nil {
 		return err

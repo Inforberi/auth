@@ -18,6 +18,7 @@ import (
 // @Failure 403 {object} httpx.ErrorResponse "codes: invalid_origin, fresh_auth_required, mfa_required_by_policy"
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID deleteAuthMfaTotp
 // @Router /api/v1/auth/mfa/totp [delete]
 func (h *Handler) Disable(w http.ResponseWriter, r *http.Request) {
 	proof, ok := mfahttp.RequestProof(w, r)

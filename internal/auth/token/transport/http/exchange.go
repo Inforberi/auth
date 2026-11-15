@@ -44,6 +44,8 @@ type ExchangeResponse struct {
 // @Failure 403 {object} httpx.ErrorResponse "invalid_origin, forbidden, email_not_verified, mfa_required"
 // @Failure 429 {object} httpx.ErrorResponse "rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "temporarily_unavailable"
+// @Security SessionCookie
+// @ID postAuthTokenExchange
 // @Router /api/v1/auth/token/exchange [post]
 func (h *Handler) Exchange(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

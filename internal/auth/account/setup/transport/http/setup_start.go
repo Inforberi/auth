@@ -36,6 +36,8 @@ type SetupStartResponse struct {
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SetupToken
+// @ID postSetupStart
 // @Router /api/v1/setup/start [post]
 func (h *SetupHandler) Start(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

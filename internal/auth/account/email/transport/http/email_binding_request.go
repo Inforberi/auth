@@ -36,6 +36,7 @@ type (
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminUsersByIdEmailBinding
 // @Router /api/v1/admin/users/{id}/email-binding [post]
 func (h *EmailBindingHandler) Request(w http.ResponseWriter, r *http.Request) {
 	auth, ok := bindingOwner(w, r)

@@ -12,7 +12,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/config"
 )
 
-func ProjectRoles(cfg *config.Config, runtime *projectruntime.Registry, repo *projectpostgres.Repository, log *zap.Logger) (*roleshttp.RoleHandler, error) {
+func ProjectRoles(cfg *config.Config, runtime *projectruntime.Registry, repo *projectpostgres.Repository, log *zap.Logger, readiness ...rolespostgres.Readiness) (*roleshttp.RoleHandler, error) {
 	if runtime == nil {
 		return nil, nil
 	}
@@ -21,5 +21,8 @@ func ProjectRoles(cfg *config.Config, runtime *projectruntime.Registry, repo *pr
 		return nil, err
 	}
 	backend := rolespostgres.NewRuntimeRoles(repo, runtime, definition.Catalog())
-	return roleshttp.NewRoles(roleservice.NewRoles(backend), log), nil
+	if len(readiness) != 0 {
+		backend.WithReadiness(readiness[0])
+	}
+	return roleshttp.NewRoles(roleservice.NewRoles(backend), log).WithManagement(backend), nil
 }

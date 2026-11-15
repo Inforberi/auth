@@ -70,3 +70,10 @@ func (s *ProjectProviderSettings) Configure(root string) error {
 
 	return err
 }
+
+func (s *ProjectProviderSettings) PrepareUpdate(input settingsproviders.ProviderUpdateInput) (settingsproviders.ProviderUpdate, error) {
+	if s.google == nil || s.telegram == nil {
+		return settingsproviders.ProviderUpdate{}, projectdomain.ErrUnavailable
+	}
+	return settingsproviders.NewProviders(nil, s.google, s.telegram).PrepareUpdate(input)
+}

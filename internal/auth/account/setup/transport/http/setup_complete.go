@@ -31,6 +31,8 @@ type SetupCompleteResponse struct {
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SetupToken
+// @ID postSetupComplete
 // @Router /api/v1/setup/complete [post]
 func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

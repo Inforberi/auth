@@ -45,6 +45,7 @@ type SendMailResponse struct {
 // @Success 200 {object} SendMailResponse
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, to_required, subject_required, body_required"
 // @Failure 500 {object} httpx.ErrorResponse "code: send_failed"
+// @ID postDevSendMail
 // @Router /api/v1/dev/send-mail [post]
 func (h *MailTestHandler) Send(w http.ResponseWriter, r *http.Request) {
 	var input SendMailRequest

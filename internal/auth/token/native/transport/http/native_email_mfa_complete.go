@@ -16,6 +16,7 @@ import (
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthNativeMfaEmailComplete
 // @Router /api/v1/auth/native/mfa/email/complete [post]
 func (h *NativeHandler) CompleteEmailMFA(w http.ResponseWriter, r *http.Request) {
 	h.CompleteMFA(w, r)

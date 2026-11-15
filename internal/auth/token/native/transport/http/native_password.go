@@ -30,6 +30,7 @@ type NativePasswordRequest struct {
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthNativePasswordLogin
 // @Router /api/v1/auth/native/password/login [post]
 func (h *NativeHandler) Password(w http.ResponseWriter, r *http.Request) {
 	var input NativePasswordRequest

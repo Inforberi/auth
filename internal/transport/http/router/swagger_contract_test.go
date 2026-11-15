@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
+	operatorhttp "github.com/Inforberi/financial-intelligence/internal/admin/administrators/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/admission"
 	directoryhttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/directory/transport/http"
 	policyhttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/policy/transport/http"
@@ -109,6 +110,7 @@ func TestSwaggerMatchesPlatformRoutes(t *testing.T) {
 	h.Config.Server.TLSCertFile, h.Config.Server.TLSKeyFile = "tls.crt", "tls.key"
 	h.Config.Password.ResetURL = h.Config.Platform.Origin + "/reset"
 	h.Projects = projecthttp.New(&operatorReadCatalog{}, zap.NewNop())
+	h.Operators = operatorhttp.NewManagement(nil, zap.NewNop())
 	h.Config.Platform.Runtime = roleRouteRuntime()
 	h.ProjectRoles = roleshttp.NewRoles(&operatorRoles{}, zap.NewNop())
 	h.ProjectUsers = directoryhttp.NewUsers(&operatorUsers{}, zap.NewNop())

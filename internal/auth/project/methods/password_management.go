@@ -2,6 +2,7 @@ package methods
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -10,6 +11,7 @@ import (
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	sessionpostgres "github.com/Inforberi/financial-intelligence/internal/auth/session/repository/postgres"
+	settingspg "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
 
@@ -40,6 +42,9 @@ func (p *ProjectPassword) ConfirmReauthentication(ctx context.Context, user acco
 			return err
 		}
 		service := passwordservice.NewReauthentication(passwordpostgres.New(pool), sessionpostgres.New(pool), p.hash, p.limits, tokengenerate.New(), p.cfg.Session.FreshAuthTTL)
+		service = service.WithFreshAuthSource(func(ctx context.Context) (time.Duration, error) {
+			return settingspg.ProjectFreshAuth(ctx, pool, p.cfg.Session.FreshAuthTTL)
+		})
 		var err error
 		result, err = service.Confirm(ctx, user, sessionHash, password, ip)
 		if err != nil {

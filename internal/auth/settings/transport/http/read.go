@@ -11,6 +11,7 @@ import "net/http"
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAdminAuthSettings
 // @Router /api/v1/admin/auth/settings [get]
 func (h *Handler) Read(w http.ResponseWriter, r *http.Request) {
 	actor, ok := Principal(w, r)

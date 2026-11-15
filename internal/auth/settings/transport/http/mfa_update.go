@@ -25,8 +25,8 @@ type MFAUpdateRequest struct {
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse "mfa_policy_conflict, mfa_not_ready"
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminAuthSettingsMfa
 // @Router /api/v1/admin/auth/settings/mfa [post]
-// @Router /api/v1/platform/settings/mfa [post]
 func (h *MFAHandler) Update(w http.ResponseWriter, r *http.Request) {
 	actor, ok := Principal(w, r)
 	if !ok {
@@ -45,4 +45,23 @@ func (h *MFAHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.respond(w, result)
+}
+
+// @Summary Change realm MFA policy
+// @Description Requires current realm permission, fresh password and fresh MFA when required by policy, role or personal enrollment. expectedVersion prevents lost updates. Required modes need server-owned MFA capability. Strengthening invalidates all previous realm sessions and pending login challenges, including this caller; response still returns the committed policy. A no-op creates no audit/version change. Weakening preserves personal factors and never revives old sessions. No client-supplied capability or actor is accepted.
+// @Tags MFA settings
+// @Accept json
+// @Produce json
+// @Param body body MFAUpdateRequest true "Complete mode and current version"
+// @Success 200 {object} MFASettingsResponse
+// @Failure 400 {object} httpx.ErrorResponse
+// @Failure 401 {object} httpx.ErrorResponse
+// @Failure 403 {object} httpx.ErrorResponse
+// @Failure 409 {object} httpx.ErrorResponse "mfa_policy_conflict, mfa_not_ready"
+// @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID postPlatformSettingsMfa
+// @Router /api/v1/platform/settings/mfa [post]
+func (h *MFAHandler) UpdatePlatform(w http.ResponseWriter, r *http.Request) {
+	h.Update(w, r)
 }

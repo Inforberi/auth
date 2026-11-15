@@ -8,6 +8,7 @@ import (
 )
 
 type Repository interface {
+	Rename(context.Context, operatordomain.Principal, domain.Rename) (domain.NameReceipt, error)
 	Read(context.Context, domain.ID) (domain.Project, error)
 	List(context.Context, ListQuery) (Page, error)
 	ApplyTransition(context.Context, operatordomain.Principal, domain.Transition) (domain.TransitionReceipt, error)

@@ -16,3 +16,8 @@ GRANT UPDATE(onboarding_admitted) ON platform.project_preparations TO auth_platf
 GRANT SELECT ON platform.project_secrets TO auth_platform_preparation;
 GRANT INSERT(project_id,reservation_id,storage_target,database_oid,owner_oid,runtime_oid,schema_version,format_version,key_id,ciphertext)
   ON platform.project_secrets TO auth_platform_preparation;
+GRANT SELECT ON platform.project_preparation_requests TO auth_platform_preparation;
+GRANT UPDATE(stage,attempts,retry_after) ON platform.project_preparation_requests TO auth_platform_preparation;
+GRANT UPDATE(database_name,credential_ref,schema_version) ON platform.projects TO auth_platform_preparation;
+GRANT SELECT ON platform.project_deletions TO auth_platform_preparation;
+GRANT UPDATE(stage,retry_after) ON platform.project_deletions TO auth_platform_preparation;

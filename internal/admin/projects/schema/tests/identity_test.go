@@ -15,3 +15,11 @@ func TestProjectSchemaChecksum(t *testing.T) {
 		t.Fatal("invalid or unbound schema checksum")
 	}
 }
+
+func TestLifecycleGrantReapplyPreservesExistingFingerprint(t *testing.T) {
+	previous := "before\nafter"
+	updated := "before\n-- BEGIN platform lifecycle grants\nnew ACLs\n-- END platform lifecycle grants\nafter"
+	if projectschema.ProjectSchemaChecksum(previous) != projectschema.ProjectSchemaChecksum(updated) {
+		t.Fatal("lifecycle ACL protection must not invalidate existing project markers")
+	}
+}

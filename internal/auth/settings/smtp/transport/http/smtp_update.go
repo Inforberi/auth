@@ -37,6 +37,7 @@ type SMTPUpdateRequest struct {
 // @Failure 403 {object} httpx.ErrorResponse "forbidden, fresh_auth_required"
 // @Failure 409 {object} httpx.ErrorResponse "smtp_settings_conflict"
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminAuthSettingsSmtp
 // @Router /api/v1/admin/auth/settings/smtp [post]
 func (h *SMTPHandler) Update(w http.ResponseWriter, r *http.Request) {
 	actor, ok := settingshttp.Principal(w, r)

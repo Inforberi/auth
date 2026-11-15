@@ -176,9 +176,39 @@ func TestOperatorRoleRouteBoundary(t *testing.T) {
 		}
 	}
 	require.Equal(t, 12, capacityCalls)
+	protected, err := NewOperator(h)
+	require.NoError(t, err)
+	for _, endpoint := range []struct{ method, path string }{
+		{http.MethodPut, "/roles/role"},
+		{http.MethodPost, "/users/user/administrator"},
+		{http.MethodGet, "/auth/settings/mfa"},
+		{http.MethodPost, "/auth/settings/mfa"},
+		{http.MethodGet, "/auth/settings/retention"},
+		{http.MethodPost, "/auth/settings/retention"},
+		{http.MethodGet, "/auth/settings/sessions"},
+		{http.MethodPost, "/auth/settings/sessions"},
+		{http.MethodGet, "/auth/settings/link-lifetimes"},
+		{http.MethodPost, "/auth/settings/link-lifetimes"},
+		{http.MethodGet, "/auth/settings/credential-lifetimes"},
+		{http.MethodPost, "/auth/settings/credential-lifetimes"},
+		{http.MethodGet, "/auth/settings/operation-budgets"},
+		{http.MethodPost, "/auth/settings/operation-budgets"},
+		{http.MethodGet, "/auth/settings/smtp"},
+		{http.MethodPost, "/auth/settings/smtp"},
+		{http.MethodGet, "/auth/settings/providers/google"},
+		{http.MethodPost, "/auth/settings/providers/telegram"},
+		{http.MethodGet, "/auth/settings/telegram-bot"},
+		{http.MethodPost, "/auth/settings/telegram-bot"},
+	} {
+		req := httptest.NewRequest(endpoint.method, cfg.Platform.Origin+"/api/v1/platform/projects/project"+endpoint.path, nil)
+		req.Header.Set("Origin", cfg.Platform.Origin)
+		w := httptest.NewRecorder()
+		protected.ServeHTTP(w, req)
+		require.Equal(t, http.StatusUnauthorized, w.Code, "%s %s", endpoint.method, endpoint.path)
+	}
 	unsafe := h
 	unsafe.ProjectCapacity = nil
-	_, err := NewOperator(unsafe)
+	_, err = NewOperator(unsafe)
 	require.Error(t, err)
 	unsafe = h
 	copyCfg := *cfg

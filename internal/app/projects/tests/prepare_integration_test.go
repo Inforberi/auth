@@ -3,7 +3,9 @@ package projects_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +18,7 @@ import (
 
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	preparationcli "github.com/Inforberi/financial-intelligence/internal/admin/projects/preparation/transport/cli"
+	authschema "github.com/Inforberi/financial-intelligence/migrations/auth"
 )
 
 func TestPrepareCommandSQL(t *testing.T) {
@@ -35,6 +38,10 @@ func TestPrepareCommandSQL(t *testing.T) {
 		require.NoError(t, physical.Close(cleanup))
 		require.NoError(t, admin.Close(cleanup))
 	})
+	// The fixture installs an event trigger and inspects SCRAM metadata using the existing stand administrator.
+	var fixtureAdmin bool
+	require.NoError(t, physical.QueryRow(ctx, `SELECT rolsuper FROM pg_roles WHERE rolname=current_user`).Scan(&fixtureAdmin))
+	require.True(t, fixtureAdmin, "AUTH_STORAGE_TEST_DATABASE_URL must use the existing administrator of the disposable stand")
 	var name string
 	require.NoError(t, admin.QueryRow(ctx, `SELECT current_database()`).Scan(&name))
 	require.Equal(t, "auth_prepare_catalog_test", name)
@@ -74,7 +81,7 @@ func TestPrepareCommandSQL(t *testing.T) {
 		require.NoError(t, err)
 		return string(source)
 	}
-	for _, path := range []string{"migrations/auth/000001_init.up.sql", "migrations/admin/000001_catalog.up.sql", "migrations/admin/000002_operators.up.sql"} {
+	for _, path := range []string{"migrations/auth/000001_init.up.sql", "migrations/auth/000002_settings_source.up.sql", "migrations/admin/000001_catalog.up.sql", "migrations/admin/000002_operators.up.sql", "migrations/admin/000003_project_names.up.sql", "migrations/admin/000004_operator_management.up.sql", "migrations/admin/000005_project_operations.up.sql"} {
 		_, err = admin.Exec(ctx, read(path))
 		require.NoError(t, err)
 	}
@@ -88,8 +95,8 @@ func TestPrepareCommandSQL(t *testing.T) {
 	require.NoError(t, err)
 	_, err = physical.Exec(ctx, strings.NewReplacer(":'realm'", "'c2000000-0000-4000-8000-000000000001'", ":'target'", "'primary'").Replace(read("deploy/postgres/storage-target.sql")))
 	require.NoError(t, err)
-	storageURL := strings.Replace(os.Getenv("AUTH_STORAGE_TEST_DATABASE_URL"), "auth@", "auth_storage_executor:storage-fixture-only@", 1)
-	catalogURL := strings.Replace(dsn, "auth@", "auth_platform_preparation_test:catalog-fixture-only@", 1)
+	storageURL := preparationFixtureURL(t, os.Getenv("AUTH_STORAGE_TEST_DATABASE_URL"), "auth_storage_executor", "storage-fixture-only")
+	catalogURL := preparationFixtureURL(t, dsn, "auth_platform_preparation_test", "catalog-fixture-only")
 	env := func(key string) string {
 		return map[string]string{
 			"PROVISIONER_CATALOG_URL": catalogURL, "PROVISIONER_STORAGE_URL": storageURL,
@@ -135,7 +142,7 @@ func TestPrepareCommandSQL(t *testing.T) {
 	var installed, replayed bytes.Buffer
 	require.NoError(t, preparationcli.Run(ctx, schemaArgs, env, &installed, io.Discard, runPreparationCommand))
 	require.Contains(t, installed.String(), `"stage":"schema_prepared"`)
-	require.Contains(t, installed.String(), `"schemaVersion":1`)
+	require.Contains(t, installed.String(), fmt.Sprintf(`"schemaVersion":%d`, authschema.AuthVersion))
 	require.NoError(t, preparationcli.Run(ctx, schemaArgs, env, &replayed, io.Discard, runPreparationCommand))
 	require.Equal(t, installed.String(), replayed.String())
 	operatorSecretsProfileDrill(t, admin, env, read)
@@ -224,4 +231,16 @@ func TestPrepareCommandSQL(t *testing.T) {
 		require.True(t, closed)
 	})
 	require.Error(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard, runPreparationCommand), "stale catalog receipt cannot start storage")
+	t.Run("requested_preparation_and_confirmed_deletion", func(t *testing.T) {
+		checkRequestedProjectOperations(t, admin, physical, env)
+	})
+}
+
+func preparationFixtureURL(t *testing.T, dsn, user, password string) string {
+	t.Helper()
+	target, err := url.Parse(dsn)
+	require.NoError(t, err)
+	require.NotEmpty(t, target.Host)
+	target.User = url.UserPassword(user, password)
+	return target.String()
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	passworddomain "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/domain"
 	passwordprovisioning "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/provisioning/service"
@@ -80,4 +81,24 @@ func (p *ProjectPassword) CompleteTemporaryPassword(ctx context.Context, token, 
 	return p.useTemporary(ctx, func(ctx context.Context, service *passwordprovisioning.TemporaryPasswordService) error {
 		return service.Complete(ctx, token, password, confirmation, ip)
 	})
+}
+
+func (p *ProjectPassword) PreparePlatformTemporary(ctx context.Context, actor accountdomain.UserID, email string) (passwordprovisioning.PreparedTemporaryPassword, error) {
+	if p.temporary == nil {
+		return passwordprovisioning.PreparedTemporaryPassword{}, passworddomain.ErrTemporaryPasswordDisabled
+	}
+	ctx, cancel := context.WithTimeout(ctx, p.cfg.Timeout)
+	defer cancel()
+	service := passwordprovisioning.NewTemporaryPassword(nil, p.hash, p.temporary.limits, p.temporary.digest, p.limits, p.cfg.TemporaryPassword)
+	return service.PreparePlatformTemporary(ctx, actor, email)
+}
+
+func (p *ProjectPassword) PreparePlatformReissue(ctx context.Context, actor accountdomain.UserID) (passwordprovisioning.PreparedTemporaryPassword, error) {
+	if p.temporary == nil {
+		return passwordprovisioning.PreparedTemporaryPassword{}, passworddomain.ErrTemporaryPasswordDisabled
+	}
+	ctx, cancel := context.WithTimeout(ctx, p.cfg.Timeout)
+	defer cancel()
+	service := passwordprovisioning.NewTemporaryPassword(nil, p.hash, p.temporary.limits, p.temporary.digest, p.limits, p.cfg.TemporaryPassword)
+	return service.PreparePlatformReissue(ctx, actor)
 }

@@ -21,6 +21,7 @@ import (
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminAuthSettingsMfaTelegramBot
 // @Router /api/v1/admin/auth/settings/mfa/telegram/bot [post]
 func (h *TelegramHandler) UpdateBot(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

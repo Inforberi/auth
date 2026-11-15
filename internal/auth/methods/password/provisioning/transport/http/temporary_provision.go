@@ -27,6 +27,7 @@ type TemporaryProvisionRequest struct {
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminUsersTemporaryPassword
 // @Router /api/v1/admin/users/temporary-password [post]
 func (h *TemporaryAdminHandler) Provision(w http.ResponseWriter, r *http.Request) {
 	actor, ok := temporaryAdminActor(w, r)

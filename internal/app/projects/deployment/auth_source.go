@@ -145,7 +145,7 @@ func (d *ProjectAuthDeployment) Profile(ctx context.Context, key projectruntime.
 }
 
 func (d *ProjectAuthDeployment) browserProfile(base projectprofile.ProjectProfileConfig, methods projectMethodDeployment) projectprofile.ProjectProfileConfig {
-	profile := projectprofile.ProjectProfileConfig{BrowserEnabled: methods.Browser, UserDirectoryEnabled: methods.UserDirectory, UserLifecycleEnabled: methods.UserLifecycle, AuthSettingsEnabled: methods.AuthSettings, ProviderSettingsEnabled: methods.ProviderSettings, RetentionSettingsEnabled: methods.RetentionSettings, MFASettingsEnabled: methods.MFASettings, Timeout: base.Timeout}
+	profile := projectprofile.ProjectProfileConfig{BrowserEnabled: methods.Browser, FrontendOrigins: slices.Clone(methods.FrontendOrigins), LoginBudgetBaseline: base.LoginBudgetBaseline, OperationBudgetBaseline: base.OperationBudgetBaseline, UserDirectoryEnabled: methods.UserDirectory, UserLifecycleEnabled: methods.UserLifecycle, AuthSettingsEnabled: methods.AuthSettings, ProviderSettingsEnabled: methods.ProviderSettings, RetentionSettingsEnabled: methods.RetentionSettings, MFASettingsEnabled: methods.MFASettings, Timeout: base.Timeout}
 	if methods.SMTPSettings {
 		profile.SMTPSettings = &projectsettings.ProjectSMTPSettingsConfig{AllowedTargets: slices.Clone(d.smtpTargets)}
 	}

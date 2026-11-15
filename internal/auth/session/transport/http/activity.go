@@ -37,6 +37,8 @@ func NewActivity(svc ActivityService, log *zap.Logger) *ActivityHandler {
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID postAuthSessionActivity
 // @Router /api/v1/auth/session/activity [post]
 func (h *ActivityHandler) Record(w http.ResponseWriter, r *http.Request) {
 	auth, ok := requireAuth(w, r)

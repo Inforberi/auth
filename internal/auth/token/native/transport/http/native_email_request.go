@@ -33,6 +33,7 @@ type NativeEmailResponse struct {
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthNativeEmailRequest
 // @Router /api/v1/auth/native/email/request [post]
 func (h *NativeHandler) EmailRequest(w http.ResponseWriter, r *http.Request) {
 	var input NativeEmailRequest

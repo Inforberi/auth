@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -10,6 +11,8 @@ import (
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	"github.com/Inforberi/financial-intelligence/internal/auth/methods/password/hasher"
 	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
+	settings "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingspg "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 )
 
@@ -58,7 +61,13 @@ func (p *ProjectEmail) ResendVerification(ctx context.Context, email, ip string)
 		return projectdomain.ErrUnavailable
 	}
 	return p.runtime.use(ctx, func(ctx context.Context, pool *pgxpool.Pool, mail *mailer.Mailer) error {
-		return p.runtime.verification(pool, mail, p.cfg.Verification).Resend(ctx, email, ip)
+		cfg := p.cfg.Verification
+		base := settings.LinkLifetimePolicy{VerificationSeconds: int64(cfg.TTL / time.Second)}
+		cfg.TTLSource = func(ctx context.Context) (time.Duration, error) {
+			policy, err := settingspg.ProjectLinkLifetime(ctx, pool, base, int64(cfg.ResendInterval/time.Second))
+			return time.Duration(policy.VerificationSeconds) * time.Second, err
+		}
+		return p.runtime.verification(pool, mail, cfg).Resend(ctx, email, ip)
 	})
 }
 
@@ -76,7 +85,13 @@ func (p *ProjectEmail) ForgotPassword(ctx context.Context, email, ip string) err
 		return projectdomain.ErrUnavailable
 	}
 	return p.runtime.use(ctx, func(ctx context.Context, pool *pgxpool.Pool, mail *mailer.Mailer) error {
-		return p.runtime.recovery(pool, mail, p.hash, p.cfg.Password).Forgot(ctx, email, ip)
+		cfg := p.cfg.Password
+		base := settings.LinkLifetimePolicy{ResetSeconds: int64(cfg.ResetTokenTTL / time.Second)}
+		cfg.TTLSource = func(ctx context.Context) (time.Duration, error) {
+			policy, err := settingspg.ProjectLinkLifetime(ctx, pool, base, 0)
+			return time.Duration(policy.ResetSeconds) * time.Second, err
+		}
+		return p.runtime.recovery(pool, mail, p.hash, cfg).Forgot(ctx, email, ip)
 	})
 }
 

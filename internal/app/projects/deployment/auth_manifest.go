@@ -21,6 +21,7 @@ type projectAuthManifest struct {
 type projectMethodDeployment struct {
 	ID                projectdomain.ID         `json:"id"`
 	Browser           bool                     `json:"browser"`
+	FrontendOrigins   []string                 `json:"frontendOrigins,omitempty"`
 	Invitations       bool                     `json:"invitations"`
 	TemporaryPassword bool                     `json:"temporaryPassword"`
 	Access            *projectAccessDeployment `json:"access,omitempty"`
@@ -93,6 +94,14 @@ func validateProjectAuthManifest(manifest projectAuthManifest) error {
 }
 
 func validProjectMethodDeployment(entry projectMethodDeployment) bool {
+	if len(entry.FrontendOrigins) > 31 || !entry.Browser && len(entry.FrontendOrigins) != 0 {
+		return false
+	}
+	for _, origin := range entry.FrontendOrigins {
+		if !projectdomain.ValidOrigin(origin) {
+			return false
+		}
+	}
 	if !entry.Browser && entry.requiresBrowser() {
 		return false
 	}

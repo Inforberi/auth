@@ -19,6 +19,7 @@ import (
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID deleteAuthMfaEmail
 // @Router /api/v1/auth/mfa/email [delete]
 func (h *EmailHandler) DisableEmailFactor(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

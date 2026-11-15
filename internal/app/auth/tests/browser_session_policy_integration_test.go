@@ -45,4 +45,15 @@ func TestBrowserSessionPolicySchema(t *testing.T) {
 	require.NoError(t, err)
 	require.Zero(t, legacy.BrowserIdleSeconds)
 	require.Equal(t, 2*time.Hour, legacy.AbsoluteExpiresAt.Sub(legacy.CreatedAt))
+
+	// Project onboarding may leave the standalone source marker uninitialized.
+	accessExec(t, db, ctx, `CREATE VIEW auth.project_identity AS SELECT true AS singleton`)
+	accessExec(t, db, ctx, `UPDATE auth.settings_source SET initialized=false WHERE singleton`)
+	params.TokenHash = tokengenerate.New().Hash("configured-project-browser-session")
+	_, err = repo.CreateSession(ctx, params)
+	require.NoError(t, err)
+	projectSession, err := repo.FindSession(ctx, params.TokenHash)
+	require.NoError(t, err)
+	require.EqualValues(t, 480, projectSession.BrowserIdleSeconds)
+	require.EqualValues(t, 120, projectSession.BrowserRefreshSeconds)
 }

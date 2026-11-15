@@ -39,6 +39,15 @@ type AuthPolicyReadiness struct {
 	PolicyVersion int64
 }
 
+func (r AuthPolicyReadiness) MFAReady() bool {
+	for _, feature := range r.Features {
+		if feature.Feature == "mfa_management" {
+			return feature.Ready
+		}
+	}
+	return false
+}
+
 type AuthPolicyView struct {
 	Snapshot  settingsdomain.Snapshot
 	Readiness AuthPolicyReadiness

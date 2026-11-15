@@ -28,6 +28,7 @@ type CompleteLoginRequest struct {
 // @Failure 404 {object} httpx.ErrorResponse "code: method_disabled"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
+// @ID postAuthMfaLoginComplete
 // @Router /api/v1/auth/mfa/login/complete [post]
 func (h *Handler) CompleteLogin(w http.ResponseWriter, r *http.Request) {
 	var input CompleteLoginRequest

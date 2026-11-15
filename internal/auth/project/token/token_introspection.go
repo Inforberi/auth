@@ -22,6 +22,7 @@ func newProjectIntrospection(limiter tokenservice.IntrospectionLimiter, public [
 	return tokenservice.NewIntrospectionFactory(limiter, keys, tokenservice.IntrospectionConfig{
 		Issuer: cfg.Issuer, Resources: cfg.Tokens.Resources, Clients: cfg.Introspection.Clients,
 		ConsumerPerMinute: cfg.Introspection.ConsumerPerMinute, ProjectPerMinute: cfg.Introspection.ProjectPerMinute,
+		BudgetSource: cfg.Introspection.BudgetSource,
 	}, cfg.Catalog)
 }
 

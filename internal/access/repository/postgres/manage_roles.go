@@ -83,11 +83,8 @@ func (r *Repository) UpdateRole(ctx context.Context, input service.UpdateRoleInp
 		if !changed {
 			return nil
 		}
-		if err := tx.QueryRow(ctx, `UPDATE auth.roles SET key=$2,name=$3,description=$4,version=version+1,mfa_required=$6,
-			session_revision=session_revision+CASE WHEN $5 THEN 1 ELSE 0 END WHERE id=$1 RETURNING version`, role.ID, role.Key, role.Name, role.Description, elevated, role.MFARequired).Scan(&role.Version); err != nil {
-			return err
-		}
-		if err := updateRolePermissions(ctx, tx, current, role); err != nil {
+		role, err = SaveRoleChange(ctx, tx, current, role, elevated)
+		if err != nil {
 			return err
 		}
 		return recordAudit(ctx, tx, input.Actor, role, "role_updated", "", nil)
@@ -118,4 +115,15 @@ func replacePermissions(ctx context.Context, tx pgx.Tx, role domain.Role) error 
 	}
 	_, err := tx.Exec(ctx, `INSERT INTO auth.role_permissions(role_id,permission_key) SELECT $1,unnest($2::text[])`, role.ID, keys)
 	return err
+}
+
+func SaveRoleChange(ctx context.Context, tx pgx.Tx, current, role domain.Role, elevated bool) (domain.Role, error) {
+	if err := tx.QueryRow(ctx, `UPDATE auth.roles SET key=$2,name=$3,description=$4,version=version+1,mfa_required=$6,
+			session_revision=session_revision+CASE WHEN $5 THEN 1 ELSE 0 END WHERE id=$1 RETURNING version`, role.ID, role.Key, role.Name, role.Description, elevated, role.MFARequired).Scan(&role.Version); err != nil {
+		return domain.Role{}, mapConflict(err)
+	}
+	if err := updateRolePermissions(ctx, tx, current, role); err != nil {
+		return domain.Role{}, mapConflict(err)
+	}
+	return role, nil
 }

@@ -25,6 +25,7 @@ type TemporaryCompleteRequest struct {
 // @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
+// @ID postAuthTemporaryPasswordComplete
 // @Router /api/v1/auth/temporary-password/complete [post]
 func (h *TemporaryPasswordHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

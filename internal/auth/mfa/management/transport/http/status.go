@@ -30,6 +30,7 @@ type SecurityStatusResponse struct {
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAuthMfaStatus
 // @Router /api/v1/auth/mfa/status [get]
 func (h *Handler) ReadStatus(w http.ResponseWriter, r *http.Request) {
 	proof, ok := mfahttp.RequestProof(w, r)

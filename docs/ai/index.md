@@ -1,5 +1,11 @@
 # Карта проекта
 
+Действующий остаток старого плана перед U1: [только безопасность кода, эксплуатационная безопасность и итоговый отчёт](../planning/implementation.md#остаток-старого-плана-перед-u1--уточнение-12-ноября-2026). Нагрузочные/GC-прогоны больше не обязательный pre-UI gate.
+
+Для согласования будущей админки и пользовательских экранов: [текущие возможности, настройки, ограничения и API](../admin-ui-specification.md). Документ разделяет реализованный backend, параметры запуска и ещё не готовые UI management API.
+
+Дополнения backend для управления из панели, defaults и границы ENV: [план U1–U7](../planning/ui-management.md). [U1 — контракты и матрица 185 ENV](../planning/ui-u1-contracts.md) детализирован 14 ноября; реализация и UI ещё не начаты.
+
 Текущий корректирующий аудит domain/service/repository/transport/app и его последовательность — [границы слоёв](../planning/layer-boundaries-audit.md). Это план устранения конкретных находок, не отметка о завершённом рефакторинге.
 
 Начать с [текущего шага](current-task.md), затем выбрать нужную строку ниже. Это навигация, не список обязательного чтения: статусы — в плане, поведение — в коде, доказательства — в history. Правила — [AGENTS.md](../../AGENTS.md).
@@ -52,6 +58,8 @@
 | Сборка, lifecycle, изоляция | [архитектура](../architecture.md), [realm isolation](../features/realm-isolation.md) | `internal/app/{app,run,server,resources}.go`, `internal/app/auth/{app,assembly,lifecycle,resources}.go, internal/app/admin/assembly.go, internal/infra/secretbox/scope.go`, `internal/config`, `internal/server/http`, `internal/infra/realmscope` |
 
 ## Auth и доступы
+
+Источник настроек U2: [API/ENV, scopes, migration и ограничения](../features/settings-source.md), код `internal/auth/settings/configuration/service`, `settings/repository/postgres/configuration*`, `internal/config/settings_source.go`. Приёмка — в текущем шаге.
 
 | Задача | Первичный документ | Код |
 | --- | --- | --- |

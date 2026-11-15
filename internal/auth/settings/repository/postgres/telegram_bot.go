@@ -47,3 +47,10 @@ func (r *Repository) ReadTelegramBot(ctx context.Context, actor accessservice.Pr
 func (r *Repository) LoadTelegramBot(ctx context.Context) (settingstelegram.TelegramBotStored, error) {
 	return scanTelegramBot(r.db.QueryRow(ctx, `SELECT `+telegramBotColumns+telegramBotEncryptedColumns+telegramBotFrom), true)
 }
+
+func ReadTelegramBotInTransaction(ctx context.Context, tx pgx.Tx, secrets bool) (settingstelegram.TelegramBotStored, error) {
+	if secrets {
+		return scanTelegramBot(tx.QueryRow(ctx, `SELECT `+telegramBotColumns+telegramBotEncryptedColumns+telegramBotFrom), true)
+	}
+	return scanTelegramBot(tx.QueryRow(ctx, `SELECT `+telegramBotColumns+telegramBotFrom), false)
+}

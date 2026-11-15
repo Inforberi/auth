@@ -22,6 +22,7 @@ type ConfirmRequest struct {
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, invalid_verification"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
+// @ID postAuthEmailVerify
 // @Router /api/v1/auth/email/verify [post]
 func (h *VerificationHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 	var input ConfirmRequest

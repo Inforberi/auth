@@ -2,6 +2,7 @@ package methods
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -123,11 +124,16 @@ func (p *ProjectOIDC) service(pool *pgxpool.Pool) (*oidcservice.Service, error) 
 	providers := settingsproviders.NewProviders(repo, p.googleCipher, p.telegramCipher)
 	cfg := oidcservice.Config{
 		Enabled: true, Issuer: settingsdomain.ProviderIssuer(p.cfg.Provider), IPLimit: p.cfg.IPLimit, GlobalLimit: p.cfg.GlobalLimit,
-		CheckPolicy: func(ctx context.Context) error { return policy.CheckPublic(ctx, p.cfg.Provider, false) },
+		BudgetSource: p.cfg.BudgetSource,
+		CheckPolicy:  func(ctx context.Context) error { return policy.CheckPublic(ctx, p.cfg.Provider, false) },
 	}
 	accounts := accountpostgres.New(pool)
 	owner := p.deps.Clients.client(p.cfg.Provider)
-	service := oidcservice.New(cfg, p.flows, owner, accountservice.NewIdentityResolution(accounts), login, tokens, accountservice.NewIdentityManagement(accounts, p.cfg.Session.FreshAuthTTL))
+	identity := accountservice.NewIdentityManagement(accounts, p.cfg.Session.FreshAuthTTL).
+		WithFreshAuthSource(func(ctx context.Context) (time.Duration, error) {
+			return settingspostgres.ProjectFreshAuth(ctx, pool, p.cfg.Session.FreshAuthTTL)
+		})
+	service := oidcservice.New(cfg, p.flows, owner, accountservice.NewIdentityResolution(accounts), login, tokens, identity)
 	return service.WithProviderSource(func(ctx context.Context) (oidcservice.Provider, int64, error) {
 		stored, secret, err := projectProviderCredentials(ctx, providers, p.cfg.Provider)
 		if err != nil {

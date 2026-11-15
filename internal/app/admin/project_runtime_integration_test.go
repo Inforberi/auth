@@ -42,7 +42,7 @@ func TestProjectRuntimeAssemblySQL(t *testing.T) {
 	if root == "" {
 		root = "../../.."
 	}
-	for _, name := range []string{"auth/000001_init.up.sql", "admin/000001_catalog.up.sql", "admin/000002_operators.up.sql"} {
+	for _, name := range []string{"auth/000001_init.up.sql", "admin/000001_catalog.up.sql", "admin/000002_operators.up.sql", "admin/000003_project_names.up.sql", "admin/000004_operator_management.up.sql", "admin/000005_project_operations.up.sql"} {
 		source, err := os.ReadFile(filepath.Join(root, "migrations", name))
 		require.NoError(t, err)
 		_, err = admin.Exec(ctx, string(source))

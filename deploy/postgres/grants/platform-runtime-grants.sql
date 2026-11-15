@@ -19,6 +19,8 @@ GRANT SELECT(project_id,reservation_id,storage_target,database_oid,owner_oid,run
   ON platform.project_secrets TO auth_platform_runtime;
 GRANT INSERT(id,slug,name,origin,storage_target) ON platform.projects TO auth_platform_runtime;
 GRANT SELECT,INSERT ON platform.project_creations TO auth_platform_runtime;
+GRANT SELECT,INSERT ON platform.project_name_changes TO auth_platform_runtime;
+GRANT UPDATE(name) ON platform.projects TO auth_platform_runtime;
 GRANT SELECT ON platform.project_role_intents TO auth_platform_runtime;
 GRANT SELECT ON platform.project_role_admissions,platform.project_role_outcomes TO auth_platform_runtime;
 GRANT INSERT(operation_id,created_at,expires_at) ON platform.project_role_admissions TO auth_platform_runtime;
@@ -38,3 +40,12 @@ GRANT INSERT(project_id,operation_id,action,actor_kind,actor_id,reason,
   ON platform.project_events TO auth_platform_runtime;
 
 -- Deliberately no blanket platform DML/default privileges, schema CREATE or recovery decision grants.
+
+GRANT SELECT,INSERT ON platform.operator_management TO auth_platform_runtime;
+GRANT DELETE ON platform.operator_permissions TO auth_platform_runtime;
+GRANT SELECT ON platform.project_preparation_requests TO auth_platform_runtime;
+GRANT INSERT(operation_id,project_id,actor_id,expected_version,expected_generation)
+  ON platform.project_preparation_requests TO auth_platform_runtime;
+GRANT SELECT ON platform.project_deletions TO auth_platform_runtime;
+GRANT INSERT(operation_id,project_id,actor_id,version,generation,acknowledge_users)
+  ON platform.project_deletions TO auth_platform_runtime;

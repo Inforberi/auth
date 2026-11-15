@@ -18,42 +18,51 @@ func (r *Repository) UpdateSMTP(ctx context.Context, input settingssmtp.SMTPUpda
 		if _, err := accesspostgres.AuthorizeMutation(ctx, tx, input.Actor, "", settings.AuthSettingsManage); err != nil {
 			return err
 		}
-		if err := RequireAPISettings(ctx, tx); err != nil {
+		var err error
+		result, err = ApplySMTP(ctx, tx, input, func(before, after domain.SMTPSnapshot) error {
+			_, err := tx.Exec(ctx, `INSERT INTO auth.smtp_settings_audit(actor_id,version,previous_configuration,next_configuration)
+			VALUES($1,$2,$3,$4)`, input.Actor.UserID, after.Version, before, after)
 			return err
-		}
-		before, err := scanSMTP(tx.QueryRow(ctx, `SELECT `+smtpColumns+`,password FROM auth.smtp_settings WHERE singleton FOR UPDATE`), true)
-		if err != nil {
-			return err
-		}
-		if before.Version != input.ExpectedVersion {
-			return domain.ErrPolicyConflict
-		}
-		password, passwordSet := input.Password, input.PasswordSet
-		if password == nil {
-			// Do not silently send retained credentials to a different server or identity.
-			if before.Config.Host != input.Config.Host || before.Config.Port != input.Config.Port || before.Config.Username != input.Config.Username {
-				return domain.ErrInvalidSMTP
-			}
-			password, passwordSet = before.Password, before.PasswordSet
-		}
-		if input.Config.Username != "" && !passwordSet {
-			return domain.ErrInvalidSMTP
-		}
-		if input.Password == nil && before.Config == input.Config {
-			result = before.SMTPSnapshot
-			return nil
-		}
-		stored, err := scanSMTP(tx.QueryRow(ctx, `UPDATE auth.smtp_settings SET version=version+1,configuration=$1,password=$2,password_set=$3
-			WHERE singleton RETURNING `+smtpColumns, input.Config, password, passwordSet), false)
-		if err != nil {
-			return err
-		}
-		result = stored.SMTPSnapshot
-		_, err = tx.Exec(ctx, `INSERT INTO auth.smtp_settings_audit(actor_id,version,previous_configuration,next_configuration)
-			VALUES($1,$2,$3,$4)`, input.Actor.UserID, result.Version, before.SMTPSnapshot, result)
+		})
 		return err
 	})
 	return result, err
+}
+
+func ApplySMTP(ctx context.Context, tx pgx.Tx, input settingssmtp.SMTPUpdate, audit func(domain.SMTPSnapshot, domain.SMTPSnapshot) error) (domain.SMTPSnapshot, error) {
+	var result domain.SMTPSnapshot
+	if err := RequireAPISettings(ctx, tx); err != nil {
+		return result, err
+	}
+	before, err := scanSMTP(tx.QueryRow(ctx, `SELECT `+smtpColumns+`,password FROM auth.smtp_settings WHERE singleton FOR UPDATE`), true)
+	if err != nil {
+		return result, err
+	}
+	if before.Version != input.ExpectedVersion {
+		return result, domain.ErrPolicyConflict
+	}
+	password, passwordSet := input.Password, input.PasswordSet
+	if password == nil {
+		// Do not silently send retained credentials to a different server or identity.
+		if before.Config.Host != input.Config.Host || before.Config.Port != input.Config.Port || before.Config.Username != input.Config.Username {
+			return result, domain.ErrInvalidSMTP
+		}
+		password, passwordSet = before.Password, before.PasswordSet
+	}
+	if input.Config.Username != "" && !passwordSet {
+		return result, domain.ErrInvalidSMTP
+	}
+	if input.Password == nil && before.Config == input.Config {
+		result = before.SMTPSnapshot
+		return result, nil
+	}
+	stored, err := scanSMTP(tx.QueryRow(ctx, `UPDATE auth.smtp_settings SET version=version+1,configuration=$1,password=$2,password_set=$3
+			WHERE singleton RETURNING `+smtpColumns, input.Config, password, passwordSet), false)
+	if err != nil {
+		return result, err
+	}
+	result = stored.SMTPSnapshot
+	return result, audit(before.SMTPSnapshot, result)
 }
 
 func (r *Repository) AuthorizeSMTPTest(ctx context.Context, actor accessservice.Principal, version int64) (settingssmtp.SMTPStored, error) {

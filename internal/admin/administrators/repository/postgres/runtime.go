@@ -35,19 +35,23 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 			('platform.projects','SELECT'),
 			('platform.project_events','SELECT'),
 			('platform.project_creations','SELECT'),('platform.project_creations','INSERT'),
+            ('platform.project_name_changes','SELECT'),('platform.project_name_changes','INSERT'),
+
 			('platform.project_role_intents','SELECT'),
 			('platform.project_auth_policy_intents','SELECT'),('platform.project_auth_policy_admissions','SELECT'),
 			('platform.project_role_admissions','SELECT'),('platform.project_role_outcomes','SELECT'),
 			('platform.operator_realm','SELECT'),('platform.operator_permissions','SELECT'),('platform.operator_permissions','INSERT'),
-			('platform.operator_audit','SELECT'),('platform.operator_audit','INSERT')) required(relation,privilege)
+			('platform.operator_audit','SELECT'),('platform.operator_audit','INSERT'),
+			('platform.operator_management','SELECT'),('platform.operator_management','INSERT'),
+			('platform.operator_permissions','DELETE')) required(relation,privilege)
 			WHERE NOT has_table_privilege(current_user,required.relation,required.privilege))
 		AND has_column_privilege(current_user,'platform.operator_realm','initialized_at','UPDATE')
 		AND has_column_privilege(current_user,'platform.operator_realm','first_operator_id','UPDATE')
 		AND has_column_privilege(current_user,'platform.operator_permissions','permission_key','UPDATE')
 		AND NOT has_column_privilege(current_user,'platform.operator_permissions','user_id','UPDATE')
-		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['desired_state','phase','version','generation','updated_at']) col
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['name','desired_state','phase','version','generation','updated_at']) col
 			WHERE NOT has_column_privilege(current_user,'platform.projects',col,'UPDATE'))
-		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['id','slug','name','origin','storage_target','database_name','credential_ref','schema_version','created_at']) col
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['id','slug','origin','storage_target','database_name','credential_ref','schema_version','created_at']) col
 			WHERE has_column_privilege(current_user,'platform.projects',col,'UPDATE'))
 		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['project_id','operation_id','action','actor_kind','actor_id','reason',
 			'from_state','from_phase','from_version','from_generation','to_state','to_phase','to_version','to_generation']) col
@@ -59,6 +63,9 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 			WHERE has_column_privilege(current_user,'platform.projects',col,'INSERT'))
 		AND NOT has_table_privilege(current_user,'platform.projects','INSERT,DELETE,TRUNCATE')
 		AND NOT has_table_privilege(current_user,'platform.project_creations','UPDATE,DELETE,TRUNCATE')
+        AND NOT has_table_privilege(current_user,'platform.project_name_changes','UPDATE,DELETE,TRUNCATE')
+        AND NOT has_any_column_privilege(current_user,'platform.project_name_changes','UPDATE')
+
 		AND NOT has_table_privilege(current_user,'platform.project_auth_policy_intents','DELETE,TRUNCATE')
 		AND NOT has_any_column_privilege(current_user,'platform.project_auth_policy_intents','UPDATE,REFERENCES')
 		AND NOT has_column_privilege(current_user,'platform.project_auth_policy_intents','created_at','INSERT')
@@ -97,6 +104,8 @@ func (r *Repository) CheckRuntime(ctx context.Context, setupEnabled bool) error 
 		AND NOT has_table_privilege(current_user,'platform.operator_realm','INSERT,DELETE,TRUNCATE')
 		AND NOT has_column_privilege(current_user,'platform.operator_realm','id','UPDATE')
 		AND NOT has_table_privilege(current_user,'platform.operator_audit','UPDATE,DELETE,TRUNCATE')
+		AND NOT has_table_privilege(current_user,'platform.operator_management','UPDATE,DELETE,TRUNCATE')
+		AND NOT has_any_column_privilege(current_user,'platform.operator_management','UPDATE')
 		AND NOT has_table_privilege(current_user,'auth.platform_role_creations','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')
 		AND NOT has_any_column_privilege(current_user,'auth.platform_role_creations','SELECT,INSERT,UPDATE,REFERENCES')
 		AND NOT has_table_privilege(current_user,'auth.platform_role_assignments','SELECT,INSERT,UPDATE,DELETE,TRUNCATE')

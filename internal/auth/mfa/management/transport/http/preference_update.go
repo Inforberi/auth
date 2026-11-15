@@ -25,6 +25,7 @@ type PreferenceRequest struct {
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
+// @ID postAuthMfaPreference
 // @Router /api/v1/auth/mfa/preference [post]
 func (h *PreferenceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

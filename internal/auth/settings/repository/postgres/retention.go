@@ -64,3 +64,7 @@ func (r *Repository) InitializeRetention(ctx context.Context, seed domain.Retent
 	})
 	return result, err
 }
+
+func ReadRetentionInTransaction(ctx context.Context, tx pgx.Tx) (domain.RetentionSnapshot, error) {
+	return scanRetention(tx.QueryRow(ctx, `SELECT `+retentionColumns+` FROM auth.retention_settings WHERE singleton`))
+}

@@ -17,6 +17,8 @@ import (
 )
 
 type Definition struct {
+	Frontend            func(context.Context) (settingsdomain.FrontendPolicy, error)
+	FrontendOrigins     []string
 	Key                 projectruntime.Key
 	Origin              string
 	Policy              settingsdomain.Snapshot
@@ -53,7 +55,8 @@ type Definition struct {
 
 func New(definition Definition) *ProjectProfile {
 	return &ProjectProfile{
-		key:                 definition.Key,
+		key:      definition.Key,
+		frontend: definition.Frontend, frontendOrigins: definition.FrontendOrigins,
 		origin:              definition.Origin,
 		policy:              definition.Policy,
 		deps:                definition.Dependencies,
@@ -92,6 +95,11 @@ func (p *ProjectProfile) Publish(ctx context.Context, observed settingsdomain.Sn
 	if err := p.checkSnapshotCurrent(ctx, observed); err != nil {
 		return err
 	}
+	installed, err := p.browserPolicySchema(ctx)
+	if err != nil {
+		return err
+	}
+	p.browserPolicyInstalled = installed
 	p.observedAt = time.Now().UTC()
 	return nil
 }

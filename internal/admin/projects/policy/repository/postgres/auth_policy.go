@@ -10,6 +10,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/internal/sqlerrors"
 	catalogpostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/repository/postgres"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	sessions "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	configuration "github.com/Inforberi/financial-intelligence/internal/auth/settings/configuration/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
@@ -17,9 +18,16 @@ import (
 
 type RuntimeAuthPolicy struct {
 	*catalogpostgres.Repository
-	registry  *projectruntime.Registry
-	available settingsdomain.PolicyRuntime
-	readiness AuthPolicyReadinessSource
+	registry                  *projectruntime.Registry
+	available                 settingsdomain.PolicyRuntime
+	readiness                 AuthPolicyReadinessSource
+	settingsProfile           SettingsProfile
+	browserSessions           sessions.BrowserPolicy
+	linkLifetimes             settingsdomain.LinkLifetimePolicy
+	credentialLifetimes       settingsdomain.CredentialLifetimePolicy
+	loginBudgets              settingsdomain.LoginBudgetPolicy
+	operationBudgets          settingsdomain.OperationBudgetsPolicy
+	verificationResendSeconds int64
 }
 
 type AuthPolicyReadinessSource func(context.Context, projectruntime.Key, string) (domain.AuthPolicyReadiness, error)

@@ -43,6 +43,7 @@ type CredentialLifetimePolicyHandler struct {
 
 // @Summary Read standalone credential lifetime policy
 // @Success 200 {object} CredentialLifetimePolicyView
+// @ID getAdminAuthSettingsCredentialLifetimes
 // @Router /api/v1/admin/auth/settings/credential-lifetimes [get]
 func (h *CredentialLifetimePolicyHandler) Read(w http.ResponseWriter, r *http.Request) {
 	servePolicyRead(w, r, h.ReadPolicy, policyResponse[CredentialLifetimePolicyView](h.Log, "credential_lifetime_policy", domain.ErrInvalidCredentialLifetime, "invalid credential lifetime policy"))
@@ -53,6 +54,7 @@ func (h *CredentialLifetimePolicyHandler) Read(w http.ResponseWriter, r *http.Re
 // @Param body body CredentialLifetimePolicyRequest true "Complete policy and current version"
 // @Success 200 {object} CredentialLifetimePolicyView
 // @Failure 409 {object} PolicyErrorResponse
+// @ID postAdminAuthSettingsCredentialLifetimes
 // @Router /api/v1/admin/auth/settings/credential-lifetimes [post]
 func (h *CredentialLifetimePolicyHandler) Update(w http.ResponseWriter, r *http.Request) {
 	servePolicyUpdate(w, r, h.UpdatePolicy, policyResponse[CredentialLifetimePolicyView](h.Log, "credential_lifetime_policy", domain.ErrInvalidCredentialLifetime, "invalid credential lifetime policy"))

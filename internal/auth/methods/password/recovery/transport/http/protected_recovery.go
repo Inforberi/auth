@@ -52,6 +52,7 @@ var protectedRecoveryErrors = []httpx.ErrorRule{
 // @Failure 403 {object} httpx.ErrorResponse "code: invalid_origin"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
+// @ID postAuthEmailChangeRecover
 // @Router /api/v1/auth/email/change/recover [post]
 func (h *ProtectedRecoveryHandler) Recover(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

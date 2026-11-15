@@ -3,10 +3,15 @@ package admin
 import (
 	"context"
 
+	operatordomain "github.com/Inforberi/financial-intelligence/internal/admin/administrators/domain"
+	operatorservice "github.com/Inforberi/financial-intelligence/internal/admin/administrators/service"
+	operatorhttp "github.com/Inforberi/financial-intelligence/internal/admin/administrators/transport/http"
+
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/admission"
 	projectdomain "github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	policypostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/policy/repository/postgres"
 	projectpostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/repository/postgres"
+	rolespostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/repository/postgres"
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
 	projectservice "github.com/Inforberi/financial-intelligence/internal/admin/projects/service"
 	projecthttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/transport/http"
@@ -63,7 +68,7 @@ func Assemble(ctx context.Context, cfg *config.Config, deps authapp.Dependencies
 	if runtime != nil {
 		observer = runtime
 	}
-	repo := postgres.NewWithDelivery(deps.Pool, postgres.DeliveryConfig{})
+	repo := postgres.NewWithDelivery(deps.Pool, postgres.DeliveryConfig{Invitations: cfg.Invitation.Enabled})
 	accountRuntime, err := accountapp.Assemble(scope, repo, deps.Redis, mail, cfg.Account)
 	if err != nil {
 		return nil, err
@@ -100,10 +105,6 @@ func Assemble(ctx context.Context, cfg *config.Config, deps authapp.Dependencies
 	if runtime != nil {
 		registry = runtime.Registry
 	}
-	roles, err := ProjectRoles(cfg, registry, projects, deps.Logger)
-	if err != nil {
-		return nil, err
-	}
 	projectHTTP, drainHTTP, err := openProjectHTTP(ctx, cfg, runtime, delivery, deps, owned)
 	if err != nil {
 		return nil, err
@@ -112,12 +113,25 @@ func Assemble(ctx context.Context, cfg *config.Config, deps authapp.Dependencies
 	if projectHTTP != nil {
 		readiness = projectHTTP.Assess
 	}
+	roles, err := ProjectRoles(cfg, registry, projects, deps.Logger, rolespostgres.Readiness(readiness))
+	if err != nil {
+		return nil, err
+	}
+	operatorInvitations := accountRuntime.AssembleManagement(deps.Hash, password.Recovery, cfg, deps.Logger).Provisioning
+	catalog := projecthttp.New(projectservice.NewWithRuntime(projects, operator, observer), deps.Logger).
+		WithPreparation(projects).
+		WithDeletion(projects).
+		WithDeletionPreview(func(ctx context.Context, actor operatordomain.Principal, target projectdomain.DirectoryTarget) (projectpostgres.DeletionPreview, error) {
+			return projects.PreviewDeletion(ctx, actor, target, registry)
+		})
 	handler, err := router.NewOperator(router.Handlers{
 		Config: cfg, Logger: deps.Logger, Setup: setup, MFA: mfa.Handler, MFALogin: mfa.LoginHandler, MFARecovery: mfa.RecoveryHandler,
-		Projects:          projecthttp.New(projectservice.NewWithRuntime(projects, operator, observer), deps.Logger),
+		Projects:          catalog,
 		ProjectRoles:      roles,
-		ProjectUsers:      ProjectUsers(registry, projects, deps.Logger),
-		ProjectAuthPolicy: ProjectAuthPolicy(registry, projects, readiness, deps.Logger),
+		ProjectUsers:      ProjectUsers(registry, projects, deps.Logger, projectHTTP),
+		Operators:         operatorhttp.NewManagement(operatorservice.NewManagement(operator, operatorInvitations, cfg.Session.FreshAuthTTL), deps.Logger),
+		Activation:        password.AssembleActivation(repo, deps.Hash, cfg, deps.Logger),
+		ProjectAuthPolicy: ProjectAuthPolicy(registry, projects, readiness, deps.Logger, cfg, projectHTTP.SettingsProfile),
 		ProjectCapacity:   projecthttp.Capacity(capacity),
 		MFASettings:       MFASettings(operator, cfg.MFA.Enabled, deps.Logger),
 		PasswordHandler:   passwordhttp.New(password.Service, deps.Logger),

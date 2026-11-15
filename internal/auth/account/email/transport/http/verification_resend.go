@@ -22,6 +22,7 @@ type ResendRequest struct {
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, invalid_email"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
+// @ID postAuthEmailResend
 // @Router /api/v1/auth/email/resend [post]
 func (h *VerificationHandler) Resend(w http.ResponseWriter, r *http.Request) {
 	var input ResendRequest

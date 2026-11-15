@@ -21,6 +21,7 @@ type TelegramFactorResponse struct {
 // @Produce json
 // @Success 200 {object} TelegramFactorResponse
 // @Failure 401 {object} httpx.ErrorResponse
+// @ID getAuthMfaTelegram
 // @Router /api/v1/auth/mfa/telegram [get]
 func (h *TelegramHandler) Read(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

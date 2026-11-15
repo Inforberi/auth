@@ -21,6 +21,7 @@ type TelegramPreparationResponse struct {
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
+// @ID postAuthMfaTelegramPreparation
 // @Router /api/v1/auth/mfa/telegram/preparation [post]
 func (h *TelegramHandler) Request(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

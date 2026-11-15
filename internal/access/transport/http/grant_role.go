@@ -18,6 +18,7 @@ import "net/http"
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminUsersByIdRolesByRoleId
 // @Router /api/v1/admin/users/{id}/roles/{roleId} [post]
 func (h *Handler) GrantRole(w http.ResponseWriter, r *http.Request) {
 	h.changeAssignment(w, r, true)

@@ -32,6 +32,8 @@ func NewRotation(service rotationService, log *zap.Logger) *RotationHandler {
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID postAuthSessionRotate
 // @Router /api/v1/auth/session/rotate [post]
 func (h *RotationHandler) Rotate(w http.ResponseWriter, r *http.Request) {
 	auth, ok := requireAuth(w, r)

@@ -30,6 +30,7 @@ type (
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthMfaTotpEnrollmentConfirm
 // @Router /api/v1/auth/mfa/totp/enrollment/confirm [post]
 func (h *Handler) ConfirmEnrollment(w http.ResponseWriter, r *http.Request) {
 	var input ConfirmEnrollmentRequest

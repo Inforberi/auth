@@ -37,6 +37,7 @@ type LoginByEmailResponse struct {
 // @Failure 500 {object} httpx.ErrorResponse "code: internal_error"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited; Retry-After: 60"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
+// @ID postAuthLoginEmail
 // @Router /api/v1/auth/login/email [post]
 func (h *PublicPasswordHandler) LoginByEmail(w http.ResponseWriter, r *http.Request) {
 	h.login(w, r, h.service.Login)

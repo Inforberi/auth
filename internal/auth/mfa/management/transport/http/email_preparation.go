@@ -30,6 +30,7 @@ type EmailPreparationResponse struct {
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthMfaEmailPreparation
 // @Router /api/v1/auth/mfa/email/preparation [post]
 func (h *EmailHandler) RequestEmailPreparation(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

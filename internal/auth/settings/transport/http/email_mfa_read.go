@@ -15,6 +15,7 @@ import (
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAdminAuthSettingsMfaEmail
 // @Router /api/v1/admin/auth/settings/mfa/email [get]
 func (h *EmailMFAHandler) Read(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

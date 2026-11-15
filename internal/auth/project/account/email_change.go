@@ -2,6 +2,7 @@ package account
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -10,6 +11,7 @@ import (
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
 	passwordrecovery "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/recovery/service"
+	settingspg "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/infra/mailer"
 )
 
@@ -19,7 +21,9 @@ func (p *ProjectEmail) useEmailChange(ctx context.Context, operation func(contex
 	}
 	return p.runtime.use(ctx, func(ctx context.Context, pool *pgxpool.Pool, mail *mailer.Mailer) error {
 		service := accountemail.NewEmailChange(accountpostgres.New(pool), p.hash, p.runtime.verificationLimits, p.runtime.verificationCipher, p.cfg.Change, p.cfg.FreshAuthTTL)
-		return operation(ctx, service)
+		return operation(ctx, service.WithFreshAuthSource(func(ctx context.Context) (time.Duration, error) {
+			return settingspg.ProjectFreshAuth(ctx, pool, p.cfg.FreshAuthTTL)
+		}))
 	})
 }
 

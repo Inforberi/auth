@@ -16,6 +16,7 @@ import (
 	operatorpostgres "github.com/Inforberi/financial-intelligence/internal/admin/administrators/repository/postgres"
 	adminapp "github.com/Inforberi/financial-intelligence/internal/app/admin"
 	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+	provisioning "github.com/Inforberi/financial-intelligence/internal/auth/account/provisioning/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
 )
@@ -65,6 +66,11 @@ func TestOperatorProfileSQLHTTPS(t *testing.T) {
 		}
 	}
 	mail := &operatorMailbox{messages: make(chan string, 8)}
+	cfg.Invitation = provisioning.InvitationConfig{
+		Enabled: true, URL: cfg.Platform.Origin + "/activate", TTL: time.Hour,
+		ActivationGlobalLimit: 30, IssueActorAttemptsPerMinute: 20, IssueProjectAttemptsPerMinute: 30,
+		ReissueCooldown: time.Minute,
+	}
 	assembled, err := adminapp.Assemble(ctx, cfg, deps, mail)
 	if err != nil {
 		t.Fatal("operator assembly", err)
@@ -143,6 +149,7 @@ func TestOperatorProfileSQLHTTPS(t *testing.T) {
 	operatorCatalogReadDrill(t, admin, h, user, session)
 	operatorCatalogWriteDrill(t, admin, deps.Pool, repo, h, actor, session)
 	operatorCatalogCreateDrill(t, admin, deps.Pool, repo, h, actor, session)
+	operatorManagementDrill(t, admin, h, actor, session)
 	operatorPreparationDrill(t, admin, deps.Pool, cfg.Platform.RealmID)
 	h.call("GET", "/api/v1/auth/me", nil, []*http.Cookie{{Name: sessionhttp.SessionCookieName, Value: strings.Repeat("A", 43)}}, 401)
 	workerCtx, cancel := context.WithCancel(ctx)

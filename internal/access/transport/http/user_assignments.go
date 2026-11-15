@@ -20,6 +20,7 @@ import (
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAdminUsersByIdAccess
 // @Router /api/v1/admin/users/{id}/access [get]
 func (h *Handler) UserAssignments(w http.ResponseWriter, r *http.Request) {
 	actor, ok := principal(w, r)

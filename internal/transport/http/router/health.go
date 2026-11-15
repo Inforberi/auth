@@ -17,6 +17,7 @@ type HealthResponse struct {
 // @Tags Health
 // @Produce json
 // @Success 200 {object} HealthResponse
+// @ID getHealthLive
 // @Router /health/live [get]
 func live(w http.ResponseWriter, _ *http.Request) {
 	httpx.JSON(w, http.StatusOK, HealthResponse{Status: "ok"})
@@ -27,6 +28,7 @@ func live(w http.ResponseWriter, _ *http.Request) {
 // @Produce json
 // @Success 200 {object} HealthResponse
 // @Failure 503 {object} HealthResponse
+// @ID getHealthReady
 // @Router /health/ready [get]
 func readiness(check func(context.Context) error) http.HandlerFunc {
 	var mu sync.Mutex

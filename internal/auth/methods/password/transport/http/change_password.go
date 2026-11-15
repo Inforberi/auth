@@ -68,6 +68,7 @@ func validateChangePasswordInput(input ChangePasswordRequest) error {
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
 // @Failure 404 {object} httpx.ErrorResponse "code: not_found"
 // @Failure 500 {object} httpx.ErrorResponse "code: internal_error"
+// @ID postAuthChangePassword
 // @Router /api/v1/auth/change-password [post]
 func (p *ChangePasswordHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	auth, ok := sessionhttp.GetAuthContext(r.Context())

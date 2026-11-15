@@ -113,3 +113,7 @@ func TestCatalogCursor(t *testing.T) {
 		}
 	}
 }
+
+func (r *catalogStub) Rename(context.Context, operatordomain.Principal, domain.Rename) (domain.NameReceipt, error) {
+	return domain.NameReceipt{}, r.err
+}

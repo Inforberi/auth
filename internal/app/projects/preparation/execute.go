@@ -49,10 +49,42 @@ func Run(ctx context.Context, input preparationservice.Input, connections Connec
 	if err != nil {
 		return preparationservice.Result{}, err
 	}
+	if input.Requested {
+		if err := preparation.CheckRuntime(ctx); err != nil {
+			return preparationservice.Result{}, err
+		}
+		var locked bool
+		if err := conn.QueryRow(ctx, `SELECT pg_try_advisory_lock(hashtextextended('project-preparation:'||$1::text,0))`, input.Request.OperationID).Scan(&locked); err != nil || !locked {
+			return preparationservice.Result{}, domain.ErrConflict
+		}
+		var stage string
+		input.Request, stage, err = preparation.ClaimRequested(ctx, input.Request.OperationID)
+		if err != nil {
+			return preparationservice.Result{}, err
+		}
+		if stage == "managed_configuration_prepared" {
+			return activateRequested(ctx, input, connections, preparation, physical)
+		}
+	}
 	result, err := preparationservice.Prepare(ctx, input, preparation, physical, connections.Codec, func(ctx context.Context, reservation domain.PreparationReservation) (uint32, error) {
 		resources, err := physical.Prepare(ctx, reservation)
 		return resources.DatabaseOID, err
 	})
+	if input.Requested {
+		stage := result.Stage
+		if err != nil {
+			stage = "failed"
+		}
+		report, stop := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
+		recordErr := preparation.RecordRequestedResult(report, input.Request.OperationID, stage)
+		stop()
+		if recordErr != nil {
+			return preparationservice.Result{}, errors.Join(err, recordErr)
+		}
+		if err == nil {
+			return activateRequested(ctx, input, connections, preparation, physical)
+		}
+	}
 	if err != nil {
 		return preparationservice.Result{}, err
 	}

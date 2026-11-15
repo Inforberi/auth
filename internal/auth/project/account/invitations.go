@@ -55,3 +55,8 @@ func (p *ProjectEmail) ActivateInvitation(ctx context.Context, token, password, 
 		return service.Activate(ctx, token, password, confirmation, ip)
 	})
 }
+
+func (p *ProjectEmail) PreparePlatformInvitation(ctx context.Context, actor accountdomain.UserID, email string) (accountprovisioning.ProvisionCommand, error) {
+	service := accountprovisioning.NewProvisioning(nil, p.runtime.verificationLimits, p.runtime.verificationCipher, p.cfg.Invitations)
+	return service.PreparePlatformInvitation(ctx, actor, email)
+}

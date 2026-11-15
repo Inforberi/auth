@@ -7,6 +7,7 @@ import (
 
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
+	account "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
@@ -33,50 +34,59 @@ func (s *TelegramBotSettings) Update(ctx context.Context, input TelegramBotUpdat
 	if input.BotToken == nil && !input.RotateWebhookSecret {
 		return before.TelegramBotSnapshot, nil
 	}
-	if err := s.admitTelegramBotUpdate(ctx, input.Actor); err != nil {
+	prepared, err := s.PrepareUpdate(ctx, input, before)
+	if err != nil {
 		return domain.TelegramBotSnapshot{}, err
 	}
+	return s.repo.UpdateTelegramBot(ctx, prepared)
+}
+
+func (s *TelegramBotSettings) PrepareUpdate(ctx context.Context, input TelegramBotUpdateInput, before TelegramBotStored) (TelegramBotUpdate, error) {
+	if err := s.admitTelegramBotUpdate(ctx, input.Actor.UserID); err != nil {
+		return TelegramBotUpdate{}, err
+	}
 	var token domain.TelegramBotToken
+	var err error
 	if input.BotToken == nil {
 		token, err = s.openToken(before)
 	} else {
 		token, err = domain.NewTelegramBotToken(*input.BotToken)
 	}
 	if err != nil {
-		return domain.TelegramBotSnapshot{}, err
+		return TelegramBotUpdate{}, err
 	}
 	// The preflight transaction is committed; network verification holds no SQL locks.
 	identity, err := s.verifier.VerifyTelegramBot(ctx, token)
 	if errors.Is(err, domain.ErrInvalidTelegramBot) {
-		return domain.TelegramBotSnapshot{}, domain.ErrInvalidTelegramBot
+		return TelegramBotUpdate{}, domain.ErrInvalidTelegramBot
 	}
 	if err != nil || !identity.Valid() || identity.ID != token.ID() {
-		return domain.TelegramBotSnapshot{}, domain.ErrTelegramBotVerification
+		return TelegramBotUpdate{}, domain.ErrTelegramBotVerification
 	}
 	webhook, err := s.telegramWebhookForUpdate(before, identity.ID, input.RotateWebhookSecret)
 	if err != nil {
-		return domain.TelegramBotSnapshot{}, err
+		return TelegramBotUpdate{}, err
 	}
 	encryptedToken, err := sealTelegramSecret(s.tokenCipher, identity.ID, "bot-token", token.Value())
 	if err != nil {
-		return domain.TelegramBotSnapshot{}, err
+		return TelegramBotUpdate{}, err
 	}
 	encryptedWebhook, err := sealTelegramSecret(s.webhookCipher, identity.ID, "webhook-secret", webhook)
 	if err != nil {
-		return domain.TelegramBotSnapshot{}, err
+		return TelegramBotUpdate{}, err
 	}
-	return s.repo.UpdateTelegramBot(ctx, TelegramBotUpdate{
+	return TelegramBotUpdate{
 		Actor: input.Actor, ExpectedVersion: input.ExpectedVersion,
 		Identity: identity, Token: encryptedToken, Webhook: encryptedWebhook,
-	})
+	}, nil
 }
 
-func (s *TelegramBotSettings) admitTelegramBotUpdate(ctx context.Context, actor accessservice.Principal) error {
+func (s *TelegramBotSettings) admitTelegramBotUpdate(ctx context.Context, actor account.UserID) error {
 	for _, budget := range []struct {
 		key   string
 		count int
 	}{
-		{"telegram-bot-settings:user:" + string(actor.UserID), s.config.UserUpdatesPerMinute},
+		{"telegram-bot-settings:user:" + string(actor), s.config.UserUpdatesPerMinute},
 		{"telegram-bot-settings:project", s.config.ProjectUpdatesPerMinute},
 	} {
 		allowed, err := s.limits.Allow(ctx, budget.key, budget.count, time.Minute)

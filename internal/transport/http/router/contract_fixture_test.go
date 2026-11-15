@@ -57,9 +57,11 @@ type apiSchema struct {
 }
 
 type apiOperation struct {
-	Description string   `json:"description"`
-	Consumes    []string `json:"consumes"`
-	Produces    []string `json:"produces"`
+	OperationID string                `json:"operationId"`
+	Security    []map[string][]string `json:"security"`
+	Description string                `json:"description"`
+	Consumes    []string              `json:"consumes"`
+	Produces    []string              `json:"produces"`
 	Parameters  []struct {
 		Name     string    `json:"name"`
 		In       string    `json:"in"`

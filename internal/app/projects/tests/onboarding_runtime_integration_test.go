@@ -3,6 +3,7 @@ package projects_test
 import (
 	"context"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -37,6 +38,8 @@ func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, env func(string) s
 	empty, err := repo.ReadOnboardingKeys(ctx, stale, binding, codec)
 	require.ErrorIs(t, err, domain.ErrConflict)
 	require.Empty(t, empty.SetupSecret())
+	credential, err := repo.ReadDatabaseCredential(ctx, r, binding, codec)
+	require.NoError(t, err)
 	database, _, err := r.ResourceNames()
 	require.NoError(t, err)
 	runtime := "authr_a2000000000040008000000000000001"
@@ -52,19 +55,19 @@ func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, env func(string) s
 			ALTER DATABASE `+pgx.Identifier{database}.Sanitize()+` ALLOW_CONNECTIONS false`)
 		require.NoError(t, err)
 	}()
-	poolFor := func(user string) *pgxpool.Pool {
+	poolFor := func(user, password string) *pgxpool.Pool {
 		cfg, err := pgxpool.ParseConfig(physical.Config().ConnString())
 		require.NoError(t, err)
-		cfg.ConnConfig.Database, cfg.ConnConfig.User = database, user
+		cfg.ConnConfig.Database, cfg.ConnConfig.User, cfg.ConnConfig.Password = database, user, password
 		cfg.MaxConns, cfg.MinConns = 1, 0
 		pool, err := pgxpool.NewWithConfig(ctx, cfg)
 		require.NoError(t, err)
 		return pool
 	}
-	privileged := poolFor(physical.Config().User)
+	privileged := poolFor(physical.Config().User, physical.Config().Password)
 	defer privileged.Close()
 	require.Error(t, schemapostgres.CheckOnboardingRuntime(ctx, privileged, keys.Proof()), "reject executor/superuser as runtime")
-	pool := poolFor(runtime)
+	pool := poolFor(runtime, credential.Password())
 	defer pool.Close()
 	require.NoError(t, schemapostgres.CheckOnboardingRuntime(ctx, pool, keys.Proof()))
 	require.ErrorIs(t, schemapostgres.CheckManagedRuntime(ctx, pool, keys.Proof()), domain.ErrConflict)
@@ -93,8 +96,9 @@ func onboardingRuntimeDrill(t *testing.T, physical *pgx.Conn, env func(string) s
 	api, err := pgxpool.NewWithConfig(ctx, apiConfig)
 	require.NoError(t, err)
 	defer api.Close()
-	adminConfig := apiConfig.Copy()
-	adminConfig.ConnConfig.User, adminConfig.ConnConfig.Password = "auth", ""
+	adminConfig, err := pgxpool.ParseConfig(os.Getenv("AUTH_PREPARE_TEST_CATALOG_URL"))
+	require.NoError(t, err)
+	adminConfig.MaxConns, adminConfig.MinConns = 1, 0
 	admin, err := pgxpool.NewWithConfig(ctx, adminConfig)
 	require.NoError(t, err)
 	defer admin.Close()

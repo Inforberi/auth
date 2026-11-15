@@ -44,3 +44,7 @@ func ReadMFAPolicyInTransaction(ctx context.Context, tx pgx.Tx) (domain.MFASnaps
 	}
 	return s, s.Policy.Validate()
 }
+
+func LoadMFAPolicyInTransaction(ctx context.Context, tx pgx.Tx) (domain.MFASnapshot, error) {
+	return scanMFA(tx.QueryRow(ctx, `SELECT `+mfaColumns+` FROM auth.mfa_settings WHERE singleton`))
+}

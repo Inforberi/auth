@@ -76,7 +76,17 @@ func (t *Target) checkInstalledSchema(ctx context.Context, tx pgx.Tx, r domain.P
 			AND (c.relname<>'platform_role_creations' OR permission.name='SELECT')
 			AND (c.relname<>'platform_role_assignments' OR permission.name='SELECT')
 			AND (c.relname<>'platform_auth_policy_updates' OR permission.name='SELECT')
+			AND (c.relname NOT IN ('platform_user_lifecycle','platform_user_creations','platform_management_audit') OR permission.name='SELECT')
 			AND NOT has_table_privilege(role.oid,c.oid,permission.name))
+		AND NOT EXISTS(SELECT 1 FROM (VALUES
+		  ('auth.platform_user_lifecycle',ARRAY['operation_id','project_id','realm_id','actor_id','user_id','action','expected_version','auth_version','email_id']),
+		  ('auth.platform_user_creations',ARRAY['operation_id','project_id','realm_id','actor_id','user_id','fingerprint']),
+		  ('auth.platform_management_audit',ARRAY['actor_id','action','target','previous_value','next_value'])
+		) AS receipt(name, insert_columns)
+		  WHERE has_table_privilege(role.oid,receipt.name,'INSERT,UPDATE,DELETE,TRUNCATE')
+		  OR has_any_column_privilege(role.oid,receipt.name,'UPDATE,INSERT WITH GRANT OPTION')
+		  OR has_column_privilege(role.oid,receipt.name,'created_at','INSERT')
+		  OR EXISTS(SELECT 1 FROM unnest(receipt.insert_columns) col WHERE NOT has_column_privilege(role.oid,receipt.name,col,'INSERT')))
 		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['operation_id','realm_id','actor_id','project_id','binding','request','role_id','role_snapshot','admission_id']) col
 			WHERE NOT has_column_privilege(role.oid,'auth.platform_role_creations',col,'INSERT'))
 		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['operation_id','realm_id','actor_id','project_id','binding','request','admission_id','previous_policy','next_policy','changed']) col

@@ -25,6 +25,7 @@ const docTemplate = `{
                     "Tokens"
                 ],
                 "summary": "Public JWT verification keys",
+                "operationId": "getWellKnownJwksJson",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -46,6 +47,7 @@ const docTemplate = `{
                     "Tokens"
                 ],
                 "summary": "Public JWT verification keys",
+                "operationId": "headWellKnownJwksJson",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -72,6 +74,7 @@ const docTemplate = `{
                     "Administration"
                 ],
                 "summary": "Start administrative password login",
+                "operationId": "postAdminAuthLoginEmail",
                 "parameters": [
                     {
                         "type": "string",
@@ -146,6 +149,7 @@ const docTemplate = `{
                     "Auth settings"
                 ],
                 "summary": "Read authentication settings",
+                "operationId": "getAdminAuthSettings",
                 "parameters": [
                     {
                         "type": "string",
@@ -194,6 +198,7 @@ const docTemplate = `{
                     "Auth settings"
                 ],
                 "summary": "Replace authentication settings",
+                "operationId": "postAdminAuthSettings",
                 "parameters": [
                     {
                         "type": "string",
@@ -255,6 +260,7 @@ const docTemplate = `{
         "/api/v1/admin/auth/settings/credential-lifetimes": {
             "get": {
                 "summary": "Read standalone credential lifetime policy",
+                "operationId": "getAdminAuthSettingsCredentialLifetimes",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -269,6 +275,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "summary": "Change standalone credential lifetime policy",
+                "operationId": "postAdminAuthSettingsCredentialLifetimes",
                 "parameters": [
                     {
                         "description": "Complete policy and current version",
@@ -299,6 +306,7 @@ const docTemplate = `{
         "/api/v1/admin/auth/settings/email-otp": {
             "get": {
                 "summary": "Read standalone email OTP policy",
+                "operationId": "getAdminAuthSettingsEmailOtp",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -313,6 +321,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "summary": "Change standalone email OTP policy",
+                "operationId": "postAdminAuthSettingsEmailOtp",
                 "parameters": [
                     {
                         "description": "Complete policy and current version",
@@ -343,6 +352,7 @@ const docTemplate = `{
         "/api/v1/admin/auth/settings/frontend": {
             "get": {
                 "summary": "Read standalone frontend policy",
+                "operationId": "getAdminAuthSettingsFrontend",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -357,6 +367,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "summary": "Change standalone frontend policy",
+                "operationId": "postAdminAuthSettingsFrontend",
                 "parameters": [
                     {
                         "description": "Complete policy and current version",
@@ -387,6 +398,7 @@ const docTemplate = `{
         "/api/v1/admin/auth/settings/link-lifetimes": {
             "get": {
                 "summary": "Read standalone link lifetime policy",
+                "operationId": "getAdminAuthSettingsLinkLifetimes",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -401,6 +413,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "summary": "Change standalone link lifetime policy",
+                "operationId": "postAdminAuthSettingsLinkLifetimes",
                 "parameters": [
                     {
                         "description": "Complete policy and current version",
@@ -431,6 +444,7 @@ const docTemplate = `{
         "/api/v1/admin/auth/settings/login-budgets": {
             "get": {
                 "summary": "Read standalone login policy",
+                "operationId": "getAdminAuthSettingsLoginBudgets",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -445,6 +459,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "summary": "Change standalone login policy",
+                "operationId": "postAdminAuthSettingsLoginBudgets",
                 "parameters": [
                     {
                         "description": "Complete policy and current version",
@@ -482,6 +497,7 @@ const docTemplate = `{
                     "MFA settings"
                 ],
                 "summary": "Read realm MFA policy",
+                "operationId": "getAdminAuthSettingsMfa",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -521,6 +537,7 @@ const docTemplate = `{
                     "MFA settings"
                 ],
                 "summary": "Change realm MFA policy",
+                "operationId": "postAdminAuthSettingsMfa",
                 "parameters": [
                     {
                         "description": "Complete mode and current version",
@@ -582,6 +599,7 @@ const docTemplate = `{
                     "Auth settings"
                 ],
                 "summary": "Read project email MFA policy",
+                "operationId": "getAdminAuthSettingsMfaEmail",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -639,6 +657,7 @@ const docTemplate = `{
                     "Auth settings"
                 ],
                 "summary": "Update project email MFA policy",
+                "operationId": "postAdminAuthSettingsMfaEmail",
                 "parameters": [
                     {
                         "description": "request",
@@ -706,6 +725,7 @@ const docTemplate = `{
                     "Auth settings"
                 ],
                 "summary": "Read Telegram MFA policy",
+                "operationId": "getAdminAuthSettingsMfaTelegram",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -763,6 +783,7 @@ const docTemplate = `{
                     "Auth settings"
                 ],
                 "summary": "Update Telegram MFA policy",
+                "operationId": "postAdminAuthSettingsMfaTelegram",
                 "parameters": [
                     {
                         "description": "settings",
@@ -830,6 +851,7 @@ const docTemplate = `{
                     "Auth settings"
                 ],
                 "summary": "Read masked Telegram bot settings",
+                "operationId": "getAdminAuthSettingsMfaTelegramBot",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -887,6 +909,7 @@ const docTemplate = `{
                     "Auth settings"
                 ],
                 "summary": "Verify and update Telegram bot secrets",
+                "operationId": "postAdminAuthSettingsMfaTelegramBot",
                 "parameters": [
                     {
                         "description": "settings",
@@ -957,6 +980,7 @@ const docTemplate = `{
                     "Auth settings"
                 ],
                 "summary": "Register the project-owned HTTPS Telegram webhook",
+                "operationId": "postAdminAuthSettingsMfaTelegramWebhook",
                 "parameters": [
                     {
                         "description": "settings",
@@ -1017,6 +1041,7 @@ const docTemplate = `{
         "/api/v1/admin/auth/settings/operation-budgets": {
             "get": {
                 "summary": "Read standalone login policy",
+                "operationId": "getAdminAuthSettingsOperationBudgets",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1031,6 +1056,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "summary": "Change standalone login policy",
+                "operationId": "postAdminAuthSettingsOperationBudgets",
                 "parameters": [
                     {
                         "description": "Complete policy and current version",
@@ -1068,6 +1094,7 @@ const docTemplate = `{
                     "Provider settings"
                 ],
                 "summary": "Read Google or Telegram client settings without the secret",
+                "operationId": "getAdminAuthSettingsProvidersByProvider",
                 "parameters": [
                     {
                         "type": "string",
@@ -1133,6 +1160,7 @@ const docTemplate = `{
                     "Provider settings"
                 ],
                 "summary": "Configure or rotate Google/Telegram client credentials",
+                "operationId": "postAdminAuthSettingsProvidersByProvider",
                 "parameters": [
                     {
                         "type": "string",
@@ -1212,6 +1240,7 @@ const docTemplate = `{
                     "Retention settings"
                 ],
                 "summary": "Read saved data retention periods",
+                "operationId": "getAdminAuthSettingsRetention",
                 "parameters": [
                     {
                         "type": "string",
@@ -1260,6 +1289,7 @@ const docTemplate = `{
                     "Retention settings"
                 ],
                 "summary": "Update data retention periods",
+                "operationId": "postAdminAuthSettingsRetention",
                 "parameters": [
                     {
                         "type": "string",
@@ -1321,6 +1351,7 @@ const docTemplate = `{
         "/api/v1/admin/auth/settings/sessions": {
             "get": {
                 "summary": "Read standalone browser session policy",
+                "operationId": "getAdminAuthSettingsSessions",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1335,6 +1366,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "summary": "Change standalone browser session policy",
+                "operationId": "postAdminAuthSettingsSessions",
                 "parameters": [
                     {
                         "description": "Complete policy and current version",
@@ -1372,6 +1404,7 @@ const docTemplate = `{
                     "SMTP settings"
                 ],
                 "summary": "Read SMTP settings without the password",
+                "operationId": "getAdminAuthSettingsSmtp",
                 "parameters": [
                     {
                         "type": "string",
@@ -1420,6 +1453,7 @@ const docTemplate = `{
                     "SMTP settings"
                 ],
                 "summary": "Replace SMTP settings and optionally rotate the password",
+                "operationId": "postAdminAuthSettingsSmtp",
                 "parameters": [
                     {
                         "type": "string",
@@ -1491,6 +1525,7 @@ const docTemplate = `{
                     "SMTP settings"
                 ],
                 "summary": "Test the saved SMTP connection without sending email",
+                "operationId": "postAdminAuthSettingsSmtpTest",
                 "parameters": [
                     {
                         "type": "string",
@@ -1565,6 +1600,7 @@ const docTemplate = `{
                     "Admin Access"
                 ],
                 "summary": "Read the project's permission catalog",
+                "operationId": "getAdminPermissions",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1603,6 +1639,7 @@ const docTemplate = `{
                     "Admin Access"
                 ],
                 "summary": "List role metadata",
+                "operationId": "getAdminRoles",
                 "parameters": [
                     {
                         "type": "string",
@@ -1663,6 +1700,7 @@ const docTemplate = `{
                     "Admin Access"
                 ],
                 "summary": "Create a custom role",
+                "operationId": "postAdminRoles",
                 "parameters": [
                     {
                         "type": "string",
@@ -1731,6 +1769,7 @@ const docTemplate = `{
                     "Admin Access"
                 ],
                 "summary": "Read a role and its permissions",
+                "operationId": "getAdminRolesById",
                 "parameters": [
                     {
                         "type": "string",
@@ -1791,6 +1830,7 @@ const docTemplate = `{
                     "Admin Access"
                 ],
                 "summary": "Replace a custom role's definition",
+                "operationId": "postAdminRolesById",
                 "parameters": [
                     {
                         "type": "string",
@@ -1872,6 +1912,7 @@ const docTemplate = `{
                     "Admin Users"
                 ],
                 "summary": "List users",
+                "operationId": "getAdminUsers",
                 "parameters": [
                     {
                         "type": "string",
@@ -1955,6 +1996,7 @@ const docTemplate = `{
                     "Admin Users"
                 ],
                 "summary": "Create a pending user, optionally with an email invitation",
+                "operationId": "postAdminUsers",
                 "parameters": [
                     {
                         "type": "string",
@@ -2038,6 +2080,7 @@ const docTemplate = `{
                     "Admin Users"
                 ],
                 "summary": "Create a pending user with a one-time temporary password",
+                "operationId": "postAdminUsersTemporaryPassword",
                 "parameters": [
                     {
                         "type": "string",
@@ -2118,6 +2161,7 @@ const docTemplate = `{
                     "Admin Users"
                 ],
                 "summary": "Read a user card",
+                "operationId": "getAdminUsersById",
                 "parameters": [
                     {
                         "type": "string",
@@ -2184,6 +2228,7 @@ const docTemplate = `{
                     "Admin Users"
                 ],
                 "summary": "Irreversibly delete an account",
+                "operationId": "deleteAdminUsersById",
                 "parameters": [
                     {
                         "type": "string",
@@ -2265,6 +2310,7 @@ const docTemplate = `{
                     "Admin Access"
                 ],
                 "summary": "Read a user's role assignments and permission union",
+                "operationId": "getAdminUsersByIdAccess",
                 "parameters": [
                     {
                         "type": "string",
@@ -2327,6 +2373,7 @@ const docTemplate = `{
                     "Access"
                 ],
                 "summary": "Assign the system administrator role",
+                "operationId": "postAdminUsersByIdAdministrator",
                 "parameters": [
                     {
                         "type": "string",
@@ -2409,6 +2456,7 @@ const docTemplate = `{
                     "Access"
                 ],
                 "summary": "Revoke the system administrator role",
+                "operationId": "deleteAdminUsersByIdAdministrator",
                 "parameters": [
                     {
                         "type": "string",
@@ -2493,6 +2541,7 @@ const docTemplate = `{
                     "Admin Users"
                 ],
                 "summary": "Approve a user's initial email binding",
+                "operationId": "postAdminUsersByIdEmailBinding",
                 "parameters": [
                     {
                         "type": "string",
@@ -2577,6 +2626,7 @@ const docTemplate = `{
                     "Admin Users"
                 ],
                 "summary": "Reissue a pending user's email invitation",
+                "operationId": "postAdminUsersByIdInvitation",
                 "parameters": [
                     {
                         "type": "string",
@@ -2661,6 +2711,7 @@ const docTemplate = `{
                     "Admin Access"
                 ],
                 "summary": "Assign a custom role to a user",
+                "operationId": "postAdminUsersByIdRolesByRoleId",
                 "parameters": [
                     {
                         "type": "string",
@@ -2750,6 +2801,7 @@ const docTemplate = `{
                     "Admin Access"
                 ],
                 "summary": "Revoke a custom role from a user",
+                "operationId": "deleteAdminUsersByIdRolesByRoleId",
                 "parameters": [
                     {
                         "type": "string",
@@ -2841,6 +2893,7 @@ const docTemplate = `{
                     "Admin Users"
                 ],
                 "summary": "Block or unblock a user",
+                "operationId": "postAdminUsersByIdStatus",
                 "parameters": [
                     {
                         "type": "string",
@@ -2925,6 +2978,7 @@ const docTemplate = `{
                     "Admin Users"
                 ],
                 "summary": "Reissue a pending user's temporary password",
+                "operationId": "postAdminUsersByIdTemporaryPassword",
                 "parameters": [
                     {
                         "type": "string",
@@ -3006,6 +3060,7 @@ const docTemplate = `{
                     "Access"
                 ],
                 "summary": "Read my effective permissions",
+                "operationId": "getAuthAccess",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3053,6 +3108,7 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "change password",
+                "operationId": "postAuthChangePassword",
                 "parameters": [
                     {
                         "type": "string",
@@ -3136,6 +3192,7 @@ const docTemplate = `{
                     "Email OTP"
                 ],
                 "summary": "Sign in with a one-time email code",
+                "operationId": "postAuthEmailOtpConfirm",
                 "parameters": [
                     {
                         "type": "string",
@@ -3213,6 +3270,7 @@ const docTemplate = `{
                     "Email OTP"
                 ],
                 "summary": "Request a passwordless email login code",
+                "operationId": "postAuthEmailOtpRequest",
                 "parameters": [
                     {
                         "type": "string",
@@ -3284,6 +3342,7 @@ const docTemplate = `{
                     "Account"
                 ],
                 "summary": "Confirm the owner's initial email binding",
+                "operationId": "postAuthEmailBindingConfirm",
                 "parameters": [
                     {
                         "type": "string",
@@ -3361,6 +3420,7 @@ const docTemplate = `{
                     "Account"
                 ],
                 "summary": "Request a login email change",
+                "operationId": "postAuthEmailChange",
                 "parameters": [
                     {
                         "type": "string",
@@ -3438,6 +3498,7 @@ const docTemplate = `{
                     "Account"
                 ],
                 "summary": "Confirm a login email change",
+                "operationId": "postAuthEmailChangeConfirm",
                 "parameters": [
                     {
                         "type": "string",
@@ -3509,6 +3570,7 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "Recover an account after an unauthorized email change",
+                "operationId": "postAuthEmailChangeRecover",
                 "parameters": [
                     {
                         "type": "string",
@@ -3574,6 +3636,7 @@ const docTemplate = `{
                     "Account"
                 ],
                 "summary": "Report an unauthorized email change",
+                "operationId": "postAuthEmailChangeReport",
                 "parameters": [
                     {
                         "type": "string",
@@ -3639,6 +3702,7 @@ const docTemplate = `{
                     "Account"
                 ],
                 "summary": "Request email verification",
+                "operationId": "postAuthEmailResend",
                 "parameters": [
                     {
                         "type": "string",
@@ -3704,6 +3768,7 @@ const docTemplate = `{
                     "Account"
                 ],
                 "summary": "Confirm email ownership",
+                "operationId": "postAuthEmailVerify",
                 "parameters": [
                     {
                         "type": "string",
@@ -3769,6 +3834,7 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "Request password recovery",
+                "operationId": "postAuthForgotPassword",
                 "parameters": [
                     {
                         "type": "string",
@@ -3831,6 +3897,7 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "Complete Google OIDC login",
+                "operationId": "getAuthGoogleCallback",
                 "parameters": [
                     {
                         "type": "string",
@@ -3851,13 +3918,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_auth_methods_google_transport_http.CallbackResponse"
+                            "$ref": "#/definitions/github_com_Inforberi_financial-intelligence_internal_auth_methods_google_transport_http.CallbackResponse"
                         }
                     },
                     "202": {
                         "description": "MFA required; browser binding cookie, no session issued",
                         "schema": {
-                            "$ref": "#/definitions/internal_auth_methods_google_transport_http.MFAChallengeResponse"
+                            "$ref": "#/definitions/github_com_Inforberi_financial-intelligence_internal_auth_methods_google_transport_http.MFAChallengeResponse"
                         }
                     },
                     "400": {
@@ -3909,6 +3976,7 @@ const docTemplate = `{
                     "Account"
                 ],
                 "summary": "Start linking Google to the current account",
+                "operationId": "postAuthGoogleLink",
                 "parameters": [
                     {
                         "type": "string",
@@ -3922,7 +3990,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_auth_methods_google_transport_http.StartResponse"
+                            "$ref": "#/definitions/github_com_Inforberi_financial-intelligence_internal_auth_methods_google_transport_http.StartResponse"
                         }
                     },
                     "401": {
@@ -3963,6 +4031,7 @@ const docTemplate = `{
                     "Account"
                 ],
                 "summary": "Unlink Google from the current account",
+                "operationId": "deleteAuthGoogleLink",
                 "parameters": [
                     {
                         "type": "string",
@@ -4031,6 +4100,7 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "Start Google OIDC login",
+                "operationId": "postAuthGoogleStart",
                 "parameters": [
                     {
                         "type": "string",
@@ -4044,7 +4114,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_auth_methods_google_transport_http.StartResponse"
+                            "$ref": "#/definitions/github_com_Inforberi_financial-intelligence_internal_auth_methods_google_transport_http.StartResponse"
                         }
                     },
                     "403": {
@@ -4087,6 +4157,7 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "Activate an invited password account",
+                "operationId": "postAuthInvitationsActivate",
                 "parameters": [
                     {
                         "type": "string",
@@ -4152,6 +4223,7 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "login by email",
+                "operationId": "postAuthLoginEmail",
                 "parameters": [
                     {
                         "type": "string",
@@ -4224,11 +4296,17 @@ const docTemplate = `{
         },
         "/api/v1/auth/logout": {
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Missing or invalid sessions return 401 and clear the stale cookie. Dependency failures do not clear it. Requires an allowed Origin.",
                 "tags": [
                     "Session"
                 ],
                 "summary": "Revoke current session and clear browser cookie",
+                "operationId": "postAuthLogout",
                 "parameters": [
                     {
                         "type": "string",
@@ -4271,11 +4349,17 @@ const docTemplate = `{
         },
         "/api/v1/auth/logout-all": {
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Requires an allowed Origin. Auth version increment prevents stale in-flight issuance.",
                 "tags": [
                     "Session"
                 ],
                 "summary": "Revoke all own sessions including current and clear browser cookie",
+                "operationId": "postAuthLogoutAll",
                 "parameters": [
                     {
                         "type": "string",
@@ -4312,6 +4396,11 @@ const docTemplate = `{
         },
         "/api/v1/auth/me": {
             "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Requires __Host-session cookie. Returns IDs only; profile and contact management are separate features.",
                 "produces": [
                     "application/json"
@@ -4320,6 +4409,7 @@ const docTemplate = `{
                     "Session"
                 ],
                 "summary": "Get authenticated user and current session IDs",
+                "operationId": "getAuthMe",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -4352,6 +4442,7 @@ const docTemplate = `{
                     "Auth settings"
                 ],
                 "summary": "Read public authentication methods",
+                "operationId": "getAuthMethods",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -4384,6 +4475,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Read personal email MFA status",
+                "operationId": "getAuthMfaEmail",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -4438,6 +4530,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Enable the proved email MFA channel",
+                "operationId": "postAuthMfaEmail",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -4492,6 +4585,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Disable personal email MFA",
+                "operationId": "deleteAuthMfaEmail",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -4551,6 +4645,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Start password login with an explicitly selected email factor",
+                "operationId": "postAuthMfaEmailLogin",
                 "parameters": [
                     {
                         "description": "request",
@@ -4621,6 +4716,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Complete browser email second-factor login",
+                "operationId": "postAuthMfaEmailLoginComplete",
                 "parameters": [
                     {
                         "description": "request",
@@ -4691,6 +4787,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Prove possession of an email MFA channel",
+                "operationId": "postAuthMfaEmailPreparation",
                 "parameters": [
                     {
                         "description": "request",
@@ -4761,6 +4858,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Confirm email MFA channel possession",
+                "operationId": "postAuthMfaEmailPreparationConfirm",
                 "parameters": [
                     {
                         "description": "request",
@@ -4831,6 +4929,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Complete login with a second factor",
+                "operationId": "postAuthMfaLoginComplete",
                 "parameters": [
                     {
                         "type": "string",
@@ -4902,6 +5001,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Start mandatory TOTP enrollment during login",
+                "operationId": "postAuthMfaLoginEnrollment",
                 "parameters": [
                     {
                         "type": "string",
@@ -4973,6 +5073,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Confirm mandatory TOTP enrollment during login",
+                "operationId": "postAuthMfaLoginEnrollmentConfirm",
                 "parameters": [
                     {
                         "type": "string",
@@ -5040,6 +5141,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Read the user's preferred MFA method",
+                "operationId": "getAuthMfaPreference",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -5067,6 +5169,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Select an enrolled, allowed MFA method",
+                "operationId": "postAuthMfaPreference",
                 "parameters": [
                     {
                         "description": "version and method",
@@ -5122,6 +5225,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Regenerate recovery codes",
+                "operationId": "postAuthMfaRecoveryCodesRegenerate",
                 "parameters": [
                     {
                         "type": "string",
@@ -5178,6 +5282,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Complete operator-assisted MFA replacement",
+                "operationId": "postAuthMfaRecoveryComplete",
                 "parameters": [
                     {
                         "type": "string",
@@ -5249,6 +5354,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Explicitly request MFA recovery after password verification",
+                "operationId": "postAuthMfaRecoveryLogin",
                 "parameters": [
                     {
                         "description": "primary credentials",
@@ -5301,6 +5407,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Request operator-assisted MFA replacement",
+                "operationId": "postAuthMfaRecoveryStart",
                 "parameters": [
                     {
                         "type": "string",
@@ -5369,6 +5476,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Read own MFA status and policy",
+                "operationId": "getAuthMfaStatus",
                 "parameters": [
                     {
                         "type": "string",
@@ -5419,6 +5527,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Confirm a fresh second factor",
+                "operationId": "postAuthMfaStepUp",
                 "parameters": [
                     {
                         "type": "string",
@@ -5486,6 +5595,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Read the current user's Telegram factor",
+                "operationId": "getAuthMfaTelegram",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -5507,6 +5617,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Enable or replace the confirmed Telegram factor",
+                "operationId": "postAuthMfaTelegram",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -5546,6 +5657,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Disable the Telegram factor",
+                "operationId": "deleteAuthMfaTelegram",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -5583,6 +5695,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Begin private Telegram factor preparation",
+                "operationId": "postAuthMfaTelegramPreparation",
                 "responses": {
                     "202": {
                         "description": "Accepted",
@@ -5623,6 +5736,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Confirm Telegram possession in the original browser",
+                "operationId": "postAuthMfaTelegramPreparationConfirm",
                 "parameters": [
                     {
                         "description": "binding and code",
@@ -5666,6 +5780,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Disable TOTP for the current account",
+                "operationId": "deleteAuthMfaTotp",
                 "parameters": [
                     {
                         "type": "string",
@@ -5719,6 +5834,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Start TOTP enrollment",
+                "operationId": "postAuthMfaTotpEnrollment",
                 "parameters": [
                     {
                         "type": "string",
@@ -5781,6 +5897,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Confirm TOTP enrollment",
+                "operationId": "postAuthMfaTotpEnrollmentConfirm",
                 "parameters": [
                     {
                         "type": "string",
@@ -5849,6 +5966,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Start protected TOTP replacement",
+                "operationId": "postAuthMfaTotpReplacement",
                 "parameters": [
                     {
                         "type": "string",
@@ -5911,6 +6029,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Confirm protected TOTP replacement",
+                "operationId": "postAuthMfaTotpReplacementConfirm",
                 "parameters": [
                     {
                         "type": "string",
@@ -5982,6 +6101,7 @@ const docTemplate = `{
                     "Native tokens"
                 ],
                 "summary": "Sign in with a native email code",
+                "operationId": "postAuthNativeEmailConfirm",
                 "parameters": [
                     {
                         "description": "Native binding and email code",
@@ -6058,6 +6178,7 @@ const docTemplate = `{
                     "Native tokens"
                 ],
                 "summary": "Request a native email login code",
+                "operationId": "postAuthNativeEmailRequest",
                 "parameters": [
                     {
                         "description": "Email and resource scope",
@@ -6122,6 +6243,7 @@ const docTemplate = `{
                     "Native tokens"
                 ],
                 "summary": "Complete native MFA login",
+                "operationId": "postAuthNativeMfaComplete",
                 "parameters": [
                     {
                         "description": "Native challenge, binding and factor",
@@ -6192,6 +6314,7 @@ const docTemplate = `{
                     "Native tokens"
                 ],
                 "summary": "Complete a native email second-factor challenge",
+                "operationId": "postAuthNativeMfaEmailComplete",
                 "parameters": [
                     {
                         "description": "Challenge, binding and email code",
@@ -6256,6 +6379,7 @@ const docTemplate = `{
                     "Native tokens"
                 ],
                 "summary": "Sign in with password and an explicitly selected email factor",
+                "operationId": "postAuthNativeMfaEmailLogin",
                 "parameters": [
                     {
                         "description": "Password and resource scope",
@@ -6320,6 +6444,7 @@ const docTemplate = `{
                     "Native tokens"
                 ],
                 "summary": "Start required native TOTP enrollment",
+                "operationId": "postAuthNativeMfaEnrollment",
                 "parameters": [
                     {
                         "description": "Native enrollment-required challenge",
@@ -6390,6 +6515,7 @@ const docTemplate = `{
                     "Native tokens"
                 ],
                 "summary": "Confirm required native TOTP enrollment",
+                "operationId": "postAuthNativeMfaEnrollmentConfirm",
                 "parameters": [
                     {
                         "description": "Primary challenge, native binding, enrollment token and first TOTP",
@@ -6460,6 +6586,7 @@ const docTemplate = `{
                     "Native tokens"
                 ],
                 "summary": "Sign in to the native API with a password",
+                "operationId": "postAuthNativePasswordLogin",
                 "parameters": [
                     {
                         "description": "Credentials and resource scope",
@@ -6536,6 +6663,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Confirm an email proof for MFA management",
+                "operationId": "postAuthReauthenticateEmailConfirm",
                 "parameters": [
                     {
                         "type": "string",
@@ -6607,6 +6735,7 @@ const docTemplate = `{
                     "MFA"
                 ],
                 "summary": "Request an email proof for MFA management",
+                "operationId": "postAuthReauthenticateEmailRequest",
                 "parameters": [
                     {
                         "type": "string",
@@ -6678,6 +6807,7 @@ const docTemplate = `{
                     "Session"
                 ],
                 "summary": "Confirm current password for sensitive actions",
+                "operationId": "postAuthReauthenticatePassword",
                 "parameters": [
                     {
                         "type": "string",
@@ -6749,6 +6879,7 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "Register by email",
+                "operationId": "postAuthRegisterEmail",
                 "parameters": [
                     {
                         "type": "string",
@@ -6832,6 +6963,7 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "Reset password",
+                "operationId": "postAuthResetPassword",
                 "parameters": [
                     {
                         "type": "string",
@@ -6886,6 +7018,11 @@ const docTemplate = `{
         },
         "/api/v1/auth/session/activity": {
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Call only after user interaction, never from polling or timers alone. Administrative sessions use a stored bounded idle window; ordinary sessions are unchanged. Does not renew primary, password or MFA proof or the absolute deadline. No body or client timestamps.",
                 "produces": [
                     "application/json"
@@ -6894,6 +7031,7 @@ const docTemplate = `{
                     "Sessions"
                 ],
                 "summary": "Report interactive session activity",
+                "operationId": "postAuthSessionActivity",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -6924,11 +7062,17 @@ const docTemplate = `{
         },
         "/api/v1/auth/session/rotate": {
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Requires an allowed Origin and the current session cookie. Replaces the token once without extending deadlines or refreshing authentication. Concurrent rotations have one winner; serialize browser requests around rotation. A lost successful response requires a new login. No old-token grace period.",
                 "tags": [
                     "Session"
                 ],
                 "summary": "Rotate the current session token",
+                "operationId": "postAuthSessionRotate",
                 "parameters": [
                     {
                         "type": "string",
@@ -6965,6 +7109,11 @@ const docTemplate = `{
         },
         "/api/v1/auth/sessions": {
             "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Up to 50 items ordered by creation time and public UUID descending; pass nextCursor as before. No session secrets are returned.",
                 "produces": [
                     "application/json"
@@ -6973,6 +7122,7 @@ const docTemplate = `{
                     "Session"
                 ],
                 "summary": "List own active sessions",
+                "operationId": "getAuthSessions",
                 "parameters": [
                     {
                         "type": "string",
@@ -7011,11 +7161,17 @@ const docTemplate = `{
         },
         "/api/v1/auth/sessions/{id}": {
             "delete": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Foreign, unknown and inactive sessions share 404. Revoking current session also clears the cookie. Requires an allowed Origin.",
                 "tags": [
                     "Session"
                 ],
                 "summary": "Revoke one own active session",
+                "operationId": "deleteAuthSessionsById",
                 "parameters": [
                     {
                         "type": "string",
@@ -7079,6 +7235,7 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "Complete Telegram OIDC login",
+                "operationId": "getAuthTelegramCallback",
                 "parameters": [
                     {
                         "type": "string",
@@ -7105,7 +7262,7 @@ const docTemplate = `{
                     "202": {
                         "description": "MFA required; browser binding cookie, no session issued",
                         "schema": {
-                            "$ref": "#/definitions/internal_auth_methods_telegram_transport_http.MFAChallengeResponse"
+                            "$ref": "#/definitions/github_com_Inforberi_financial-intelligence_internal_auth_methods_telegram_transport_http.MFAChallengeResponse"
                         }
                     },
                     "400": {
@@ -7157,6 +7314,7 @@ const docTemplate = `{
                     "Account"
                 ],
                 "summary": "Start linking Telegram to the current account",
+                "operationId": "postAuthTelegramLink",
                 "parameters": [
                     {
                         "type": "string",
@@ -7170,7 +7328,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_auth_methods_telegram_transport_http.StartResponse"
+                            "$ref": "#/definitions/github_com_Inforberi_financial-intelligence_internal_auth_methods_telegram_transport_http.StartResponse"
                         }
                     },
                     "401": {
@@ -7211,6 +7369,7 @@ const docTemplate = `{
                     "Account"
                 ],
                 "summary": "Unlink Telegram from the current account",
+                "operationId": "deleteAuthTelegramLink",
                 "parameters": [
                     {
                         "type": "string",
@@ -7279,6 +7438,7 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "Start Telegram OIDC login",
+                "operationId": "postAuthTelegramStart",
                 "parameters": [
                     {
                         "type": "string",
@@ -7335,6 +7495,7 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "Set a permanent password after temporary login",
+                "operationId": "postAuthTemporaryPasswordComplete",
                 "parameters": [
                     {
                         "type": "string",
@@ -7400,6 +7561,7 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "Begin mandatory password setup",
+                "operationId": "postAuthTemporaryPasswordLogin",
                 "parameters": [
                     {
                         "type": "string",
@@ -7454,6 +7616,11 @@ const docTemplate = `{
         },
         "/api/v1/auth/token/exchange": {
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Requires exact allowed Origin and a live completed cookie session. Does not refresh the session or MFA. Scope is restricted by the configured audience and current SQL grants. Strict tokens still require an online authority decision at the consumer.",
                 "consumes": [
                     "application/json"
@@ -7465,6 +7632,7 @@ const docTemplate = `{
                     "Tokens"
                 ],
                 "summary": "Issue an access JWT from the current cookie session",
+                "operationId": "postAuthTokenExchange",
                 "parameters": [
                     {
                         "type": "string",
@@ -7533,6 +7701,7 @@ const docTemplate = `{
                     "Native tokens"
                 ],
                 "summary": "Revoke the native refresh family and its API session",
+                "operationId": "postAuthTokenLogout",
                 "parameters": [
                     {
                         "description": "Opaque refresh credential",
@@ -7594,6 +7763,7 @@ const docTemplate = `{
                     "Native tokens"
                 ],
                 "summary": "Rotate native refresh and issue an access token",
+                "operationId": "postAuthTokenRefresh",
                 "parameters": [
                     {
                         "description": "Current opaque refresh credential",
@@ -7658,6 +7828,7 @@ const docTemplate = `{
                     "Dev"
                 ],
                 "summary": "Send test email",
+                "operationId": "postDevSendMail",
                 "parameters": [
                     {
                         "type": "string",
@@ -7706,6 +7877,11 @@ const docTemplate = `{
         },
         "/api/v1/internal/auth/token/introspect": {
             "post": {
+                "security": [
+                    {
+                        "ServiceBasic": []
+                    }
+                ],
                 "description": "Service-to-service HTTPS only. Dedicated per-consumer HTTP Basic credentials, not user Bearer/cookies. Invalid/inactive tokens return only active:false. Does not renew sessions. Custom protocol, not RFC 7662.",
                 "consumes": [
                     "application/json"
@@ -7717,14 +7893,8 @@ const docTemplate = `{
                     "Tokens"
                 ],
                 "summary": "Check an access JWT against current session authority",
+                "operationId": "postInternalAuthTokenIntrospect",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Basic service client ID and secret",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "Full access JWT",
                         "name": "body",
@@ -7775,8 +7945,74 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/platform/operators": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Operators"
+                ],
+                "summary": "List platform operators",
+                "operationId": "getPlatformOperators",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cursor from the previous page",
+                        "name": "after",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/operator_http.OperatorPage"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Operators"
+                ],
+                "summary": "Invite an operator, replace project permissions or revoke access",
+                "operationId": "postPlatformOperators",
+                "parameters": [
+                    {
+                        "description": "Owner-only command",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/operator_http.OperatorCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/operator_http.OperatorReceipt"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/platform/projects": {
             "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Platform deployment only. Requires its current browser session and platform.projects.read; a project role or JWT is not platform authority. No session refresh, fresh-proof renewal or storage probes. Newest createdAt/UUID first, exclusive opaque cursor bound to phase filter. No credentials, binding references, database names, offset or total count.",
                 "produces": [
                     "application/json"
@@ -7785,6 +8021,7 @@ const docTemplate = `{
                     "Platform Projects"
                 ],
                 "summary": "List independent projects",
+                "operationId": "getPlatformProjects",
                 "parameters": [
                     {
                         "type": "string",
@@ -7858,6 +8095,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Platform deployment only. Requires current platform.projects.manage and fresh password/MFA. Persists enabled/pending metadata plus an atomic creation audit/receipt; does not create a database, keys, administrator or running project. Origin is generated from slug and deployment-owned auth domain. Storage target is deployment-owned; arbitrary origin/DSN/credentials are not accepted. Retry the same operation UUID/payload after a lost response. Replay checks current authority and returns the original creation snapshot, not later lifecycle state.",
                 "consumes": [
                     "application/json"
@@ -7869,6 +8111,7 @@ const docTemplate = `{
                     "Platform Projects"
                 ],
                 "summary": "Create an independent project intent",
+                "operationId": "postPlatformProjects",
                 "parameters": [
                     {
                         "type": "string",
@@ -7953,6 +8196,11 @@ const docTemplate = `{
         },
         "/api/v1/platform/projects/{id}": {
             "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Platform deployment only. Requires its current browser session and platform.projects.read. Returns stored lifecycle metadata, not storage readiness or credentials. Pending, failed and suspended projects remain visible to an authorized operator. Does not open the project DB, renew a session or expose storage target/database/credential references.",
                 "produces": [
                     "application/json"
@@ -7961,6 +8209,7 @@ const docTemplate = `{
                     "Platform Projects"
                 ],
                 "summary": "Read an independent project",
+                "operationId": "getPlatformProjectsById",
                 "parameters": [
                     {
                         "type": "string",
@@ -8024,6 +8273,11 @@ const docTemplate = `{
         },
         "/api/v1/platform/projects/{id}/auth/settings": {
             "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Requires current platform.project_settings.manage and fresh password/MFA before read and disclosure. Exact ready/enabled target version/generation. availableMethods/tokenProfiles/readiness are target-specific trusted assembly observations, independent of stored enable switches; dependencies are rechecked when saving policy. Password verification has a separate readiness prerequisite. No secrets or external delivery guarantee; HTTP-disabled deployment reports closed capabilities. GET never initializes settings or renews sessions.",
                 "produces": [
                     "application/json"
@@ -8032,6 +8286,7 @@ const docTemplate = `{
                     "Platform Auth settings"
                 ],
                 "summary": "Read a project's public authentication policy",
+                "operationId": "getPlatformProjectsByIdAuthSettings",
                 "parameters": [
                     {
                         "type": "string",
@@ -8107,6 +8362,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Requires current platform.project_settings.manage and fresh password/MFA. Full policy including explicit false values. Project version/generation and policy version prevent stale writes. Current authority commits an exact admission for at most 3 seconds; already admitted work may finish after a later revoke. Project change and platform-attributed receipt/audit commit together, with no fake local user. No-op/replay do not rewrite settings. Methods, stored provider credentials, required delivery and token adapters must be ready; deployment cannot be supplied in the request. Current production bridge rejects enabling unassembled methods. Existing sessions/JWT are not automatically revoked. 202 means unknown commit, not rollback; retry the same operation/payload or read its result. No query parameters. Body at most 8 KiB.",
                 "consumes": [
                     "application/json"
@@ -8118,6 +8378,7 @@ const docTemplate = `{
                     "Platform Auth settings"
                 ],
                 "summary": "Replace a project's public authentication policy",
+                "operationId": "postPlatformProjectsByIdAuthSettings",
                 "parameters": [
                     {
                         "type": "string",
@@ -8230,8 +8491,595 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/platform/projects/{id}/auth/settings/credential-lifetimes": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Read project credential lifetime policy",
+                "operationId": "getPlatformProjectsByIdAuthSettingsCredentialLifetimes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/postgres.CredentialLifetimeSettings"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Update project lifetimes for new authentication credentials",
+                "operationId": "postPlatformProjectsByIdAuthSettingsCredentialLifetimes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Complete policy and current policy version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.ProjectCredentialLifetimesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/postgres.CredentialLifetimeSettings"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/auth/settings/frontend": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Read project frontend policy",
+                "operationId": "getPlatformProjectsByIdAuthSettingsFrontend",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/postgres.FrontendSettings"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Update project frontend origins and action URLs",
+                "operationId": "postPlatformProjectsByIdAuthSettingsFrontend",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Complete policy and current policy version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.ProjectFrontendsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/postgres.FrontendSettings"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/auth/settings/link-lifetimes": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Read project link lifetime policy",
+                "operationId": "getPlatformProjectsByIdAuthSettingsLinkLifetimes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/postgres.LinkLifetimeSettings"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Update project lifetimes for new verification and reset links",
+                "operationId": "postPlatformProjectsByIdAuthSettingsLinkLifetimes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Complete policy and current policy version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.ProjectLinkLifetimesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/postgres.LinkLifetimeSettings"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/auth/settings/login-budgets": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Read project login budget policy",
+                "operationId": "getPlatformProjectsByIdAuthSettingsLoginBudgets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/postgres.LoginBudgetSettings"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Update project password login, registration and reset budgets",
+                "operationId": "postPlatformProjectsByIdAuthSettingsLoginBudgets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Complete policy and current policy version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.ProjectLoginBudgetsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/postgres.LoginBudgetSettings"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/auth/settings/mfa": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Read project MFA policy",
+                "operationId": "getPlatformProjectsByIdAuthSettingsMfa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.MFASnapshot"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Update project MFA policy",
+                "operationId": "postPlatformProjectsByIdAuthSettingsMfa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "MFA mode and current policy version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.ProjectMFARequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.MFASnapshot"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/auth/settings/operation-budgets": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Read project operation budget policy",
+                "operationId": "getPlatformProjectsByIdAuthSettingsOperationBudgets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/postgres.OperationBudgetSettings"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Update project authentication operation budgets",
+                "operationId": "postPlatformProjectsByIdAuthSettingsOperationBudgets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Complete policy and current policy version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.ProjectOperationBudgetsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/postgres.OperationBudgetSettings"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/platform/projects/{id}/auth/settings/operations/{operationId}": {
             "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Requires current platform.project_settings.manage and fresh password/MFA. Exact project/caller/operation scope is checked before opening a project connection; current binding and authority are checked again before disclosure. Reads the immutable project receipt and verifies its original durable admission. status=unknown means no committed receipt was found, not rollback. Project must be online/ready with the original binding/version; no offline catalog completion cache. Never re-executes a mutation or creates an admission. Returned policy is historical evidence, not the current policy or current access.",
                 "produces": [
                     "application/json"
@@ -8240,6 +9088,7 @@ const docTemplate = `{
                     "Platform Auth settings"
                 ],
                 "summary": "Read the caller's authentication-policy operation result",
+                "operationId": "getPlatformProjectsByIdAuthSettingsOperationsByOperationId",
                 "parameters": [
                     {
                         "type": "string",
@@ -8326,8 +9175,820 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/platform/projects/{id}/auth/settings/providers/{provider}": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Read project login provider settings",
+                "operationId": "getPlatformProjectsByIdAuthSettingsProvidersByProvider",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "google or telegram",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ProviderSnapshot"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Update project login provider settings",
+                "operationId": "postPlatformProjectsByIdAuthSettingsProvidersByProvider",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "google or telegram",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Client ID and optional replacement secret",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.ProjectProviderRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ProviderSnapshot"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/auth/settings/retention": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Read project data retention settings",
+                "operationId": "getPlatformProjectsByIdAuthSettingsRetention",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.RetentionSnapshot"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Update project data retention settings",
+                "operationId": "postPlatformProjectsByIdAuthSettingsRetention",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Retention policy, current version and shortening confirmation",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.ProjectRetentionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.RetentionSnapshot"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/auth/settings/sessions": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Read project browser session policy",
+                "operationId": "getPlatformProjectsByIdAuthSettingsSessions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/postgres.BrowserSessionSettings"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Update project policy for new browser sessions",
+                "operationId": "postPlatformProjectsByIdAuthSettingsSessions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Complete policy and current policy version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.ProjectSessionsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/postgres.BrowserSessionSettings"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/auth/settings/smtp": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Read project SMTP settings",
+                "operationId": "getPlatformProjectsByIdAuthSettingsSmtp",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.SMTPSnapshot"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Update project SMTP settings",
+                "operationId": "postPlatformProjectsByIdAuthSettingsSmtp",
+                "parameters": [
+                    {
+                        "description": "Configuration and optional replacement password",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.ProjectSMTPRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.SMTPSnapshot"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/auth/settings/telegram-bot": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Read project Telegram bot settings",
+                "operationId": "getPlatformProjectsByIdAuthSettingsTelegramBot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.TelegramBotSnapshot"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Replace the project Telegram bot token or rotate its webhook secret",
+                "operationId": "postPlatformProjectsByIdAuthSettingsTelegramBot",
+                "parameters": [
+                    {
+                        "description": "Expected version and credential change",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.ProjectTelegramBotRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.TelegramBotSnapshot"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/auth/settings/telegram-bot/webhook": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Requires fresh platform authentication and settings permission. Uses the registered project origin and stored credentials.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Activate the Telegram webhook for a project",
+                "operationId": "postPlatformProjectsByIdAuthSettingsTelegramBotWebhook",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Current Telegram bot settings version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.ProjectWebhookRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.TelegramBotSnapshot"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/deletion": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Confirm physical deletion of a project",
+                "operationId": "postPlatformProjectsByIdDeletion",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Exact project ID, versions and explicit data loss confirmation",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.DeletionConfirmation"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/domain.DeletionOperation"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/deletion-preview": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Check whether the selected project has users before deletion",
+                "operationId": "getPlatformProjectsByIdDeletionPreview",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/postgres.DeletionPreview"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/deletion/{operationId}": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Read a confirmed project deletion",
+                "operationId": "getPlatformProjectsByIdDeletionByOperationId",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Operation UUID",
+                        "name": "operationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.DeletionOperation"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/name": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Change the display name of a project",
+                "operationId": "postPlatformProjectsByIdName",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Operation UUID, project version, display name and reason",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.RenameProjectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.RenameProjectResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/preparation": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Request project database preparation",
+                "operationId": "postPlatformProjectsByIdPreparation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Operation UUID and project versions",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.PreparationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PreparationOperation"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/preparation/{operationId}": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Projects"
+                ],
+                "summary": "Read project database preparation result",
+                "operationId": "getPlatformProjectsByIdPreparationByOperationId",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Operation UUID",
+                        "name": "operationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PreparationOperation"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/platform/projects/{id}/resume": {
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Platform deployment only. Requires current platform.projects.manage and fresh password/MFA proofs. Restores desired state without re-provisioning an already prepared database. Returns the committed receipt, not a fresh project card. Pending or failed preparation does not become ready.",
                 "consumes": [
                     "application/json"
@@ -8339,6 +10000,7 @@ const docTemplate = `{
                     "Platform Projects"
                 ],
                 "summary": "Resume an independent project",
+                "operationId": "postPlatformProjectsByIdResume",
                 "parameters": [
                     {
                         "type": "string",
@@ -8424,6 +10086,11 @@ const docTemplate = `{
         },
         "/api/v1/platform/projects/{id}/retry": {
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Platform deployment only. Requires current platform.projects.manage and fresh password/MFA proofs. Changes enabled/failed to enabled/pending and records one audit/receipt. Does not create a database in the HTTP request or start an executor. A suspended project must be resumed first.",
                 "consumes": [
                     "application/json"
@@ -8435,6 +10102,7 @@ const docTemplate = `{
                     "Platform Projects"
                 ],
                 "summary": "Retry failed project preparation",
+                "operationId": "postPlatformProjectsByIdRetry",
                 "parameters": [
                     {
                         "type": "string",
@@ -8520,6 +10188,11 @@ const docTemplate = `{
         },
         "/api/v1/platform/projects/{id}/role-operations/{operationId}": {
             "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Requires current platform.projects.read and fresh password/MFA. Exact project/operation/caller scope. Foreign project, unknown UUID and another caller's operation share not-found. committed=false means unknown, not rollback. This GET reads catalog evidence only and never opens a project connection. An existing result remains readable after write permission revoke or project suspension.",
                 "produces": [
                     "application/json"
@@ -8528,6 +10201,7 @@ const docTemplate = `{
                     "Platform Roles"
                 ],
                 "summary": "Read the caller's project role operation",
+                "operationId": "getPlatformProjectsByIdRoleOperationsByOperationId",
                 "parameters": [
                     {
                         "type": "string",
@@ -8604,6 +10278,11 @@ const docTemplate = `{
         },
         "/api/v1/platform/projects/{id}/role-operations/{operationId}/reconcile": {
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Empty body. Requires current platform.projects.read and fresh password/MFA before recovery and before disclosure. Checks project/operation/caller scope before borrowing any project connection. Reads the original project receipt on the exact trusted runtime; records completion evidence only, never retries role mutation or creates an admission. Missing receipt remains unknown. Cold suspended/stale target may be unavailable; there is no fallback to another DB.",
                 "produces": [
                     "application/json"
@@ -8612,6 +10291,7 @@ const docTemplate = `{
                     "Platform Roles"
                 ],
                 "summary": "Recover the caller's project role operation result",
+                "operationId": "postPlatformProjectsByIdRoleOperationsByOperationIdReconcile",
                 "parameters": [
                     {
                         "type": "string",
@@ -8689,6 +10369,11 @@ const docTemplate = `{
         },
         "/api/v1/platform/projects/{id}/roles": {
             "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Requires current platform.project_access.manage and fresh password/MFA, checked before the project read and again before disclosure. Exact enabled/ready target and version/generation; read-only project snapshot. Exclusive key pagination, no total count, offset or per-row permission queries. Includes system-role metadata; assignments to system roles remain forbidden. Does not renew sessions or create operation receipts. Get permissions from the role detail endpoint.",
                 "produces": [
                     "application/json"
@@ -8697,6 +10382,7 @@ const docTemplate = `{
                     "Platform Roles"
                 ],
                 "summary": "List current project roles from the platform",
+                "operationId": "getPlatformProjectsByIdRoles",
                 "parameters": [
                     {
                         "type": "string",
@@ -8785,6 +10471,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Runtime-enabled platform only. Requires current platform.project_access.manage and fresh password/MFA. Exact project version/generation; immutable operation UUID/payload. Target and actor are server-owned. A 202 unknown result may have committed: read/reconcile the same operation, never infer rollback. Known project commit can return catalogRecorded=false. No assignment or project identity is created. Project MFA capability is not yet assembled: mfaRequired=true fails closed with mfa_not_ready. Permission catalog uses deployment-owned ACCESS_CATALOG_FILE.",
                 "consumes": [
                     "application/json"
@@ -8796,6 +10487,7 @@ const docTemplate = `{
                     "Platform Roles"
                 ],
                 "summary": "Create a project role as a platform operator",
+                "operationId": "postPlatformProjectsByIdRoles",
                 "parameters": [
                     {
                         "type": "string",
@@ -8899,6 +10591,11 @@ const docTemplate = `{
         },
         "/api/v1/platform/projects/{id}/roles/{roleId}": {
             "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Requires current platform.project_access.manage and fresh password/MFA before read and before disclosure. Exact enabled/ready project binding, version/generation and role UUID. Role and permissions come from one read-only repeatable-read project snapshot. No project identity impersonation, mutations, admissions or session renewal. A foreign or unknown role UUID is not found.",
                 "produces": [
                     "application/json"
@@ -8907,6 +10604,7 @@ const docTemplate = `{
                     "Platform Roles"
                 ],
                 "summary": "Read a current project role with permissions",
+                "operationId": "getPlatformProjectsByIdRolesByRoleId",
                 "parameters": [
                     {
                         "type": "string",
@@ -8993,10 +10691,74 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "put": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Roles"
+                ],
+                "summary": "Replace a project role definition",
+                "operationId": "putPlatformProjectsByIdRolesByRoleId",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role UUID",
+                        "name": "roleId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Role definition and current role version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.EditRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.PlatformRoleResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/platform/projects/{id}/suspend": {
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Platform deployment only. Requires current platform.projects.manage and fresh password/MFA proofs. Stores a suspension decision and atomic audit, without deleting storage or sessions. Same committed operation and payload returns its original receipt only after current authority is checked again. Runtime enforcement arrives with MP4; this endpoint alone does not stop an external running service.",
                 "consumes": [
                     "application/json"
@@ -9008,6 +10770,7 @@ const docTemplate = `{
                     "Platform Projects"
                 ],
                 "summary": "Suspend an independent project",
+                "operationId": "postPlatformProjectsByIdSuspend",
                 "parameters": [
                     {
                         "type": "string",
@@ -9093,6 +10856,11 @@ const docTemplate = `{
         },
         "/api/v1/platform/projects/{id}/users": {
             "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Requires current platform.project_users.manage and fresh password/MFA before read and before disclosure. Exact ready/enabled project binding and version/generation. Read-only snapshot, nondeleted users only, exact normalized email/status filters, exclusive createdAt/UUID cursor. No offset, total count, project session, admission or session renewal. Returns no roles or credential secrets.",
                 "produces": [
                     "application/json"
@@ -9101,6 +10869,7 @@ const docTemplate = `{
                     "Platform Users"
                 ],
                 "summary": "List users of an independent project from the platform",
+                "operationId": "getPlatformProjectsByIdUsers",
                 "parameters": [
                     {
                         "type": "string",
@@ -9204,10 +10973,80 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Accepts at most one of invitationEmail and temporaryPasswordEmail. A generated temporary password is returned once on first commit and must not be logged or cached. It requires password replacement and does not verify the email.",
+                "tags": [
+                    "Platform Users"
+                ],
+                "summary": "Create a pending account in a project",
+                "operationId": "postPlatformProjectsByIdUsers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Operation UUID and optional credential delivery mode",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_user_http.CreateUserCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project_user_http.CreateUserReceipt"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/platform/projects/{id}/users/{userId}": {
             "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Requires BOTH current platform.project_users.manage and platform.project_access.manage plus fresh password/MFA before read and before disclosure. Exact ready/enabled project target. Same read-only snapshot for account, contacts and role metadata/accessVersion; no secrets or fabricated project actor. Retained soft-deleted accounts are readable by UUID but not restored. Contacts/providers/roles overflow returns conflict, never partial success. Use role/access versions in subsequent explicit grant/revoke calls.",
                 "produces": [
                     "application/json"
@@ -9216,6 +11055,7 @@ const docTemplate = `{
                     "Platform Users"
                 ],
                 "summary": "Read a project user and current role assignments from the platform",
+                "operationId": "getPlatformProjectsByIdUsersByUserId",
                 "parameters": [
                     {
                         "type": "string",
@@ -9304,8 +11144,141 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/platform/projects/{id}/users/{userId}/administrator": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Roles"
+                ],
+                "summary": "Grant or revoke project system administrator",
+                "operationId": "postPlatformProjectsByIdUsersByUserIdAdministrator",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User UUID",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Grant or revoke and current versions",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_http.AdministratorRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project_http.AdministratorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/projects/{id}/users/{userId}/lifecycle": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "tags": [
+                    "Platform Users"
+                ],
+                "summary": "Change the lifecycle of a project user from the platform",
+                "operationId": "postPlatformProjectsByIdUsersByUserIdLifecycle",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project user UUID",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project version",
+                        "name": "expectedVersion",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current project generation",
+                        "name": "expectedGeneration",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Operation, expected account version and action",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project_user_http.LifecycleCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project_user_http.LifecycleReceipt"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/platform/projects/{id}/users/{userId}/roles/{roleId}/grant": {
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Runtime-enabled platform only. Fresh platform.project_access.manage and exact project/user/role versions. System roles are forbidden. Grant checks catalog/MFA capability, caps assignments, invalidates pre-grant active sessions, and atomically records a project receipt. Same operation UUID/payload replays its original result; unknown COMMIT never means rollback. No actor/target/action override in JSON. Project MFA-required grants fail closed until capability is assembled.",
                 "consumes": [
                     "application/json"
@@ -9317,6 +11290,7 @@ const docTemplate = `{
                     "Platform Roles"
                 ],
                 "summary": "Grant a custom project role as a platform operator",
+                "operationId": "postPlatformProjectsByIdUsersByUserIdRolesByRoleIdGrant",
                 "parameters": [
                     {
                         "type": "string",
@@ -9428,6 +11402,11 @@ const docTemplate = `{
         },
         "/api/v1/platform/projects/{id}/users/{userId}/roles/{roleId}/revoke": {
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Fresh platform.project_access.manage and exact versions. System role assignments cannot be changed here. Removes the binding under the shared Access lock, bumps access_version only on change, preserves auth_version, and writes the immutable receipt in the same transaction. SQL permission validation observes revocation immediately; offline JWT semantics are unchanged. Blocked non-deleted targets may be stripped of custom roles. Read/reconcile the same operation after an unknown response.",
                 "consumes": [
                     "application/json"
@@ -9439,6 +11418,7 @@ const docTemplate = `{
                     "Platform Roles"
                 ],
                 "summary": "Revoke a custom project role as a platform operator",
+                "operationId": "postPlatformProjectsByIdUsersByUserIdRolesByRoleIdRevoke",
                 "parameters": [
                     {
                         "type": "string",
@@ -9550,6 +11530,11 @@ const docTemplate = `{
         },
         "/api/v1/platform/settings/mfa": {
             "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Requires a live browser session and allowed HTTPS Origin. Local endpoint requires auth.settings.manage; platform endpoint uses independent platform.project_settings.manage authority. No fresh proof is required for reading. Policy applies only to this realm database.",
                 "produces": [
                     "application/json"
@@ -9558,6 +11543,7 @@ const docTemplate = `{
                     "MFA settings"
                 ],
                 "summary": "Read realm MFA policy",
+                "operationId": "getPlatformSettingsMfa",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -9586,6 +11572,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
                 "description": "Requires current realm permission, fresh password and fresh MFA when required by policy, role or personal enrollment. expectedVersion prevents lost updates. Required modes need server-owned MFA capability. Strengthening invalidates all previous realm sessions and pending login challenges, including this caller; response still returns the committed policy. A no-op creates no audit/version change. Weakening preserves personal factors and never revives old sessions. No client-supplied capability or actor is accepted.",
                 "consumes": [
                     "application/json"
@@ -9597,6 +11588,7 @@ const docTemplate = `{
                     "MFA settings"
                 ],
                 "summary": "Change realm MFA policy",
+                "operationId": "postPlatformSettingsMfa",
                 "parameters": [
                     {
                         "description": "Complete mode and current version",
@@ -9650,6 +11642,11 @@ const docTemplate = `{
         },
         "/api/v1/setup/complete": {
             "post": {
+                "security": [
+                    {
+                        "SetupToken": []
+                    }
+                ],
                 "description": "Consumes installation proof and pending intent with email code and TOTP when required by the pinned mode. Atomically creates owner, policy, system grant and durable marker. Optional creates no factor and returns empty recoveryCodes; other modes return recovery codes once. Does not issue a session. Setup stays closed after restart or loss of administrator.",
                 "consumes": [
                     "application/json"
@@ -9661,6 +11658,7 @@ const docTemplate = `{
                     "Setup"
                 ],
                 "summary": "Complete first administrator setup exactly once",
+                "operationId": "postSetupComplete",
                 "parameters": [
                     {
                         "type": "string",
@@ -9727,6 +11725,11 @@ const docTemplate = `{
         },
         "/api/v1/setup/start": {
             "post": {
+                "security": [
+                    {
+                        "SetupToken": []
+                    }
+                ],
                 "description": "Requires installation operator secret and allowed HTTPS Origin. Pins mfaMode in encrypted intent; omitted mode defaults to administrators. Optional returns no TOTP enrollment data. Sends email code, creates no user or session. A retry after one minute replaces previous intent.",
                 "consumes": [
                     "application/json"
@@ -9738,6 +11741,7 @@ const docTemplate = `{
                     "Setup"
                 ],
                 "summary": "Start operator-controlled first administrator setup",
+                "operationId": "postSetupStart",
                 "parameters": [
                     {
                         "type": "string",
@@ -9811,6 +11815,7 @@ const docTemplate = `{
                     "Health"
                 ],
                 "summary": "Process liveness",
+                "operationId": "getHealthLive",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -9830,6 +11835,7 @@ const docTemplate = `{
                     "Health"
                 ],
                 "summary": "PostgreSQL and Redis readiness",
+                "operationId": "getHealthReady",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -9855,6 +11861,7 @@ const docTemplate = `{
                     "Health"
                 ],
                 "summary": "Legacy process ping",
+                "operationId": "getPing",
                 "responses": {
                     "200": {
                         "description": "pong",
@@ -10652,6 +12659,58 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.CredentialLifetimePolicy": {
+            "type": "object",
+            "properties": {
+                "emailBindingSeconds": {
+                    "type": "integer"
+                },
+                "emailChangeProtectionSeconds": {
+                    "type": "integer"
+                },
+                "emailChangeRecoverySeconds": {
+                    "type": "integer"
+                },
+                "emailChangeSeconds": {
+                    "type": "integer"
+                },
+                "freshAuthSeconds": {
+                    "type": "integer"
+                },
+                "invitationCooldownSeconds": {
+                    "type": "integer"
+                },
+                "invitationSeconds": {
+                    "type": "integer"
+                },
+                "mfaChallengeSeconds": {
+                    "type": "integer"
+                },
+                "temporaryPasswordSeconds": {
+                    "type": "integer"
+                },
+                "temporaryReissueCooldownSeconds": {
+                    "type": "integer"
+                },
+                "temporarySetupSeconds": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.DeletionOperation": {
+            "type": "object",
+            "properties": {
+                "operationId": {
+                    "type": "string"
+                },
+                "projectId": {
+                    "type": "string"
+                },
+                "stage": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.FeatureReadiness": {
             "type": "object",
             "properties": {
@@ -10663,6 +12722,101 @@ const docTemplate = `{
                 },
                 "reason": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.FrontendPolicy": {
+            "type": "object",
+            "properties": {
+                "corsEnabled": {
+                    "type": "boolean"
+                },
+                "emailChangeRecoveryUrl": {
+                    "type": "string"
+                },
+                "emailChangeReportUrl": {
+                    "type": "string"
+                },
+                "emailChangeUrl": {
+                    "type": "string"
+                },
+                "invitationUrl": {
+                    "type": "string"
+                },
+                "origins": {
+                    "type": "string"
+                },
+                "resetUrl": {
+                    "type": "string"
+                },
+                "verificationUrl": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.LinkLifetimePolicy": {
+            "type": "object",
+            "properties": {
+                "resetSeconds": {
+                    "type": "integer"
+                },
+                "verificationSeconds": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.LoginBudgetPolicy": {
+            "type": "object",
+            "properties": {
+                "globalPerMinute": {
+                    "type": "integer"
+                },
+                "identityPerMinute": {
+                    "type": "integer"
+                },
+                "ipPerMinute": {
+                    "type": "integer"
+                },
+                "registrationGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "registrationIpPerMinute": {
+                    "type": "integer"
+                },
+                "resetGlobalPerMinute": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.MFAMode": {
+            "type": "string",
+            "enum": [
+                "optional",
+                "administrators",
+                "required"
+            ],
+            "x-enum-varnames": [
+                "MFAOptional",
+                "MFAAdministrators",
+                "MFARequired"
+            ]
+        },
+        "domain.MFAPolicy": {
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "$ref": "#/definitions/domain.MFAMode"
+                }
+            }
+        },
+        "domain.MFASnapshot": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/domain.MFAPolicy"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -10681,6 +12835,199 @@ const docTemplate = `{
                 "TelegramCode"
             ]
         },
+        "domain.OperationBudgetsPolicy": {
+            "type": "object",
+            "properties": {
+                "activationGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "bindingConfirmPerMinute": {
+                    "type": "integer"
+                },
+                "bindingRequestPerMinute": {
+                    "type": "integer"
+                },
+                "googleGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "googleIPPerMinute": {
+                    "type": "integer"
+                },
+                "invitationActorPerMinute": {
+                    "type": "integer"
+                },
+                "invitationGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "jwtActorPerMinute": {
+                    "type": "integer"
+                },
+                "jwtConsumerPerMinute": {
+                    "type": "integer"
+                },
+                "jwtGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "jwtIPPerMinute": {
+                    "type": "integer"
+                },
+                "jwtIntrospectionPerMinute": {
+                    "type": "integer"
+                },
+                "jwtSessionPerMinute": {
+                    "type": "integer"
+                },
+                "mfaGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "mfaIPPerMinute": {
+                    "type": "integer"
+                },
+                "mfaUserPerMinute": {
+                    "type": "integer"
+                },
+                "telegramGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "telegramIPPerMinute": {
+                    "type": "integer"
+                },
+                "temporaryActorPerMinute": {
+                    "type": "integer"
+                },
+                "temporaryGlobalPerMinute": {
+                    "type": "integer"
+                },
+                "temporarySetupPerMinute": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.Operator": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "owner": {
+                    "type": "boolean"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.PreparationOperation": {
+            "type": "object",
+            "properties": {
+                "expectedGeneration": {
+                    "type": "integer"
+                },
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "operationId": {
+                    "type": "string"
+                },
+                "phase": {
+                    "type": "string"
+                },
+                "projectId": {
+                    "type": "string"
+                },
+                "stage": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ProviderSnapshot": {
+            "type": "object",
+            "properties": {
+                "clientId": {
+                    "type": "string"
+                },
+                "clientSecretSet": {
+                    "type": "boolean"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.RetentionPolicy": {
+            "type": "object",
+            "properties": {
+                "emailReservationDays": {
+                    "type": "integer"
+                },
+                "securityAuditDays": {
+                    "type": "integer"
+                },
+                "sessionDays": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.RetentionSnapshot": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/domain.RetentionPolicy"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.SMTPConfig": {
+            "type": "object",
+            "properties": {
+                "domain": {
+                    "type": "string"
+                },
+                "from": {
+                    "type": "string"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "requireTls": {
+                    "type": "boolean"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.SMTPSnapshot": {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/domain.SMTPConfig"
+                },
+                "passwordSet": {
+                    "type": "boolean"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
         "domain.SourceMetadata": {
             "type": "object",
             "properties": {
@@ -10692,6 +13039,26 @@ const docTemplate = `{
                     ]
                 },
                 "readOnly": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "domain.TelegramBotSnapshot": {
+            "type": "object",
+            "properties": {
+                "botId": {
+                    "type": "integer"
+                },
+                "botTokenSet": {
+                    "type": "boolean"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                },
+                "webhookSecretSet": {
                     "type": "boolean"
                 }
             }
@@ -10724,6 +13091,64 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Inforberi_financial-intelligence_internal_auth_methods_google_transport_http.CallbackResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Inforberi_financial-intelligence_internal_auth_methods_google_transport_http.MFAChallengeResponse": {
+            "type": "object",
+            "properties": {
+                "challenge": {
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Inforberi_financial-intelligence_internal_auth_methods_google_transport_http.StartResponse": {
+            "type": "object",
+            "properties": {
+                "authorizationUrl": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Inforberi_financial-intelligence_internal_auth_methods_telegram_transport_http.MFAChallengeResponse": {
+            "type": "object",
+            "properties": {
+                "challenge": {
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_Inforberi_financial-intelligence_internal_auth_methods_telegram_transport_http.StartResponse": {
+            "type": "object",
+            "properties": {
+                "authorizationUrl": {
                     "type": "string"
                 }
             }
@@ -10968,64 +13393,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_auth_methods_google_transport_http.CallbackResponse": {
-            "type": "object",
-            "properties": {
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_auth_methods_google_transport_http.MFAChallengeResponse": {
-            "type": "object",
-            "properties": {
-                "challenge": {
-                    "type": "string"
-                },
-                "expiresAt": {
-                    "type": "string"
-                },
-                "method": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_auth_methods_google_transport_http.StartResponse": {
-            "type": "object",
-            "properties": {
-                "authorizationUrl": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_auth_methods_telegram_transport_http.MFAChallengeResponse": {
-            "type": "object",
-            "properties": {
-                "challenge": {
-                    "type": "string"
-                },
-                "expiresAt": {
-                    "type": "string"
-                },
-                "method": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_auth_methods_telegram_transport_http.StartResponse": {
-            "type": "object",
-            "properties": {
-                "authorizationUrl": {
                     "type": "string"
                 }
             }
@@ -11448,6 +13815,56 @@ const docTemplate = `{
                 }
             }
         },
+        "operator_http.OperatorCommand": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "invite",
+                        "permissions",
+                        "revoke"
+                    ]
+                },
+                "email": {
+                    "type": "string"
+                },
+                "operationId": {
+                    "type": "string"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
+        "operator_http.OperatorPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Operator"
+                    }
+                },
+                "nextCursor": {
+                    "type": "string"
+                }
+            }
+        },
+        "operator_http.OperatorReceipt": {
+            "type": "object",
+            "properties": {
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
         "password_http.ActivationRequest": {
             "type": "object",
             "properties": {
@@ -11703,6 +14120,135 @@ const docTemplate = `{
                 }
             }
         },
+        "postgres.BrowserSessionSettings": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/service.BrowserPolicy"
+                },
+                "source": {
+                    "$ref": "#/definitions/domain.SourceMetadata"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "postgres.CredentialLifetimeSettings": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/domain.CredentialLifetimePolicy"
+                },
+                "source": {
+                    "$ref": "#/definitions/domain.SourceMetadata"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "postgres.DeletionPreview": {
+            "type": "object",
+            "properties": {
+                "generation": {
+                    "type": "integer"
+                },
+                "hasUsers": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "projectId": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "postgres.FrontendSettings": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/domain.FrontendPolicy"
+                },
+                "source": {
+                    "$ref": "#/definitions/domain.SourceMetadata"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "postgres.LinkLifetimeSettings": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/domain.LinkLifetimePolicy"
+                },
+                "source": {
+                    "$ref": "#/definitions/domain.SourceMetadata"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "postgres.LoginBudgetSettings": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/domain.LoginBudgetPolicy"
+                },
+                "source": {
+                    "$ref": "#/definitions/domain.SourceMetadata"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "postgres.OperationBudgetSettings": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "$ref": "#/definitions/domain.OperationBudgetsPolicy"
+                },
+                "source": {
+                    "$ref": "#/definitions/domain.SourceMetadata"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "project_http.AdministratorRequest": {
+            "type": "object",
+            "properties": {
+                "expectedAccessVersion": {
+                    "type": "integer"
+                },
+                "expectedAuthVersion": {
+                    "type": "integer"
+                },
+                "expectedRoleVersion": {
+                    "type": "integer"
+                },
+                "grant": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "project_http.AdministratorResponse": {
+            "type": "object",
+            "properties": {
+                "accessVersion": {
+                    "type": "integer"
+                }
+            }
+        },
         "project_http.ChangeStateRequest": {
             "type": "object",
             "properties": {
@@ -11803,6 +14349,55 @@ const docTemplate = `{
                 },
                 "replayed": {
                     "type": "boolean"
+                }
+            }
+        },
+        "project_http.DeletionConfirmation": {
+            "type": "object",
+            "properties": {
+                "acknowledgeUsers": {
+                    "type": "boolean"
+                },
+                "confirmDataLoss": {
+                    "type": "boolean"
+                },
+                "confirmProjectId": {
+                    "type": "string"
+                },
+                "expectedGeneration": {
+                    "type": "integer"
+                },
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "operationId": {
+                    "type": "string"
+                }
+            }
+        },
+        "project_http.EditRoleRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "expectedRoleVersion": {
+                    "type": "integer"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "mfaRequired": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -11936,6 +14531,20 @@ const docTemplate = `{
                 }
             }
         },
+        "project_http.PreparationRequest": {
+            "type": "object",
+            "properties": {
+                "expectedGeneration": {
+                    "type": "integer"
+                },
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "operationId": {
+                    "type": "string"
+                }
+            }
+        },
         "project_http.ProjectAuthPolicyResponse": {
             "type": "object",
             "properties": {
@@ -11960,6 +14569,77 @@ const docTemplate = `{
                 }
             }
         },
+        "project_http.ProjectCredentialLifetimesRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/domain.CredentialLifetimePolicy"
+                }
+            }
+        },
+        "project_http.ProjectFrontendsRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/domain.FrontendPolicy"
+                }
+            }
+        },
+        "project_http.ProjectLinkLifetimesRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/domain.LinkLifetimePolicy"
+                }
+            }
+        },
+        "project_http.ProjectLoginBudgetsRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/domain.LoginBudgetPolicy"
+                }
+            }
+        },
+        "project_http.ProjectMFARequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": [
+                        "optional",
+                        "administrators",
+                        "required"
+                    ]
+                }
+            }
+        },
+        "project_http.ProjectOperationBudgetsRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/domain.OperationBudgetsPolicy"
+                }
+            }
+        },
         "project_http.ProjectPageResponse": {
             "type": "object",
             "properties": {
@@ -11971,6 +14651,20 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/project_http.ProjectResponse"
                     }
+                }
+            }
+        },
+        "project_http.ProjectProviderRequest": {
+            "type": "object",
+            "properties": {
+                "clientId": {
+                    "type": "string"
+                },
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "secret": {
+                    "type": "string"
                 }
             }
         },
@@ -12003,6 +14697,98 @@ const docTemplate = `{
                 },
                 "updatedAt": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "project_http.ProjectRetentionRequest": {
+            "type": "object",
+            "properties": {
+                "confirmShortening": {
+                    "type": "boolean"
+                },
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/domain.RetentionPolicy"
+                }
+            }
+        },
+        "project_http.ProjectSMTPRequest": {
+            "type": "object",
+            "properties": {
+                "configuration": {
+                    "$ref": "#/definitions/domain.SMTPConfig"
+                },
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "project_http.ProjectSessionsRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "policy": {
+                    "$ref": "#/definitions/service.BrowserPolicy"
+                }
+            }
+        },
+        "project_http.ProjectTelegramBotRequest": {
+            "type": "object",
+            "properties": {
+                "botToken": {
+                    "type": "string"
+                },
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "rotateWebhookSecret": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "project_http.ProjectWebhookRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                }
+            }
+        },
+        "project_http.RenameProjectRequest": {
+            "type": "object",
+            "properties": {
+                "expectedVersion": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "operationId": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "project_http.RenameProjectResponse": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "replayed": {
+                    "type": "boolean"
                 },
                 "version": {
                     "type": "integer"
@@ -12092,6 +14878,72 @@ const docTemplate = `{
                 }
             }
         },
+        "project_user_http.CreateUserCommand": {
+            "type": "object",
+            "properties": {
+                "invitationEmail": {
+                    "type": "string"
+                },
+                "operationId": {
+                    "type": "string"
+                },
+                "temporaryPasswordEmail": {
+                    "type": "string"
+                }
+            }
+        },
+        "project_user_http.CreateUserReceipt": {
+            "type": "object",
+            "properties": {
+                "expiresAt": {
+                    "type": "string"
+                },
+                "temporaryPassword": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
+        "project_user_http.LifecycleCommand": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "blocked",
+                        "delete",
+                        "temporary_password",
+                        "initial_email"
+                    ]
+                },
+                "email": {
+                    "type": "string"
+                },
+                "expectedAuthVersion": {
+                    "type": "integer"
+                },
+                "operationId": {
+                    "type": "string"
+                }
+            }
+        },
+        "project_user_http.LifecycleReceipt": {
+            "type": "object",
+            "properties": {
+                "authVersion": {
+                    "type": "integer"
+                },
+                "expiresAt": {
+                    "type": "string"
+                },
+                "temporaryPassword": {
+                    "type": "string"
+                }
+            }
+        },
         "provider_settings_http.SettingsResponse": {
             "type": "object",
             "properties": {
@@ -12176,6 +15028,29 @@ const docTemplate = `{
             "properties": {
                 "status": {
                     "type": "string"
+                }
+            }
+        },
+        "service.BrowserPolicy": {
+            "type": "object",
+            "properties": {
+                "absoluteSeconds": {
+                    "type": "integer"
+                },
+                "adminAbsoluteSeconds": {
+                    "type": "integer"
+                },
+                "adminActivitySeconds": {
+                    "type": "integer"
+                },
+                "adminIdleSeconds": {
+                    "type": "integer"
+                },
+                "idleSeconds": {
+                    "type": "integer"
+                },
+                "refreshThresholdSeconds": {
+                    "type": "integer"
                 }
             }
         },
@@ -13050,6 +15925,22 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "ServiceBasic": {
+            "type": "basic"
+        },
+        "SessionCookie": {
+            "description": "Browser session cookie (__Host-session). Browser clients use credentials: include. Server clients use a cookie jar.",
+            "type": "apiKey",
+            "name": "Cookie",
+            "in": "header"
+        },
+        "SetupToken": {
+            "type": "apiKey",
+            "name": "X-Setup-Token",
+            "in": "header"
+        }
     }
 }`
 
@@ -13060,7 +15951,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{"https", "http"},
 	Title:            "Auth API",
-	Description:      "Reusable authentication service. Cookie sessions require HTTPS. All auth mutations require an exact allowed Origin. CORS is opt-in; cookie profile is same-site.",
+	Description:      "Dedicated client credentials for token introspection.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

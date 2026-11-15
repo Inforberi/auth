@@ -4,6 +4,7 @@ import (
 	"context"
 
 	projectruntime "github.com/Inforberi/financial-intelligence/internal/admin/projects/runtime"
+	authsettings "github.com/Inforberi/financial-intelligence/internal/app/auth/settings"
 	projectaccount "github.com/Inforberi/financial-intelligence/internal/auth/project/account"
 	projectmethods "github.com/Inforberi/financial-intelligence/internal/auth/project/methods"
 	projectprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
@@ -19,9 +20,11 @@ func projectBrowserDeployment(cfg *config.Config) projectprofile.ProjectProfileS
 	invitations, temporary := cfg.Invitation, cfg.TemporaryPassword
 	invitations.Enabled, temporary.Enabled = false, false
 	verification.EncryptionKey = ""
+	loginBudget := authsettings.LoginBudgetBaseline(cfg)
+	operationBudget := authsettings.OperationBudgetBaseline(cfg)
 	withMail, timeout := cfg.Platform.Delivery.Enabled, cfg.Platform.HTTP.BuildTimeout
 	return func(_ context.Context, _ projectruntime.Key, origin string) (projectprofile.ProjectProfileConfig, error) {
-		profile := projectprofile.ProjectProfileConfig{BrowserEnabled: true, Timeout: timeout, Password: &projectmethods.ProjectPasswordConfig{Session: session, MFA: mfa, TemporaryPassword: temporary, Capacity: capacity, Timeout: timeout}}
+		profile := projectprofile.ProjectProfileConfig{BrowserEnabled: true, LoginBudgetBaseline: loginBudget, OperationBudgetBaseline: operationBudget, Timeout: timeout, Password: &projectmethods.ProjectPasswordConfig{Session: session, MFA: mfa, TemporaryPassword: temporary, Capacity: capacity, Timeout: timeout}}
 		projectChange := change
 		projectChange.ConfirmURL, projectChange.ReportURL, projectChange.RecoveryURL = origin+"/change-email", origin+"/protect-account", origin+"/recover-account"
 		projectRecovery := recovery

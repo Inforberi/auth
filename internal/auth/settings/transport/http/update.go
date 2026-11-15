@@ -69,6 +69,7 @@ func (input *PolicyRequest) Domain() (domain.Policy, bool) {
 // @Failure 403 {object} httpx.ErrorResponse "forbidden, fresh_auth_required"
 // @Failure 409 {object} httpx.ErrorResponse "auth_policy_conflict, auth_method_not_ready, last_administrator"
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminAuthSettings
 // @Router /api/v1/admin/auth/settings [post]
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	actor, ok := Principal(w, r)

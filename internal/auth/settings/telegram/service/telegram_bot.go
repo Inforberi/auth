@@ -55,12 +55,24 @@ type TelegramBotSettings struct {
 }
 
 func NewTelegramBotSettings(repo TelegramBotRepository, tokenCipher, webhookCipher settingsservice.ProviderCipher, verifier TelegramBotVerifier, limits settingsservice.SettingsLimiter, tokens TelegramBotTokens, config TelegramBotLimits) (*TelegramBotSettings, error) {
-	if repo == nil || tokenCipher == nil || webhookCipher == nil || verifier == nil || limits == nil || tokens == nil ||
+	if repo == nil {
+		return nil, domain.ErrInvalidTelegramBot
+	}
+	s, err := NewTelegramBotPreparation(tokenCipher, webhookCipher, verifier, limits, tokens, config)
+	if err != nil {
+		return nil, err
+	}
+	s.repo = repo
+	return s, nil
+}
+
+func NewTelegramBotPreparation(tokenCipher, webhookCipher settingsservice.ProviderCipher, verifier TelegramBotVerifier, limits settingsservice.SettingsLimiter, tokens TelegramBotTokens, config TelegramBotLimits) (*TelegramBotSettings, error) {
+	if tokenCipher == nil || webhookCipher == nil || verifier == nil || limits == nil || tokens == nil ||
 		config.UserUpdatesPerMinute < 1 || config.ProjectUpdatesPerMinute < 1 {
 		return nil, domain.ErrInvalidTelegramBot
 	}
 	return &TelegramBotSettings{
-		repo: repo, tokenCipher: tokenCipher, webhookCipher: webhookCipher,
+		tokenCipher: tokenCipher, webhookCipher: webhookCipher,
 		verifier: verifier, limits: limits, tokens: tokens, config: config,
 	}, nil
 }

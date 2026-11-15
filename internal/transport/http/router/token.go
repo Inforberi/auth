@@ -11,7 +11,7 @@ func publicTokenRoutes(r chi.Router, h Handlers) {
 		return
 	}
 	r.Get("/.well-known/jwks.json", h.Tokens.JWKS)
-	r.Head("/.well-known/jwks.json", h.Tokens.JWKS)
+	r.Head("/.well-known/jwks.json", h.Tokens.JWKSHead)
 }
 
 func tokenExchangeRoutes(r chi.Router, h Handlers) {

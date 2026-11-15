@@ -19,6 +19,7 @@ type ProjectRoute struct {
 }
 
 type ProjectRouteProtection struct {
+	Browser          middleware.OriginConfig
 	Session          func(http.Handler) http.Handler
 	SessionNoRefresh func(http.Handler) http.Handler
 	SessionLogout    func(http.Handler) http.Handler
@@ -30,8 +31,12 @@ func NewProjectRoutes(origin string, routes []ProjectRoute, protection ProjectRo
 		return nil, projectdomain.ErrInvalidProject
 	}
 	r := chi.NewRouter()
-	browser := middleware.BrowserProtection(middleware.OriginConfig{AllowedOrigins: []string{origin}})
+	if len(protection.Browser.AllowedOrigins) == 0 {
+		protection.Browser.AllowedOrigins = []string{origin}
+	}
+	browser := middleware.BrowserProtection(protection.Browser)
 	seen := make(map[string]bool)
+	preflight := make(map[string]map[string]bool)
 	for _, route := range routes {
 		id := route.Method + " " + route.Path
 		if route.Handler == nil || seen[id] {
@@ -63,7 +68,24 @@ func NewProjectRoutes(origin string, routes []ProjectRoute, protection ProjectRo
 		default:
 			return nil, errors.New("unknown project route protection")
 		}
+		switch route.Protection {
+		case "browser", "callback", "session", "session_no_refresh", "session_logout":
+			if preflight[route.Path] == nil {
+				preflight[route.Path] = make(map[string]bool)
+			}
+			preflight[route.Path][route.Method] = true
+		}
 		r.Method(route.Method, route.Path, handler)
+	}
+	for path, methods := range preflight {
+		cors := browser(http.NotFoundHandler())
+		r.Options(path, func(w http.ResponseWriter, req *http.Request) {
+			if !methods[req.Header.Get("Access-Control-Request-Method")] {
+				http.NotFound(w, req)
+				return
+			}
+			cors.ServeHTTP(w, req)
+		})
 	}
 	return r, nil
 }

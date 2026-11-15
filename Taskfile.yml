@@ -204,21 +204,45 @@ tasks:
     swagger:
         desc: Пересобрать Swagger
         cmds:
-            - go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g cmd/auth/main.go --parseInternal --packageName docs -o docs/api/generated
+            - task: swagger:generate
 
-    # Редкие проверки — отдельно по риску или перед релизом
-    check:api:
-        desc: Проверить воспроизводимость Swagger без изменения файлов
+    swagger:generate:
+        internal: true
         cmds:
             - |
                 set -eu
-                api_docs=$(mktemp -d)
-                trap 'rm -f "$api_docs/docs.go" "$api_docs/swagger.json" "$api_docs/swagger.yaml"; rmdir "$api_docs"' EXIT
+                api_docs=docs/api/generated
+                marker=$(mktemp ./swaggerrootXXXXXX)
+                check_dir=
+                cleanup() {
+                    rm -f "$marker" "$marker.go"
+                    if [ -n "$check_dir" ]; then
+                        rm -f "$check_dir/docs.go" "$check_dir/swagger.json" "$check_dir/swagger.yaml"
+                        rmdir "$check_dir"
+                    fi
+                }
+                trap cleanup EXIT
+                mv "$marker" "$marker.go"
+                # Swag resolves Go import aliases via the module path from go list.
+                printf 'package auth\n' > "$marker.go"
+                if [ {{.CHECK_API | default "false" | shellQuote}} = true ]; then
+                    check_dir=$(mktemp -d)
+                    api_docs=$check_dir
+                fi
                 go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g cmd/auth/main.go --parseInternal --packageName docs -o "$api_docs"
-                cmp docs/api/generated/docs.go "$api_docs/docs.go"
-                cmp docs/api/generated/swagger.json "$api_docs/swagger.json"
-                cmp docs/api/generated/swagger.yaml "$api_docs/swagger.yaml"
+                if [ -n "$check_dir" ]; then
+                    for file in docs.go swagger.json swagger.yaml; do
+                        cmp "docs/api/generated/$file" "$check_dir/$file"
+                    done
+                fi
 
+    check:api:
+        desc: Проверить воспроизводимость Swagger без изменения файлов
+        cmds:
+            - task: swagger:generate
+              vars: { CHECK_API: "true" }
+
+    # Редкие проверки — отдельно по риску или перед релизом
     check:security:
         desc: Проверить уязвимости Go-зависимостей
         aliases: [check-security]

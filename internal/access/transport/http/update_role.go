@@ -34,6 +34,7 @@ type UpdateRoleRequest struct {
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminRolesById
 // @Router /api/v1/admin/roles/{id} [post]
 func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 	actor, ok := principal(w, r)

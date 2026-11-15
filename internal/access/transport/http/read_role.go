@@ -20,6 +20,7 @@ import (
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAdminRolesById
 // @Router /api/v1/admin/roles/{id} [get]
 func (h *Handler) ReadRole(w http.ResponseWriter, r *http.Request) {
 	actor, ok := principal(w, r)

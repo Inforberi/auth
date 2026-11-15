@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	account "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
+
 	accessdomain "github.com/Inforberi/financial-intelligence/internal/access/domain"
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
@@ -26,21 +28,33 @@ func (s *TelegramBotSettings) ActivateWebhook(ctx context.Context, actor accesss
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	if _, err := s.repo.AuthorizeTelegramBotUpdate(ctx, actor, version); err != nil {
-		return domain.TelegramBotSnapshot{}, err
-	}
-	if err := s.admitTelegramBotUpdate(ctx, actor); err != nil {
-		return domain.TelegramBotSnapshot{}, err
-	}
-	credentials, err := s.Credentials(ctx)
+	stored, err := s.repo.AuthorizeTelegramBotUpdate(ctx, actor, version)
 	if err != nil {
 		return domain.TelegramBotSnapshot{}, err
 	}
-	if credentials.Snapshot.Version != version {
-		return domain.TelegramBotSnapshot{}, domain.ErrPolicyConflict
-	}
-	if err := register(ctx, credentials); err != nil {
-		return domain.TelegramBotSnapshot{}, domain.ErrTelegramBotVerification
+	if err := s.RegisterWebhook(ctx, actor.UserID, version, stored, register); err != nil {
+		return domain.TelegramBotSnapshot{}, err
 	}
 	return repo.ConfirmTelegramWebhook(ctx, actor, version)
+}
+
+// RegisterWebhook performs the external step after the caller authorizes the actor and reads the current configuration.
+func (s *TelegramBotSettings) RegisterWebhook(ctx context.Context, actor account.UserID, version int64, stored TelegramBotStored, register func(context.Context, TelegramBotCredentials) error) error {
+	if version < 1 || register == nil {
+		return domain.ErrInvalidTelegramBot
+	}
+	if stored.Version != version {
+		return domain.ErrPolicyConflict
+	}
+	if err := s.admitTelegramBotUpdate(ctx, actor); err != nil {
+		return err
+	}
+	credentials, err := s.openCredentials(stored)
+	if err != nil {
+		return err
+	}
+	if err := register(ctx, credentials); err != nil {
+		return domain.ErrTelegramBotVerification
+	}
+	return nil
 }

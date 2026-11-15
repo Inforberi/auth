@@ -59,6 +59,7 @@ func operatorCatalogCreateDrill(t *testing.T, admin, runtime *pgxpool.Pool, auth
 	if string(card["version"]) != "2" || operatorField(t, card, "desiredState") != "suspended" {
 		t.Fatal("replay reset lifecycle")
 	}
+	checkProjectRename(t, h, id, session)
 	changed := input
 	changed.Name = "Other"
 	call(changed, 409)

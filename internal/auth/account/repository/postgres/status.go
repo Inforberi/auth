@@ -47,6 +47,10 @@ func (r *Repository) ChangeUserStatus(ctx context.Context, actor accessservice.P
 }
 
 func changeStatus(ctx context.Context, tx pgx.Tx, change domain.StatusChange) (domain.AuthVersion, error) {
+	return applyStatus(ctx, tx, change, true)
+}
+
+func applyStatus(ctx context.Context, tx pgx.Tx, change domain.StatusChange, localAudit bool) (domain.AuthVersion, error) {
 	var version domain.AuthVersion
 	var status domain.Status
 	var deleted *time.Time
@@ -84,6 +88,9 @@ func changeStatus(ctx context.Context, tx pgx.Tx, change domain.StatusChange) (d
 	}
 	if err := revokeStatusAccess(ctx, tx, change.UserID); err != nil {
 		return 0, err
+	}
+	if !localAudit {
+		return version, nil
 	}
 	if _, err := tx.Exec(ctx, `INSERT INTO auth.account_status_audit(user_id,actor_id,previous_status,new_status,auth_version) VALUES ($1,$2,$3,$4,$5)`, change.UserID, change.ActorID, status, change.Status, version); err != nil {
 		return 0, err

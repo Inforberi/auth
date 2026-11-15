@@ -69,3 +69,8 @@ func (r *Repository) InitializeProvider(ctx context.Context, seed settingsprovid
 	})
 	return result, err
 }
+
+func ReadProviderInTransaction(ctx context.Context, tx pgx.Tx, provider string) (domain.ProviderSnapshot, error) {
+	stored, err := scanProvider(tx.QueryRow(ctx, `SELECT `+providerColumns+` FROM auth.provider_settings WHERE provider=$1`, provider), false)
+	return stored.ProviderSnapshot, err
+}

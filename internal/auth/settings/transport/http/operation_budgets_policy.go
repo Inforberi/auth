@@ -53,6 +53,7 @@ type OperationBudgetsPolicyHandler struct {
 
 // @Summary Read standalone login policy
 // @Success 200 {object} OperationBudgetsPolicyView
+// @ID getAdminAuthSettingsOperationBudgets
 // @Router /api/v1/admin/auth/settings/operation-budgets [get]
 func (h *OperationBudgetsPolicyHandler) Read(w http.ResponseWriter, r *http.Request) {
 	servePolicyRead(w, r, h.ReadPolicy, policyResponse[OperationBudgetsPolicyView](h.Log, "operation_budgets_policy", domain.ErrInvalidOperationBudgets, "invalid operation budgets"))
@@ -63,6 +64,7 @@ func (h *OperationBudgetsPolicyHandler) Read(w http.ResponseWriter, r *http.Requ
 // @Param body body OperationBudgetsPolicyRequest true "Complete policy and current version"
 // @Success 200 {object} OperationBudgetsPolicyView
 // @Failure 409 {object} PolicyErrorResponse
+// @ID postAdminAuthSettingsOperationBudgets
 // @Router /api/v1/admin/auth/settings/operation-budgets [post]
 func (h *OperationBudgetsPolicyHandler) Update(w http.ResponseWriter, r *http.Request) {
 	servePolicyUpdate(w, r, h.UpdatePolicy, policyResponse[OperationBudgetsPolicyView](h.Log, "operation_budgets_policy", domain.ErrInvalidOperationBudgets, "invalid operation budgets"))

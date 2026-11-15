@@ -35,6 +35,7 @@ type RolePageResponse struct {
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAdminRoles
 // @Router /api/v1/admin/roles [get]
 func (h *Handler) ListRoles(w http.ResponseWriter, r *http.Request) {
 	actor, ok := principal(w, r)

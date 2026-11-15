@@ -29,6 +29,25 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA auth TO auth_runtime;
     REVOKE ALL ON auth.project_identity FROM auth_runtime;
     GRANT SELECT ON auth.project_identity TO auth_runtime;
   END IF;
+-- BEGIN platform lifecycle grants
+  IF to_regclass('auth.platform_user_lifecycle') IS NOT NULL THEN
+    REVOKE INSERT,UPDATE,DELETE,TRUNCATE ON auth.platform_user_lifecycle FROM auth_runtime;
+    GRANT SELECT ON auth.platform_user_lifecycle TO auth_runtime;
+    GRANT INSERT(operation_id,project_id,realm_id,actor_id,user_id,action,expected_version,auth_version,email_id)
+      ON auth.platform_user_lifecycle TO auth_runtime;
+  END IF;
+  IF to_regclass('auth.platform_user_creations') IS NOT NULL THEN
+    REVOKE INSERT,UPDATE,DELETE,TRUNCATE ON auth.platform_user_creations FROM auth_runtime;
+    GRANT SELECT ON auth.platform_user_creations TO auth_runtime;
+    GRANT INSERT(operation_id,project_id,realm_id,actor_id,user_id,fingerprint)
+      ON auth.platform_user_creations TO auth_runtime;
+  END IF;
+  IF to_regclass('auth.platform_management_audit') IS NOT NULL THEN
+    REVOKE INSERT,UPDATE,DELETE,TRUNCATE ON auth.platform_management_audit FROM auth_runtime;
+    GRANT SELECT ON auth.platform_management_audit TO auth_runtime;
+    GRANT INSERT(actor_id,action,target,previous_value,next_value) ON auth.platform_management_audit TO auth_runtime;
+  END IF;
+-- END platform lifecycle grants
 END;
 $$;
 ALTER DEFAULT PRIVILEGES IN SCHEMA auth

@@ -18,6 +18,7 @@ import (
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthMfaTotpReplacement
 // @Router /api/v1/auth/mfa/totp/replacement [post]
 func (h *Handler) StartReplacement(w http.ResponseWriter, r *http.Request) {
 	proof, ok := mfahttp.RequestProof(w, r)

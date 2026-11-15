@@ -85,6 +85,10 @@ func (s *TelegramBotSettings) Credentials(ctx context.Context) (TelegramBotCrede
 	if err != nil {
 		return TelegramBotCredentials{}, err
 	}
+	return s.openCredentials(stored)
+}
+
+func (s *TelegramBotSettings) openCredentials(stored TelegramBotStored) (TelegramBotCredentials, error) {
 	token, err := s.openToken(stored)
 	if err != nil {
 		return TelegramBotCredentials{}, err

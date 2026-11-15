@@ -10,8 +10,8 @@ func operatorMFASettingsRoutes(r chi.Router, h Handlers) {
 	if h.ProjectCapacity != nil {
 		protected = protected.With(h.ProjectCapacity)
 	}
-	protected.Get("/platform/settings/mfa", h.MFASettings.Read)
-	protected.Post("/platform/settings/mfa", h.MFASettings.Update)
+	protected.Get("/platform/settings/mfa", h.MFASettings.ReadPlatform)
+	protected.Post("/platform/settings/mfa", h.MFASettings.UpdatePlatform)
 }
 
 func authSettingsRoutes(r chi.Router, h Handlers) {

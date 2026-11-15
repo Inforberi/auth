@@ -25,8 +25,9 @@ type roleService interface {
 }
 
 type RoleHandler struct {
-	service roleService
-	log     *zap.Logger
+	management RoleManagement
+	service    roleService
+	log        *zap.Logger
 }
 
 func NewRoles(service roleService, log *zap.Logger) *RoleHandler {
@@ -82,6 +83,7 @@ func roleOperationLocation(project, operation domain.ID) string {
 }
 
 var roleErrors = append([]httpx.ErrorRule{
+	httpx.MatchError(accountdomain.ErrLastAdministrator, 409, "last_administrator", "last administrator cannot be removed"),
 	httpx.MatchError(accessdomain.ErrForbidden, 403, "forbidden", "system role assignments require a separate administrator flow"),
 	httpx.MatchError(accessdomain.ErrRoleNotFound, 404, "role_not_found", "role not found"),
 	httpx.MatchError(accessdomain.ErrTargetUnavailable, 409, "target_unavailable", "target user is unavailable"),

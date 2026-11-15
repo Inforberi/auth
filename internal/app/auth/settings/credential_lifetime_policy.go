@@ -17,7 +17,7 @@ func AssembleCredentialLifetimePolicy(ctx context.Context, repo *settingspostgre
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	mode := cfg.SettingsSource.Mode
-	baseline := credentialLifetimeBaseline(cfg)
+	baseline := CredentialLifetimeBaseline(cfg)
 	if err := baseline.Validate(); err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func AssembleCredentialLifetimePolicy(ctx context.Context, repo *settingspostgre
 	}, nil
 }
 
-func credentialLifetimeBaseline(cfg *config.Config) domain.CredentialLifetimePolicy {
+func CredentialLifetimeBaseline(cfg *config.Config) domain.CredentialLifetimePolicy {
 	return domain.CredentialLifetimePolicy{
 		MFAChallengeSeconds:             int64(cfg.MFA.ChallengeTTL / time.Second),
 		FreshAuthSeconds:                int64(cfg.Session.FreshAuthTTL / time.Second),

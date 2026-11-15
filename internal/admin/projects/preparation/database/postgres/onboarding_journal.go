@@ -23,12 +23,8 @@ func (t *Target) lockOnboarding(ctx context.Context, r domain.PreparationReserva
 	if err := t.CheckRuntime(ctx); err != nil {
 		return err
 	}
-	var locked bool
-	if err := t.conn.QueryRow(ctx, `SELECT pg_try_advisory_lock(1096111176,1)`).Scan(&locked); err != nil {
-		return unavailable(ctx)
-	}
-	if !locked {
-		return ErrBusy
+	if err := t.Lock(ctx); err != nil {
+		return err
 	}
 	// The dedicated session keeps the target lock until its caller closes it, also on errors.
 	t.prepared = &preparedProject{

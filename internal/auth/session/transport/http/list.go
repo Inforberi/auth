@@ -32,6 +32,8 @@ type SessionsResponse struct {
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID getAuthSessions
 // @Router /api/v1/auth/sessions [get]
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	auth, ok := requireAuth(w, r)

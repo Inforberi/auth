@@ -24,6 +24,8 @@ import (
 )
 
 type emailMFAHTTPFixture struct {
+	pair     preparedHTTPProjects
+	factory  runtimeprofile.Factory
 	projects projectIsolationHTTP
 	tokens   tokenIsolationFixture
 	webs     [2]isolationHTTP
@@ -85,10 +87,11 @@ func prepareMFAHTTP(t *testing.T, bot projectmfa.ProjectTelegramClient) emailMFA
 			return config, err
 		}
 	}
+	f.pair, f.factory = pair, profilefactory.NewFactory(projects.deps, source)
 	handler, err := projectbrowser.NewProjectHTTP(runtimeprofile.ProjectHTTPConfig{
 		PlatformOrigin: "https://platform-http.example.test", Residents: projecthttp.RuntimeDispatcherConfig{MaxProfiles: 2, MaxBuilding: 1, BuildTimeout: 10 * time.Second, MaxAge: time.Minute},
 		Capacity: middleware.CapacityConfig{MaxInFlight: 8, RequestTimeout: 10 * time.Second}, SessionValidation: &projects.password.Session,
-	}, projects.deps.Reader, profilefactory.NewFactory(projects.deps, source), nil)
+	}, projects.deps.Reader, f.factory, nil)
 	require.NoError(t, err)
 	server := httptest.NewTLSServer(handler)
 	t.Cleanup(func() {

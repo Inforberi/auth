@@ -20,6 +20,8 @@ import (
 )
 
 type Endpoints struct {
+	Frontend                func(context.Context) (settingsdomain.FrontendPolicy, error)
+	FrontendOrigins         []string
 	Password                *projectmethods.ProjectPassword
 	EmailOTP                *projectmethods.ProjectEmailOTP
 	Google                  *projectmethods.ProjectOIDC
@@ -65,6 +67,7 @@ func (p *ProjectProfile) Endpoints() (Endpoints, error) {
 		return Endpoints{}, errors.New("unbuilt project HTTP profile")
 	}
 	e := Endpoints{
+		Frontend: p.frontend, FrontendOrigins: p.frontendOrigins,
 		Password:            p.password,
 		EmailOTP:            p.emailOTP,
 		Google:              p.google,

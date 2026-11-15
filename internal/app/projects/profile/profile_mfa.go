@@ -97,7 +97,7 @@ func sameProjectSession(a, b sessionservice.Config) bool {
 }
 
 func sameProjectMFA(a, b mfaservice.Config) bool {
-	return a.ChallengeTTLSource == nil && b.ChallengeTTLSource == nil && a.BudgetSource == nil && b.BudgetSource == nil &&
+	return a.ChallengeTTLSource == nil && b.ChallengeTTLSource == nil && (a.BudgetSource == nil) == (b.BudgetSource == nil) &&
 		a.Enabled == b.Enabled && a.RecoveryEnabled == b.RecoveryEnabled && a.Issuer == b.Issuer &&
 		a.ChallengeTTL == b.ChallengeTTL && a.UserLimitPerMinute == b.UserLimitPerMinute &&
 		a.IPLimitPerMinute == b.IPLimitPerMinute && a.GlobalLimitPerMinute == b.GlobalLimitPerMinute

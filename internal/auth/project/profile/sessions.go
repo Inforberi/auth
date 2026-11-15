@@ -19,6 +19,14 @@ type SessionRuntime struct {
 	cfg     sessionservice.Config
 }
 
+func (p *ProjectProfile) browserPolicySchema(ctx context.Context) (bool, error) {
+	var installed bool
+	err := p.deps.Registry.UsePool(ctx, p.key, func(ctx context.Context, pool *pgxpool.Pool) error {
+		return pool.QueryRow(ctx, `SELECT to_regclass('auth.browser_session_policy') IS NOT NULL`).Scan(&installed)
+	})
+	return installed, err
+}
+
 func (p *ProjectProfile) httpSessionConfig(fallback *sessionservice.Config) (sessionservice.Config, error) {
 	switch {
 	case p.password != nil:
@@ -78,7 +86,11 @@ func (s *SessionRuntime) use(ctx context.Context, operation func(context.Context
 		if err := projectbinding.RequireCurrent(ctx, s.profile.deps.Reader, s.profile.key); err != nil {
 			return err
 		}
-		if err := operation(ctx, sessionpostgres.New(pool)); err != nil {
+		repo := sessionpostgres.New(pool)
+		if p := s.profile; p.browserPolicyInstalled {
+			repo = sessionpostgres.NewWithBrowserPolicy(pool)
+		}
+		if err := operation(ctx, repo); err != nil {
 			return err
 		}
 		return projectbinding.RequireCurrent(ctx, s.profile.deps.Reader, s.profile.key)

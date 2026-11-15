@@ -18,5 +18,6 @@ type StartResponse = oidchttp.StartResponse
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthGoogleStart
 // @Router /api/v1/auth/google/start [post]
 func (h *Handler) Start(w http.ResponseWriter, r *http.Request) { h.Handler.Start(w, r) }

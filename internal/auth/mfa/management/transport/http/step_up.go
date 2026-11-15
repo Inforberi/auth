@@ -33,6 +33,7 @@ type (
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthMfaStepUp
 // @Router /api/v1/auth/mfa/step-up [post]
 func (h *Handler) StepUp(w http.ResponseWriter, r *http.Request) {
 	var input StepUpRequest

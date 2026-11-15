@@ -25,6 +25,7 @@ type LoginEnrollmentRequest struct {
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthMfaLoginEnrollment
 // @Router /api/v1/auth/mfa/login/enrollment [post]
 func (h *Handler) StartLoginEnrollment(w http.ResponseWriter, r *http.Request) {
 	var input LoginEnrollmentRequest

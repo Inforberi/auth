@@ -28,6 +28,15 @@ func NewManaged(db *pgxpool.Pool, authority MutationAuthority, freshFor time.Dur
 func (r *Repository) ApplyTransition(ctx context.Context, actor operatordomain.Principal, command domain.Transition) (domain.TransitionReceipt, error) {
 	var result domain.TransitionReceipt
 	err := r.mutate(ctx, actor, operatordomain.ProjectsManage, func(ctx context.Context, tx pgx.Tx, _ time.Time) error {
+		if command.Action == domain.Resume {
+			var project domain.ID
+			if err := tx.QueryRow(ctx, `SELECT id FROM platform.projects WHERE id=$1 FOR UPDATE`, command.ProjectID).Scan(&project); err != nil {
+				return sqlerrors.Catalog(ctx, err)
+			}
+			if err := guardDeletion(ctx, tx, command.ProjectID); err != nil {
+				return err
+			}
+		}
 		command.ActorID, command.ActorKind = domain.ID(actor.UserID), domain.OperatorActor
 		var err error
 		result, err = Transition(ctx, tx, command)

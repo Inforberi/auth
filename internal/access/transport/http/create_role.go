@@ -29,6 +29,7 @@ type CreateRoleRequest struct {
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminRoles
 // @Router /api/v1/admin/roles [post]
 func (h *Handler) CreateRole(w http.ResponseWriter, r *http.Request) {
 	actor, ok := principal(w, r)

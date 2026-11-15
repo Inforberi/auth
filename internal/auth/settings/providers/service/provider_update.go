@@ -21,24 +21,32 @@ func (s *Providers) Update(ctx context.Context, input ProviderUpdateInput) (doma
 	if input.Actor.Validate() != nil {
 		return domain.ProviderSnapshot{}, accessdomain.ErrForbidden
 	}
-	if !domain.ValidProvider(input.Provider) || input.ExpectedVersion < 1 || input.ClientID != "" && !domain.ValidProviderClientID(input.Provider, input.ClientID) {
-		return domain.ProviderSnapshot{}, domain.ErrInvalidProvider
+	update, err := s.PrepareUpdate(input)
+	if err != nil {
+		return domain.ProviderSnapshot{}, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
+	return s.repo.UpdateProvider(ctx, update)
+}
+
+func (s *Providers) PrepareUpdate(input ProviderUpdateInput) (ProviderUpdate, error) {
+	if !domain.ValidProvider(input.Provider) || input.ExpectedVersion < 1 || input.ClientID != "" && !domain.ValidProviderClientID(input.Provider, input.ClientID) {
+		return ProviderUpdate{}, domain.ErrInvalidProvider
+	}
 	update := ProviderUpdate{Actor: input.Actor, Provider: input.Provider, ClientID: input.ClientID, ExpectedVersion: input.ExpectedVersion}
 	if input.Secret != nil {
 		if !domain.ValidProviderSecret(*input.Secret) {
-			return domain.ProviderSnapshot{}, domain.ErrInvalidProvider
+			return ProviderUpdate{}, domain.ErrInvalidProvider
 		}
 		var err error
 		update.Secret, err = s.ciphers[input.Provider].Seal([]byte(*input.Secret))
 		if err != nil {
-			return domain.ProviderSnapshot{}, errors.New("provider secret encryption unavailable")
+			return ProviderUpdate{}, errors.New("provider secret encryption unavailable")
 		}
 		update.SecretSet = *input.Secret != ""
 	}
-	return s.repo.UpdateProvider(ctx, update)
+	return update, nil
 }
 
 // Replacement resolves encrypted credentials against the current locked snapshot.

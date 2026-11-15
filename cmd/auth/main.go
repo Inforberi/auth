@@ -17,6 +17,15 @@ import (
 // @description Reusable authentication service. Cookie sessions require HTTPS. All auth mutations require an exact allowed Origin. CORS is opt-in; cookie profile is same-site.
 // @BasePath /
 // @schemes https http
+// @securityDefinitions.apikey SessionCookie
+// @in header
+// @name Cookie
+// @description Browser session cookie (__Host-session). Browser clients use credentials: include. Server clients use a cookie jar.
+// @securityDefinitions.basic ServiceBasic
+// @description Dedicated client credentials for token introspection.
+// @securityDefinitions.apikey SetupToken
+// @in header
+// @name X-Setup-Token
 
 func main() {
 	if err := run(); err != nil {

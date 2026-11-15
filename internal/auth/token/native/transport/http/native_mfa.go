@@ -28,6 +28,7 @@ type NativeMFARequest struct {
 // @Failure 404 {object} httpx.ErrorResponse "method_disabled"
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthNativeMfaComplete
 // @Router /api/v1/auth/native/mfa/complete [post]
 func (h *NativeHandler) CompleteMFA(w http.ResponseWriter, r *http.Request) {
 	var input NativeMFARequest

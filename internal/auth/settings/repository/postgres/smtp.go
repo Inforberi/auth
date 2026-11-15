@@ -74,3 +74,8 @@ func InitializeSMTPInTransaction(ctx context.Context, tx pgx.Tx, seed settingssm
 	return scanSMTP(tx.QueryRow(ctx, `INSERT INTO auth.smtp_settings(singleton,configuration,password,password_set)
 		VALUES(true,$1,$2,$3) RETURNING `+smtpColumns+`,password`, seed.Config, seed.Password, seed.PasswordSet), true)
 }
+
+func ReadSMTPInTransaction(ctx context.Context, tx pgx.Tx) (domain.SMTPSnapshot, error) {
+	stored, err := scanSMTP(tx.QueryRow(ctx, `SELECT `+smtpColumns+` FROM auth.smtp_settings WHERE singleton`), false)
+	return stored.SMTPSnapshot, err
+}

@@ -130,7 +130,7 @@ func (t *Target) installProjectSchema(ctx context.Context, conn *pgx.Conn, r dom
 		if _, err := tx.Exec(ctx, `SET LOCAL ROLE `+pgx.Identifier{resources.Owner}.Sanitize()); err != nil {
 			return unavailable(ctx)
 		}
-		if _, err := tx.Exec(ctx, `SET LOCAL search_path=pg_catalog,public; REVOKE CREATE ON SCHEMA public FROM PUBLIC;`+authschema.InitialAuth()); err != nil {
+		if _, err := tx.Exec(ctx, `SET LOCAL search_path=pg_catalog,public; REVOKE CREATE ON SCHEMA public FROM PUBLIC;`+authschema.InitialAuth()+"\n"+authschema.ProjectPolicyMigrations()+"\n"+authschema.PlatformUserLifecycle); err != nil {
 			return unavailable(ctx)
 		}
 		if _, err := tx.Exec(ctx, grants+`; REVOKE CONNECT ON DATABASE `+pgx.Identifier{resources.Database}.Sanitize()+` FROM `+pgx.Identifier{runtime}.Sanitize()+`; REVOKE ALL ON SCHEMA auth FROM PUBLIC`); err != nil {

@@ -28,6 +28,7 @@ type DeleteUserRequest struct {
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID deleteAdminUsersById
 // @Router /api/v1/admin/users/{id} [delete]
 func (h *UserLifecycleHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	actor, ok := Actor(w, r)

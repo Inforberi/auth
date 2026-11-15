@@ -29,6 +29,7 @@ type CompleteEmailLoginRequest struct {
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthMfaEmailLoginComplete
 // @Router /api/v1/auth/mfa/email/login/complete [post]
 func (h *EmailHandler) CompleteEmailLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

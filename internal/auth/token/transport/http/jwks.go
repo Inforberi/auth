@@ -23,8 +23,8 @@ type PublicKey struct {
 // @Produce json
 // @Success 200 {object} JWKSResponse
 // @Success 304 "unchanged"
+// @ID getWellKnownJwksJson
 // @Router /.well-known/jwks.json [get]
-// @Router /.well-known/jwks.json [head]
 func (h *Handler) JWKS(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "public, max-age=30, must-revalidate")
@@ -37,4 +37,16 @@ func (h *Handler) JWKS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, _ = w.Write(h.public) //nolint:gosec // A disconnected client cannot receive a second response.
+}
+
+// @Summary Public JWT verification keys
+// @Description Public-only deployment key set. Contains no private signing material. Not an authorization decision. Keys are operator-controlled and loaded on startup.
+// @Tags Tokens
+// @Produce json
+// @Success 200 {object} JWKSResponse
+// @Success 304 "unchanged"
+// @ID headWellKnownJwksJson
+// @Router /.well-known/jwks.json [head]
+func (h *Handler) JWKSHead(w http.ResponseWriter, r *http.Request) {
+	h.JWKS(w, r)
 }

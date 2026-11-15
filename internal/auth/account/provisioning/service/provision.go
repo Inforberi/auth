@@ -74,6 +74,28 @@ func (s *ProvisionService) Provision(ctx context.Context, input ProvisionInput) 
 	if err := s.limitIssue(ctx, input.Actor.UserID); err != nil {
 		return nil, err
 	}
+	command, err := s.prepareProvision(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.ProvisionAccount(ctx, command)
+}
+
+func (s *ProvisionService) PreparePlatformInvitation(ctx context.Context, actor domain.UserID, rawEmail string) (ProvisionCommand, error) {
+	if !s.cfg.Enabled {
+		return ProvisionCommand{}, domain.ErrProvisionDisabled
+	}
+	email, err := domain.NewEmail(rawEmail)
+	if err != nil {
+		return ProvisionCommand{}, err
+	}
+	if err := s.limitIssue(ctx, actor); err != nil {
+		return ProvisionCommand{}, err
+	}
+	return s.prepareProvision(ctx, ProvisionInput{Email: email.String(), Invite: true})
+}
+
+func (s *ProvisionService) prepareProvision(ctx context.Context, input ProvisionInput) (ProvisionCommand, error) {
 	command := ProvisionCommand{
 		Input: input, TTL: s.cfg.TTL,
 		Fingerprint: s.cipher.Digest("provision:v1:" + strconv.FormatBool(input.Invite) + ":" + input.Email),
@@ -81,17 +103,17 @@ func (s *ProvisionService) Provision(ctx context.Context, input ProvisionInput) 
 	if input.Invite {
 		prepared, err := s.prepareInvitation(ctx, input.Email)
 		if err != nil {
-			return nil, err
+			return ProvisionCommand{}, err
 		}
 		if s.cfg.TTLSource != nil {
 			command.TTL, err = s.cfg.TTLSource(ctx)
 			if err != nil {
-				return nil, err
+				return ProvisionCommand{}, err
 			}
 		}
 		command.Invitation = prepared
 	}
-	return s.repo.ProvisionAccount(ctx, command)
+	return command, nil
 }
 
 func (s *ProvisionService) limitIssue(ctx context.Context, actor domain.UserID) error {

@@ -29,6 +29,15 @@ func projectRuntimeProfileDrill(t *testing.T, admin *pgx.Conn, runtime *pgxpool.
 	require.Equal(t, []string{"realm_id", "project_id", "reservation_id", "database_oid", "owner_oid", "runtime_oid", "schema_version", "schema_checksum"}, fields)
 	_, err := admin.Exec(ctx, projectschema.RuntimeGrants(runtime.Config().ConnConfig.Database, runtime.Config().ConnConfig.User))
 	require.NoError(t, err, "restore/reapply grants must preserve the read-only projection")
+	var appendOnly bool
+	require.NoError(t, runtime.QueryRow(ctx, `SELECT bool_and(
+  has_table_privilege(current_user, relation, 'SELECT')
+  AND has_column_privilege(current_user, relation, field, 'INSERT')
+  AND NOT has_table_privilege(current_user, relation, 'INSERT,UPDATE,DELETE,TRUNCATE')
+  AND NOT has_column_privilege(current_user, relation, 'created_at', 'INSERT'))
+  FROM (VALUES ('auth.platform_user_lifecycle','operation_id'),
+    ('auth.platform_user_creations','operation_id'), ('auth.platform_management_audit','action')) AS grants(relation, field)`).Scan(&appendOnly))
+	require.True(t, appendOnly, "reapplying runtime grants must preserve append-only receipts")
 	_, err = runtime.Exec(ctx, `SELECT setup_operator_hash FROM project_meta.identity`)
 	require.Error(t, err)
 	_, err = runtime.Exec(ctx, `SELECT setup_operator_hash FROM auth.project_identity`)

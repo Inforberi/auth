@@ -1,6 +1,7 @@
 package methods
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -17,6 +18,7 @@ type ProjectOIDCConfig struct {
 	Enabled              bool
 	RedirectURI          string
 	IPLimit, GlobalLimit int
+	BudgetSource         func(context.Context) (int, int, error)
 	MFA                  mfaservice.Config
 	Session              sessionservice.Config
 	Timeout              time.Duration

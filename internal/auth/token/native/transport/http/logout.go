@@ -19,6 +19,7 @@ import (
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthTokenLogout
 // @Router /api/v1/auth/token/logout [post]
 func (h *NativeHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	var input RefreshRequest

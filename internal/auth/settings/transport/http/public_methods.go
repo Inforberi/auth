@@ -27,6 +27,7 @@ type PublicRegistrationResponse struct {
 // @Success 200 {object} PublicMethodsResponse
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAuthMethods
 // @Router /api/v1/auth/methods [get]
 func PublicMethods(load func(context.Context) (domain.Policy, error), available domain.PublicMethods) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

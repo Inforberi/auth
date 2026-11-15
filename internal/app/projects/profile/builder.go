@@ -1,6 +1,7 @@
 package profile
 
 import (
+	"context"
 	"time"
 
 	projectaccess "github.com/Inforberi/financial-intelligence/internal/access/project"
@@ -16,6 +17,8 @@ import (
 )
 
 type profileAssembly struct {
+	frontend                 func(context.Context) (settingsdomain.FrontendPolicy, error)
+	frontendOrigins          []string
 	key                      projectruntime.Key
 	origin                   string
 	policy                   settingsdomain.Snapshot

@@ -40,6 +40,7 @@ type BrowserSessionPolicyHandler struct {
 
 // @Summary Read standalone browser session policy
 // @Success 200 {object} BrowserSessionPolicyView
+// @ID getAdminAuthSettingsSessions
 // @Router /api/v1/admin/auth/settings/sessions [get]
 func (h *BrowserSessionPolicyHandler) Read(w http.ResponseWriter, r *http.Request) {
 	servePolicyRead(w, r, h.ReadPolicy, policyResponse[BrowserSessionPolicyView](h.Log, "browser_session_policy", sessions.ErrInvalidBrowserPolicy, "invalid browser session policy"))
@@ -50,6 +51,7 @@ func (h *BrowserSessionPolicyHandler) Read(w http.ResponseWriter, r *http.Reques
 // @Param body body BrowserSessionPolicyRequest true "Complete policy and current version"
 // @Success 200 {object} BrowserSessionPolicyView
 // @Failure 409 {object} PolicyErrorResponse
+// @ID postAdminAuthSettingsSessions
 // @Router /api/v1/admin/auth/settings/sessions [post]
 func (h *BrowserSessionPolicyHandler) Update(w http.ResponseWriter, r *http.Request) {
 	servePolicyUpdate(w, r, h.UpdatePolicy, policyResponse[BrowserSessionPolicyView](h.Log, "browser_session_policy", sessions.ErrInvalidBrowserPolicy, "invalid browser session policy"))

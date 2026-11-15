@@ -32,6 +32,7 @@ type NativeRecoveryCodesResponse struct {
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthNativeMfaEnrollmentConfirm
 // @Router /api/v1/auth/native/mfa/enrollment/confirm [post]
 func (h *NativeHandler) ConfirmEnrollment(w http.ResponseWriter, r *http.Request) {
 	var input NativeEnrollmentConfirmRequest

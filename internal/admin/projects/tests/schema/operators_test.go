@@ -56,9 +56,15 @@ func TestPlatformOperatorsPostgres(t *testing.T) {
 		operatorMigration(t, db, cleanup, "auth/000001_init.down.sql")
 	})
 	operatorMigration(t, db, ctx, "admin/000002_operators.up.sql")
+	operatorMigration(t, db, ctx, "admin/000003_project_names.up.sql")
+	operatorMigration(t, db, ctx, "admin/000004_operator_management.up.sql")
+	operatorMigration(t, db, ctx, "admin/000005_project_operations.up.sql")
 	t.Cleanup(func() {
 		cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 		defer stop()
+		operatorMigration(t, db, cleanup, "admin/000005_project_operations.down.sql")
+		operatorMigration(t, db, cleanup, "admin/000004_operator_management.down.sql")
+		operatorMigration(t, db, cleanup, "admin/000003_project_names.down.sql")
 		operatorMigration(t, db, cleanup, "admin/000002_operators.down.sql")
 	})
 	var realm domain.RealmID

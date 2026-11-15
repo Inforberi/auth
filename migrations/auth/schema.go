@@ -38,3 +38,10 @@ func InitialAuth() string {
 func StandaloneMigrations() string {
 	return browserSessionPolicy + "\n" + linkLifetimePolicy + "\n" + credentialLifetimePolicy + "\n" + loginBudgetPolicy + "\n" + frontendPolicy + "\n" + operationBudgetsPolicy
 }
+
+func ProjectPolicyMigrations() string {
+	return browserSessionPolicy + "\n" + linkLifetimePolicy + "\n" + credentialLifetimePolicy + "\n" + loginBudgetPolicy + "\n" + frontendPolicy + "\n" + operationBudgetsPolicy
+}
+
+//go:embed 000010_platform_user_lifecycle.up.sql
+var PlatformUserLifecycle string

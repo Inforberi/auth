@@ -17,5 +17,8 @@ func runPreparation(ctx context.Context, input preparationservice.Input, connect
 	if err != nil {
 		return preparationservice.Result{}, err
 	}
+	if input.Watch {
+		return preparationapp.Watch(ctx, input, preparationapp.Connections{Catalog: catalog, Storage: storage, Codec: connections.Codec})
+	}
 	return preparationapp.Run(ctx, input, preparationapp.Connections{Catalog: catalog, Storage: storage, Codec: connections.Codec})
 }

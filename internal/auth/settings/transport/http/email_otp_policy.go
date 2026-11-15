@@ -37,6 +37,7 @@ type EmailOTPPolicyHandler struct {
 
 // @Summary Read standalone email OTP policy
 // @Success 200 {object} EmailOTPPolicyView
+// @ID getAdminAuthSettingsEmailOtp
 // @Router /api/v1/admin/auth/settings/email-otp [get]
 func (h *EmailOTPPolicyHandler) Read(w http.ResponseWriter, r *http.Request) {
 	servePolicyRead(w, r, h.ReadPolicy, policyResponse[EmailOTPPolicyView](h.Log, "email_otp_policy", otp.ErrInvalidPolicy, "invalid email OTP policy"))
@@ -47,6 +48,7 @@ func (h *EmailOTPPolicyHandler) Read(w http.ResponseWriter, r *http.Request) {
 // @Param body body EmailOTPPolicyRequest true "Complete policy and current version"
 // @Success 200 {object} EmailOTPPolicyView
 // @Failure 409 {object} PolicyErrorResponse
+// @ID postAdminAuthSettingsEmailOtp
 // @Router /api/v1/admin/auth/settings/email-otp [post]
 func (h *EmailOTPPolicyHandler) Update(w http.ResponseWriter, r *http.Request) {
 	servePolicyUpdate(w, r, h.UpdatePolicy, policyResponse[EmailOTPPolicyView](h.Log, "email_otp_policy", otp.ErrInvalidPolicy, "invalid email OTP policy"))

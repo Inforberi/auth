@@ -50,6 +50,7 @@ type UserDetailResponse struct {
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAdminUsersById
 // @Router /api/v1/admin/users/{id} [get]
 func (h *UserDirectoryHandler) Read(w http.ResponseWriter, r *http.Request) {
 	actor, ok := Actor(w, r)

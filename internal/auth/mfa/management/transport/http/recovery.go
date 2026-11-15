@@ -18,6 +18,7 @@ import (
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthMfaRecoveryCodesRegenerate
 // @Router /api/v1/auth/mfa/recovery-codes/regenerate [post]
 func (h *Handler) RegenerateRecovery(w http.ResponseWriter, r *http.Request) {
 	proof, ok := mfahttp.RequestProof(w, r)

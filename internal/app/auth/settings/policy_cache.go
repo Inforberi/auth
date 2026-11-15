@@ -7,7 +7,7 @@ import (
 )
 
 // A bounded refresh coalesces requests while keeping policy changes visible to all replicas.
-func cachedPolicy[P comparable](load func(context.Context) (P, error)) (func(context.Context) (P, error), func()) {
+func CachedPolicy[P comparable](load func(context.Context) (P, error)) (func(context.Context) (P, error), func()) {
 	var mu sync.RWMutex
 	var value P
 	var expires time.Time

@@ -29,6 +29,8 @@ type PlatformRolePageResponse struct {
 // @Failure 428 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID getPlatformProjectsByIdRoles
 // @Router /api/v1/platform/projects/{id}/roles [get]
 func (h *RoleHandler) ListRoles(w http.ResponseWriter, r *http.Request) {
 	actor, ok := cataloghttp.RequestActor(w, r)

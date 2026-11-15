@@ -132,3 +132,7 @@ func TestOperatorCatalogRouteBoundary(t *testing.T) {
 		t.Fatal("standalone published platform API", response.Code)
 	}
 }
+
+func (s *operatorReadCatalog) Rename(context.Context, operatordomain.Principal, projectdomain.Rename) (projectdomain.NameReceipt, error) {
+	return projectdomain.NameReceipt{}, nil
+}

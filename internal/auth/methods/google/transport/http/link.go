@@ -15,5 +15,6 @@ import (
 // @Failure 404 {object} httpx.ErrorResponse "code: method_disabled"
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthGoogleLink
 // @Router /api/v1/auth/google/link [post]
 func (h *Handler) StartLink(w http.ResponseWriter, r *http.Request) { h.Handler.StartLink(w, r) }

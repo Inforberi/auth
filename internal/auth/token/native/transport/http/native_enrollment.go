@@ -34,6 +34,7 @@ type NativeEnrollmentResponse struct {
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthNativeMfaEnrollment
 // @Router /api/v1/auth/native/mfa/enrollment [post]
 func (h *NativeHandler) StartEnrollment(w http.ResponseWriter, r *http.Request) {
 	var input NativeEnrollmentRequest

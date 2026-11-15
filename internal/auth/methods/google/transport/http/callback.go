@@ -26,5 +26,6 @@ type (
 // @Failure 409 {object} httpx.ErrorResponse "identity_conflict"
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAuthGoogleCallback
 // @Router /api/v1/auth/google/callback [get]
 func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) { h.Handler.Callback(w, r) }

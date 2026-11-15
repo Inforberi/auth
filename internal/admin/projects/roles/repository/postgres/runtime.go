@@ -14,6 +14,7 @@ type RuntimeRoles struct {
 	*catalogpostgres.Repository
 	registry    *projectruntime.Registry
 	permissions settings.Catalog
+	readiness   Readiness
 }
 
 func NewRuntimeRoles(repo *catalogpostgres.Repository, registry *projectruntime.Registry, permissions settings.Catalog) *RuntimeRoles {
@@ -21,19 +22,33 @@ func NewRuntimeRoles(repo *catalogpostgres.Repository, registry *projectruntime.
 }
 
 func (r *RuntimeRoles) ExecuteRoleCreation(ctx context.Context, actor operatordomain.Principal, command domain.RoleCreation) (domain.RoleCreationResult, error) {
+	var ready bool
+	if command.MFARequired {
+		var err error
+		ready, err = r.projectMFAReady(ctx, actor, domain.DirectoryTarget{ProjectID: command.ProjectID, ExpectedVersion: command.ExpectedVersion, ExpectedGeneration: command.ExpectedGeneration}, operatordomain.AccessManage)
+		if err != nil {
+			return domain.RoleCreationResult{}, err
+		}
+	}
 	grant, err := r.AdmitRoleCreation(ctx, actor, command)
 	if err != nil {
 		return domain.RoleCreationResult{}, err
 	}
-	// Platform MFA readiness is not project readiness. Until project Auth assembly
-	// supplies that capability, MFA-required roles fail closed in the transaction.
-	return grant.ExecuteWithRuntime(ctx, r.registry, r.permissions, false)
+	return grant.ExecuteWithRuntime(ctx, r.registry, r.permissions, ready)
 }
 
 func (r *RuntimeRoles) ExecuteRoleAssignment(ctx context.Context, actor operatordomain.Principal, command domain.RoleAssignment) (domain.RoleAssignmentResult, error) {
+	var ready bool
+	if command.Action == domain.RoleGrant {
+		var err error
+		ready, err = r.projectMFAReady(ctx, actor, domain.DirectoryTarget{ProjectID: command.ProjectID, ExpectedVersion: command.ExpectedVersion, ExpectedGeneration: command.ExpectedGeneration}, operatordomain.AccessManage)
+		if err != nil {
+			return domain.RoleAssignmentResult{}, err
+		}
+	}
 	grant, err := r.AdmitRoleAssignment(ctx, actor, command)
 	if err != nil {
 		return domain.RoleAssignmentResult{}, err
 	}
-	return grant.ExecuteWithRuntime(ctx, r.registry, r.permissions, false)
+	return grant.ExecuteWithRuntime(ctx, r.registry, r.permissions, ready)
 }

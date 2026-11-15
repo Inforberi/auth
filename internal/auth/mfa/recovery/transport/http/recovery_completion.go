@@ -30,6 +30,7 @@ type CompleteRecoveryRequest struct {
 // @Failure 404 {object} httpx.ErrorResponse "method_disabled for public primary; route absent when recovery disabled"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
+// @ID postAuthMfaRecoveryComplete
 // @Router /api/v1/auth/mfa/recovery/complete [post]
 func (h *Handler) CompleteRecovery(w http.ResponseWriter, r *http.Request) {
 	if h.recovery == nil {

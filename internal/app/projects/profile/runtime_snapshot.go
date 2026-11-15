@@ -4,7 +4,8 @@ import runtimeprofile "github.com/Inforberi/financial-intelligence/internal/auth
 
 func (p *profileAssembly) runtimeSnapshot() *runtimeprofile.ProjectProfile {
 	return runtimeprofile.New(runtimeprofile.Definition{
-		Key:                 p.key,
+		Key:      p.key,
+		Frontend: p.frontend, FrontendOrigins: p.frontendOrigins,
 		Origin:              p.origin,
 		Policy:              p.policy,
 		Dependencies:        p.deps,

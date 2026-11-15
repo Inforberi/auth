@@ -18,6 +18,7 @@ import (
 // @Failure 409 {object} httpx.ErrorResponse "code: mfa_conflict"
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthMfaTotpEnrollment
 // @Router /api/v1/auth/mfa/totp/enrollment [post]
 func (h *Handler) StartEnrollment(w http.ResponseWriter, r *http.Request) {
 	proof, ok := mfahttp.RequestProof(w, r)

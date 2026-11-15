@@ -17,7 +17,7 @@ func AssembleLoginBudgetPolicy(ctx context.Context, repo *settingspostgres.Repos
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	mode := cfg.SettingsSource.Mode
-	baseline := domain.LoginBudgetPolicy{IPPerMinute: cfg.Capacity.LoginIPLimit, IdentityPerMinute: cfg.Capacity.LoginEmailLimit, GlobalPerMinute: cfg.Capacity.LoginGlobalLimit, RegistrationIPPerMinute: cfg.Account.RegistrationIPLimit, RegistrationGlobalPerMinute: cfg.Account.RegistrationGlobalLimit, ResetGlobalPerMinute: cfg.Password.ResetGlobalLimit}
+	baseline := LoginBudgetBaseline(cfg)
 	if err := baseline.Validate(baseline); err != nil {
 		return nil, err
 	}
@@ -25,7 +25,7 @@ func AssembleLoginBudgetPolicy(ctx context.Context, repo *settingspostgres.Repos
 	if err := store.Initialize(ctx, baseline); err != nil {
 		return nil, err
 	}
-	load, invalidate := cachedPolicy(store.Load)
+	load, invalidate := CachedPolicy(store.Load)
 	if mode.Effective() == domain.SourceAPI {
 		policy, err := store.Load(ctx)
 		if err != nil {
@@ -73,4 +73,8 @@ func AssembleLoginBudgetPolicy(ctx context.Context, repo *settingspostgres.Repos
 			return view(snapshot), err
 		},
 	}, nil
+}
+
+func LoginBudgetBaseline(cfg *config.Config) domain.LoginBudgetPolicy {
+	return domain.LoginBudgetPolicy{IPPerMinute: cfg.Capacity.LoginIPLimit, IdentityPerMinute: cfg.Capacity.LoginEmailLimit, GlobalPerMinute: cfg.Capacity.LoginGlobalLimit, RegistrationIPPerMinute: cfg.Account.RegistrationIPLimit, RegistrationGlobalPerMinute: cfg.Account.RegistrationGlobalLimit, ResetGlobalPerMinute: cfg.Password.ResetGlobalLimit}
 }

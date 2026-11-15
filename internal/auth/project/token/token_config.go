@@ -1,6 +1,7 @@
 package token
 
 import (
+	"context"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -27,6 +28,7 @@ type ProjectNativeConfig struct {
 }
 
 type ProjectIntrospectionConfig struct {
+	BudgetSource                        func(context.Context) (int, int, error)
 	Clients                             []tokenservice.IntrospectionClientConfig
 	ConsumerPerMinute, ProjectPerMinute int
 }

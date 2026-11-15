@@ -35,6 +35,7 @@ type RecoveryCandidateResponse struct {
 // @Failure 404 {object} httpx.ErrorResponse "method_disabled for public primary; route absent when recovery disabled"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
+// @ID postAuthMfaRecoveryStart
 // @Router /api/v1/auth/mfa/recovery/start [post]
 func (h *Handler) StartRecovery(w http.ResponseWriter, r *http.Request) {
 	if h.recovery == nil {

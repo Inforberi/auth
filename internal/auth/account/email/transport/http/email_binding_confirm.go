@@ -26,6 +26,7 @@ type ConfirmEmailBindingRequest struct {
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthEmailBindingConfirm
 // @Router /api/v1/auth/email/binding/confirm [post]
 func (h *EmailBindingHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 	auth, ok := bindingOwner(w, r)

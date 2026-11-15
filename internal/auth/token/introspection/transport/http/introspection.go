@@ -40,7 +40,6 @@ type IntrospectionResponse struct {
 // @Tags Tokens
 // @Accept json
 // @Produce json
-// @Param Authorization header string true "Basic service client ID and secret"
 // @Param body body IntrospectionRequest true "Full access JWT"
 // @Success 200 {object} IntrospectionResponse
 // @Failure 400 {object} httpx.ErrorResponse "invalid_json"
@@ -48,6 +47,8 @@ type IntrospectionResponse struct {
 // @Failure 403 {object} httpx.ErrorResponse "forbidden"
 // @Failure 429 {object} httpx.ErrorResponse "rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "temporarily_unavailable"
+// @Security ServiceBasic
+// @ID postInternalAuthTokenIntrospect
 // @Router /api/v1/internal/auth/token/introspect [post]
 func (h *IntrospectionHandler) Inspect(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

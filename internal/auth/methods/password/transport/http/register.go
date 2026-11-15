@@ -35,6 +35,7 @@ type RegisterResponse struct {
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, email_required, password_required, invalid_email, password_too_short, password_too_long, password_no_letter, password_no_digit, password_no_upper_letter"
 // @Failure 409 {object} httpx.ErrorResponse "code: email_already_exists"
 // @Failure 500 {object} httpx.ErrorResponse "code: internal_error"
+// @ID postAuthRegisterEmail
 // @Router /api/v1/auth/register/email [post]
 func (h *PublicPasswordHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var input RegisterRequest

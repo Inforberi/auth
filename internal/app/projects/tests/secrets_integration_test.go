@@ -19,6 +19,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/admin/projects/domain"
 	preparationpostgres "github.com/Inforberi/financial-intelligence/internal/admin/projects/preparation/repository/postgres"
 	preparationcli "github.com/Inforberi/financial-intelligence/internal/admin/projects/preparation/transport/cli"
+	authschema "github.com/Inforberi/financial-intelligence/migrations/auth"
 )
 
 func secretsPreparationDrill(t *testing.T, admin, physical *pgx.Conn, env func(string) string, schemaArgs []string) {
@@ -53,7 +54,7 @@ func secretsPreparationDrill(t *testing.T, admin, physical *pgx.Conn, env func(s
 	reservation.StorageTarget = "primary"
 	require.NoError(t, admin.QueryRow(ctx, `SELECT reservation_id::text FROM platform.project_preparations`).Scan(&reservation.ReservationID))
 	binding.RealmID, binding.ProjectID, binding.ReservationID = "c2000000-0000-4000-8000-000000000001", reservation.ProjectID, reservation.ReservationID
-	binding.StorageTarget, binding.SchemaVersion = "primary", 1
+	binding.StorageTarget, binding.SchemaVersion = reservation.StorageTarget, authschema.AuthVersion
 	require.NoError(t, physical.QueryRow(ctx, `SELECT oid,datdba,(SELECT oid FROM pg_roles WHERE rolname='authr_a2000000000040008000000000000001')
 		FROM pg_database WHERE datname='authp_a2000000000040008000000000000001'`).Scan(&binding.DatabaseOID, &binding.OwnerOID, &binding.RuntimeOID))
 	cfg, err := pgxpool.ParseConfig(env("PROVISIONER_CATALOG_URL"))

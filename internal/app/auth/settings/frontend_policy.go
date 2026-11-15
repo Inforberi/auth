@@ -25,7 +25,7 @@ func AssembleFrontendPolicy(ctx context.Context, repo *settingspostgres.Reposito
 	if err := store.Initialize(ctx, baseline); err != nil {
 		return nil, err
 	}
-	load, invalidate := cachedPolicy(func(ctx context.Context) (domain.FrontendPolicy, error) {
+	load, invalidate := CachedPolicy(func(ctx context.Context) (domain.FrontendPolicy, error) {
 		policy, err := store.Load(ctx)
 		if err != nil {
 			return policy, err

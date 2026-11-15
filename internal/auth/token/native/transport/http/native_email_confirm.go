@@ -27,6 +27,7 @@ type NativeEmailConfirmRequest struct {
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthNativeEmailConfirm
 // @Router /api/v1/auth/native/email/confirm [post]
 func (h *NativeHandler) EmailConfirm(w http.ResponseWriter, r *http.Request) {
 	var input NativeEmailConfirmRequest

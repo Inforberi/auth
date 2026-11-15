@@ -29,6 +29,7 @@ type UserPageResponse struct {
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAdminUsers
 // @Router /api/v1/admin/users [get]
 func (h *UserDirectoryHandler) List(w http.ResponseWriter, r *http.Request) {
 	actor, ok := Actor(w, r)

@@ -30,6 +30,7 @@ type SMTPTestResponse struct {
 // @Failure 409 {object} httpx.ErrorResponse "smtp_settings_conflict, smtp_connection_failed"
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminAuthSettingsSmtpTest
 // @Router /api/v1/admin/auth/settings/smtp/test [post]
 func (h *SMTPHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
 	actor, ok := settingshttp.Principal(w, r)

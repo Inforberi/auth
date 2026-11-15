@@ -27,6 +27,7 @@ type EmailProofResponse struct {
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthReauthenticateEmailConfirm
 // @Router /api/v1/auth/reauthenticate/email/confirm [post]
 func (h *Handler) ConfirmReauthentication(w http.ResponseWriter, r *http.Request) {
 	proof, ok := reauthenticationProof(w, r)

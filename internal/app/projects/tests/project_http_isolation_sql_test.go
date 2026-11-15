@@ -84,7 +84,7 @@ func prepareHTTPProjects(t *testing.T) preparedHTTPProjects {
 		require.NoError(t, err)
 		return string(data)
 	}
-	for _, path := range []string{"migrations/auth/000001_init.up.sql", "migrations/admin/000001_catalog.up.sql", "migrations/admin/000002_operators.up.sql"} {
+	for _, path := range []string{"migrations/auth/000001_init.up.sql", "migrations/auth/000002_settings_source.up.sql", "migrations/admin/000001_catalog.up.sql", "migrations/admin/000002_operators.up.sql", "migrations/admin/000003_project_names.up.sql", "migrations/admin/000004_operator_management.up.sql", "migrations/admin/000005_project_operations.up.sql"} {
 		_, err := admin.Exec(ctx, read(path))
 		require.NoError(t, err)
 	}
@@ -102,10 +102,12 @@ func prepareHTTPProjects(t *testing.T) preparedHTTPProjects {
 	_, err = physical.Exec(ctx, strings.NewReplacer(":'realm'", "'c2000000-0000-4000-8000-000000000001'", ":'target'", "'primary'").Replace(read("deploy/postgres/storage-target.sql")))
 	require.NoError(t, err)
 	master := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{17}, 32))
+	catalogURL := preparationFixtureURL(t, dsn, "auth_platform_preparation_test", "catalog-fixture-only")
+	storageURL := preparationFixtureURL(t, os.Getenv("AUTH_STORAGE_TEST_DATABASE_URL"), "auth_storage_executor", "storage-fixture-only")
 	env := func(name string) string {
 		return map[string]string{
-			"PROVISIONER_CATALOG_URL":    strings.Replace(dsn, "auth@", "auth_platform_preparation_test:catalog-fixture-only@", 1),
-			"PROVISIONER_STORAGE_URL":    strings.Replace(os.Getenv("AUTH_STORAGE_TEST_DATABASE_URL"), "auth@", "auth_storage_executor:storage-fixture-only@", 1),
+			"PROVISIONER_CATALOG_URL":    catalogURL,
+			"PROVISIONER_STORAGE_URL":    storageURL,
 			"PROVISIONER_REALM_ID":       "c2000000-0000-4000-8000-000000000001",
 			"PROVISIONER_STORAGE_TARGET": "primary",
 			"PROVISIONER_MASTER_KEY":     master,

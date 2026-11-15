@@ -11,6 +11,7 @@ import (
 	accesspostgres "github.com/Inforberi/financial-intelligence/internal/access/repository/postgres"
 	accessservice "github.com/Inforberi/financial-intelligence/internal/access/service"
 	"github.com/Inforberi/financial-intelligence/internal/access/settings"
+	accountdomain "github.com/Inforberi/financial-intelligence/internal/auth/account/domain"
 	"github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 )
 
@@ -70,6 +71,46 @@ func (p VersionedPolicy[P]) Read(ctx context.Context, actor accessservice.Princi
 		return snapshot, accessdomain.ErrForbidden
 	}
 	return snapshot, err
+}
+
+func (p VersionedPolicy[P]) ReadProject(ctx context.Context, tx pgx.Tx, baseline P) (PolicySnapshot[P], domain.SourceMode, error) {
+	var snapshot PolicySnapshot[P]
+	var stored *P
+	var mode domain.SourceMode
+	err := tx.QueryRow(ctx, `SELECT p.version,p.policy,s.mode FROM `+p.table.policy+` p
+		CROSS JOIN auth.settings_source s WHERE p.singleton AND s.singleton`).Scan(&snapshot.Version, &stored, &mode)
+	snapshot.Policy = baseline
+	if mode == domain.SourceAPI && stored != nil {
+		snapshot.Policy = *stored
+	}
+	return snapshot, mode, err
+}
+
+func (p VersionedPolicy[P]) ApplyProject(ctx context.Context, tx pgx.Tx, actor accountdomain.UserID, expected int64, baseline, policy P) (PolicySnapshot[P], error) {
+	if err := RequireAPISettings(ctx, tx); err != nil {
+		return PolicySnapshot[P]{}, err
+	}
+	var result PolicySnapshot[P]
+	var stored *P
+	if err := tx.QueryRow(ctx, `SELECT version,policy FROM `+p.table.policy+` WHERE singleton FOR UPDATE`).Scan(&result.Version, &stored); err != nil {
+		return result, err
+	}
+	if result.Version != expected {
+		return result, domain.ErrPolicyConflict
+	}
+	before := baseline
+	if stored != nil {
+		before = *stored
+	}
+	result.Policy = policy
+	if stored != nil && before == policy {
+		return result, nil
+	}
+	if err := tx.QueryRow(ctx, `UPDATE `+p.table.policy+` SET policy=$1,version=version+1 WHERE singleton RETURNING version`, policy).Scan(&result.Version); err != nil {
+		return result, err
+	}
+	_, err := tx.Exec(ctx, `INSERT INTO `+p.table.audit+`(actor_id,version,previous_policy,next_policy) VALUES($1,$2,$3,$4)`, actor, result.Version, before, policy)
+	return result, err
 }
 
 func (p VersionedPolicy[P]) Update(ctx context.Context, actor accessservice.Principal, expected int64, policy P) (PolicySnapshot[P], error) {

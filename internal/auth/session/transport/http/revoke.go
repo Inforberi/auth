@@ -13,6 +13,8 @@ import "net/http"
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID deleteAuthSessionsById
 // @Router /api/v1/auth/sessions/{id} [delete]
 func (h *Handler) Revoke(w http.ResponseWriter, r *http.Request, id string) {
 	auth, ok := requireAuth(w, r)

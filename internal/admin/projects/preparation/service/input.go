@@ -15,6 +15,8 @@ type Input struct {
 	Password   bool
 	Onboarding bool
 	Managed    bool
+	Requested  bool
+	Watch      bool
 }
 
 type Result struct {

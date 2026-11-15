@@ -2,6 +2,7 @@ package methods
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,6 +18,8 @@ import (
 	passwordpostgres "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/repository/postgres"
 	passwordservice "github.com/Inforberi/financial-intelligence/internal/auth/methods/password/service"
 	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
+	settings "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingspg "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
@@ -29,6 +32,7 @@ type ProjectRegistrationVerification struct {
 type projectRegistration struct {
 	cfg        accountservice.Config
 	configured bool
+	origin     string
 	cipher     accountservice.Cipher
 	limits     accountservice.Limiter
 }
@@ -54,6 +58,7 @@ func newProjectRegistration(scope realmscope.Scope, root string, cfg *ProjectReg
 		}
 		verification.EncryptionKey = ""
 		registration.cfg, registration.configured = verification, true
+		registration.origin = cfg.Origin
 	}
 	return registration, nil
 }
@@ -78,7 +83,23 @@ func (p *ProjectPassword) Register(ctx context.Context, email, password, userAge
 		}
 		var repo *passwordpostgres.PasswordRepo
 		if p.registration.configured {
-			repo = registrationapp.Assemble(pool, verifier, account, nil)
+			cfg := p.registration.cfg
+			base := settings.LinkLifetimePolicy{VerificationSeconds: int64(cfg.TTL / time.Second)}
+			repo = registrationapp.Assemble(pool, verifier, account, func(ctx context.Context, tx pgx.Tx) (time.Duration, error) {
+				policy, err := settingspg.ProjectLinkLifetime(ctx, tx, base, int64(cfg.ResendInterval/time.Second))
+				return time.Duration(policy.VerificationSeconds) * time.Second, err
+			}, func(ctx context.Context, tx pgx.Tx) (string, error) {
+				policy, err := settingspg.ProjectFrontend(ctx, tx, settings.FrontendPolicy{VerificationURL: cfg.URL})
+				if err != nil {
+					return "", err
+				}
+				if err := (settings.FrontendPolicy{
+					Origins: p.registration.origin, VerificationURL: policy.VerificationURL, ResetURL: cfg.URL,
+				}).Validate([]string{p.registration.origin}); err != nil {
+					return "", err
+				}
+				return policy.VerificationURL, nil
+			})
 		} else {
 			// SQL calls this only for optional/required verification, then rolls back all account writes.
 			repo = passwordpostgres.NewWithRegistration(pool, func(context.Context, pgx.Tx, accountdomain.UserID, accountdomain.AddressID, string) error {

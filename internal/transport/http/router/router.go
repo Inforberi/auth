@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	accesshttp "github.com/Inforberi/financial-intelligence/internal/access/transport/http"
+	operatorhttp "github.com/Inforberi/financial-intelligence/internal/admin/administrators/transport/http"
 	directoryhttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/directory/transport/http"
 	policyhttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/policy/transport/http"
 	roleshttp "github.com/Inforberi/financial-intelligence/internal/admin/projects/roles/transport/http"
@@ -43,6 +44,7 @@ import (
 )
 
 type Handlers struct {
+	Operators                *operatorhttp.Management
 	ProjectRoles             *roleshttp.RoleHandler
 	ProjectUsers             *directoryhttp.UserHandler
 	ProjectAuthPolicy        *policyhttp.AuthPolicyHandler

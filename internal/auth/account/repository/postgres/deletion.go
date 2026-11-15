@@ -47,6 +47,10 @@ func (r *Repository) DeleteUserAccount(ctx context.Context, actor accessservice.
 }
 
 func deleteAccount(ctx context.Context, tx pgx.Tx, deletion domain.AccountDeletion) (domain.AuthVersion, error) {
+	return applyDeletion(ctx, tx, deletion, true)
+}
+
+func applyDeletion(ctx context.Context, tx pgx.Tx, deletion domain.AccountDeletion, localAudit bool) (domain.AuthVersion, error) {
 	var version domain.AuthVersion
 	var deleted *time.Time
 	err := tx.QueryRow(ctx, `SELECT auth_version,deleted_at FROM auth.users WHERE id=$1 FOR UPDATE`, deletion.UserID).Scan(&version, &deleted)
@@ -92,6 +96,9 @@ func deleteAccount(ctx context.Context, tx pgx.Tx, deletion domain.AccountDeleti
 		if _, err := tx.Exec(ctx, query, deletion.UserID); err != nil {
 			return 0, err
 		}
+	}
+	if !localAudit {
+		return version, nil
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO auth.account_deletion_audit(user_id,actor_id,auth_version)
 			VALUES ($1,$2,$3)`, deletion.UserID, deletion.ActorID, version)

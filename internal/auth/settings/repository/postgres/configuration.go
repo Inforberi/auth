@@ -158,11 +158,20 @@ func (r *Repository) commitConfiguration(ctx context.Context, conn *pgxpool.Conn
 
 // Caller has already established current actor authority and holds Access locks.
 func RequireAPISettings(ctx context.Context, tx pgx.Tx) error {
+	return requireAPISettings(ctx, tx, `SELECT mode FROM auth.settings_source WHERE singleton FOR SHARE`)
+}
+
+// CheckAPISettings verifies the source before external I/O in a read-only transaction.
+func CheckAPISettings(ctx context.Context, tx pgx.Tx) error {
+	return requireAPISettings(ctx, tx, `SELECT mode FROM auth.settings_source WHERE singleton`)
+}
+
+func requireAPISettings(ctx context.Context, tx pgx.Tx, query string) error {
 	if configuration.EnvironmentOwned(ctx) {
 		return domain.ErrSourceReadOnly
 	}
 	var mode domain.SourceMode
-	if err := tx.QueryRow(ctx, `SELECT mode FROM auth.settings_source WHERE singleton FOR SHARE`).Scan(&mode); err != nil {
+	if err := tx.QueryRow(ctx, query).Scan(&mode); err != nil {
 		return err
 	}
 	if mode != domain.SourceAPI {

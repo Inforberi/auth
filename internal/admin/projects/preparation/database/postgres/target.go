@@ -99,14 +99,8 @@ func (t *Target) Prepare(ctx context.Context, r domain.PreparationReservation) (
 	if err := t.CheckRuntime(ctx); err != nil {
 		return Resources{}, err
 	}
-	// One DDL operation per target; the same session holds the lock through CREATE DATABASE.
-	// No unlock/reuse: even an ambiguous timeout ends with connection close, never a pooled session.
-	var locked bool
-	if err := t.conn.QueryRow(ctx, `SELECT pg_try_advisory_lock(1096111176, 1)`).Scan(&locked); err != nil {
-		return Resources{}, unavailable(ctx)
-	}
-	if !locked {
-		return Resources{}, ErrBusy
+	if err := t.Lock(ctx); err != nil {
+		return Resources{}, err
 	}
 	resources := Resources{Database: database, Owner: owner}
 	if err := t.reserveOwner(ctx, r, &resources); err != nil {
@@ -117,6 +111,19 @@ func (t *Target) Prepare(ctx context.Context, r domain.PreparationReservation) (
 	}
 	t.prepared = &preparedProject{reservation: r, resources: resources}
 	return resources, nil
+}
+
+func (t *Target) Lock(ctx context.Context) error {
+	// One DDL operation per target; the same session holds the lock through CREATE DATABASE.
+	// No unlock/reuse: even an ambiguous timeout ends with connection close, never a pooled session.
+	var locked bool
+	if err := t.conn.QueryRow(ctx, `SELECT pg_try_advisory_lock(1096111176, 1)`).Scan(&locked); err != nil {
+		return unavailable(ctx)
+	}
+	if !locked {
+		return ErrBusy
+	}
+	return nil
 }
 
 func unavailable(ctx context.Context) error {

@@ -16,5 +16,6 @@ import (
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID deleteAuthGoogleLink
 // @Router /api/v1/auth/google/link [delete]
 func (h *Handler) Unlink(w http.ResponseWriter, r *http.Request) { h.Handler.Unlink(w, r) }

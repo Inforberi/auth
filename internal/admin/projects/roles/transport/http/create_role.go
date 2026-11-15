@@ -53,6 +53,8 @@ type CreatePlatformRoleResponse struct {
 // @Failure 428 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID postPlatformProjectsByIdRoles
 // @Router /api/v1/platform/projects/{id}/roles [post]
 func (h *RoleHandler) Create(w http.ResponseWriter, r *http.Request) {
 	actor, ok := cataloghttp.OperationActor(w, r)

@@ -26,6 +26,7 @@ type ResetRequest struct {
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, invalid_reset, password_mismatch, password_policy"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
+// @ID postAuthResetPassword
 // @Router /api/v1/auth/reset-password [post]
 func (h *RecoveryHandler) Reset(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

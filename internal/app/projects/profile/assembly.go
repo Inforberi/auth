@@ -33,7 +33,12 @@ func buildProjectProfile(ctx context.Context, key projectruntime.Key, origin str
 	if err != nil {
 		return nil, err
 	}
+	cfg = bindProjectCredentialLifetimes(cfg, key, deps)
+	cfg = bindProjectLoginBudgets(cfg, key, deps)
+	cfg = bindProjectOperationBudgets(cfg, key, deps)
+	cfg, frontend := bindProjectFrontend(cfg, key, origin, deps)
 	p := &profileAssembly{key: key, origin: origin, policy: configuration.Policy(), deps: deps, states: make(map[string]runtimeprofile.ProjectFeatureState)}
+	p.frontend, p.frontendOrigins = frontend, cfg.FrontendOrigins
 	observed := p.policy
 	if assess {
 		p.policy.Policy = cfg.AssessmentPolicy(p.policy.Policy)

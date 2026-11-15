@@ -29,6 +29,7 @@ type ProvisionRequest struct {
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminUsers
 // @Router /api/v1/admin/users [post]
 func (h *ProvisioningHandler) Provision(w http.ResponseWriter, r *http.Request) {
 	actor, ok := accounthttp.Actor(w, r)

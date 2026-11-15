@@ -19,6 +19,7 @@ type PermissionCatalogResponse struct {
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAdminPermissions
 // @Router /api/v1/admin/permissions [get]
 func (h *Handler) PermissionCatalog(w http.ResponseWriter, r *http.Request) {
 	actor, ok := principal(w, r)

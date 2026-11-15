@@ -15,6 +15,7 @@ import (
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAdminAuthSettingsRetention
 // @Router /api/v1/admin/auth/settings/retention [get]
 func (h *RetentionHandler) Read(w http.ResponseWriter, r *http.Request) {
 	actor, ok := settingshttp.Principal(w, r)

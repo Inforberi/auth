@@ -39,6 +39,7 @@ type LoginBudgetPolicyHandler struct {
 
 // @Summary Read standalone login policy
 // @Success 200 {object} LoginBudgetPolicyView
+// @ID getAdminAuthSettingsLoginBudgets
 // @Router /api/v1/admin/auth/settings/login-budgets [get]
 func (h *LoginBudgetPolicyHandler) Read(w http.ResponseWriter, r *http.Request) {
 	servePolicyRead(w, r, h.ReadPolicy, policyResponse[LoginBudgetPolicyView](h.Log, "login_budget_policy", domain.ErrInvalidLoginBudget, "invalid login policy"))
@@ -49,6 +50,7 @@ func (h *LoginBudgetPolicyHandler) Read(w http.ResponseWriter, r *http.Request) 
 // @Param body body LoginBudgetPolicyRequest true "Complete policy and current version"
 // @Success 200 {object} LoginBudgetPolicyView
 // @Failure 409 {object} PolicyErrorResponse
+// @ID postAdminAuthSettingsLoginBudgets
 // @Router /api/v1/admin/auth/settings/login-budgets [post]
 func (h *LoginBudgetPolicyHandler) Update(w http.ResponseWriter, r *http.Request) {
 	servePolicyUpdate(w, r, h.UpdatePolicy, policyResponse[LoginBudgetPolicyView](h.Log, "login_budget_policy", domain.ErrInvalidLoginBudget, "invalid login policy"))

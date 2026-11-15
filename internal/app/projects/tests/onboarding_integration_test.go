@@ -141,6 +141,14 @@ func onboardingPreparationDrill(t *testing.T, physical *pgx.Conn, env func(strin
 		var restored bool
 		require.NoError(t, conn.QueryRow(ctx, `SELECT xmin::text,to_jsonb(p)=$1::jsonb FROM auth.auth_settings p`, policyBefore).Scan(&policyXmin, &restored))
 		require.True(t, restored, "administrative drills must restore the exact prepared policy")
+		var users, roles int
+		require.NoError(t, conn.QueryRow(ctx, `SELECT (SELECT count(*) FROM auth.users), (SELECT count(*) FROM auth.roles)`).Scan(&users, &roles))
+		require.Zero(t, users, "administrative drills must remove their project users")
+		if roles != 0 {
+			var keys []string
+			require.NoError(t, conn.QueryRow(ctx, `SELECT array_agg(key ORDER BY key) FROM auth.roles`).Scan(&keys))
+			t.Fatalf("administrative drills left project roles: %v", keys)
+		}
 	})
 	require.NoError(t, preparationcli.Run(ctx, args, env, io.Discard, io.Discard, runPreparationCommand))
 	inspect(func(conn *pgx.Conn) {

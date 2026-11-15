@@ -27,6 +27,8 @@ import (
 // @Failure 428 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID getPlatformProjectsByIdRolesByRoleId
 // @Router /api/v1/platform/projects/{id}/roles/{roleId} [get]
 func (h *RoleHandler) ReadRole(w http.ResponseWriter, r *http.Request) {
 	actor, ok := cataloghttp.RequestActor(w, r)

@@ -12,6 +12,7 @@ import (
 // @Produce json
 // @Success 200 {object} PreferenceResponse
 // @Failure 401 {object} httpx.ErrorResponse
+// @ID getAuthMfaPreference
 // @Router /api/v1/auth/mfa/preference [get]
 func (h *PreferenceHandler) Read(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

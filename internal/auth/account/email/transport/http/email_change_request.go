@@ -26,6 +26,7 @@ type EmailChangeRequest struct {
 // @Failure 409 {object} httpx.ErrorResponse "code: email_change_pending"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
+// @ID postAuthEmailChange
 // @Router /api/v1/auth/email/change [post]
 func (h *EmailChangeHandler) Request(w http.ResponseWriter, r *http.Request) {
 	auth, ok := sessionhttp.GetAuthContext(r.Context())

@@ -37,6 +37,8 @@ type UpdateProjectAuthPolicyRequest struct {
 // @Failure 428 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID postPlatformProjectsByIdAuthSettings
 // @Router /api/v1/platform/projects/{id}/auth/settings [post]
 func (h *AuthPolicyHandler) Update(w http.ResponseWriter, r *http.Request) {
 	actor, ok := cataloghttp.OperationActor(w, r)

@@ -28,6 +28,7 @@ type ConfirmLoginEnrollmentRequest struct {
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthMfaLoginEnrollmentConfirm
 // @Router /api/v1/auth/mfa/login/enrollment/confirm [post]
 func (h *Handler) ConfirmLoginEnrollment(w http.ResponseWriter, r *http.Request) {
 	var input ConfirmLoginEnrollmentRequest

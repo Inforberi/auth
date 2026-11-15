@@ -30,6 +30,8 @@ import (
 // @Failure 428 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID getPlatformProjectsByIdUsers
 // @Router /api/v1/platform/projects/{id}/users [get]
 func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 	actor, ok := cataloghttp.RequestActor(w, r)

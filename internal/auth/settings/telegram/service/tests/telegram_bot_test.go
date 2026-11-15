@@ -87,6 +87,18 @@ func TestTelegramBotSettingsSecretsAndRotation(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, token, credentials.Token.Value())
 	require.True(t, domain.ValidTelegramWebhookSecret(credentials.WebhookSecret))
+	register := func(_ context.Context, got settingstelegram.TelegramBotCredentials) error {
+		require.Equal(t, credentials, got)
+		return errors.New("private provider response")
+	}
+	err = svc.RegisterWebhook(t.Context(), testActor.UserID, snapshot.Version-1, repo.stored, func(context.Context, settingstelegram.TelegramBotCredentials) error {
+		t.Fatal("stale settings reached Telegram")
+		return nil
+	})
+	require.ErrorIs(t, err, domain.ErrPolicyConflict)
+	err = svc.RegisterWebhook(t.Context(), testActor.UserID, snapshot.Version, repo.stored, register)
+	require.ErrorIs(t, err, domain.ErrTelegramBotVerification)
+	require.NotContains(t, err.Error(), "private provider response")
 	encoded, err := json.Marshal(credentials)
 	require.NoError(t, err)
 	for _, text := range []string{string(encoded), fmt.Sprintf("%+v %#v", credentials, credentials), fmt.Sprintf("%+v %#v", credentials.Token, credentials.Token)} {

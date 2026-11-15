@@ -29,6 +29,7 @@ type ChangeUserStatusRequest struct {
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminUsersByIdStatus
 // @Router /api/v1/admin/users/{id}/status [post]
 func (h *UserLifecycleHandler) ChangeStatus(w http.ResponseWriter, r *http.Request) {
 	actor, ok := Actor(w, r)

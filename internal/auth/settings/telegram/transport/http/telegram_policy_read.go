@@ -18,6 +18,7 @@ import (
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAdminAuthSettingsMfaTelegram
 // @Router /api/v1/admin/auth/settings/mfa/telegram [get]
 func (h *TelegramHandler) ReadPolicy(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

@@ -15,6 +15,7 @@ import (
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAuthAccess
 // @Router /api/v1/auth/access [get]
 func (h *Handler) MyAccess(w http.ResponseWriter, r *http.Request) {
 	actor, ok := principal(w, r)

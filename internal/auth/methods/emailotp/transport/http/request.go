@@ -23,6 +23,7 @@ type RequestCodeRequest struct {
 // @Failure 404 {object} httpx.ErrorResponse "code: method_disabled"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
+// @ID postAuthEmailOtpRequest
 // @Router /api/v1/auth/email-otp/request [post]
 func (h *Handler) Request(w http.ResponseWriter, r *http.Request) {
 	var input RequestCodeRequest

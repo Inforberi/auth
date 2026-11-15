@@ -17,6 +17,7 @@ import (
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID getAdminAuthSettingsProvidersByProvider
 // @Router /api/v1/admin/auth/settings/providers/{provider} [get]
 func (h *ProviderHandler) Read(w http.ResponseWriter, r *http.Request) {
 	actor, ok := settingshttp.Principal(w, r)

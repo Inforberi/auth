@@ -29,6 +29,7 @@ type TemporaryReissueRequest struct {
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminUsersByIdTemporaryPassword
 // @Router /api/v1/admin/users/{id}/temporary-password [post]
 func (h *TemporaryAdminHandler) Reissue(w http.ResponseWriter, r *http.Request) {
 	actor, ok := temporaryAdminActor(w, r)

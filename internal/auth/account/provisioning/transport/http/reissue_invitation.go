@@ -30,6 +30,7 @@ type ReissueInvitationRequest struct {
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminUsersByIdInvitation
 // @Router /api/v1/admin/users/{id}/invitation [post]
 func (h *ProvisioningHandler) ReissueInvitation(w http.ResponseWriter, r *http.Request) {
 	actor, ok := accounthttp.Actor(w, r)

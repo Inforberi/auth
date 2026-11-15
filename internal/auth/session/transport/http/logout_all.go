@@ -10,6 +10,8 @@ import "net/http"
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID postAuthLogoutAll
 // @Router /api/v1/auth/logout-all [post]
 func (h *Handler) LogoutAll(w http.ResponseWriter, r *http.Request) {
 	auth, ok := requireAuth(w, r)

@@ -24,6 +24,9 @@ func (p *ProjectProfile) runtimeBinding() projectbinding.Binding {
 }
 
 type ProjectProfile struct {
+	frontend                 func(context.Context) (settingsdomain.FrontendPolicy, error)
+	frontendOrigins          []string
+	browserPolicyInstalled   bool
 	key                      projectruntime.Key
 	origin                   string
 	policy                   settingsdomain.Snapshot

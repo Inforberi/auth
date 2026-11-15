@@ -28,6 +28,7 @@ type ProviderUpdateRequest struct {
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse "provider_settings_conflict, provider_client_bound, auth_method_not_ready"
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAdminAuthSettingsProvidersByProvider
 // @Router /api/v1/admin/auth/settings/providers/{provider} [post]
 func (h *ProviderHandler) Update(w http.ResponseWriter, r *http.Request) {
 	actor, ok := settingshttp.Principal(w, r)

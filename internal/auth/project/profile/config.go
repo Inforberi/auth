@@ -12,10 +12,14 @@ import (
 	projectbinding "github.com/Inforberi/financial-intelligence/internal/auth/project/runtime"
 	projectsettings "github.com/Inforberi/financial-intelligence/internal/auth/project/settings"
 	projectnative "github.com/Inforberi/financial-intelligence/internal/auth/project/token"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingssmtp "github.com/Inforberi/financial-intelligence/internal/auth/settings/smtp/service"
 )
 
 type ProjectProfileConfig struct {
+	FrontendOrigins          []string
+	LoginBudgetBaseline      settingsdomain.LoginBudgetPolicy
+	OperationBudgetBaseline  settingsdomain.OperationBudgetsPolicy
 	BrowserEnabled           bool
 	UserDirectoryEnabled     bool
 	UserLifecycleEnabled     bool

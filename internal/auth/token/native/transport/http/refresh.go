@@ -24,6 +24,7 @@ type RefreshRequest struct {
 // @Failure 403 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthTokenRefresh
 // @Router /api/v1/auth/token/refresh [post]
 func (h *NativeHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	var input RefreshRequest

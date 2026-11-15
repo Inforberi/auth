@@ -27,6 +27,7 @@ type EmailPreparationConfirmation struct {
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthMfaEmailPreparationConfirm
 // @Router /api/v1/auth/mfa/email/preparation/confirm [post]
 func (h *EmailHandler) ConfirmEmailPreparation(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

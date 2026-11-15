@@ -40,6 +40,7 @@ type FrontendPolicyHandler struct {
 
 // @Summary Read standalone frontend policy
 // @Success 200 {object} FrontendPolicyView
+// @ID getAdminAuthSettingsFrontend
 // @Router /api/v1/admin/auth/settings/frontend [get]
 func (h *FrontendPolicyHandler) Read(w http.ResponseWriter, r *http.Request) {
 	servePolicyRead(w, r, h.ReadPolicy, policyResponse[FrontendPolicyView](h.Log, "frontend_policy", domain.ErrInvalidFrontend, "invalid frontend policy"))
@@ -50,6 +51,7 @@ func (h *FrontendPolicyHandler) Read(w http.ResponseWriter, r *http.Request) {
 // @Param body body FrontendPolicyRequest true "Complete policy and current version"
 // @Success 200 {object} FrontendPolicyView
 // @Failure 409 {object} PolicyErrorResponse
+// @ID postAdminAuthSettingsFrontend
 // @Router /api/v1/admin/auth/settings/frontend [post]
 func (h *FrontendPolicyHandler) Update(w http.ResponseWriter, r *http.Request) {
 	servePolicyUpdate(w, r, h.UpdatePolicy, policyResponse[FrontendPolicyView](h.Log, "frontend_policy", domain.ErrInvalidFrontend, "invalid frontend policy"))

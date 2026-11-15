@@ -1,14 +1,17 @@
 package browser
 
 import (
+	"context"
 	"errors"
 	"net/http"
+	"strings"
 
 	"go.uber.org/zap"
 
 	projectprofile "github.com/Inforberi/financial-intelligence/internal/auth/project/profile"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	sessionhttp "github.com/Inforberi/financial-intelligence/internal/auth/session/transport/http"
+	"github.com/Inforberi/financial-intelligence/internal/transport/http/middleware"
 	"github.com/Inforberi/financial-intelligence/internal/transport/http/router"
 )
 
@@ -26,6 +29,12 @@ func BindRoutes(profile *projectprofile.ProjectProfile, fallback *sessionservice
 	p.telegramMFAHandlers(handlers, log)
 	native := p.tokenHandlers(handlers, log)
 	var protection router.ProjectRouteProtection
+	if p.Frontend != nil {
+		protection.Browser.PolicySource = func(ctx context.Context) (middleware.OriginConfig, error) {
+			frontend, err := p.Frontend(ctx)
+			return middleware.OriginConfig{AllowedOrigins: strings.Split(frontend.Origins, ","), CORSEnabled: frontend.CORSEnabled}, err
+		}
+	}
 	if native != nil {
 		protection.Native = native.Protect
 	}

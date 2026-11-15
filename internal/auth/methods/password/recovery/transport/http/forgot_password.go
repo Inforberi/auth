@@ -23,6 +23,7 @@ type ForgotRequest struct {
 // @Failure 400 {object} httpx.ErrorResponse "codes: invalid_json, invalid_email"
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited"
 // @Failure 503 {object} httpx.ErrorResponse "code: temporarily_unavailable"
+// @ID postAuthForgotPassword
 // @Router /api/v1/auth/forgot-password [post]
 func (h *RecoveryHandler) Forgot(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

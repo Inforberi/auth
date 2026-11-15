@@ -29,6 +29,7 @@ type EmailLoginRequest struct {
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthMfaEmailLogin
 // @Router /api/v1/auth/mfa/email/login [post]
 func (h *EmailHandler) StartEmailLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

@@ -28,6 +28,8 @@ import (
 // @Failure 428 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID getPlatformProjectsByIdUsersByUserId
 // @Router /api/v1/platform/projects/{id}/users/{userId} [get]
 func (h *UserHandler) Read(w http.ResponseWriter, r *http.Request) {
 	actor, ok := cataloghttp.RequestActor(w, r)

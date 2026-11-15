@@ -34,6 +34,7 @@ type LinkLifetimePolicyHandler struct {
 
 // @Summary Read standalone link lifetime policy
 // @Success 200 {object} LinkLifetimePolicyView
+// @ID getAdminAuthSettingsLinkLifetimes
 // @Router /api/v1/admin/auth/settings/link-lifetimes [get]
 func (h *LinkLifetimePolicyHandler) Read(w http.ResponseWriter, r *http.Request) {
 	servePolicyRead(w, r, h.ReadPolicy, policyResponse[LinkLifetimePolicyView](h.Log, "link_lifetime_policy", domain.ErrInvalidLinkLifetime, "invalid link lifetime policy"))
@@ -44,6 +45,7 @@ func (h *LinkLifetimePolicyHandler) Read(w http.ResponseWriter, r *http.Request)
 // @Param body body LinkLifetimePolicyRequest true "Complete policy and current version"
 // @Success 200 {object} LinkLifetimePolicyView
 // @Failure 409 {object} PolicyErrorResponse
+// @ID postAdminAuthSettingsLinkLifetimes
 // @Router /api/v1/admin/auth/settings/link-lifetimes [post]
 func (h *LinkLifetimePolicyHandler) Update(w http.ResponseWriter, r *http.Request) {
 	servePolicyUpdate(w, r, h.UpdatePolicy, policyResponse[LinkLifetimePolicyView](h.Log, "link_lifetime_policy", domain.ErrInvalidLinkLifetime, "invalid link lifetime policy"))

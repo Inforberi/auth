@@ -22,6 +22,7 @@ type TelegramConfirmRequest struct {
 // @Success 200 {object} mfahttp.StatusResponse
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 401 {object} httpx.ErrorResponse
+// @ID postAuthMfaTelegramPreparationConfirm
 // @Router /api/v1/auth/mfa/telegram/preparation/confirm [post]
 func (h *TelegramHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")

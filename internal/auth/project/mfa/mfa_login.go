@@ -1,7 +1,9 @@
 package mfa
 
 import (
+	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -13,6 +15,7 @@ import (
 	"github.com/Inforberi/financial-intelligence/internal/auth/mfa/totp"
 	sessionservice "github.com/Inforberi/financial-intelligence/internal/auth/session/service"
 	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
+	settingspg "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/infra/realmscope"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 	"github.com/Inforberi/financial-intelligence/internal/infra/tokengenerate"
@@ -44,13 +47,22 @@ func NewProjectMFALogin(scope realmscope.Scope, root string, cfg mfaservice.Conf
 	return &ProjectMFALogin{cipher: cipher, limits: limits, managementConfig: cfg, config: mfaservice.LoginConfig{
 		Issuer: cfg.Issuer, AllowPrimary: func(method, issuer string) bool { return settingsdomain.PrimaryMethod(method, issuer) == primary },
 		ChallengeTTL: cfg.ChallengeTTL, SessionTTL: session.SessionTTL, AbsoluteSessionTTL: session.AbsoluteSessionTTL,
+		BudgetSource:     cfg.BudgetSource,
 		AdminIdleTimeout: session.AdminIdleTimeout, AdminAbsoluteTTL: session.AdminAbsoluteTTL, AdminActivityInterval: session.AdminActivityInterval,
 		UserLimitPerMinute: cfg.UserLimitPerMinute, IPLimitPerMinute: cfg.IPLimitPerMinute, GlobalLimitPerMinute: cfg.GlobalLimitPerMinute,
 	}}, nil
 }
 
 func (m *ProjectMFALogin) NewLogin(pool *pgxpool.Pool) (*mfalogin.Login, error) {
-	return mfalogin.NewLogin(mfapostgres.New(pool), m.cipher, totp.Authenticator{}, m.limits, tokengenerate.New(), m.config)
+	cfg := m.config
+	cfg.ChallengeTTLSource = func(ctx context.Context) (time.Duration, error) {
+		policy, err := settingspg.ProjectCredentialLifetime(ctx, pool)
+		if policy.MFAChallengeSeconds == 0 {
+			return m.config.ChallengeTTL, err
+		}
+		return time.Duration(policy.MFAChallengeSeconds) * time.Second, err
+	}
+	return mfalogin.NewLogin(mfapostgres.New(pool), m.cipher, totp.Authenticator{}, m.limits, tokengenerate.New(), cfg)
 }
 
 func ValidateProjectMFA(cfg mfaservice.Config) error {

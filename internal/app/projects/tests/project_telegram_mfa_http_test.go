@@ -35,6 +35,11 @@ func TestTwoProjectTelegramMFAHTTP(t *testing.T) {
 		require.Equal(t, 200, response.status, string(response.body))
 		require.NotContains(t, string(response.body), token)
 		require.NoError(t, json.Unmarshal(response.body, &saved))
+		if i == 0 {
+			t.Run("platform_webhook_denies_env_and_revoked_operator", func(t *testing.T) {
+				checkPlatformWebhookDenials(t, f, bot, saved.Version)
+			})
+		}
 		response = web.call(t, ctx, "POST", "/api/v1/admin/auth/settings/mfa/telegram/webhook", web.origin, owner, map[string]any{"expectedVersion": saved.Version})
 		require.Equal(t, 200, response.status, string(response.body))
 		require.NoError(t, json.Unmarshal(response.body, &saved))

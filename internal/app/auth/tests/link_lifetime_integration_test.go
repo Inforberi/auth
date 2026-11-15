@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -11,10 +12,33 @@ import (
 	accountemail "github.com/Inforberi/financial-intelligence/internal/auth/account/email/service"
 	"github.com/Inforberi/financial-intelligence/internal/auth/account/registration"
 	accountpostgres "github.com/Inforberi/financial-intelligence/internal/auth/account/repository/postgres"
+	settingsdomain "github.com/Inforberi/financial-intelligence/internal/auth/settings/domain"
 	settingspostgres "github.com/Inforberi/financial-intelligence/internal/auth/settings/repository/postgres"
 	"github.com/Inforberi/financial-intelligence/internal/config"
 	"github.com/Inforberi/financial-intelligence/internal/infra/secretbox"
 )
+
+func TestProjectLinkLifetimeUsesStoredPolicy(t *testing.T) {
+	db, ctx := schemaFixture(t)
+	migrateFixture(t, db, ctx, "up")
+	t.Cleanup(func() { migrateFixture(t, db, ctx, "down") })
+
+	baseline := settingsdomain.LinkLifetimePolicy{VerificationSeconds: 1800, ResetSeconds: 1800}
+	configured := settingsdomain.LinkLifetimePolicy{VerificationSeconds: 600, ResetSeconds: 900}
+	store := settingspostgres.New(db).LinkLifetimePolicy()
+	require.NoError(t, pgx.BeginFunc(ctx, db, func(tx pgx.Tx) error {
+		got, err := settingspostgres.ProjectLinkLifetime(ctx, tx, baseline, 60)
+		if err != nil {
+			return err
+		}
+		require.Equal(t, baseline, got)
+		_, err = store.ApplyProject(ctx, tx, "23400000-0000-4000-8000-000000000001", 1, baseline, configured)
+		return err
+	}))
+	got, err := settingspostgres.ProjectLinkLifetime(ctx, db, baseline, 60)
+	require.NoError(t, err)
+	require.Equal(t, configured, got)
+}
 
 func TestVerificationLinkLifetime(t *testing.T) {
 	db, ctx := schemaFixture(t)

@@ -520,6 +520,40 @@ definitions:
         example: ok
         type: string
     type: object
+  domain.CredentialLifetimePolicy:
+    properties:
+      emailBindingSeconds:
+        type: integer
+      emailChangeProtectionSeconds:
+        type: integer
+      emailChangeRecoverySeconds:
+        type: integer
+      emailChangeSeconds:
+        type: integer
+      freshAuthSeconds:
+        type: integer
+      invitationCooldownSeconds:
+        type: integer
+      invitationSeconds:
+        type: integer
+      mfaChallengeSeconds:
+        type: integer
+      temporaryPasswordSeconds:
+        type: integer
+      temporaryReissueCooldownSeconds:
+        type: integer
+      temporarySetupSeconds:
+        type: integer
+    type: object
+  domain.DeletionOperation:
+    properties:
+      operationId:
+        type: string
+      projectId:
+        type: string
+      stage:
+        type: string
+    type: object
   domain.FeatureReadiness:
     properties:
       feature:
@@ -528,6 +562,69 @@ definitions:
         type: boolean
       reason:
         type: string
+    type: object
+  domain.FrontendPolicy:
+    properties:
+      corsEnabled:
+        type: boolean
+      emailChangeRecoveryUrl:
+        type: string
+      emailChangeReportUrl:
+        type: string
+      emailChangeUrl:
+        type: string
+      invitationUrl:
+        type: string
+      origins:
+        type: string
+      resetUrl:
+        type: string
+      verificationUrl:
+        type: string
+    type: object
+  domain.LinkLifetimePolicy:
+    properties:
+      resetSeconds:
+        type: integer
+      verificationSeconds:
+        type: integer
+    type: object
+  domain.LoginBudgetPolicy:
+    properties:
+      globalPerMinute:
+        type: integer
+      identityPerMinute:
+        type: integer
+      ipPerMinute:
+        type: integer
+      registrationGlobalPerMinute:
+        type: integer
+      registrationIpPerMinute:
+        type: integer
+      resetGlobalPerMinute:
+        type: integer
+    type: object
+  domain.MFAMode:
+    enum:
+    - optional
+    - administrators
+    - required
+    type: string
+    x-enum-varnames:
+    - MFAOptional
+    - MFAAdministrators
+    - MFARequired
+  domain.MFAPolicy:
+    properties:
+      mode:
+        $ref: '#/definitions/domain.MFAMode'
+    type: object
+  domain.MFASnapshot:
+    properties:
+      policy:
+        $ref: '#/definitions/domain.MFAPolicy'
+      version:
+        type: integer
     type: object
   domain.Method:
     enum:
@@ -541,6 +638,132 @@ definitions:
     - RecoveryCode
     - EmailCode
     - TelegramCode
+  domain.OperationBudgetsPolicy:
+    properties:
+      activationGlobalPerMinute:
+        type: integer
+      bindingConfirmPerMinute:
+        type: integer
+      bindingRequestPerMinute:
+        type: integer
+      googleGlobalPerMinute:
+        type: integer
+      googleIPPerMinute:
+        type: integer
+      invitationActorPerMinute:
+        type: integer
+      invitationGlobalPerMinute:
+        type: integer
+      jwtActorPerMinute:
+        type: integer
+      jwtConsumerPerMinute:
+        type: integer
+      jwtGlobalPerMinute:
+        type: integer
+      jwtIPPerMinute:
+        type: integer
+      jwtIntrospectionPerMinute:
+        type: integer
+      jwtSessionPerMinute:
+        type: integer
+      mfaGlobalPerMinute:
+        type: integer
+      mfaIPPerMinute:
+        type: integer
+      mfaUserPerMinute:
+        type: integer
+      telegramGlobalPerMinute:
+        type: integer
+      telegramIPPerMinute:
+        type: integer
+      temporaryActorPerMinute:
+        type: integer
+      temporaryGlobalPerMinute:
+        type: integer
+      temporarySetupPerMinute:
+        type: integer
+    type: object
+  domain.Operator:
+    properties:
+      email:
+        type: string
+      owner:
+        type: boolean
+      permissions:
+        items:
+          type: string
+        type: array
+      status:
+        type: string
+      userId:
+        type: string
+    type: object
+  domain.PreparationOperation:
+    properties:
+      expectedGeneration:
+        type: integer
+      expectedVersion:
+        type: integer
+      operationId:
+        type: string
+      phase:
+        type: string
+      projectId:
+        type: string
+      stage:
+        type: string
+    type: object
+  domain.ProviderSnapshot:
+    properties:
+      clientId:
+        type: string
+      clientSecretSet:
+        type: boolean
+      provider:
+        type: string
+      version:
+        type: integer
+    type: object
+  domain.RetentionPolicy:
+    properties:
+      emailReservationDays:
+        type: integer
+      securityAuditDays:
+        type: integer
+      sessionDays:
+        type: integer
+    type: object
+  domain.RetentionSnapshot:
+    properties:
+      policy:
+        $ref: '#/definitions/domain.RetentionPolicy'
+      version:
+        type: integer
+    type: object
+  domain.SMTPConfig:
+    properties:
+      domain:
+        type: string
+      from:
+        type: string
+      host:
+        type: string
+      port:
+        type: integer
+      requireTls:
+        type: boolean
+      username:
+        type: string
+    type: object
+  domain.SMTPSnapshot:
+    properties:
+      config:
+        $ref: '#/definitions/domain.SMTPConfig'
+      passwordSet:
+        type: boolean
+      version:
+        type: integer
+    type: object
   domain.SourceMetadata:
     properties:
       mode:
@@ -549,6 +772,19 @@ definitions:
         - env
         type: string
       readOnly:
+        type: boolean
+    type: object
+  domain.TelegramBotSnapshot:
+    properties:
+      botId:
+        type: integer
+      botTokenSet:
+        type: boolean
+      username:
+        type: string
+      version:
+        type: integer
+      webhookSecretSet:
         type: boolean
     type: object
   emailotp_http.ConfirmCodeRequest:
@@ -569,6 +805,43 @@ definitions:
   emailotp_http.StatusResponse:
     properties:
       status:
+        type: string
+    type: object
+  github_com_Inforberi_financial-intelligence_internal_auth_methods_google_transport_http.CallbackResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  github_com_Inforberi_financial-intelligence_internal_auth_methods_google_transport_http.MFAChallengeResponse:
+    properties:
+      challenge:
+        type: string
+      expiresAt:
+        type: string
+      method:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_Inforberi_financial-intelligence_internal_auth_methods_google_transport_http.StartResponse:
+    properties:
+      authorizationUrl:
+        type: string
+    type: object
+  github_com_Inforberi_financial-intelligence_internal_auth_methods_telegram_transport_http.MFAChallengeResponse:
+    properties:
+      challenge:
+        type: string
+      expiresAt:
+        type: string
+      method:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_Inforberi_financial-intelligence_internal_auth_methods_telegram_transport_http.StartResponse:
+    properties:
+      authorizationUrl:
         type: string
     type: object
   http.ActivityResponse:
@@ -727,43 +1000,6 @@ definitions:
       code:
         type: string
       message:
-        type: string
-    type: object
-  internal_auth_methods_google_transport_http.CallbackResponse:
-    properties:
-      status:
-        type: string
-    type: object
-  internal_auth_methods_google_transport_http.MFAChallengeResponse:
-    properties:
-      challenge:
-        type: string
-      expiresAt:
-        type: string
-      method:
-        type: string
-      status:
-        type: string
-    type: object
-  internal_auth_methods_google_transport_http.StartResponse:
-    properties:
-      authorizationUrl:
-        type: string
-    type: object
-  internal_auth_methods_telegram_transport_http.MFAChallengeResponse:
-    properties:
-      challenge:
-        type: string
-      expiresAt:
-        type: string
-      method:
-        type: string
-      status:
-        type: string
-    type: object
-  internal_auth_methods_telegram_transport_http.StartResponse:
-    properties:
-      authorizationUrl:
         type: string
     type: object
   mfa_http.ChallengeResponse:
@@ -1035,6 +1271,39 @@ definitions:
       authorizationUrl:
         type: string
     type: object
+  operator_http.OperatorCommand:
+    properties:
+      action:
+        enum:
+        - invite
+        - permissions
+        - revoke
+        type: string
+      email:
+        type: string
+      operationId:
+        type: string
+      permissions:
+        items:
+          type: string
+        type: array
+      userId:
+        type: string
+    type: object
+  operator_http.OperatorPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/domain.Operator'
+        type: array
+      nextCursor:
+        type: string
+    type: object
+  operator_http.OperatorReceipt:
+    properties:
+      userId:
+        type: string
+    type: object
   password_http.ActivationRequest:
     properties:
       confirmPassword:
@@ -1205,6 +1474,89 @@ definitions:
     required:
     - idempotencyKey
     type: object
+  postgres.BrowserSessionSettings:
+    properties:
+      policy:
+        $ref: '#/definitions/service.BrowserPolicy'
+      source:
+        $ref: '#/definitions/domain.SourceMetadata'
+      version:
+        type: integer
+    type: object
+  postgres.CredentialLifetimeSettings:
+    properties:
+      policy:
+        $ref: '#/definitions/domain.CredentialLifetimePolicy'
+      source:
+        $ref: '#/definitions/domain.SourceMetadata'
+      version:
+        type: integer
+    type: object
+  postgres.DeletionPreview:
+    properties:
+      generation:
+        type: integer
+      hasUsers:
+        type: boolean
+      name:
+        type: string
+      projectId:
+        type: string
+      version:
+        type: integer
+    type: object
+  postgres.FrontendSettings:
+    properties:
+      policy:
+        $ref: '#/definitions/domain.FrontendPolicy'
+      source:
+        $ref: '#/definitions/domain.SourceMetadata'
+      version:
+        type: integer
+    type: object
+  postgres.LinkLifetimeSettings:
+    properties:
+      policy:
+        $ref: '#/definitions/domain.LinkLifetimePolicy'
+      source:
+        $ref: '#/definitions/domain.SourceMetadata'
+      version:
+        type: integer
+    type: object
+  postgres.LoginBudgetSettings:
+    properties:
+      policy:
+        $ref: '#/definitions/domain.LoginBudgetPolicy'
+      source:
+        $ref: '#/definitions/domain.SourceMetadata'
+      version:
+        type: integer
+    type: object
+  postgres.OperationBudgetSettings:
+    properties:
+      policy:
+        $ref: '#/definitions/domain.OperationBudgetsPolicy'
+      source:
+        $ref: '#/definitions/domain.SourceMetadata'
+      version:
+        type: integer
+    type: object
+  project_http.AdministratorRequest:
+    properties:
+      expectedAccessVersion:
+        type: integer
+      expectedAuthVersion:
+        type: integer
+      expectedRoleVersion:
+        type: integer
+      grant:
+        type: boolean
+    type: object
+  project_http.AdministratorResponse:
+    properties:
+      accessVersion:
+        type: integer
+    type: object
   project_http.ChangeStateRequest:
     properties:
       expectedGeneration:
@@ -1271,6 +1623,38 @@ definitions:
         $ref: '#/definitions/project_http.ProjectResponse'
       replayed:
         type: boolean
+    type: object
+  project_http.DeletionConfirmation:
+    properties:
+      acknowledgeUsers:
+        type: boolean
+      confirmDataLoss:
+        type: boolean
+      confirmProjectId:
+        type: string
+      expectedGeneration:
+        type: integer
+      expectedVersion:
+        type: integer
+      operationId:
+        type: string
+    type: object
+  project_http.EditRoleRequest:
+    properties:
+      description:
+        type: string
+      expectedRoleVersion:
+        type: integer
+      key:
+        type: string
+      mfaRequired:
+        type: boolean
+      name:
+        type: string
+      permissions:
+        items:
+          type: string
+        type: array
     type: object
   project_http.PlatformAssignmentRequest:
     properties:
@@ -1357,6 +1741,15 @@ definitions:
       version:
         type: integer
     type: object
+  project_http.PreparationRequest:
+    properties:
+      expectedGeneration:
+        type: integer
+      expectedVersion:
+        type: integer
+      operationId:
+        type: string
+    type: object
   project_http.ProjectAuthPolicyResponse:
     properties:
       changed:
@@ -1373,6 +1766,52 @@ definitions:
         - unknown
         type: string
     type: object
+  project_http.ProjectCredentialLifetimesRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/domain.CredentialLifetimePolicy'
+    type: object
+  project_http.ProjectFrontendsRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/domain.FrontendPolicy'
+    type: object
+  project_http.ProjectLinkLifetimesRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/domain.LinkLifetimePolicy'
+    type: object
+  project_http.ProjectLoginBudgetsRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/domain.LoginBudgetPolicy'
+    type: object
+  project_http.ProjectMFARequest:
+    properties:
+      expectedVersion:
+        type: integer
+      mode:
+        enum:
+        - optional
+        - administrators
+        - required
+        type: string
+    type: object
+  project_http.ProjectOperationBudgetsRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/domain.OperationBudgetsPolicy'
+    type: object
   project_http.ProjectPageResponse:
     properties:
       nextCursor:
@@ -1381,6 +1820,15 @@ definitions:
         items:
           $ref: '#/definitions/project_http.ProjectResponse'
         type: array
+    type: object
+  project_http.ProjectProviderRequest:
+    properties:
+      clientId:
+        type: string
+      expectedVersion:
+        type: integer
+      secret:
+        type: string
     type: object
   project_http.ProjectResponse:
     properties:
@@ -1402,6 +1850,65 @@ definitions:
         type: string
       updatedAt:
         type: string
+      version:
+        type: integer
+    type: object
+  project_http.ProjectRetentionRequest:
+    properties:
+      confirmShortening:
+        type: boolean
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/domain.RetentionPolicy'
+    type: object
+  project_http.ProjectSMTPRequest:
+    properties:
+      configuration:
+        $ref: '#/definitions/domain.SMTPConfig'
+      expectedVersion:
+        type: integer
+      password:
+        type: string
+    type: object
+  project_http.ProjectSessionsRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      policy:
+        $ref: '#/definitions/service.BrowserPolicy'
+    type: object
+  project_http.ProjectTelegramBotRequest:
+    properties:
+      botToken:
+        type: string
+      expectedVersion:
+        type: integer
+      rotateWebhookSecret:
+        type: boolean
+    type: object
+  project_http.ProjectWebhookRequest:
+    properties:
+      expectedVersion:
+        type: integer
+    type: object
+  project_http.RenameProjectRequest:
+    properties:
+      expectedVersion:
+        type: integer
+      name:
+        type: string
+      operationId:
+        type: string
+      reason:
+        type: string
+    type: object
+  project_http.RenameProjectResponse:
+    properties:
+      name:
+        type: string
+      replayed:
+        type: boolean
       version:
         type: integer
     type: object
@@ -1461,6 +1968,50 @@ definitions:
     - policy
     - reason
     type: object
+  project_user_http.CreateUserCommand:
+    properties:
+      invitationEmail:
+        type: string
+      operationId:
+        type: string
+      temporaryPasswordEmail:
+        type: string
+    type: object
+  project_user_http.CreateUserReceipt:
+    properties:
+      expiresAt:
+        type: string
+      temporaryPassword:
+        type: string
+      userId:
+        type: string
+    type: object
+  project_user_http.LifecycleCommand:
+    properties:
+      action:
+        enum:
+        - active
+        - blocked
+        - delete
+        - temporary_password
+        - initial_email
+        type: string
+      email:
+        type: string
+      expectedAuthVersion:
+        type: integer
+      operationId:
+        type: string
+    type: object
+  project_user_http.LifecycleReceipt:
+    properties:
+      authVersion:
+        type: integer
+      expiresAt:
+        type: string
+      temporaryPassword:
+        type: string
+    type: object
   provider_settings_http.SettingsResponse:
     properties:
       clientId:
@@ -1517,6 +2068,21 @@ definitions:
     properties:
       status:
         type: string
+    type: object
+  service.BrowserPolicy:
+    properties:
+      absoluteSeconds:
+        type: integer
+      adminAbsoluteSeconds:
+        type: integer
+      adminActivitySeconds:
+        type: integer
+      adminIdleSeconds:
+        type: integer
+      idleSeconds:
+        type: integer
+      refreshThresholdSeconds:
+        type: integer
     type: object
   settings.Permission:
     properties:
@@ -2092,9 +2658,7 @@ definitions:
     type: object
 info:
   contact: {}
-  description: Reusable authentication service. Cookie sessions require HTTPS. All
-    auth mutations require an exact allowed Origin. CORS is opt-in; cookie profile
-    is same-site.
+  description: Dedicated client credentials for token introspection.
   title: Auth API
   version: "1.0"
 paths:
@@ -2103,6 +2667,7 @@ paths:
       description: Public-only deployment key set. Contains no private signing material.
         Not an authorization decision. Keys are operator-controlled and loaded on
         startup.
+      operationId: getWellKnownJwksJson
       produces:
       - application/json
       responses:
@@ -2119,6 +2684,7 @@ paths:
       description: Public-only deployment key set. Contains no private signing material.
         Not an authorization decision. Keys are operator-controlled and loaded on
         startup.
+      operationId: headWellKnownJwksJson
       produces:
       - application/json
       responses:
@@ -2141,6 +2707,7 @@ paths:
         factor, otherwise a bound MFA challenge (including limited enrollment when
         required). Independent of public login methods; does not create an account
         or assign roles. Uses the public password login rate budget.
+      operationId: postAdminAuthLoginEmail
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -2195,6 +2762,7 @@ paths:
         readiness. tokenProfiles is read-only deployment metadata; changing audience/mode
         requires coordinated rollout with consumers. No secrets/key paths/client IDs
         are returned; does not refresh the session.
+      operationId: getAdminAuthSettings
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -2233,6 +2801,7 @@ paths:
         updates; adapters must be ready locally and identically configured on every
         instance. Disabling issuance does not revoke existing tokens or close introspection/logout/browser
         administration.
+      operationId: postAdminAuthSettings
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -2277,6 +2846,7 @@ paths:
       - Auth settings
   /api/v1/admin/auth/settings/credential-lifetimes:
     get:
+      operationId: getAdminAuthSettingsCredentialLifetimes
       responses:
         "200":
           description: OK
@@ -2286,6 +2856,7 @@ paths:
     post:
       consumes:
       - application/json
+      operationId: postAdminAuthSettingsCredentialLifetimes
       parameters:
       - description: Complete policy and current version
         in: body
@@ -2305,6 +2876,7 @@ paths:
       summary: Change standalone credential lifetime policy
   /api/v1/admin/auth/settings/email-otp:
     get:
+      operationId: getAdminAuthSettingsEmailOtp
       responses:
         "200":
           description: OK
@@ -2314,6 +2886,7 @@ paths:
     post:
       consumes:
       - application/json
+      operationId: postAdminAuthSettingsEmailOtp
       parameters:
       - description: Complete policy and current version
         in: body
@@ -2333,6 +2906,7 @@ paths:
       summary: Change standalone email OTP policy
   /api/v1/admin/auth/settings/frontend:
     get:
+      operationId: getAdminAuthSettingsFrontend
       responses:
         "200":
           description: OK
@@ -2342,6 +2916,7 @@ paths:
     post:
       consumes:
       - application/json
+      operationId: postAdminAuthSettingsFrontend
       parameters:
       - description: Complete policy and current version
         in: body
@@ -2361,6 +2936,7 @@ paths:
       summary: Change standalone frontend policy
   /api/v1/admin/auth/settings/link-lifetimes:
     get:
+      operationId: getAdminAuthSettingsLinkLifetimes
       responses:
         "200":
           description: OK
@@ -2370,6 +2946,7 @@ paths:
     post:
       consumes:
       - application/json
+      operationId: postAdminAuthSettingsLinkLifetimes
       parameters:
       - description: Complete policy and current version
         in: body
@@ -2389,6 +2966,7 @@ paths:
       summary: Change standalone link lifetime policy
   /api/v1/admin/auth/settings/login-budgets:
     get:
+      operationId: getAdminAuthSettingsLoginBudgets
       responses:
         "200":
           description: OK
@@ -2398,6 +2976,7 @@ paths:
     post:
       consumes:
       - application/json
+      operationId: postAdminAuthSettingsLoginBudgets
       parameters:
       - description: Complete policy and current version
         in: body
@@ -2421,6 +3000,7 @@ paths:
         endpoint requires auth.settings.manage; platform endpoint uses independent
         platform.project_settings.manage authority. No fresh proof is required for
         reading. Policy applies only to this realm database.
+      operationId: getAdminAuthSettingsMfa
       produces:
       - application/json
       responses:
@@ -2453,6 +3033,7 @@ paths:
         this caller; response still returns the committed policy. A no-op creates
         no audit/version change. Weakening preserves personal factors and never revives
         old sessions. No client-supplied capability or actor is accepted.
+      operationId: postAdminAuthSettingsMfa
       parameters:
       - description: Complete mode and current version
         in: body
@@ -2494,6 +3075,7 @@ paths:
     get:
       description: Requires current project auth.settings.manage permission. Reads
         saved allowed/version; readiness is a server capability, not a client field.
+      operationId: getAdminAuthSettingsMfaEmail
       produces:
       - application/json
       responses:
@@ -2534,6 +3116,7 @@ paths:
       description: Requires fresh administrative proofs, current permission and optimistic
         version. Enabling requires a complete project runtime; disabling is rejected
         while bindings exist. Shares the policy version with MFA mode.
+      operationId: postAdminAuthSettingsMfaEmail
       parameters:
       - description: request
         in: body
@@ -2579,6 +3162,7 @@ paths:
     get:
       description: Requires current auth.settings.manage. Mutations require fresh
         password/strong MFA and expectedVersion. Secrets are never returned.
+      operationId: getAdminAuthSettingsMfaTelegram
       produces:
       - application/json
       responses:
@@ -2618,6 +3202,7 @@ paths:
       - application/json
       description: Requires current auth.settings.manage. Mutations require fresh
         password/strong MFA and expectedVersion. Secrets are never returned.
+      operationId: postAdminAuthSettingsMfaTelegram
       parameters:
       - description: settings
         in: body
@@ -2663,6 +3248,7 @@ paths:
     get:
       description: Requires current auth.settings.manage. Mutations require fresh
         password/strong MFA and expectedVersion. Secrets are never returned.
+      operationId: getAdminAuthSettingsMfaTelegramBot
       produces:
       - application/json
       responses:
@@ -2702,6 +3288,7 @@ paths:
       - application/json
       description: Requires current auth.settings.manage. Mutations require fresh
         password/strong MFA and expectedVersion. Secrets are never returned.
+      operationId: postAdminAuthSettingsMfaTelegramBot
       parameters:
       - description: settings
         in: body
@@ -2749,6 +3336,7 @@ paths:
       - application/json
       description: Requires current auth.settings.manage. Mutations require fresh
         password/strong MFA and expectedVersion. Secrets are never returned.
+      operationId: postAdminAuthSettingsMfaTelegramWebhook
       parameters:
       - description: settings
         in: body
@@ -2792,6 +3380,7 @@ paths:
       - Auth settings
   /api/v1/admin/auth/settings/operation-budgets:
     get:
+      operationId: getAdminAuthSettingsOperationBudgets
       responses:
         "200":
           description: OK
@@ -2801,6 +3390,7 @@ paths:
     post:
       consumes:
       - application/json
+      operationId: postAdminAuthSettingsOperationBudgets
       parameters:
       - description: Complete policy and current version
         in: body
@@ -2823,6 +3413,7 @@ paths:
       description: Live session, HTTPS Origin and auth.settings.manage; no fresh proof
         for reading. Presence is not a live provider test. Redirect URI and fixed
         issuer/endpoints remain deployment configuration.
+      operationId: getAdminAuthSettingsProvidersByProvider
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -2871,6 +3462,7 @@ paths:
         is disabled. Client ID change requires explicit secret, disabled method and
         no linked identities. Rotation invalidates pending OIDC/MFA/enrollment/recovery
         proofs, not existing sessions. No external connection under SQL locks.
+      operationId: postAdminAuthSettingsProvidersByProvider
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -2926,6 +3518,7 @@ paths:
       description: Requires a live session, allowed HTTPS Origin and auth.settings.manage.
         No fresh proof is required for reading. Durations are in days; worker batch
         and interval remain deployment configuration.
+      operationId: getAdminAuthSettingsRetention
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -2963,6 +3556,7 @@ paths:
         SQL settings; an already started batch can use the old snapshot within its
         five-second deadline. Existing session deadlines and transient challenge expiry
         do not change.
+      operationId: postAdminAuthSettingsRetention
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -3007,6 +3601,7 @@ paths:
       - Retention settings
   /api/v1/admin/auth/settings/sessions:
     get:
+      operationId: getAdminAuthSettingsSessions
       responses:
         "200":
           description: OK
@@ -3016,6 +3611,7 @@ paths:
     post:
       consumes:
       - application/json
+      operationId: postAdminAuthSettingsSessions
       parameters:
       - description: Complete policy and current version
         in: body
@@ -3037,6 +3633,7 @@ paths:
     get:
       description: Requires a live session, HTTPS Origin and auth.settings.manage.
         passwordSet is presence only. No secrets, session refresh or network tests.
+      operationId: getAdminAuthSettingsSmtp
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -3073,6 +3670,7 @@ paths:
         clears it only without username. Changed destination/username requires explicit
         password. SMTP_ALLOWED_TARGETS is deployment-only; production cannot disable
         TLS. No network request in this transaction.
+      operationId: postAdminAuthSettingsSmtp
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -3124,6 +3722,7 @@ paths:
         not actual delivery. Max 10 seconds, 3/user/minute and 10/project/minute,
         2 concurrent tests/instance. Does not store a readiness claim or refresh the
         session.
+      operationId: postAdminAuthSettingsSmtpTest
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -3175,6 +3774,7 @@ paths:
       description: Requires current access.roles.manage or access.assignments.manage.
         Returns declared keys, not an ability to create arbitrary permissions through
         HTTP.
+      operationId: getAdminPermissions
       produces:
       - application/json
       responses:
@@ -3202,6 +3802,7 @@ paths:
       description: Requires current roles.manage or assignments.manage. Keyset pagination,
         no count or per-role permission queries. A full page returns its last key
         as nextAfter; a final empty page may be necessary. Use role detail for permissions.
+      operationId: getAdminRoles
       parameters:
       - description: Exclusive last role key
         in: query
@@ -3244,6 +3845,7 @@ paths:
       description: Requires access.roles.manage, all delegated permissions and fresh
         password plus MFA in the mutation transaction. No system role or wildcard
         bypass. Duplicate key returns conflict; no automatic assignments.
+      operationId: postAdminRoles
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -3291,6 +3893,7 @@ paths:
       description: Requires current access.roles.manage or access.assignments.manage.
         Includes version for a subsequent explicit edit or assignment. Reads do not
         renew session or authentication freshness.
+      operationId: getAdminRolesById
       parameters:
       - description: Role UUID
         in: path
@@ -3335,6 +3938,7 @@ paths:
         delegated permissions, fresh password plus MFA and current role version in
         one transaction. Enabling required MFA invalidates old role-bound sessions.
         A no-op preserves the version; system roles cannot be changed.
+      operationId: postAdminRolesById
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -3394,6 +3998,7 @@ paths:
         status filters, no substring search, offset or total count. Selected display
         email prefers password contact, otherwise first retained contact by UUID.
         One bounded SQL statement checks permission and reads a page.
+      operationId: getAdminUsers
       parameters:
       - description: Opaque exclusive nextCursor from the previous page
         in: query
@@ -3455,6 +4060,7 @@ paths:
         by actor; mismatched parameters or occupied email conflict. No roles, verified
         email, password or session are granted. Replay does not resend mail or reactivate
         the account.
+      operationId: postAdminUsers
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -3516,6 +4122,7 @@ paths:
         atomic credential cleanup, session revocation, audit and email reservation
         policy. This is a retained tombstone, not complete PII erasure. No account
         restoration. Last system administrator is protected.
+      operationId: deleteAdminUsersById
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -3575,6 +4182,7 @@ paths:
         subject, token, MFA secret or recovery codes. UUID lookup also supports retained
         soft-deleted users without restoring them. Contacts/providers/roles bounded
         to 32; overflow is an explicit conflict, not silent truncation.
+      operationId: getAdminUsersById
       parameters:
       - description: User UUID
         in: path
@@ -3622,6 +4230,7 @@ paths:
         the target. Unknown/deleted target and unauthorized actor share forbidden.
         Pending/blocked targets may have assignments but cannot exercise permissions.
         accessVersion is for assignment concurrency, not permission caching.
+      operationId: getAdminUsersByIdAccess
       parameters:
       - description: Target user UUID
         in: path
@@ -3670,6 +4279,7 @@ paths:
         only with such a backup. Access changes immediately; no-op replay still requires
         current authority. Does not delete the account, disable MFA or change the
         system role itself.
+      operationId: deleteAdminUsersByIdAdministrator
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -3731,6 +4341,7 @@ paths:
         credentials. Requires current target auth/access and system role versions.
         Does not create credentials, a session, a new role or a bootstrap bypass.
         Authorized current-version replay is a no-op.
+      operationId: postAdminUsersByIdAdministrator
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -3791,6 +4402,7 @@ paths:
         a code but does not reserve/attach the address, create an account or bypass
         the owner's MFA. Approval expires no later than the administrator's current
         authentication proof.
+      operationId: postAdminUsersByIdEmailBinding
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -3851,6 +4463,7 @@ paths:
         unverified contact, pending provisioned user only. No email changes, new user,
         roles, session or bypass of temporary-password activation. Cooldown and Redis
         budgets apply. Replay does not send another message.
+      operationId: postAdminUsersByIdInvitation
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -3909,6 +4522,7 @@ paths:
       description: JSON body is required also for DELETE. Same permission/delegation/version/password/MFA
         transaction guard as grant. Self-revoke of a custom role is allowed; system
         role cannot be revoked. Subsequent authorization uses current SQL assignments.
+      operationId: deleteAdminUsersByIdRolesByRoleId
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -3973,6 +4587,7 @@ paths:
         No self-grant or system-role assignment. Pending users receive access only
         after activation. Retry with stale versions returns conflict; a current no-op
         preserves the version.
+      operationId: postAdminUsersByIdRolesByRoleId
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4039,6 +4654,7 @@ paths:
         activation/recovery proofs. Unblocking does not activate pending users, restore
         deleted accounts or revive old sessions. Last system administrator is protected.
         Read/create permissions do not authorize this operation.
+      operationId: postAdminUsersByIdStatus
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4100,6 +4716,7 @@ paths:
         user's password. First commit returns a new secret once and invalidates old
         temporary/setup authority. Replay preserves stored expiry and never returns
         password. No email, roles or session are granted.
+      operationId: postAdminUsersByIdTemporaryPassword
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4161,6 +4778,7 @@ paths:
         returns it or extends TTL. No email verification, roles or session. Protect
         the response, do not log or cache it. Lost response requires a new reissue
         command after cooldown.
+      operationId: postAdminUsersTemporaryPassword
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4217,6 +4835,7 @@ paths:
         for this authenticated user only. The version is not a cache key for role
         contents. This response helps UI presentation; the backend must authorize
         every protected operation itself.
+      operationId: getAuthAccess
       produces:
       - application/json
       responses:
@@ -4251,6 +4870,7 @@ paths:
         allowed Origin and current password. Atomically updates password, revokes
         all sessions and records audit; sign in again. Response retains legacy uppercase
         Status. Existing role/MFA session requirements remain enforced.
+      operationId: postAuthChangePassword
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4310,6 +4930,7 @@ paths:
         allowed Origin, current status/version/email and at most five failed guesses
         per challenge. One-time consumption then ordinary SQL session issuance; not
         MFA or password reauthentication.
+      operationId: postAuthEmailOtpConfirm
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4363,6 +4984,7 @@ paths:
       description: Optional profile, existing active account with verified current
         password email only. Generic accepted response; sets a browser-bound HttpOnly
         flow cookie. Does not register, verify email or create a session.
+      operationId: postAuthEmailOtpRequest
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4414,6 +5036,7 @@ paths:
         current password/MFA/session/permission in SQL. Atomically creates a verified
         contact, raises auth_version, revokes all target sessions and records audit.
         Does not create login authority or merge accounts.
+      operationId: postAuthEmailBindingConfirm
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4470,6 +5093,7 @@ paths:
         reauthentication; a supplied wrong password is always rejected. Old email
         remains active until confirmation. Sends separate confirmation and security
         links; no tokens returned.
+      operationId: postAuthEmailChange
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4524,6 +5148,7 @@ paths:
         Original session must still be valid. Claims new email, revokes all sessions
         and sends old-address notice atomically. No session created; GET links never
         mutate state.
+      operationId: postAuthEmailChangeConfirm
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4575,6 +5200,7 @@ paths:
         the compromised password, restores that address, revokes access and invalidates
         previous protection links before activating the account. Does not bypass administrative
         blocking, create a session or run on GET.
+      operationId: postAuthEmailChangeRecover
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4623,6 +5249,7 @@ paths:
         change and revokes sessions, or blocks the account after completion. Never
         rolls back email, unblocks or signs in automatically. Protected recovery remains
         a separate release gate.
+      operationId: postAuthEmailChangeReport
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4668,6 +5295,7 @@ paths:
       description: Always returns accepted for unknown, verified, blocked and cooldown
         addresses. Enqueues encrypted delivery for eligible addresses. Limits use
         socket peer IP; forwarded headers are not trusted.
+      operationId: postAuthEmailResend
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4713,6 +5341,7 @@ paths:
       description: Consumes a 256-bit token once. Expired, replaced, replayed, blocked
         or unknown tokens share one error. Does not create a session. POST only; opening
         an email link must not confirm automatically.
+      operationId: postAuthEmailVerify
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4758,6 +5387,7 @@ paths:
       description: Generic accepted response for unknown, blocked and cooldown addresses.
         Enqueues an encrypted email after SQL commit; does not guarantee delivery.
         Socket IP limits; forwarded headers are not trusted.
+      operationId: postAuthForgotPassword
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -4802,6 +5432,7 @@ paths:
         cookie. Login sets __Host-session; linking requires the unchanged fresh session
         and never creates or replaces it. No email auto-merge. Restart after a failed
         or lost callback.
+      operationId: getAuthGoogleCallback
       parameters:
       - description: Authorization code
         in: query
@@ -4819,11 +5450,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_auth_methods_google_transport_http.CallbackResponse'
+            $ref: '#/definitions/github_com_Inforberi_financial-intelligence_internal_auth_methods_google_transport_http.CallbackResponse'
         "202":
           description: MFA required; browser binding cookie, no session issued
           schema:
-            $ref: '#/definitions/internal_auth_methods_google_transport_http.MFAChallengeResponse'
+            $ref: '#/definitions/github_com_Inforberi_financial-intelligence_internal_auth_methods_google_transport_http.MFAChallengeResponse'
         "400":
           description: Bad Request
           schema:
@@ -4856,6 +5487,7 @@ paths:
       description: Requires Origin and fresh password proof. A verified permanent
         password login must remain. Successful unlink increments auth_version and
         revokes all sessions, including the caller. Unknown ownership is not revealed.
+      operationId: deleteAuthGoogleLink
       parameters:
       - description: Allowed browser origin
         in: header
@@ -4901,6 +5533,7 @@ paths:
         password and recent password reauthentication. Flow binds UUID and session
         hash; callback does not create a session or user. One identity per provider
         per account.
+      operationId: postAuthGoogleLink
       parameters:
       - description: Allowed browser origin
         in: header
@@ -4913,7 +5546,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_auth_methods_google_transport_http.StartResponse'
+            $ref: '#/definitions/github_com_Inforberi_financial-intelligence_internal_auth_methods_google_transport_http.StartResponse'
         "401":
           description: Unauthorized
           schema:
@@ -4941,6 +5574,7 @@ paths:
     post:
       description: Requires allowed Origin. Sets a browser-bound HttpOnly flow cookie;
         navigate to authorizationUrl. Disabled by default.
+      operationId: postAuthGoogleStart
       parameters:
       - description: Allowed HTTPS origin
         in: header
@@ -4953,7 +5587,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_auth_methods_google_transport_http.StartResponse'
+            $ref: '#/definitions/github_com_Inforberi_financial-intelligence_internal_auth_methods_google_transport_http.StartResponse'
         "403":
           description: Forbidden
           schema:
@@ -4981,6 +5615,7 @@ paths:
         sets a password and verifies the invited contact atomically. Expired, replayed,
         blocked and unknown tokens have one error. Does not create a session or assign
         roles. GET never activates an account.
+      operationId: postAuthInvitationsActivate
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -5029,6 +5664,7 @@ paths:
         in the final SQL commit; required email verification refuses unverified credentials
         without a session. HTTPS and allowed Origin are required. Invalid credentials
         return 400, not 401. Disabling a method does not revoke already issued sessions.
+      operationId: postAuthLoginEmail
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -5084,6 +5720,7 @@ paths:
     post:
       description: Missing or invalid sessions return 401 and clear the stale cookie.
         Dependency failures do not clear it. Requires an allowed Origin.
+      operationId: postAuthLogout
       parameters:
       - description: Exact HTTPS origin from AUTH_ALLOWED_ORIGINS
         in: header
@@ -5109,6 +5746,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Revoke current session and clear browser cookie
       tags:
       - Session
@@ -5116,6 +5755,7 @@ paths:
     post:
       description: Requires an allowed Origin. Auth version increment prevents stale
         in-flight issuance.
+      operationId: postAuthLogoutAll
       parameters:
       - description: Exact HTTPS origin from AUTH_ALLOWED_ORIGINS
         in: header
@@ -5137,6 +5777,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Revoke all own sessions including current and clear browser cookie
       tags:
       - Session
@@ -5144,6 +5786,7 @@ paths:
     get:
       description: Requires __Host-session cookie. Returns IDs only; profile and contact
         management are separate features.
+      operationId: getAuthMe
       produces:
       - application/json
       responses:
@@ -5159,6 +5802,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Get authenticated user and current session IDs
       tags:
       - Session
@@ -5166,6 +5811,7 @@ paths:
     get:
       description: Returns standalone login and registration choices for this API
         instance. No account data is read. Login still performs its own checks.
+      operationId: getAuthMethods
       produces:
       - application/json
       responses:
@@ -5189,6 +5835,7 @@ paths:
       description: Requires current primary/factor proofs, allowed Origin and session.
         Cannot remove the last mandatory factor. Atomically revokes old credentials
         and audits; disabling project policy alone does not remove bindings.
+      operationId: deleteAuthMfaEmail
       produces:
       - application/json
       responses:
@@ -5226,6 +5873,7 @@ paths:
     get:
       description: Current owner session only. Does not refresh its lifetime or reveal
         another user. Configured, usable and suspended are distinct states.
+      operationId: getAuthMfaEmail
       produces:
       - application/json
       responses:
@@ -5265,6 +5913,7 @@ paths:
         proofs required. Email-only administrative factor is unsupported: enroll TOTP
         first. Atomically binds the channel, audits and revokes old credentials; no
         new session.'
+      operationId: postAuthMfaEmail
       produces:
       - application/json
       responses:
@@ -5307,6 +5956,7 @@ paths:
         enrolled verified channel. Returns only a challenge and project-scoped HttpOnly
         binding cookie; never creates a session before the code. Email proof is not
         strong TOTP assurance.
+      operationId: postAuthMfaEmailLogin
       parameters:
       - description: request
         in: body
@@ -5356,6 +6006,7 @@ paths:
         challenge/code. TOTP, native, foreign, replaced, expired and replayed challenges
         fail closed. Sets the shared browser session cookie; never returns its token
         in JSON.
+      operationId: postAuthMfaEmailLoginComplete
       parameters:
       - description: request
         in: body
@@ -5404,6 +6055,7 @@ paths:
       description: Requires current owner session, fresh explicit password proof and
         any currently required MFA proof. Only an owned verified address is accepted.
         Sends a separate-purpose code; does not enable a factor or create a session.
+      operationId: postAuthMfaEmailPreparation
       parameters:
       - description: request
         in: body
@@ -5452,6 +6104,7 @@ paths:
       description: Consumes the dedicated code and rotates the current session verifier
         without increasing its lifetime or granting strong MFA. Requires allowed Origin
         and the original owner session proof.
+      operationId: postAuthMfaEmailPreparationConfirm
       parameters:
       - description: request
         in: body
@@ -5500,6 +6153,7 @@ paths:
       description: Requires the same browser binding cookie and allowed Origin. Consumes
         the selected TOTP/recovery or Telegram code and challenge atomically with
         SQL session issuance. No client UUID, auth version or MFA timestamp is accepted.
+      operationId: postAuthMfaLoginComplete
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -5550,6 +6204,7 @@ paths:
         same browser binding. No full session, account UUID or password is accepted.
         Secret expires with the existing login challenge; restarting does not extend
         its deadline.
+      operationId: postAuthMfaLoginEnrollment
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -5600,6 +6255,7 @@ paths:
         and first TOTP. Commits the factor, recovery codes, auth_version and revocation
         atomically; returns codes once. Creates no session: sign in again with primary
         plus MFA.'
+      operationId: postAuthMfaLoginEnrollmentConfirm
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -5644,6 +6300,7 @@ paths:
       - MFA
   /api/v1/auth/mfa/preference:
     get:
+      operationId: getAuthMfaPreference
       produces:
       - application/json
       responses:
@@ -5663,6 +6320,7 @@ paths:
       - application/json
       description: Empty method selects auto. Fresh proofs and expectedVersion required.
         Strong administrative policy takes precedence.
+      operationId: postAuthMfaPreference
       parameters:
       - description: version and method
         in: body
@@ -5702,6 +6360,7 @@ paths:
         opt-in verified-email proof for an external-only account. Replaces all recovery
         codes, returns ten new codes once and revokes sessions/pending challenges
         atomically. TOTP remains enabled.
+      operationId: postAuthMfaRecoveryCodesRegenerate
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -5746,6 +6405,7 @@ paths:
         cancelled, foreign and replayed requests share invalid_mfa. Five wrong codes
         exhaust the request and account guessing budget is shared with normal MFA
         login. Missing verified contact requires independent operator notification.
+      operationId: postAuthMfaRecoveryComplete
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -5796,6 +6456,7 @@ paths:
       description: Does not authenticate or bypass a factor. Creates a primary-bound
         challenge for the existing independently approved recovery process; no delivery
         fallback.
+      operationId: postAuthMfaRecoveryLogin
       parameters:
       - description: primary credentials
         in: body
@@ -5835,6 +6496,7 @@ paths:
         extending the primary TTL. Independent owner verification and CLI approval
         are required before completion. No user UUID, actor, version or approved flag
         accepted.
+      operationId: postAuthMfaRecoveryStart
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -5884,6 +6546,7 @@ paths:
         recovery code values, session refresh or audit. Availability is local, not
         SMTP/fleet health. Policy flags are informational; mutations independently
         recheck current state and proof.
+      operationId: getAuthMfaStatus
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -5920,6 +6583,7 @@ paths:
         an external-only account, within five minutes. Consumes TOTP/recovery, rotates
         the current session verifier and records fresh MFA context atomically. Does
         not extend session lifetime.
+      operationId: postAuthMfaStepUp
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -5966,6 +6630,7 @@ paths:
     delete:
       description: Requires fresh current proofs; cannot remove the final policy-required
         factor.
+      operationId: deleteAuthMfaTelegram
       responses:
         "200":
           description: OK
@@ -5987,6 +6652,7 @@ paths:
       tags:
       - MFA
     get:
+      operationId: getAuthMfaTelegram
       produces:
       - application/json
       responses:
@@ -6004,6 +6670,7 @@ paths:
     post:
       description: Requires the same fresh source proofs and confirmed channel. Revokes
         existing credentials; no session issued.
+      operationId: postAuthMfaTelegram
       responses:
         "200":
           description: OK
@@ -6030,6 +6697,7 @@ paths:
       - MFA
   /api/v1/auth/mfa/telegram/preparation:
     post:
+      operationId: postAuthMfaTelegramPreparation
       produces:
       - application/json
       responses:
@@ -6056,6 +6724,7 @@ paths:
     post:
       consumes:
       - application/json
+      operationId: postAuthMfaTelegramPreparationConfirm
       parameters:
       - description: binding and code
         in: body
@@ -6089,6 +6758,7 @@ paths:
         Auth roles. Realm and role requirements cannot be bypassed. Recovery codes
         are consumed through step-up first. Removes recovery codes, raises auth_version
         and revokes all sessions atomically.
+      operationId: deleteAuthMfaTotp
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -6126,6 +6796,7 @@ paths:
       description: Requires an active session and fresh password proof, or opt-in
         verified-email proof for an external-only account, within five minutes. Returns
         the secret once in a no-store owner response. Does not enable MFA before confirmation.
+      operationId: postAuthMfaTotpEnrollment
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -6169,6 +6840,7 @@ paths:
       description: Consumes the first code, returns ten recovery codes once, raises
         auth_version and revokes all sessions atomically. Sign in again with MFA;
         no session is created here.
+      operationId: postAuthMfaTotpEnrollmentConfirm
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -6217,6 +6889,7 @@ paths:
         opt-in verified-email proof for an external-only account. The current factor
         remains usable until confirmation. Replacement cannot use an ordinary enrollment
         token.
+      operationId: postAuthMfaTotpReplacement
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -6261,6 +6934,7 @@ paths:
         and a code from the new factor. Primary is password, or opt-in verified-email
         proof for an external-only account. Replaces secret/recovery codes, raises
         auth_version and revokes all sessions atomically.
+      operationId: postAuthMfaTotpReplacementConfirm
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -6311,6 +6985,7 @@ paths:
         Audience/scope come only from stored request. Email code is the primary method,
         not MFA. If issuance fails after code consumption, request a new code; no
         retry/grace or intermediate cookie session.
+      operationId: postAuthNativeEmailConfirm
       parameters:
       - description: Native binding and email code
         in: body
@@ -6364,6 +7039,7 @@ paths:
         accepted response for unknown or ineligible accounts; code only for eligible
         existing accounts. Store the returned binding in protected client memory.
         Audience/scope are bound server-side. No browser flow cookie.
+      operationId: postAuthNativeEmailRequest
       parameters:
       - description: Email and resource scope
         in: body
@@ -6409,6 +7085,7 @@ paths:
         proof. Recovery defaults to false (TOTP); true selects one recovery code.
         Factor consumption, session/family issuance and audit commit atomically. Parallel/replayed
         attempts cannot create independent successors. No Origin/Cookie/Authorization/query.
+      operationId: postAuthNativeMfaComplete
       parameters:
       - description: Native challenge, binding and factor
         in: body
@@ -6458,6 +7135,7 @@ paths:
         and its one-use email code. Recovery=true, TOTP/browser challenges and arbitrary
         target changes fail closed. Issuance/sign/audit are atomic; the resulting
         email proof does not satisfy strong-MFA guards.
+      operationId: postAuthNativeMfaEmailComplete
       parameters:
       - description: Challenge, binding and email code
         in: body
@@ -6503,6 +7181,7 @@ paths:
         after a password; never falls back to password-only tokens. Email is not strong
         TOTP assurance. Recovery of a lost channel uses the browser operator-assisted
         flow.
+      operationId: postAuthNativeMfaEmailLogin
       parameters:
       - description: Password and resource scope
         in: body
@@ -6548,6 +7227,7 @@ paths:
         No Origin/Cookie/Authorization/query. Returns the enrollment secret once for
         setup, no access or refresh credentials. Repeating start does not extend the
         primary challenge deadline.
+      operationId: postAuthNativeMfaEnrollment
       parameters:
       - description: Native enrollment-required challenge
         in: body
@@ -6597,6 +7277,7 @@ paths:
         Codes returned once. Does not issue tokens: perform a fresh primary login
         then MFA. Native challenge/binding only; no Origin/Cookie/Authorization/query
         or cookie mutations.'
+      operationId: postAuthNativeMfaEnrollmentConfirm
       parameters:
       - description: Primary challenge, native binding, enrollment token and first
           TOTP
@@ -6648,6 +7329,7 @@ paths:
         and primary checks. Required MFA/enrollment returns only a bound restricted
         challenge. No browser session is created. Strict JWT use requires an online
         authority check at the consumer.'
+      operationId: postAuthNativePasswordLogin
       parameters:
       - description: Credentials and resource scope
         in: body
@@ -6701,6 +7383,7 @@ paths:
         existing session token atomically without extending lifetime. Grants a five-minute
         email proof, not password proof, MFA proof or administrative permissions.
         Existing MFA is still required to replace or disable a factor.
+      operationId: postAuthReauthenticateEmailConfirm
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -6750,6 +7433,7 @@ paths:
       description: Optional, existing external-only account with an active session
         and an already verified owned email. Does not attach or verify a new address,
         authenticate by password or issue a new session.
+      operationId: postAuthReauthenticateEmailRequest
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -6801,6 +7485,7 @@ paths:
         extend session deadlines, prove MFA or grant permissions. No old-token grace
         period; serialize requests around reauthentication. Lost successful response
         requires login. Password and token never returned in JSON.
+      operationId: postAuthReauthenticatePassword
       parameters:
       - description: Exact HTTPS origin from AUTH_ALLOWED_ORIGINS
         in: header
@@ -6854,6 +7539,7 @@ paths:
         commit atomically; session issuance is separate, so an error does not prove
         account rollback. A committed retry returns 409, never automatic login. HTTPS
         and allowed Origin are required.
+      operationId: postAuthRegisterEmail
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -6914,6 +7600,7 @@ paths:
         consumes the token, revokes all sessions and records audit. Does not verify
         email or create a session; sign in again. New password: 8-128 bytes, letter,
         digit and uppercase. POST only, never automatic GET confirmation.'
+      operationId: postAuthResetPassword
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -6958,6 +7645,7 @@ paths:
         alone. Administrative sessions use a stored bounded idle window; ordinary
         sessions are unchanged. Does not renew primary, password or MFA proof or the
         absolute deadline. No body or client timestamps.
+      operationId: postAuthSessionActivity
       produces:
       - application/json
       responses:
@@ -6977,6 +7665,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Report interactive session activity
       tags:
       - Sessions
@@ -6986,6 +7676,7 @@ paths:
         the token once without extending deadlines or refreshing authentication. Concurrent
         rotations have one winner; serialize browser requests around rotation. A lost
         successful response requires a new login. No old-token grace period.
+      operationId: postAuthSessionRotate
       parameters:
       - description: Exact HTTPS origin from AUTH_ALLOWED_ORIGINS
         in: header
@@ -7007,6 +7698,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Rotate the current session token
       tags:
       - Session
@@ -7014,6 +7707,7 @@ paths:
     get:
       description: Up to 50 items ordered by creation time and public UUID descending;
         pass nextCursor as before. No session secrets are returned.
+      operationId: getAuthSessions
       parameters:
       - description: Public session UUID cursor
         in: query
@@ -7038,6 +7732,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: List own active sessions
       tags:
       - Session
@@ -7045,6 +7741,7 @@ paths:
     delete:
       description: Foreign, unknown and inactive sessions share 404. Revoking current
         session also clears the cookie. Requires an allowed Origin.
+      operationId: deleteAuthSessionsById
       parameters:
       - description: Exact HTTPS origin from AUTH_ALLOWED_ORIGINS
         in: header
@@ -7079,6 +7776,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Revoke one own active session
       tags:
       - Session
@@ -7088,6 +7787,7 @@ paths:
         cookie. Login sets __Host-session; linking requires the unchanged fresh session
         and never creates or replaces it. No email auto-merge. Restart after a failed
         or lost callback.
+      operationId: getAuthTelegramCallback
       parameters:
       - description: Authorization code
         in: query
@@ -7109,7 +7809,7 @@ paths:
         "202":
           description: MFA required; browser binding cookie, no session issued
           schema:
-            $ref: '#/definitions/internal_auth_methods_telegram_transport_http.MFAChallengeResponse'
+            $ref: '#/definitions/github_com_Inforberi_financial-intelligence_internal_auth_methods_telegram_transport_http.MFAChallengeResponse'
         "400":
           description: Bad Request
           schema:
@@ -7142,6 +7842,7 @@ paths:
       description: Requires Origin and fresh password proof. A verified permanent
         password login must remain. Successful unlink increments auth_version and
         revokes all sessions, including the caller. Unknown ownership is not revealed.
+      operationId: deleteAuthTelegramLink
       parameters:
       - description: Allowed browser origin
         in: header
@@ -7187,6 +7888,7 @@ paths:
         password and recent password reauthentication. Flow binds UUID and session
         hash; callback does not create a session or user. One identity per provider
         per account.
+      operationId: postAuthTelegramLink
       parameters:
       - description: Allowed browser origin
         in: header
@@ -7199,7 +7901,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_auth_methods_telegram_transport_http.StartResponse'
+            $ref: '#/definitions/github_com_Inforberi_financial-intelligence_internal_auth_methods_telegram_transport_http.StartResponse'
         "401":
           description: Unauthorized
           schema:
@@ -7227,6 +7929,7 @@ paths:
     post:
       description: Requires allowed Origin. Sets a browser-bound HttpOnly flow cookie;
         navigate to authorizationUrl. Disabled by default.
+      operationId: postAuthTelegramStart
       parameters:
       - description: Allowed HTTPS origin
         in: header
@@ -7267,6 +7970,7 @@ paths:
         token and revokes temporary credentials atomically. Does not create a session,
         verify email, bypass MFA or grant roles. Use ordinary login afterwards. GET
         never changes credentials.
+      operationId: postAuthTemporaryPasswordComplete
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -7314,6 +8018,7 @@ paths:
         password-setup token, never a session cookie. Repeated successful login replaces
         the previous setup token. Does not verify email or grant product access. Shares
         ordinary login rate limits.
+      operationId: postAuthTemporaryPasswordLogin
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -7361,6 +8066,7 @@ paths:
         Does not refresh the session or MFA. Scope is restricted by the configured
         audience and current SQL grants. Strict tokens still require an online authority
         decision at the consumer.
+      operationId: postAuthTokenExchange
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -7400,6 +8106,8 @@ paths:
           description: temporarily_unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Issue an access JWT from the current cookie session
       tags:
       - Tokens
@@ -7412,6 +8120,7 @@ paths:
         credential revokes only its own family; never logout-all. Does not remove
         reuse history. Local JWTs remain valid until their published expiry window;
         strict consumers require online authority.
+      operationId: postAuthTokenLogout
       parameters:
       - description: Opaque refresh credential
         in: body
@@ -7454,6 +8163,7 @@ paths:
         revocation before 401. No retry/grace on lost responses. First rotation can
         be immediate, later >=30s; 4096 credentials/family, then sign in again. Does
         not extend absolute lifetime, scope or assurance.
+      operationId: postAuthTokenRefresh
       parameters:
       - description: Current opaque refresh credential
         in: body
@@ -7497,6 +8207,7 @@ paths:
       - application/json
       description: Dev-only endpoint for manual SMTP testing. Available only when
         APP_ENV=dev.
+      operationId: postDevSendMail
       parameters:
       - description: Exact allowed HTTPS origin
         in: header
@@ -7538,12 +8249,8 @@ paths:
       description: Service-to-service HTTPS only. Dedicated per-consumer HTTP Basic
         credentials, not user Bearer/cookies. Invalid/inactive tokens return only
         active:false. Does not renew sessions. Custom protocol, not RFC 7662.
+      operationId: postInternalAuthTokenIntrospect
       parameters:
-      - description: Basic service client ID and secret
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Full access JWT
         in: body
         name: body
@@ -7577,9 +8284,48 @@ paths:
           description: temporarily_unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - ServiceBasic: []
       summary: Check an access JWT against current session authority
       tags:
       - Tokens
+  /api/v1/platform/operators:
+    get:
+      operationId: getPlatformOperators
+      parameters:
+      - description: Cursor from the previous page
+        in: query
+        name: after
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/operator_http.OperatorPage'
+      security:
+      - SessionCookie: []
+      summary: List platform operators
+      tags:
+      - Platform Operators
+    post:
+      operationId: postPlatformOperators
+      parameters:
+      - description: Owner-only command
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/operator_http.OperatorCommand'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/operator_http.OperatorReceipt'
+      security:
+      - SessionCookie: []
+      summary: Invite an operator, replace project permissions or revoke access
+      tags:
+      - Platform Operators
   /api/v1/platform/projects:
     get:
       description: Platform deployment only. Requires its current browser session
@@ -7587,6 +8333,7 @@ paths:
         No session refresh, fresh-proof renewal or storage probes. Newest createdAt/UUID
         first, exclusive opaque cursor bound to phase filter. No credentials, binding
         references, database names, offset or total count.
+      operationId: getPlatformProjects
       parameters:
       - description: Optional for GET; if supplied, must be the exact platform HTTPS
           origin
@@ -7639,6 +8386,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: List independent projects
       tags:
       - Platform Projects
@@ -7653,6 +8402,7 @@ paths:
         Retry the same operation UUID/payload after a lost response. Replay checks
         current authority and returns the original creation snapshot, not later lifecycle
         state.
+      operationId: postPlatformProjects
       parameters:
       - description: Exact platform HTTPS origin
         in: header
@@ -7708,6 +8458,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Create an independent project intent
       tags:
       - Platform Projects
@@ -7718,6 +8470,7 @@ paths:
         readiness or credentials. Pending, failed and suspended projects remain visible
         to an authorized operator. Does not open the project DB, renew a session or
         expose storage target/database/credential references.
+      operationId: getPlatformProjectsById
       parameters:
       - description: Optional for GET; if supplied, must be the exact platform HTTPS
           origin
@@ -7760,6 +8513,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Read an independent project
       tags:
       - Platform Projects
@@ -7772,6 +8527,7 @@ paths:
         when saving policy. Password verification has a separate readiness prerequisite.
         No secrets or external delivery guarantee; HTTP-disabled deployment reports
         closed capabilities. GET never initializes settings or renews sessions.
+      operationId: getPlatformProjectsByIdAuthSettings
       parameters:
       - description: Project UUID
         in: path
@@ -7823,6 +8579,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Read a project's public authentication policy
       tags:
       - Platform Auth settings
@@ -7840,6 +8598,7 @@ paths:
         enabling unassembled methods. Existing sessions/JWT are not automatically
         revoked. 202 means unknown commit, not rollback; retry the same operation/payload
         or read its result. No query parameters. Body at most 8 KiB.
+      operationId: postPlatformProjectsByIdAuthSettings
       parameters:
       - description: Project UUID
         in: path
@@ -7906,9 +8665,389 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Replace a project's public authentication policy
       tags:
       - Platform Auth settings
+  /api/v1/platform/projects/{id}/auth/settings/credential-lifetimes:
+    get:
+      operationId: getPlatformProjectsByIdAuthSettingsCredentialLifetimes
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postgres.CredentialLifetimeSettings'
+      security:
+      - SessionCookie: []
+      summary: Read project credential lifetime policy
+      tags:
+      - Platform Projects
+    post:
+      operationId: postPlatformProjectsByIdAuthSettingsCredentialLifetimes
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: Complete policy and current policy version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ProjectCredentialLifetimesRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postgres.CredentialLifetimeSettings'
+      security:
+      - SessionCookie: []
+      summary: Update project lifetimes for new authentication credentials
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/auth/settings/frontend:
+    get:
+      operationId: getPlatformProjectsByIdAuthSettingsFrontend
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postgres.FrontendSettings'
+      security:
+      - SessionCookie: []
+      summary: Read project frontend policy
+      tags:
+      - Platform Projects
+    post:
+      operationId: postPlatformProjectsByIdAuthSettingsFrontend
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: Complete policy and current policy version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ProjectFrontendsRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postgres.FrontendSettings'
+      security:
+      - SessionCookie: []
+      summary: Update project frontend origins and action URLs
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/auth/settings/link-lifetimes:
+    get:
+      operationId: getPlatformProjectsByIdAuthSettingsLinkLifetimes
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postgres.LinkLifetimeSettings'
+      security:
+      - SessionCookie: []
+      summary: Read project link lifetime policy
+      tags:
+      - Platform Projects
+    post:
+      operationId: postPlatformProjectsByIdAuthSettingsLinkLifetimes
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: Complete policy and current policy version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ProjectLinkLifetimesRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postgres.LinkLifetimeSettings'
+      security:
+      - SessionCookie: []
+      summary: Update project lifetimes for new verification and reset links
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/auth/settings/login-budgets:
+    get:
+      operationId: getPlatformProjectsByIdAuthSettingsLoginBudgets
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postgres.LoginBudgetSettings'
+      security:
+      - SessionCookie: []
+      summary: Read project login budget policy
+      tags:
+      - Platform Projects
+    post:
+      operationId: postPlatformProjectsByIdAuthSettingsLoginBudgets
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: Complete policy and current policy version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ProjectLoginBudgetsRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postgres.LoginBudgetSettings'
+      security:
+      - SessionCookie: []
+      summary: Update project password login, registration and reset budgets
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/auth/settings/mfa:
+    get:
+      operationId: getPlatformProjectsByIdAuthSettingsMfa
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.MFASnapshot'
+      security:
+      - SessionCookie: []
+      summary: Read project MFA policy
+      tags:
+      - Platform Projects
+    post:
+      operationId: postPlatformProjectsByIdAuthSettingsMfa
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: MFA mode and current policy version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ProjectMFARequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.MFASnapshot'
+      security:
+      - SessionCookie: []
+      summary: Update project MFA policy
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/auth/settings/operation-budgets:
+    get:
+      operationId: getPlatformProjectsByIdAuthSettingsOperationBudgets
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postgres.OperationBudgetSettings'
+      security:
+      - SessionCookie: []
+      summary: Read project operation budget policy
+      tags:
+      - Platform Projects
+    post:
+      operationId: postPlatformProjectsByIdAuthSettingsOperationBudgets
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: Complete policy and current policy version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ProjectOperationBudgetsRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postgres.OperationBudgetSettings'
+      security:
+      - SessionCookie: []
+      summary: Update project authentication operation budgets
+      tags:
+      - Platform Projects
   /api/v1/platform/projects/{id}/auth/settings/operations/{operationId}:
     get:
       description: Requires current platform.project_settings.manage and fresh password/MFA.
@@ -7919,6 +9058,7 @@ paths:
         with the original binding/version; no offline catalog completion cache. Never
         re-executes a mutation or creates an admission. Returned policy is historical
         evidence, not the current policy or current access.
+      operationId: getPlatformProjectsByIdAuthSettingsOperationsByOperationId
       parameters:
       - description: Project UUID
         in: path
@@ -7974,9 +9114,533 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Read the caller's authentication-policy operation result
       tags:
       - Platform Auth settings
+  /api/v1/platform/projects/{id}/auth/settings/providers/{provider}:
+    get:
+      operationId: getPlatformProjectsByIdAuthSettingsProvidersByProvider
+      parameters:
+      - description: google or telegram
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ProviderSnapshot'
+      security:
+      - SessionCookie: []
+      summary: Read project login provider settings
+      tags:
+      - Platform Projects
+    post:
+      operationId: postPlatformProjectsByIdAuthSettingsProvidersByProvider
+      parameters:
+      - description: google or telegram
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: Client ID and optional replacement secret
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ProjectProviderRequest'
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ProviderSnapshot'
+      security:
+      - SessionCookie: []
+      summary: Update project login provider settings
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/auth/settings/retention:
+    get:
+      operationId: getPlatformProjectsByIdAuthSettingsRetention
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.RetentionSnapshot'
+      security:
+      - SessionCookie: []
+      summary: Read project data retention settings
+      tags:
+      - Platform Projects
+    post:
+      operationId: postPlatformProjectsByIdAuthSettingsRetention
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: Retention policy, current version and shortening confirmation
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ProjectRetentionRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.RetentionSnapshot'
+      security:
+      - SessionCookie: []
+      summary: Update project data retention settings
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/auth/settings/sessions:
+    get:
+      operationId: getPlatformProjectsByIdAuthSettingsSessions
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postgres.BrowserSessionSettings'
+      security:
+      - SessionCookie: []
+      summary: Read project browser session policy
+      tags:
+      - Platform Projects
+    post:
+      operationId: postPlatformProjectsByIdAuthSettingsSessions
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: Complete policy and current policy version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ProjectSessionsRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postgres.BrowserSessionSettings'
+      security:
+      - SessionCookie: []
+      summary: Update project policy for new browser sessions
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/auth/settings/smtp:
+    get:
+      operationId: getPlatformProjectsByIdAuthSettingsSmtp
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.SMTPSnapshot'
+      security:
+      - SessionCookie: []
+      summary: Read project SMTP settings
+      tags:
+      - Platform Projects
+    post:
+      operationId: postPlatformProjectsByIdAuthSettingsSmtp
+      parameters:
+      - description: Configuration and optional replacement password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ProjectSMTPRequest'
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.SMTPSnapshot'
+      security:
+      - SessionCookie: []
+      summary: Update project SMTP settings
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/auth/settings/telegram-bot:
+    get:
+      operationId: getPlatformProjectsByIdAuthSettingsTelegramBot
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.TelegramBotSnapshot'
+      security:
+      - SessionCookie: []
+      summary: Read project Telegram bot settings
+      tags:
+      - Platform Projects
+    post:
+      operationId: postPlatformProjectsByIdAuthSettingsTelegramBot
+      parameters:
+      - description: Expected version and credential change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ProjectTelegramBotRequest'
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.TelegramBotSnapshot'
+      security:
+      - SessionCookie: []
+      summary: Replace the project Telegram bot token or rotate its webhook secret
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/auth/settings/telegram-bot/webhook:
+    post:
+      consumes:
+      - application/json
+      description: Requires fresh platform authentication and settings permission.
+        Uses the registered project origin and stored credentials.
+      operationId: postPlatformProjectsByIdAuthSettingsTelegramBotWebhook
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: Current Telegram bot settings version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.ProjectWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.TelegramBotSnapshot'
+      security:
+      - SessionCookie: []
+      summary: Activate the Telegram webhook for a project
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/deletion:
+    post:
+      operationId: postPlatformProjectsByIdDeletion
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Exact project ID, versions and explicit data loss confirmation
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.DeletionConfirmation'
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/domain.DeletionOperation'
+      security:
+      - SessionCookie: []
+      summary: Confirm physical deletion of a project
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/deletion-preview:
+    get:
+      operationId: getPlatformProjectsByIdDeletionPreview
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postgres.DeletionPreview'
+      security:
+      - SessionCookie: []
+      summary: Check whether the selected project has users before deletion
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/deletion/{operationId}:
+    get:
+      operationId: getPlatformProjectsByIdDeletionByOperationId
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Operation UUID
+        in: path
+        name: operationId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.DeletionOperation'
+      security:
+      - SessionCookie: []
+      summary: Read a confirmed project deletion
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/name:
+    post:
+      operationId: postPlatformProjectsByIdName
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Operation UUID, project version, display name and reason
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.RenameProjectRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/project_http.RenameProjectResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
+      summary: Change the display name of a project
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/preparation:
+    post:
+      operationId: postPlatformProjectsByIdPreparation
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Operation UUID and project versions
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.PreparationRequest'
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/domain.PreparationOperation'
+      security:
+      - SessionCookie: []
+      summary: Request project database preparation
+      tags:
+      - Platform Projects
+  /api/v1/platform/projects/{id}/preparation/{operationId}:
+    get:
+      operationId: getPlatformProjectsByIdPreparationByOperationId
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Operation UUID
+        in: path
+        name: operationId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.PreparationOperation'
+      security:
+      - SessionCookie: []
+      summary: Read project database preparation result
+      tags:
+      - Platform Projects
   /api/v1/platform/projects/{id}/resume:
     post:
       consumes:
@@ -7985,6 +9649,7 @@ paths:
         and fresh password/MFA proofs. Restores desired state without re-provisioning
         an already prepared database. Returns the committed receipt, not a fresh project
         card. Pending or failed preparation does not become ready.
+      operationId: postPlatformProjectsByIdResume
       parameters:
       - description: Exact platform HTTPS origin
         in: header
@@ -8042,6 +9707,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Resume an independent project
       tags:
       - Platform Projects
@@ -8053,6 +9720,7 @@ paths:
         and fresh password/MFA proofs. Changes enabled/failed to enabled/pending and
         records one audit/receipt. Does not create a database in the HTTP request
         or start an executor. A suspended project must be resumed first.
+      operationId: postPlatformProjectsByIdRetry
       parameters:
       - description: Exact platform HTTPS origin
         in: header
@@ -8110,6 +9778,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Retry failed project preparation
       tags:
       - Platform Projects
@@ -8121,6 +9791,7 @@ paths:
         This GET reads catalog evidence only and never opens a project connection.
         An existing result remains readable after write permission revoke or project
         suspension.
+      operationId: getPlatformProjectsByIdRoleOperationsByOperationId
       parameters:
       - description: If supplied, exact platform HTTPS origin
         in: header
@@ -8171,6 +9842,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Read the caller's project role operation
       tags:
       - Platform Roles
@@ -8183,6 +9856,7 @@ paths:
         role mutation or creates an admission. Missing receipt remains unknown. Cold
         suspended/stale target may be unavailable; there is no fallback to another
         DB.
+      operationId: postPlatformProjectsByIdRoleOperationsByOperationIdReconcile
       parameters:
       - description: Exact platform HTTPS origin
         in: header
@@ -8234,6 +9908,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Recover the caller's project role operation result
       tags:
       - Platform Roles
@@ -8245,6 +9921,7 @@ paths:
         no total count, offset or per-row permission queries. Includes system-role
         metadata; assignments to system roles remain forbidden. Does not renew sessions
         or create operation receipts. Get permissions from the role detail endpoint.
+      operationId: getPlatformProjectsByIdRoles
       parameters:
       - description: Project UUID
         in: path
@@ -8305,6 +9982,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: List current project roles from the platform
       tags:
       - Platform Roles
@@ -8319,6 +9998,7 @@ paths:
         identity is created. Project MFA capability is not yet assembled: mfaRequired=true
         fails closed with mfa_not_ready. Permission catalog uses deployment-owned
         ACCESS_CATALOG_FILE.'
+      operationId: postPlatformProjectsByIdRoles
       parameters:
       - description: Exact platform HTTPS origin
         in: header
@@ -8387,6 +10067,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Create a project role as a platform operator
       tags:
       - Platform Roles
@@ -8397,6 +10079,7 @@ paths:
         and role UUID. Role and permissions come from one read-only repeatable-read
         project snapshot. No project identity impersonation, mutations, admissions
         or session renewal. A foreign or unknown role UUID is not found.
+      operationId: getPlatformProjectsByIdRolesByRoleId
       parameters:
       - description: Project UUID
         in: path
@@ -8457,7 +10140,48 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Read a current project role with permissions
+      tags:
+      - Platform Roles
+    put:
+      operationId: putPlatformProjectsByIdRolesByRoleId
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role UUID
+        in: path
+        name: roleId
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: Role definition and current role version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.EditRoleRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/project_http.PlatformRoleResponse'
+      security:
+      - SessionCookie: []
+      summary: Replace a project role definition
       tags:
       - Platform Roles
   /api/v1/platform/projects/{id}/suspend:
@@ -8470,6 +10194,7 @@ paths:
         returns its original receipt only after current authority is checked again.
         Runtime enforcement arrives with MP4; this endpoint alone does not stop an
         external running service.
+      operationId: postPlatformProjectsByIdSuspend
       parameters:
       - description: Exact platform HTTPS origin
         in: header
@@ -8527,6 +10252,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Suspend an independent project
       tags:
       - Platform Projects
@@ -8538,6 +10265,7 @@ paths:
         email/status filters, exclusive createdAt/UUID cursor. No offset, total count,
         project session, admission or session renewal. Returns no roles or credential
         secrets.
+      operationId: getPlatformProjectsByIdUsers
       parameters:
       - description: Project UUID
         in: path
@@ -8610,7 +10338,55 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: List users of an independent project from the platform
+      tags:
+      - Platform Users
+    post:
+      description: Accepts at most one of invitationEmail and temporaryPasswordEmail.
+        A generated temporary password is returned once on first commit and must not
+        be logged or cached. It requires password replacement and does not verify
+        the email.
+      operationId: postPlatformProjectsByIdUsers
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: Operation UUID and optional credential delivery mode
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_user_http.CreateUserCommand'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/project_user_http.CreateUserReceipt'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
+      summary: Create a pending account in a project
       tags:
       - Platform Users
   /api/v1/platform/projects/{id}/users/{userId}:
@@ -8622,6 +10398,7 @@ paths:
         readable by UUID but not restored. Contacts/providers/roles overflow returns
         conflict, never partial success. Use role/access versions in subsequent explicit
         grant/revoke calls.
+      operationId: getPlatformProjectsByIdUsersByUserId
       parameters:
       - description: Project UUID
         in: path
@@ -8682,7 +10459,93 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Read a project user and current role assignments from the platform
+      tags:
+      - Platform Users
+  /api/v1/platform/projects/{id}/users/{userId}/administrator:
+    post:
+      operationId: postPlatformProjectsByIdUsersByUserIdAdministrator
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User UUID
+        in: path
+        name: userId
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: Grant or revoke and current versions
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_http.AdministratorRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/project_http.AdministratorResponse'
+      security:
+      - SessionCookie: []
+      summary: Grant or revoke project system administrator
+      tags:
+      - Platform Roles
+  /api/v1/platform/projects/{id}/users/{userId}/lifecycle:
+    post:
+      operationId: postPlatformProjectsByIdUsersByUserIdLifecycle
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Project user UUID
+        in: path
+        name: userId
+        required: true
+        type: string
+      - description: Current project version
+        in: query
+        name: expectedVersion
+        required: true
+        type: integer
+      - description: Current project generation
+        in: query
+        name: expectedGeneration
+        required: true
+        type: integer
+      - description: Operation, expected account version and action
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/project_user_http.LifecycleCommand'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/project_user_http.LifecycleReceipt'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
+      summary: Change the lifecycle of a project user from the platform
       tags:
       - Platform Users
   /api/v1/platform/projects/{id}/users/{userId}/roles/{roleId}/grant:
@@ -8696,6 +10559,7 @@ paths:
         its original result; unknown COMMIT never means rollback. No actor/target/action
         override in JSON. Project MFA-required grants fail closed until capability
         is assembled.
+      operationId: postPlatformProjectsByIdUsersByUserIdRolesByRoleIdGrant
       parameters:
       - description: Exact platform HTTPS origin
         in: header
@@ -8770,6 +10634,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Grant a custom project role as a platform operator
       tags:
       - Platform Roles
@@ -8784,6 +10650,7 @@ paths:
         observes revocation immediately; offline JWT semantics are unchanged. Blocked
         non-deleted targets may be stripped of custom roles. Read/reconcile the same
         operation after an unknown response.
+      operationId: postPlatformProjectsByIdUsersByUserIdRolesByRoleIdRevoke
       parameters:
       - description: Exact platform HTTPS origin
         in: header
@@ -8858,6 +10725,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Revoke a custom project role as a platform operator
       tags:
       - Platform Roles
@@ -8867,6 +10736,7 @@ paths:
         endpoint requires auth.settings.manage; platform endpoint uses independent
         platform.project_settings.manage authority. No fresh proof is required for
         reading. Policy applies only to this realm database.
+      operationId: getPlatformSettingsMfa
       produces:
       - application/json
       responses:
@@ -8886,6 +10756,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Read realm MFA policy
       tags:
       - MFA settings
@@ -8899,6 +10771,7 @@ paths:
         this caller; response still returns the committed policy. A no-op creates
         no audit/version change. Weakening preserves personal factors and never revives
         old sessions. No client-supplied capability or actor is accepted.
+      operationId: postPlatformSettingsMfa
       parameters:
       - description: Complete mode and current version
         in: body
@@ -8933,6 +10806,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SessionCookie: []
       summary: Change realm MFA policy
       tags:
       - MFA settings
@@ -8945,6 +10820,7 @@ paths:
         system grant and durable marker. Optional creates no factor and returns empty
         recoveryCodes; other modes return recovery codes once. Does not issue a session.
         Setup stays closed after restart or loss of administrator.
+      operationId: postSetupComplete
       parameters:
       - description: Installation operator proof
         in: header
@@ -8988,6 +10864,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SetupToken: []
       summary: Complete first administrator setup exactly once
       tags:
       - Setup
@@ -8999,6 +10877,7 @@ paths:
         Pins mfaMode in encrypted intent; omitted mode defaults to administrators.
         Optional returns no TOTP enrollment data. Sends email code, creates no user
         or session. A retry after one minute replaces previous intent.
+      operationId: postSetupStart
       parameters:
       - description: 32-byte installation proof (base64url)
         in: header
@@ -9042,11 +10921,14 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - SetupToken: []
       summary: Start operator-controlled first administrator setup
       tags:
       - Setup
   /health/live:
     get:
+      operationId: getHealthLive
       produces:
       - application/json
       responses:
@@ -9059,6 +10941,7 @@ paths:
       - Health
   /health/ready:
     get:
+      operationId: getHealthReady
       produces:
       - application/json
       responses:
@@ -9075,6 +10958,7 @@ paths:
       - Health
   /ping:
     get:
+      operationId: getPing
       produces:
       - text/plain
       responses:
@@ -9088,4 +10972,17 @@ paths:
 schemes:
 - https
 - http
+securityDefinitions:
+  ServiceBasic:
+    type: basic
+  SessionCookie:
+    description: 'Browser session cookie (__Host-session). Browser clients use credentials:
+      include. Server clients use a cookie jar.'
+    in: header
+    name: Cookie
+    type: apiKey
+  SetupToken:
+    in: header
+    name: X-Setup-Token
+    type: apiKey
 swagger: "2.0"

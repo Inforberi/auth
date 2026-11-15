@@ -16,6 +16,7 @@ import (
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID postAuthNativeMfaEmailLogin
 // @Router /api/v1/auth/native/mfa/email/login [post]
 func (h *NativeHandler) PasswordEmailMFA(w http.ResponseWriter, r *http.Request) {
 	h.Password(w, r)

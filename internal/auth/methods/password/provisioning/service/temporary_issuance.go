@@ -137,3 +137,63 @@ func (s *TemporaryPasswordService) limitIssue(ctx context.Context, actor account
 	}
 	return s.limit(ctx, "temporary-password-issue-project", projectLimit)
 }
+
+type PreparedTemporaryPassword struct {
+	Email, Fingerprint string
+	Credential         domain.TemporaryCredential
+	TTL, Cooldown      time.Duration
+	secret             string
+}
+
+func (p PreparedTemporaryPassword) Reveal(result *TemporaryIssueResult) {
+	if !result.Reused {
+		result.Password = p.secret
+	}
+}
+
+func (s *TemporaryPasswordService) PreparePlatformTemporary(ctx context.Context, actor accountdomain.UserID, rawEmail string) (PreparedTemporaryPassword, error) {
+	if !s.cfg.Enabled {
+		return PreparedTemporaryPassword{}, domain.ErrTemporaryPasswordDisabled
+	}
+	email, err := accountdomain.NewEmail(rawEmail)
+	if err != nil {
+		return PreparedTemporaryPassword{}, err
+	}
+	if err := s.limitIssue(ctx, actor); err != nil {
+		return PreparedTemporaryPassword{}, err
+	}
+	ttl := s.cfg.TTL
+	if s.cfg.TTLSource != nil {
+		ttl, err = s.cfg.TTLSource(ctx)
+		if err != nil {
+			return PreparedTemporaryPassword{}, err
+		}
+	}
+	secret, credential, err := s.prepareTemporary(ctx)
+	if err != nil {
+		return PreparedTemporaryPassword{}, err
+	}
+	return PreparedTemporaryPassword{
+		Email: email.String(), Fingerprint: s.digest("temporary-password-provision:v1:" + email.String()),
+		Credential: credential, TTL: ttl, secret: secret,
+	}, nil
+}
+
+func (s *TemporaryPasswordService) PreparePlatformReissue(ctx context.Context, actor accountdomain.UserID) (PreparedTemporaryPassword, error) {
+	if !s.cfg.Enabled {
+		return PreparedTemporaryPassword{}, domain.ErrTemporaryPasswordDisabled
+	}
+	if err := s.limitIssue(ctx, actor); err != nil {
+		return PreparedTemporaryPassword{}, err
+	}
+	ttl, cooldown := s.cfg.TTL, s.cfg.ReissueCooldown
+	if s.cfg.ReissuePolicySource != nil {
+		var err error
+		ttl, cooldown, err = s.cfg.ReissuePolicySource(ctx)
+		if err != nil {
+			return PreparedTemporaryPassword{}, err
+		}
+	}
+	secret, credential, err := s.prepareTemporary(ctx)
+	return PreparedTemporaryPassword{Credential: credential, TTL: ttl, Cooldown: cooldown, secret: secret}, err
+}

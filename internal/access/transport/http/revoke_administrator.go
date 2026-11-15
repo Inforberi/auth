@@ -17,6 +17,7 @@ import "net/http"
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
 // @Failure 503 {object} httpx.ErrorResponse
+// @ID deleteAdminUsersByIdAdministrator
 // @Router /api/v1/admin/users/{id}/administrator [delete]
 func (h *Handler) RevokeAdministrator(w http.ResponseWriter, r *http.Request) {
 	h.changeAdministrator(w, r, false)

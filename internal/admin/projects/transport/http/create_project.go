@@ -37,6 +37,8 @@ type CreateProjectResponse struct {
 // @Failure 428 {object} httpx.ErrorResponse
 // @Failure 429 {object} httpx.ErrorResponse "code: rate_limited; Retry-After: 60"
 // @Failure 503 {object} httpx.ErrorResponse
+// @Security SessionCookie
+// @ID postPlatformProjects
 // @Router /api/v1/platform/projects [post]
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	actor, ok := RequestActor(w, r)

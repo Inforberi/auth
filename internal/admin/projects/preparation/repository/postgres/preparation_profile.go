@@ -64,9 +64,9 @@ func (r *PreparationRepository) CheckRuntime(ctx context.Context) error {
 			('platform.operator_realm','SELECT'),('platform.projects','SELECT'),('platform.project_events','SELECT'),
 			('platform.project_preparations','SELECT')) required(relation,privilege)
 			WHERE NOT has_table_privilege(current_user,required.relation,required.privilege))
-		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['desired_state','phase','version','generation','updated_at']) col
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['desired_state','phase','version','generation','updated_at','database_name','credential_ref','schema_version']) col
 			WHERE NOT has_column_privilege(current_user,'platform.projects',col,'UPDATE'))
-		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['id','slug','name','origin','storage_target','database_name','credential_ref','schema_version','created_at']) col
+		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['id','slug','name','origin','storage_target','created_at']) col
 			WHERE has_column_privilege(current_user,'platform.projects',col,'UPDATE'))
 		AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['project_id','operation_id','action','actor_kind','actor_id','reason',
 			'from_state','from_phase','from_version','from_generation','to_state','to_phase','to_version','to_generation']) col
